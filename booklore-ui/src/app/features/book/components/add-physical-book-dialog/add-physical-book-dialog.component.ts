@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject} from '@angular/core';
+import {Component, effect, inject} from '@angular/core';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
@@ -50,7 +50,7 @@ export class AddPhysicalBookDialogComponent {
   pageCount: number | null = null;
   categories: string[] = [];
 
-  private readonly metadata = computed(() => this.bookService.uniqueMetadata());
+  private readonly metadata = this.bookService.createUniqueMetadataSignal(['authors', 'categories']);
   get allAuthors(): string[] { return this.metadata().authors; }
   get allCategories(): string[] { return this.metadata().categories; }
   filteredAuthors: string[] = [];

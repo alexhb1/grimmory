@@ -49,9 +49,8 @@ export class MetadataReviewDialogComponent implements OnInit {
         return;
       }
 
-      const bookIds = new Set(proposals.map(proposal => proposal.bookId));
-      const matchedBooks = this.bookService.books().filter(book => bookIds.has(book.id));
-      this.loading = matchedBooks.length !== bookIds.size;
+      const bookIds = [...new Set(proposals.map(proposal => proposal.bookId))];
+      this.loading = this.bookService.getBooksByIds(bookIds).length !== bookIds.length;
     });
   }
 

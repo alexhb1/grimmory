@@ -10,6 +10,7 @@ import {API_CONFIG} from '../../../core/config/api-config';
 import {AuthService} from '../../../shared/service/auth.service';
 import {BOOKS_QUERY_KEY} from './book-query-keys';
 import {LIBRARIES_QUERY_KEY, libraryFormatCountsQueryKey} from './library-query-keys';
+import {BookSidebarCountsService} from './book-sidebar-counts.service';
 
 @Injectable({providedIn: 'root'})
 export class LibraryService {
@@ -18,6 +19,7 @@ export class LibraryService {
   private bookService = inject(BookService);
   private authService = inject(AuthService);
   private queryClient = inject(QueryClient);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
   private readonly token = this.authService.token;
 
   readonly largeLibraryLoading = signal<{ isLoading: boolean; expectedCount: number }>({
@@ -96,6 +98,7 @@ export class LibraryService {
         void this.queryClient.invalidateQueries({queryKey: LIBRARIES_QUERY_KEY, exact: true});
         void this.queryClient.invalidateQueries({queryKey: BOOKS_QUERY_KEY, exact: true});
         this.queryClient.removeQueries({queryKey: libraryFormatCountsQueryKey(id), exact: true});
+        this.bookSidebarCountsService.invalidate();
       })
     );
   }

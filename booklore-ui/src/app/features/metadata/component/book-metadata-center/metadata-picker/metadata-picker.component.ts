@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, effect, EventEmitter, inject, Input, OnInit, Output} from '@angular/core';
+import {Component, DestroyRef, effect, EventEmitter, inject, Input, OnInit, Output} from '@angular/core';
 import {Book, BookMetadata, ComicMetadata, MetadataClearFlags, MetadataUpdateWrapper} from '../../../../book/model/book.model';
 import {MessageService} from 'primeng/api';
 import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/drag-drop';
@@ -89,7 +89,17 @@ export class MetadataPickerComponent implements OnInit {
 
   currentBook: Book | null = null;
 
-  private get allItems(): Record<string, string[]> { return this.uniqueMetadata(); }
+  private get allItems(): Record<string, string[]> {
+    const metadata = this.uniqueMetadata();
+    return {
+      authors: metadata.authors,
+      categories: metadata.categories,
+      moods: metadata.moods,
+      tags: metadata.tags,
+      publishers: metadata.publishers,
+      series: metadata.series,
+    };
+  }
   filteredItems: Record<string, string[]> = {};
   authorInputValue = '';
 
@@ -110,7 +120,7 @@ export class MetadataPickerComponent implements OnInit {
   private formBuilder = inject(MetadataFormBuilder);
   private metadataUtils = inject(MetadataUtilsService);
   private readonly t = inject(TranslocoService);
-  private readonly uniqueMetadata = computed(() => this.bookService.uniqueMetadata());
+  private readonly uniqueMetadata = this.bookService.uniqueMetadata;
 
 
   private enabledProviderFields: MetadataProviderSpecificFields | null = null;

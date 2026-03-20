@@ -3,6 +3,7 @@ package org.booklore.controller;
 import org.booklore.config.security.annotation.CheckBookAccess;
 import org.booklore.exception.ApiError;
 import org.booklore.model.dto.Book;
+import org.booklore.model.dto.BookSidebarCounts;
 import org.booklore.model.dto.BookRecommendation;
 import org.booklore.model.dto.BookViewerSettings;
 import org.booklore.model.dto.request.AttachBookFileRequest;
@@ -72,6 +73,13 @@ public class BookController {
         return ResponseEntity.ok(bookService.getBookDTOs(withDescription));
     }
 
+    @Operation(summary = "Get sidebar book counts", description = "Retrieve lightweight book counts for the sidebar.")
+    @ApiResponse(responseCode = "200", description = "Sidebar counts returned successfully")
+    @GetMapping("/sidebar-counts")
+    public ResponseEntity<BookSidebarCounts> getSidebarCounts() {
+        return ResponseEntity.ok(bookService.getSidebarCounts());
+    }
+
     @Operation(summary = "Get a book by ID", description = "Retrieve details of a specific book by its ID.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Book details returned successfully"),
@@ -83,6 +91,18 @@ public class BookController {
             @Parameter(description = "ID of the book to retrieve") @PathVariable long bookId,
             @Parameter(description = "Include book description in the response") @RequestParam(required = false, defaultValue = "false") boolean withDescription) {
         return ResponseEntity.ok(bookService.getBook(bookId, withDescription));
+    }
+
+    @Operation(summary = "Get books in the same series", description = "Retrieve books from the same library series as a specific book.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Series books returned successfully"),
+            @ApiResponse(responseCode = "404", description = "Book not found")
+    })
+    @GetMapping("/{bookId}/series")
+    @CheckBookAccess(bookIdParam = "bookId")
+    public ResponseEntity<List<Book>> getBooksInSeries(
+            @Parameter(description = "ID of the book") @PathVariable long bookId) {
+        return ResponseEntity.ok(bookService.getBooksInSeries(bookId));
     }
 
     @Operation(summary = "Create a physical book", description = "Create a physical book without digital files. Requires library management permission or admin.")

@@ -10,6 +10,7 @@ import {API_CONFIG} from '../../../core/config/api-config';
 import {Book} from '../model/book.model';
 import {UserService} from '../../settings/user-management/user.service';
 import {AuthService} from '../../../shared/service/auth.service';
+import {BookSidebarCountsService} from './book-sidebar-counts.service';
 
 const SHELVES_QUERY_KEY = ['shelves'] as const;
 
@@ -21,6 +22,7 @@ export class ShelfService {
   private userService = inject(UserService);
   private authService = inject(AuthService);
   private queryClient = inject(QueryClient);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
   private readonly token = this.authService.token;
 
   private shelvesQuery = injectQuery(() => ({
@@ -81,6 +83,7 @@ export class ShelfService {
     return this.http.delete<void>(`${this.url}/${id}`).pipe(
       tap(() => {
         this.bookService.removeBooksFromShelf(id);
+        this.bookSidebarCountsService.invalidate();
         void this.queryClient.invalidateQueries({queryKey: SHELVES_QUERY_KEY, exact: true});
       })
     );

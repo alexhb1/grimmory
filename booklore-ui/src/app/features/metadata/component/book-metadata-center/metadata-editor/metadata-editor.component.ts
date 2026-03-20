@@ -104,7 +104,7 @@ export class MetadataEditorComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private appSettingsService = inject(AppSettingsService);
   private readonly t = inject(TranslocoService);
-  private readonly uniqueMetadata = computed(() => this.bookService.uniqueMetadata());
+  private readonly uniqueMetadata = this.bookService.uniqueMetadata;
 
   metadataForm: FormGroup;
   currentBookId!: number;
@@ -906,7 +906,7 @@ export class MetadataEditorComponent implements OnInit {
       event.originalEvent as HttpResponse<unknown>;
     if (response && response.status === 200) {
       this.isUploading = false;
-      this.bookService.handleBookMetadataUpdate(this.currentBookId);
+      this.bookService.refreshBookDetail(this.currentBookId);
     } else {
       this.isUploading = false;
       this.messageService.add({
@@ -1191,7 +1191,7 @@ export class MetadataEditorComponent implements OnInit {
       event.originalEvent as HttpResponse<unknown>;
     if (response && response.status === 200) {
       this.isUploading = false;
-      this.bookService.handleBookMetadataUpdate(this.currentBookId);
+      this.bookService.refreshBookDetail(this.currentBookId);
     } else {
       this.isUploading = false;
       this.messageService.add({

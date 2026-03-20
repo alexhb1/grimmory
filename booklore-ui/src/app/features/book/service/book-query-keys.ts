@@ -1,4 +1,5 @@
 export const BOOKS_QUERY_KEY = ['books'] as const;
+export const BOOK_SIDEBAR_COUNTS_QUERY_KEY = ['books', 'sidebar-counts'] as const;
 
 export const bookDetailQueryKey = (bookId: number, withDescription: boolean) =>
   ['books', 'detail', bookId, withDescription] as const;
