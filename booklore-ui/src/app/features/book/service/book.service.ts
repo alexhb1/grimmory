@@ -1,7 +1,7 @@
-import {computed, effect, inject, Injectable} from '@angular/core';
-import {first, from, lastValueFrom, Observable, throwError} from 'rxjs';
+import {computed, effect, inject, Injectable, Signal} from '@angular/core';
+import {from, lastValueFrom, Observable, throwError} from 'rxjs';
 import {HttpClient, HttpParams} from '@angular/common/http';
-import {catchError, map, tap} from 'rxjs/operators';
+import {catchError, tap} from 'rxjs/operators';
 import {Book, BookDeletionResponse, BookRecommendation, BookSetting, BookStatusUpdateResponse, BookType, CreatePhysicalBookRequest, PersonalRatingUpdateResponse, ReadStatus} from '../model/book.model';
 import {API_CONFIG} from '../../../core/config/api-config';
 import {MessageService} from 'primeng/api';
@@ -22,6 +22,20 @@ import {
   patchBooksInCache,
   removeBookQueries,
 } from './book-query-cache';
+import {BookSidebarCountsService} from './book-sidebar-counts.service';
+
+const ALL_UNIQUE_METADATA_FIELDS = ['authors', 'categories', 'moods', 'tags', 'publishers', 'series'] as const;
+
+type UniqueMetadataField = typeof ALL_UNIQUE_METADATA_FIELDS[number];
+
+interface UniqueMetadataValues {
+  authors: string[];
+  categories: string[];
+  moods: string[];
+  tags: string[];
+  publishers: string[];
+  series: string[];
+}
 
 @Injectable({
   providedIn: 'root',
@@ -37,6 +51,7 @@ export class BookService {
   private bookSocketService = inject(BookSocketService);
   private bookPatchService = inject(BookPatchService);
   private queryClient = inject(QueryClient);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
   private readonly t = inject(TranslocoService);
   private readonly token = this.authService.token;
 
@@ -46,37 +61,16 @@ export class BookService {
   }));
 
   books = computed(() => this.booksQuery.data() ?? []);
-
-  /** Pre-computed unique metadata values for autocomplete across the app. */
-  readonly uniqueMetadata = computed(() => {
-    const books = this.books();
-    const authors = new Set<string>();
-    const categories = new Set<string>();
-    const moods = new Set<string>();
-    const tags = new Set<string>();
-    const publishers = new Set<string>();
-    const series = new Set<string>();
-
-    for (const book of books) {
-      const m = book.metadata;
-      if (!m) continue;
-      m.authors?.forEach(v => authors.add(v));
-      m.categories?.forEach(v => categories.add(v));
-      m.moods?.forEach(v => moods.add(v));
-      m.tags?.forEach(v => tags.add(v));
-      if (m.publisher) publishers.add(m.publisher);
-      if (m.seriesName) series.add(m.seriesName);
+  private readonly booksById = computed(() => {
+    const index = new Map<number, Book>();
+    for (const book of this.books()) {
+      index.set(+book.id, book);
     }
-
-    return {
-      authors: Array.from(authors),
-      categories: Array.from(categories),
-      moods: Array.from(moods),
-      tags: Array.from(tags),
-      publishers: Array.from(publishers),
-      series: Array.from(series),
-    };
+    return index;
   });
+
+  /** Unique metadata values used by autocomplete and metadata editors. */
+  readonly uniqueMetadata = this.createUniqueMetadataSignal();
 
   booksError = computed<string | null>(() => {
     if (!this.token() || !this.booksQuery.isError()) {
@@ -95,6 +89,45 @@ export class BookService {
       if (token === null) {
         this.queryClient.removeQueries({queryKey: BOOKS_QUERY_KEY});
       }
+    });
+  }
+
+  createUniqueMetadataSignal(fields: readonly UniqueMetadataField[] = ALL_UNIQUE_METADATA_FIELDS): Signal<UniqueMetadataValues> {
+    const includeAuthors = fields.includes('authors');
+    const includeCategories = fields.includes('categories');
+    const includeMoods = fields.includes('moods');
+    const includeTags = fields.includes('tags');
+    const includePublishers = fields.includes('publishers');
+    const includeSeries = fields.includes('series');
+
+    return computed(() => {
+      const authors = includeAuthors ? new Set<string>() : null;
+      const categories = includeCategories ? new Set<string>() : null;
+      const moods = includeMoods ? new Set<string>() : null;
+      const tags = includeTags ? new Set<string>() : null;
+      const publishers = includePublishers ? new Set<string>() : null;
+      const series = includeSeries ? new Set<string>() : null;
+
+      for (const book of this.books()) {
+        const metadata = book.metadata;
+        if (!metadata) continue;
+
+        if (authors) metadata.authors?.forEach(value => authors.add(value));
+        if (categories) metadata.categories?.forEach(value => categories.add(value));
+        if (moods) metadata.moods?.forEach(value => moods.add(value));
+        if (tags) metadata.tags?.forEach(value => tags.add(value));
+        if (publishers && metadata.publisher) publishers.add(metadata.publisher);
+        if (series && metadata.seriesName) series.add(metadata.seriesName);
+      }
+
+      return {
+        authors: authors ? Array.from(authors) : [],
+        categories: categories ? Array.from(categories) : [],
+        moods: moods ? Array.from(moods) : [],
+        tags: tags ? Array.from(tags) : [],
+        publishers: publishers ? Array.from(publishers) : [],
+        series: series ? Array.from(series) : [],
+      };
     });
   }
 
@@ -141,28 +174,19 @@ export class BookService {
   /*------------------ Book Retrieval ------------------*/
 
   findBookById(bookId: number): Book | undefined {
-    return this.books().find(book => +book.id === +bookId);
+    return this.booksById().get(+bookId);
   }
 
   getBooksByIds(bookIds: number[]): Book[] {
     if (bookIds.length === 0) return [];
-    const idSet = new Set(bookIds.map(id => +id));
-    return this.books().filter(book => idSet.has(+book.id));
+    const index = this.booksById();
+    return bookIds
+      .map(id => index.get(+id))
+      .filter((book): book is Book => !!book);
   }
 
   getBooksInSeries(bookId: number): Observable<Book[]> {
-    return from(this.queryClient.ensureQueryData(this.getBooksQueryOptions())).pipe(
-      map(books => {
-        const currentBook = books.find(book => book.id === bookId);
-        if (!currentBook?.metadata?.seriesName) {
-          return [];
-        }
-
-        const seriesName = currentBook.metadata.seriesName.toLowerCase();
-        return books.filter(book => book.metadata?.seriesName?.toLowerCase() === seriesName);
-      }),
-      first()
-    );
+    return this.http.get<Book[]>(`${this.url}/${bookId}/series`);
   }
 
   getBookRecommendations(bookId: number, limit: number = 20): Observable<BookRecommendation[]> {
@@ -180,6 +204,7 @@ export class BookService {
         const deletedIds = response.deleted.length > 0 ? response.deleted : idList;
         invalidateBooksQuery(this.queryClient);
         removeBookQueries(this.queryClient, deletedIds);
+        this.bookSidebarCountsService.invalidate();
 
         if (response.failedFileDeletions?.length > 0) {
           this.messageService.add({
@@ -214,6 +239,7 @@ export class BookService {
     return this.http.post<Book>(`${this.url}/physical`, request).pipe(
       tap(newBook => {
         invalidateBooksQuery(this.queryClient);
+        this.bookSidebarCountsService.invalidate();
         this.messageService.add({
           severity: 'success',
           summary: this.t.translate('book.bookService.toast.physicalBookCreatedSummary'),
@@ -359,11 +385,11 @@ export class BookService {
     this.bookSocketService.handleMultipleBookUpdates(updatedBooks);
   }
 
-  handleBookMetadataUpdate(bookId: number): void {
-    this.bookSocketService.handleBookMetadataUpdate(bookId);
+  refreshBookDetail(bookId: number): void {
+    this.bookSocketService.refreshBookDetail(bookId);
   }
 
-  handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
+  handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn?: string; audiobookCoverUpdatedOn?: string }[]): void {
     this.bookSocketService.handleMultipleBookCoverPatches(patches);
   }
 }

@@ -4,6 +4,8 @@ import {QueryClient} from '@tanstack/angular-query-experimental';
 import {Book} from '../model/book.model';
 import {
   addBookToCache,
+  patchBookCoverTimestampsInCache,
+  patchBookMetadataInCache,
   patchBooksInCache,
   removeBookQueries
 } from './book-query-cache';
@@ -69,6 +71,61 @@ describe('book-query-cache', () => {
     expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)).toEqual([firstBook, updatedSecondBook]);
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({queryKey: bookDetailQueryPrefix(2)});
     expect(invalidateQueriesSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('patches metadata in list and cached detail queries', () => {
+    const metadata = {
+      bookId: 1,
+      title: 'Updated Book 1',
+      publisher: 'Updated Publisher'
+    };
+
+    queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [makeBook(1)]);
+    queryClient.setQueryData(bookDetailQueryKey(1, false), makeBook(1, {
+      metadata: {
+        bookId: 1,
+        title: 'Detail Book 1',
+        description: 'kept on book, not metadata'
+      }
+    }));
+    queryClient.setQueryData(bookDetailQueryKey(1, true), makeBook(1, {
+      metadata: {
+        bookId: 1,
+        title: 'Detailed Book 1',
+        description: 'Full description'
+      }
+    }));
+
+    patchBookMetadataInCache(queryClient, 1, metadata);
+
+    expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)?.[0].metadata).toEqual(metadata);
+    expect(queryClient.getQueryData<Book>(bookDetailQueryKey(1, false))?.metadata).toEqual(metadata);
+    expect(queryClient.getQueryData<Book>(bookDetailQueryKey(1, true))?.metadata).toEqual(metadata);
+  });
+
+  it('patches ebook and audiobook cover timestamps without refetching', () => {
+    const originalBook = makeBook(1, {
+      metadata: {
+        bookId: 1,
+        title: 'Book 1',
+        coverUpdatedOn: 'old-cover',
+        audiobookCoverUpdatedOn: 'old-audio'
+      }
+    });
+
+    queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [originalBook]);
+    queryClient.setQueryData(bookDetailQueryKey(1, true), originalBook);
+
+    patchBookCoverTimestampsInCache(queryClient, [{
+      id: 1,
+      coverUpdatedOn: 'new-cover',
+      audiobookCoverUpdatedOn: 'new-audio'
+    }]);
+
+    expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)?.[0].metadata?.coverUpdatedOn).toBe('new-cover');
+    expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)?.[0].metadata?.audiobookCoverUpdatedOn).toBe('new-audio');
+    expect(queryClient.getQueryData<Book>(bookDetailQueryKey(1, true))?.metadata?.coverUpdatedOn).toBe('new-cover');
+    expect(queryClient.getQueryData<Book>(bookDetailQueryKey(1, true))?.metadata?.audiobookCoverUpdatedOn).toBe('new-audio');
   });
 
   it('removes detail and recommendation queries for deleted books', () => {

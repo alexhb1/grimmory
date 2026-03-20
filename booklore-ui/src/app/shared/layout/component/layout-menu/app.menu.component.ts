@@ -5,7 +5,6 @@ import {MenuModule} from 'primeng/menu';
 import {LibraryService} from '../../../../features/book/service/library.service';
 import {LibraryHealthService} from '../../../../features/book/service/library-health.service';
 import {ShelfService} from '../../../../features/book/service/shelf.service';
-import {BookService} from '../../../../features/book/service/book.service';
 import {LibraryShelfMenuService} from '../../../../features/book/service/library-shelf-menu.service';
 import {AppVersion, VersionService} from '../../../service/version.service';
 import {DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -20,6 +19,7 @@ import {Slider} from 'primeng/slider';
 import {FormsModule} from '@angular/forms';
 import {Popover} from 'primeng/popover';
 import {LocalStorageService} from '../../../service/local-storage.service';
+import {BookSidebarCountsService} from '../../../../features/book/service/book-sidebar-counts.service';
 
 @Component({
   selector: 'app-menu',
@@ -35,7 +35,7 @@ export class AppMenuComponent implements OnInit {
   private libraryService = inject(LibraryService);
   private libraryHealthService = inject(LibraryHealthService);
   private shelfService = inject(ShelfService);
-  private bookService = inject(BookService);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
   private versionService = inject(VersionService);
   private libraryShelfMenuService = inject(LibraryShelfMenuService);
   private dialogLauncherService = inject(DialogLauncherService);
@@ -57,44 +57,6 @@ export class AppMenuComponent implements OnInit {
   magicShelfSortField = signal<'name' | 'id'>('name');
   magicShelfSortOrder = signal<'asc' | 'desc'>('asc');
   sidebarWidth = 225;
-
-  private readonly libraryBookCounts = computed(() => {
-    const counts = new Map<number, number>();
-    for (const book of this.bookService.books()) {
-      if (book.libraryId != null) {
-        counts.set(book.libraryId, (counts.get(book.libraryId) ?? 0) + 1);
-      }
-    }
-    return counts;
-  });
-
-  private readonly shelfBookCounts = computed(() => {
-    const currentUserId = this.currentUser()?.id;
-    const counts = new Map<number, number>();
-    let unshelvedCount = 0;
-
-    for (const book of this.bookService.books()) {
-      if (!book.shelves || book.shelves.length === 0) {
-        unshelvedCount++;
-      } else {
-        for (const shelf of book.shelves) {
-          if (shelf.id != null) {
-            counts.set(shelf.id, (counts.get(shelf.id) ?? 0) + 1);
-          }
-        }
-      }
-    }
-
-    // For shelves not owned by the current user, fall back to the shelf's bookCount field
-    for (const shelf of this.shelfService.shelves()) {
-      if (shelf.userId !== currentUserId && shelf.id != null) {
-        counts.set(shelf.id, shelf.bookCount || 0);
-      }
-    }
-
-    counts.set(-1, unshelvedCount); // sentinel key for unshelved count
-    return counts;
-  });
 
   private readonly magicShelfBookCounts = computed(() => {
     const counts = new Map<number, number>();
@@ -126,7 +88,7 @@ export class AppMenuComponent implements OnInit {
             type: 'All Books',
             icon: 'pi pi-fw pi-book',
             routerLink: ['/all-books'],
-            bookCount: this.bookService.books().length,
+            bookCount: this.bookSidebarCountsService.totalCount(),
           },
           {
             label: this.t.translate('layout.menu.series'),
@@ -154,7 +116,6 @@ export class AppMenuComponent implements OnInit {
 
   readonly libraryMenu = computed<MenuItem[]>(() => {
     this.activeLang();
-    const libCounts = this.libraryBookCounts();
 
     const sortedLibraries = this.sortArray(
       this.libraryService.libraries(),
@@ -175,7 +136,7 @@ export class AppMenuComponent implements OnInit {
           icon: library.icon || undefined,
           iconType: (library.iconType || undefined) as 'PRIME_NG' | 'CUSTOM_SVG' | undefined,
           routerLink: [`/library/${library.id}/books`],
-          bookCount: libCounts.get(library.id ?? 0) ?? 0,
+          bookCount: this.bookSidebarCountsService.getLibraryCountValue(library.id ?? 0),
           unhealthy: this.libraryHealthService.isUnhealthy(library.id ?? 0),
         })),
       },
@@ -212,7 +173,6 @@ export class AppMenuComponent implements OnInit {
 
   readonly shelfMenu = computed<MenuItem[]>(() => {
     this.activeLang();
-    const shelfCounts = this.shelfBookCounts();
 
     const sortedShelves = this.sortArray(
       this.shelfService.shelves(),
@@ -234,7 +194,7 @@ export class AppMenuComponent implements OnInit {
       icon: shelf.icon || undefined,
       iconType: (shelf.iconType || undefined) as 'PRIME_NG' | 'CUSTOM_SVG' | undefined,
       routerLink: [`/shelf/${shelf.id}/books`],
-      bookCount: shelfCounts.get(shelf.id ?? 0) ?? 0,
+      bookCount: this.bookSidebarCountsService.getShelfCountValue(shelf.id ?? 0),
     }));
 
     const items: MenuItem[] = [{
@@ -243,7 +203,7 @@ export class AppMenuComponent implements OnInit {
       icon: 'pi pi-inbox',
       iconType: 'PRIME_NG' as 'PRIME_NG' | 'CUSTOM_SVG',
       routerLink: ['/unshelved-books'],
-      bookCount: shelfCounts.get(-1) ?? 0,
+      bookCount: this.bookSidebarCountsService.unshelvedCount(),
     }];
 
     if (koboShelf) {
@@ -253,7 +213,7 @@ export class AppMenuComponent implements OnInit {
         icon: koboShelf.icon || undefined,
         iconType: (koboShelf.iconType || undefined) as 'PRIME_NG' | 'CUSTOM_SVG' | undefined,
         routerLink: [`/shelf/${koboShelf.id}/books`],
-        bookCount: shelfCounts.get(koboShelf.id ?? 0) ?? 0,
+        bookCount: this.bookSidebarCountsService.getShelfCountValue(koboShelf.id ?? 0),
       });
     }
 

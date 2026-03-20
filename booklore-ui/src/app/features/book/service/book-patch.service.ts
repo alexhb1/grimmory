@@ -12,6 +12,7 @@ import {
   patchBooksInCache,
   patchBookFieldsInCache,
 } from './book-query-cache';
+import {BookSidebarCountsService} from './book-sidebar-counts.service';
 
 @Injectable({
   providedIn: 'root',
@@ -21,6 +22,7 @@ export class BookPatchService {
 
   private http = inject(HttpClient);
   private queryClient = inject(QueryClient);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
 
   private epubProgressSubject = new Subject<{ bookId: number; cfi: string; href: string; percentage: number; bookFileId?: number }>();
 
@@ -80,6 +82,7 @@ export class BookPatchService {
     return this.http.post<Book[]>(`${this.url}/shelves`, requestPayload).pipe(
       tap(updatedBooks => {
         patchBooksInCache(this.queryClient, updatedBooks);
+        this.bookSidebarCountsService.invalidate();
       })
     );
   }

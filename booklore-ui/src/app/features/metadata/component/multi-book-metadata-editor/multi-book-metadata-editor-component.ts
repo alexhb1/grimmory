@@ -33,9 +33,9 @@ export class MultiBookMetadataEditorComponent {
   bookIds: number[] = this.config.data?.bookIds ?? [];
   loading = false;
 
-  filteredBooks = computed(() => this.bookService.books().filter(book =>
-    !!book.metadata && this.bookIds.includes(book.id)
-  ));
+  filteredBooks = computed(() =>
+    this.bookService.getBooksByIds(this.bookIds).filter(book => !!book.metadata)
+  );
   private currentIndex = signal(0);
   private currentBookId = computed(() => this.filteredBooks()[this.currentIndex()]?.id ?? null);
   private bookDetailQuery = injectQuery(() => ({

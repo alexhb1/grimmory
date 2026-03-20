@@ -7,7 +7,7 @@ import {API_CONFIG} from '../../../core/config/api-config';
 import {MessageService} from 'primeng/api';
 import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {invalidateBookQueries, invalidateBooksQuery, patchBookInCacheWith, patchBookMetadataInCache} from './book-query-cache';
+import {invalidateBookDetailQueries, invalidateBooksQuery, patchBookInCacheWith, patchBookMetadataInCache} from './book-query-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -133,7 +133,7 @@ export class BookMetadataManageService {
   regenerateCover(bookId: number): Observable<void> {
     return this.http.post<void>(`${this.url}/${bookId}/regenerate-cover`, {}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, [bookId]);
+        invalidateBookDetailQueries(this.queryClient, [bookId]);
       })
     );
   }
@@ -145,7 +145,7 @@ export class BookMetadataManageService {
   generateCustomCover(bookId: number): Observable<void> {
     return this.http.post<void>(`${this.url}/${bookId}/generate-custom-cover`, {}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, [bookId]);
+        invalidateBookDetailQueries(this.queryClient, [bookId]);
       })
     );
   }
@@ -153,7 +153,7 @@ export class BookMetadataManageService {
   generateCustomCoversForBooks(bookIds: number[]): Observable<void> {
     return this.http.post<void>(`${this.url}/bulk-generate-custom-covers`, {bookIds}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, bookIds);
+        invalidateBookDetailQueries(this.queryClient, bookIds);
       })
     );
   }
@@ -161,7 +161,7 @@ export class BookMetadataManageService {
   regenerateCoversForBooks(bookIds: number[]): Observable<void> {
     return this.http.post<void>(`${this.url}/bulk-regenerate-covers`, {bookIds}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, bookIds);
+        invalidateBookDetailQueries(this.queryClient, bookIds);
       })
     );
   }
@@ -179,7 +179,7 @@ export class BookMetadataManageService {
     formData.append('file', file);
     return this.http.post<void>(`${this.url}/${bookId}/metadata/audiobook-cover/upload`, formData).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, [bookId]);
+        invalidateBookDetailQueries(this.queryClient, [bookId]);
       })
     );
   }
@@ -191,7 +191,7 @@ export class BookMetadataManageService {
   regenerateAudiobookCover(bookId: number): Observable<void> {
     return this.http.post<void>(`${this.url}/${bookId}/regenerate-audiobook-cover`, {}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, [bookId]);
+        invalidateBookDetailQueries(this.queryClient, [bookId]);
       })
     );
   }
@@ -199,7 +199,7 @@ export class BookMetadataManageService {
   generateCustomAudiobookCover(bookId: number): Observable<void> {
     return this.http.post<void>(`${this.url}/${bookId}/generate-custom-audiobook-cover`, {}).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, [bookId]);
+        invalidateBookDetailQueries(this.queryClient, [bookId]);
       })
     );
   }
@@ -217,7 +217,7 @@ export class BookMetadataManageService {
     formData.append('bookIds', bookIds.join(','));
     return this.http.post<void>(`${this.url}/bulk-upload-cover`, formData).pipe(
       tap(() => {
-        invalidateBookQueries(this.queryClient, bookIds);
+        invalidateBookDetailQueries(this.queryClient, bookIds);
       })
     );
   }

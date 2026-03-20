@@ -40,8 +40,9 @@ export class ContentRestrictionsEditorComponent implements OnInit, OnChanges {
   private bookService = inject(BookService);
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
+  private readonly metadata = this.bookService.createUniqueMetadataSignal(['categories', 'tags', 'moods']);
   private readonly sortedMetadata = computed(() => {
-    const md = this.bookService.uniqueMetadata();
+    const md = this.metadata();
     return {
       categories: [...md.categories].sort(),
       tags: [...md.tags].sort(),

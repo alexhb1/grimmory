@@ -9,12 +9,14 @@ import org.booklore.model.dto.response.BookDeletionResponse;
 import org.booklore.model.dto.response.BookStatusUpdateResponse;
 import org.booklore.model.entity.BookEntity;
 import org.booklore.model.entity.BookFileEntity;
+import org.booklore.model.entity.BookMetadataEntity;
 import org.booklore.model.entity.LibraryPathEntity;
 import org.booklore.model.entity.UserBookFileProgressEntity;
 import org.booklore.model.entity.UserBookProgressEntity;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.repository.*;
 import org.booklore.repository.BookFileRepository;
+import org.booklore.repository.projection.IdCountProjection;
 import org.booklore.service.metadata.sidecar.SidecarMetadataWriter;
 import org.booklore.service.monitoring.MonitoringRegistrationService;
 import org.booklore.service.progress.ReadingProgressService;
@@ -44,6 +46,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.booklore.model.enums.AuditAction;
 import org.booklore.service.audit.AuditService;
 
@@ -103,10 +106,54 @@ public class BookService {
         return books;
     }
 
+    public BookSidebarCounts getSidebarCounts() {
+        BookLoreUser user = authenticationService.getAuthenticatedUser();
+        boolean isAdmin = user.getPermissions().isAdmin();
+        Set<Long> libraryIds = isAdmin ? Set.of() : getUserLibraryIds(user);
+
+        if (!isAdmin && libraryIds.isEmpty()) {
+            return BookSidebarCounts.builder()
+                    .totalCount(0)
+                    .unshelvedCount(0)
+                    .libraryCounts(Map.of())
+                    .shelfCounts(Map.of())
+                    .build();
+        }
+
+        List<IdCountProjection> libraryCounts = isAdmin
+                ? bookRepository.countBooksByLibrary()
+                : bookRepository.countBooksByLibraryIds(libraryIds);
+        List<IdCountProjection> shelfCounts = isAdmin
+                ? bookRepository.countBooksByShelf()
+                : bookRepository.countBooksByShelfForLibraryIds(libraryIds);
+        long totalCount = isAdmin
+                ? bookRepository.countActiveBooks()
+                : bookRepository.countActiveBooksByLibraryIds(libraryIds);
+        long unshelvedCount = isAdmin
+                ? bookRepository.countUnshelvedBooks()
+                : bookRepository.countUnshelvedBooksByLibraryIds(libraryIds);
+
+        return BookSidebarCounts.builder()
+                .totalCount(totalCount)
+                .unshelvedCount(unshelvedCount)
+                .libraryCounts(toCountMap(libraryCounts))
+                .shelfCounts(toCountMap(shelfCounts))
+                .build();
+    }
+
     private Set<Long> getUserLibraryIds(BookLoreUser user) {
         return user.getAssignedLibraries().stream()
                 .map(Library::getId)
                 .collect(Collectors.toSet());
+    }
+
+    private Map<Long, Long> toCountMap(List<IdCountProjection> counts) {
+        return counts.stream().collect(Collectors.toMap(
+                IdCountProjection::getId,
+                projection -> Optional.ofNullable(projection.getCount()).orElse(0L),
+                (left, right) -> right,
+                LinkedHashMap::new
+        ));
     }
 
     public List<Book> getBooksByIds(Set<Long> bookIds, boolean withDescription) {
@@ -162,6 +209,39 @@ public class BookService {
         }
 
         return book;
+    }
+
+    public List<Book> getBooksInSeries(long bookId) {
+        BookEntity currentBook = bookRepository.findByIdWithBookFiles(bookId)
+                .orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
+
+        String seriesName = Optional.ofNullable(currentBook.getMetadata())
+                .map(BookMetadataEntity::getSeriesName)
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .orElse(null);
+
+        if (seriesName == null) {
+            return List.of();
+        }
+
+        List<Long> seriesBookIds = bookRepository.findIdsByLibraryIdAndSeriesNameIgnoreCase(
+                currentBook.getLibrary().getId(),
+                seriesName
+        );
+
+        if (seriesBookIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Book> books = getBooksByIds(new LinkedHashSet<>(seriesBookIds), false);
+        books.sort(Comparator.comparing(
+                (Book book) -> Optional.ofNullable(book.getMetadata())
+                        .map(BookMetadata::getSeriesNumber)
+                        .orElse(null),
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+        return books;
     }
 
 

@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, Injector, OnInit} from '@angular/core';
+import {Component, effect, inject, Injector, OnInit} from '@angular/core';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule} from '@angular/forms';
 
 import {InputText} from 'primeng/inputtext';
@@ -63,7 +63,7 @@ export class BulkMetadataUpdateComponent implements OnInit {
   private readonly bookMetadataManageService = inject(BookMetadataManageService);
   private readonly messageService = inject(MessageService);
   private readonly injector = inject(Injector);
-  private readonly uniqueMetadata = computed(() => this.bookService.uniqueMetadata());
+  private readonly uniqueMetadata = this.bookService.uniqueMetadata;
 
   get allAuthors(): string[] { return this.uniqueMetadata().authors; }
   get allGenres(): string[] { return this.uniqueMetadata().categories; }
@@ -137,7 +137,7 @@ export class BulkMetadataUpdateComponent implements OnInit {
     });
 
     effect(() => {
-      this.books = this.bookService.books().filter(book => this.bookIds.includes(book.id));
+      this.books = this.bookService.getBooksByIds(this.bookIds);
     }, {injector: this.injector});
   }
 
