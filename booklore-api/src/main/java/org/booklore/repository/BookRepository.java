@@ -4,6 +4,7 @@ import org.booklore.model.entity.BookEntity;
 import org.booklore.model.entity.LibraryPathEntity;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.repository.projection.BookCoverUpdateProjection;
+import org.booklore.repository.projection.IdCountProjection;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
@@ -64,6 +65,18 @@ public interface BookRepository extends JpaRepository<BookEntity, Long>, JpaSpec
     @EntityGraph(attributePaths = {"metadata", "metadata.comicMetadata", "shelves", "libraryPath", "bookFiles"})
     @Query("SELECT b FROM BookEntity b WHERE b.library.id = :libraryId AND (b.deleted IS NULL OR b.deleted = false)")
     List<BookEntity> findAllWithMetadataByLibraryId(@Param("libraryId") Long libraryId);
+
+    @Query("""
+            SELECT b.id FROM BookEntity b
+            LEFT JOIN b.metadata m
+            WHERE b.library.id = :libraryId
+            AND LOWER(m.seriesName) = LOWER(:seriesName)
+            AND (b.deleted IS NULL OR b.deleted = false)
+            ORDER BY COALESCE(m.seriesNumber, 0)
+            """)
+    List<Long> findIdsByLibraryIdAndSeriesNameIgnoreCase(
+            @Param("libraryId") Long libraryId,
+            @Param("seriesName") String seriesName);
 
     @EntityGraph(attributePaths = {"metadata", "bookFiles"})
     @Query("SELECT b FROM BookEntity b WHERE b.library.id = :libraryId AND (b.deleted IS NULL OR b.deleted = false)")
@@ -166,6 +179,70 @@ public interface BookRepository extends JpaRepository<BookEntity, Long>, JpaSpec
     long countByIdIn(@Param("bookIds") List<Long> bookIds);
 
     @Query("""
+            SELECT COUNT(b) FROM BookEntity b
+            WHERE (b.deleted IS NULL OR b.deleted = false)
+            """)
+    long countActiveBooks();
+
+    @Query("""
+            SELECT COUNT(b) FROM BookEntity b
+            WHERE b.library.id IN :libraryIds
+              AND (b.deleted IS NULL OR b.deleted = false)
+            """)
+    long countActiveBooksByLibraryIds(@Param("libraryIds") Collection<Long> libraryIds);
+
+    @Query("""
+            SELECT COUNT(b) FROM BookEntity b
+            WHERE b.shelves IS EMPTY
+              AND (b.deleted IS NULL OR b.deleted = false)
+            """)
+    long countUnshelvedBooks();
+
+    @Query("""
+            SELECT COUNT(b) FROM BookEntity b
+            WHERE b.library.id IN :libraryIds
+              AND b.shelves IS EMPTY
+              AND (b.deleted IS NULL OR b.deleted = false)
+            """)
+    long countUnshelvedBooksByLibraryIds(@Param("libraryIds") Collection<Long> libraryIds);
+
+    @Query("""
+            SELECT b.library.id AS id, COUNT(b) AS count
+            FROM BookEntity b
+            WHERE (b.deleted IS NULL OR b.deleted = false)
+            GROUP BY b.library.id
+            """)
+    List<IdCountProjection> countBooksByLibrary();
+
+    @Query("""
+            SELECT b.library.id AS id, COUNT(b) AS count
+            FROM BookEntity b
+            WHERE b.library.id IN :libraryIds
+              AND (b.deleted IS NULL OR b.deleted = false)
+            GROUP BY b.library.id
+            """)
+    List<IdCountProjection> countBooksByLibraryIds(@Param("libraryIds") Collection<Long> libraryIds);
+
+    @Query("""
+            SELECT s.id AS id, COUNT(DISTINCT b) AS count
+            FROM BookEntity b
+            JOIN b.shelves s
+            WHERE (b.deleted IS NULL OR b.deleted = false)
+            GROUP BY s.id
+            """)
+    List<IdCountProjection> countBooksByShelf();
+
+    @Query("""
+            SELECT s.id AS id, COUNT(DISTINCT b) AS count
+            FROM BookEntity b
+            JOIN b.shelves s
+            WHERE b.library.id IN :libraryIds
+              AND (b.deleted IS NULL OR b.deleted = false)
+            GROUP BY s.id
+            """)
+    List<IdCountProjection> countBooksByShelfForLibraryIds(@Param("libraryIds") Collection<Long> libraryIds);
+
+    @Query("""
             SELECT COUNT(DISTINCT b) FROM BookEntity b
             JOIN b.bookFiles bf
             WHERE bf.isBookFormat = true
@@ -197,7 +274,7 @@ public interface BookRepository extends JpaRepository<BookEntity, Long>, JpaSpec
             """)
     List<BookEntity> findFilelessBooksByLibraryId(@Param("libraryId") Long libraryId);
 
-    @Query("SELECT b.id as id, m.coverUpdatedOn as coverUpdatedOn FROM BookEntity b LEFT JOIN b.metadata m WHERE b.id IN :bookIds")
+    @Query("SELECT b.id as id, m.coverUpdatedOn as coverUpdatedOn, m.audiobookCoverUpdatedOn as audiobookCoverUpdatedOn FROM BookEntity b LEFT JOIN b.metadata m WHERE b.id IN :bookIds")
     List<BookCoverUpdateProjection> findCoverUpdateInfoByIds(@Param("bookIds") Collection<Long> bookIds);
 
     @Modifying

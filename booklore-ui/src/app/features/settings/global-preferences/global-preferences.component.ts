@@ -1,6 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Observable} from 'rxjs';
 import {Button} from 'primeng/button';
 import {ToggleSwitch} from 'primeng/toggleswitch';
 import {MenuItem, MessageService} from 'primeng/api';
@@ -9,7 +8,6 @@ import {SplitButton} from 'primeng/splitbutton';
 import {AppSettingsService} from '../../../shared/service/app-settings.service';
 import {BookMetadataManageService} from '../../book/service/book-metadata-manage.service';
 import {AppSettingKey, AppSettings, CoverCroppingSettings} from '../../../shared/model/app-settings.model';
-import {filter, take} from 'rxjs/operators';
 import {InputText} from 'primeng/inputtext';
 import {Slider} from 'primeng/slider';
 import {ExternalDocLinkComponent} from '../../../shared/components/external-doc-link/external-doc-link.component';
@@ -56,7 +54,6 @@ export class GlobalPreferencesComponent implements OnInit {
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
 
-  appSettings$: Observable<AppSettings | null> = this.appSettingsService.appSettings$;
   maxFileUploadSizeInMb?: number;
   regenerateCoverMenuItems: MenuItem[] = [];
 
@@ -69,20 +66,18 @@ export class GlobalPreferencesComponent implements OnInit {
       }
     ];
 
-    this.appSettings$.pipe(
-      filter(settings => !!settings),
-      take(1)
-    ).subscribe(settings => {
-      if (settings?.maxFileUploadSizeInMb) {
+    const settings = this.appSettingsService.appSettings();
+    if (settings) {
+      if (settings.maxFileUploadSizeInMb) {
         this.maxFileUploadSizeInMb = settings.maxFileUploadSizeInMb;
       }
-      if (settings?.coverCroppingSettings) {
+      if (settings.coverCroppingSettings) {
         this.coverCroppingSettings = {...settings.coverCroppingSettings};
       }
       this.toggles.autoBookSearch = settings.autoBookSearch ?? false;
       this.toggles.similarBookRecommendation = settings.similarBookRecommendation ?? false;
-      this.toggles.enableTelemetry = settings?.telemetryEnabled ?? true;
-    });
+      this.toggles.enableTelemetry = settings.telemetryEnabled ?? true;
+    }
   }
 
   onToggleChange(settingKey: keyof typeof this.toggles, checked: boolean): void {

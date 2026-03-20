@@ -1,70 +1,48 @@
 import {inject, Injectable} from '@angular/core';
-import {BookStateService} from './book-state.service';
-import {Book, BookMetadata} from '../model/book.model';
+import {Book} from '../model/book.model';
+import {QueryClient} from '@tanstack/angular-query-experimental';
+import {
+  addBookToCache,
+  BookCoverTimestampPatch,
+  invalidateBookDetailQueries,
+  invalidateBooksQuery,
+  patchBookCoverTimestampsInCache,
+  patchBooksInCache,
+  removeBookQueries,
+} from './book-query-cache';
+import {BookSidebarCountsService} from './book-sidebar-counts.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class BookSocketService {
-  private bookStateService = inject(BookStateService);
+  private queryClient = inject(QueryClient);
+  private bookSidebarCountsService = inject(BookSidebarCountsService);
 
   handleNewlyCreatedBook(book: Book): void {
-    const currentState = this.bookStateService.getCurrentBookState();
-    const updatedBooks = currentState.books ? [...currentState.books] : [];
-    const bookIndex = updatedBooks.findIndex(existingBook => existingBook.id === book.id);
-    if (bookIndex > -1) {
-      updatedBooks[bookIndex] = book;
-    } else {
-      updatedBooks.push(book);
-    }
-    this.bookStateService.updateBookState({...currentState, books: updatedBooks});
+    addBookToCache(this.queryClient, book);
+    this.bookSidebarCountsService.invalidate();
   }
 
   handleRemovedBookIds(removedBookIds: number[]): void {
-    const currentState = this.bookStateService.getCurrentBookState();
-    const filteredBooks = (currentState.books || []).filter(book => !removedBookIds.includes(book.id));
-    this.bookStateService.updateBookState({...currentState, books: filteredBooks});
+    invalidateBooksQuery(this.queryClient);
+    removeBookQueries(this.queryClient, removedBookIds);
+    this.bookSidebarCountsService.invalidate();
   }
 
   handleBookUpdate(updatedBook: Book): void {
-    const currentState = this.bookStateService.getCurrentBookState();
-    const updatedBooks = (currentState.books || []).map(book =>
-      book.id === updatedBook.id ? updatedBook : book
-    );
-    this.bookStateService.updateBookState({...currentState, books: updatedBooks});
+    patchBooksInCache(this.queryClient, [updatedBook]);
   }
 
   handleMultipleBookUpdates(updatedBooks: Book[]): void {
-    const currentState = this.bookStateService.getCurrentBookState();
-    const currentBooks = currentState.books || [];
-
-    const updatedMap = new Map(updatedBooks.map(book => [book.id, book]));
-
-    const mergedBooks = currentBooks.map(book =>
-      updatedMap.has(book.id) ? updatedMap.get(book.id)! : book
-    );
-
-    this.bookStateService.updateBookState({...currentState, books: mergedBooks});
+    patchBooksInCache(this.queryClient, updatedBooks);
   }
 
-  handleBookMetadataUpdate(bookId: number, updatedMetadata: BookMetadata): void {
-    const currentState = this.bookStateService.getCurrentBookState();
-    const updatedBooks = (currentState.books || []).map(book => {
-      return book.id === bookId ? {...book, metadata: updatedMetadata} : book;
-    });
-    this.bookStateService.updateBookState({...currentState, books: updatedBooks});
+  refreshBookDetail(bookId: number): void {
+    invalidateBookDetailQueries(this.queryClient, [bookId]);
   }
 
-  handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
-    if (!patches || patches.length === 0) return;
-    const currentState = this.bookStateService.getCurrentBookState();
-    const books = currentState.books || [];
-    patches.forEach(p => {
-      const index = books.findIndex(b => b.id === p.id);
-      if (index !== -1 && books[index].metadata) {
-        books[index].metadata.coverUpdatedOn = p.coverUpdatedOn;
-      }
-    });
-    this.bookStateService.updateBookState({...currentState, books});
+  handleMultipleBookCoverPatches(patches: BookCoverTimestampPatch[]): void {
+    patchBookCoverTimestampsInCache(this.queryClient, patches);
   }
 }
