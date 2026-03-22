@@ -8,7 +8,7 @@ import {MessageService} from 'primeng/api';
 import {FileDownloadService} from '../../../shared/service/file-download.service';
 import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {patchBookInCacheWith, patchBooksInCache, removeBookQueries} from './book-query-cache';
+import {patchBookInCacheWith, patchBooksInCache, removeBooksFromCache} from './book-query-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -191,7 +191,7 @@ export class BookFileService {
     }).pipe(
       tap(response => {
         patchBooksInCache(this.queryClient, [response.updatedBook]);
-        removeBookQueries(this.queryClient, response.deletedSourceBookIds);
+        removeBooksFromCache(this.queryClient, response.deletedSourceBookIds);
         this.messageService.add({
           severity: 'success',
           summary: this.t.translate('book.bookService.toast.filesAttachedSummary'),

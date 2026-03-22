@@ -5,7 +5,8 @@ import {Book} from '../model/book.model';
 import {
   addBookToCache,
   patchBooksInCache,
-  removeBookQueries
+  removeBookQueries,
+  removeBooksFromCache
 } from './book-query-cache';
 import {
   BOOKS_QUERY_KEY,
@@ -86,5 +87,20 @@ describe('book-query-cache', () => {
     expect(queryClient.getQueryData(bookDetailQueryKey(1, true))).toBeUndefined();
     expect(queryClient.getQueryData(bookRecommendationsQueryKey(1, 20))).toBeUndefined();
     expect(queryClient.getQueryData(bookDetailQueryKey(2, false))).toEqual(secondBook);
+  });
+
+  it('removes deleted books from the list cache and associated queries', () => {
+    const firstBook = makeBook(1);
+    const secondBook = makeBook(2);
+
+    queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [firstBook, secondBook]);
+    queryClient.setQueryData(bookDetailQueryKey(1, false), firstBook);
+    queryClient.setQueryData(bookRecommendationsQueryKey(1, 20), [secondBook]);
+
+    removeBooksFromCache(queryClient, [1]);
+
+    expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)).toEqual([secondBook]);
+    expect(queryClient.getQueryData(bookDetailQueryKey(1, false))).toBeUndefined();
+    expect(queryClient.getQueryData(bookRecommendationsQueryKey(1, 20))).toBeUndefined();
   });
 });

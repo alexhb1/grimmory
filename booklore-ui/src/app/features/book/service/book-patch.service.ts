@@ -13,6 +13,23 @@ import {
   patchBookFieldsInCache,
 } from './book-query-cache';
 
+function getResetProgressFields(type: ResetProgressType): Partial<Book> {
+  if (type === ResetProgressTypes.KOREADER) {
+    return {koreaderProgress: undefined};
+  }
+
+  if (type === ResetProgressTypes.KOBO) {
+    return {koboProgress: undefined};
+  }
+
+  return {
+    epubProgress: undefined,
+    pdfProgress: undefined,
+    cbxProgress: undefined,
+    audiobookProgress: undefined,
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -172,7 +189,12 @@ export class BookPatchService {
       tap(responses => {
         patchBookFieldsInCache(this.queryClient, responses.map(r => ({
           bookId: r.bookId,
-          fields: {readStatus: r.readStatus, readStatusModifiedTime: r.readStatusModifiedTime, dateFinished: r.dateFinished}
+          fields: {
+            ...getResetProgressFields(type),
+            readStatus: r.readStatus,
+            readStatusModifiedTime: r.readStatusModifiedTime,
+            dateFinished: r.dateFinished
+          }
         })));
       })
     );

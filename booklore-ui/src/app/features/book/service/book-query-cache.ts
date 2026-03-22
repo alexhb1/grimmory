@@ -27,6 +27,18 @@ export function removeBookQueries(queryClient: QueryClient, bookIds: Iterable<nu
   }
 }
 
+export function removeBooksFromCache(queryClient: QueryClient, bookIds: Iterable<number>): void {
+  const removedIds = new Set(bookIds);
+  if (removedIds.size === 0) {
+    return;
+  }
+
+  queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, current =>
+    (current ?? []).filter(book => !removedIds.has(book.id))
+  );
+  removeBookQueries(queryClient, removedIds);
+}
+
 // --- Surgical patches (updates cache directly, no list refetch) ---
 
 export function addBookToCache(queryClient: QueryClient, book: Book): void {
