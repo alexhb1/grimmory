@@ -1,21 +1,23 @@
 import {Component, inject, OnDestroy, OnInit} from '@angular/core';
+import {CoverPlaceholderComponent} from '../../../../shared/components/cover-generator/cover-generator.component';
 import {FormsModule} from '@angular/forms';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
-import {Button} from 'primeng/button';
-import {Checkbox} from 'primeng/checkbox';
-import {RadioButton} from 'primeng/radiobutton';
-import {SelectButton} from 'primeng/selectbutton';
-import {ProgressBar} from 'primeng/progressbar';
-import {Tag} from 'primeng/tag';
-import {Paginator} from 'primeng/paginator';
 import {Subject, takeUntil} from 'rxjs';
 import {BookFileService} from '../../service/book-file.service';
 import {BookService} from '../../service/book.service';
 import {Book, DuplicateDetectionRequest, DuplicateGroup} from '../../model/book.model';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {UrlHelperService} from '../../../../shared/service/url-helper.service';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
+import {ModalRef} from '../../../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../../../shared/components/ui/modal/modal-host';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button';
+import {CheckboxComponent} from '../../../../shared/components/ui/checkbox/checkbox';
+import {SelectButtonComponent} from '../../../../shared/components/ui/select-button/select-button';
+import {TagComponent} from '../../../../shared/components/ui/tag/tag';
+import {RadioComponent} from '../../../../shared/components/ui/radio/radio';
+import {Paginator} from 'primeng/paginator';
 
 type PresetMode = 'strict' | 'balanced' | 'aggressive' | 'custom';
 
@@ -30,18 +32,18 @@ interface DisplayGroup extends DuplicateGroup {
   standalone: true,
   imports: [
     FormsModule,
-    Button,
-    Checkbox,
-    RadioButton,
-    SelectButton,
-    ProgressBar,
-    Tag,
+    ButtonComponent,
+    CheckboxComponent,
+    SelectButtonComponent,
+    TagComponent,
+    RadioComponent,
     Paginator,
     TranslocoDirective,
     TranslocoPipe,
+    CoverPlaceholderComponent,
   ],
   templateUrl: './duplicate-merger.component.html',
-  styleUrls: ['./duplicate-merger.component.scss']
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class DuplicateMergerComponent implements OnInit, OnDestroy {
   libraryId!: number;
@@ -62,7 +64,7 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
   mergeTotal = 0;
 
   groups: DisplayGroup[] = [];
-  presetOptions: { label: string; value: PresetMode }[] = [];
+  presetOptions: { label: string; value: string }[] = [];
 
   pageFirst = 0;
   pageSize = 20;
@@ -72,14 +74,15 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
   private readonly bookService = inject(BookService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
-  private readonly dialogRef = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly confirmService = inject(ConfirmService);
+  readonly modalRef = inject(ModalRef);
+  private data = inject(MODAL_DATA) as {libraryId?: number} | null;
   private readonly t = inject(TranslocoService);
   readonly urlHelper = inject(UrlHelperService);
   private readonly appSettingsService = inject(AppSettingsService);
 
   ngOnInit(): void {
-    this.libraryId = this.config.data.libraryId;
+    this.libraryId = this.data?.libraryId!;
 
     const settings = this.appSettingsService.appSettings();
     if (settings) {
@@ -100,7 +103,8 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  onPresetChange(): void {
+  onPresetChange(value: string): void {
+    this.presetMode = value as PresetMode;
     if (this.presetMode !== 'custom') {
       this.applyPreset(this.presetMode);
     }
@@ -246,7 +250,7 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
     return `${(sizeMb / 1024).toFixed(2)} GB`;
   }
 
-  getMatchReasonSeverity(reason: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
+  getMatchReasonSeverity(reason: string): 'default' | 'info' | 'success' | 'warn' | 'danger' {
     switch (reason) {
       case 'ISBN':
       case 'EXTERNAL_ID':
@@ -256,13 +260,14 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
       case 'DIRECTORY':
         return 'warn';
       case 'FILENAME':
-        return 'secondary';
+        return 'default';
       default:
         return 'info';
     }
   }
 
-  onTargetChange(group: DisplayGroup): void {
+  onTargetChange(group: DisplayGroup, bookIdStr: string): void {
+    group.selectedTargetBookId = Number(bookIdStr);
     group.selectedForDeletion.delete(group.selectedTargetBookId);
   }
 
@@ -365,30 +370,24 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
     const idsToDelete = Array.from(group.selectedForDeletion);
     if (idsToDelete.length === 0) return;
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.duplicateMerger.confirm.deleteHeader'),
       message: this.t.translate('book.duplicateMerger.confirm.deleteMessage', {count: idsToDelete.length}),
-      header: this.t.translate('book.duplicateMerger.confirm.deleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.t.translate('common.yes'),
-      rejectLabel: this.t.translate('common.no'),
-      acceptButtonProps: {severity: 'danger'},
-      accept: () => {
-        this.bookService.deleteBooks(new Set(idsToDelete)).pipe(
-          takeUntil(this.destroy$)
-        ).subscribe({
-          next: () => {
-            group.books = group.books.filter(b => !group.selectedForDeletion.has(b.id));
-            group.selectedForDeletion.clear();
-            if (group.books.length <= 1) {
-              group.dismissed = true;
-            }
+      confirmLabel: this.t.translate('common.yes'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookService.deleteBooks(new Set(idsToDelete)).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: () => {
+          group.books = group.books.filter(b => !group.selectedForDeletion.has(b.id));
+          group.selectedForDeletion.clear();
+          if (group.books.length <= 1) {
+            group.dismissed = true;
           }
-        });
-      }
+        }
+      });
     });
-  }
-
-  closeDialog(): void {
-    this.dialogRef.close();
   }
 }

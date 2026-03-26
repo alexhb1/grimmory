@@ -1,10 +1,8 @@
 import {Component, computed, inject, OnInit} from '@angular/core';
-import {Button} from 'primeng/button';
 import {DashboardScrollerComponent} from '../dashboard-scroller/dashboard-scroller.component';
 import {BookService} from '../../../book/service/book.service';
 import {Book, ReadStatus} from '../../../book/model/book.model';
 import {UserService} from '../../../settings/user-management/user.service';
-import {ProgressSpinner} from 'primeng/progressspinner';
 import {TooltipModule} from 'primeng/tooltip';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {DashboardConfigService} from '../../services/dashboard-config.service';
@@ -12,22 +10,20 @@ import {ScrollerConfig, ScrollerType} from '../../models/dashboard-config.model'
 import {MagicShelfService} from '../../../magic-shelf/service/magic-shelf.service';
 import {BookRuleEvaluatorService} from '../../../magic-shelf/service/book-rule-evaluator.service';
 import {GroupRule} from '../../../magic-shelf/component/magic-shelf-component';
-import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
 import {SortService} from '../../../book/service/sort.service';
 import {PageTitleService} from '../../../../shared/service/page-title.service';
 import {SortDirection, SortOption} from '../../../book/model/sort.model';
 import {LibraryService} from '../../../book/service/library.service';
+import {SpinnerComponent} from '../../../../shared/components/ui/spinner/spinner';
 
 const DEFAULT_MAX_ITEMS = 20;
 
 @Component({
   selector: 'app-main-dashboard',
   templateUrl: './main-dashboard.component.html',
-  styleUrls: ['./main-dashboard.component.scss'],
   imports: [
-    Button,
     DashboardScrollerComponent,
-    ProgressSpinner,
+    SpinnerComponent,
     TooltipModule,
     TranslocoDirective
   ],
@@ -35,9 +31,8 @@ const DEFAULT_MAX_ITEMS = 20;
 })
 export class MainDashboardComponent implements OnInit {
 
-  private bookService = inject(BookService);
-  private libraryService = inject(LibraryService);
-  private dialogLauncher = inject(DialogLauncherService);
+  readonly bookService = inject(BookService);
+  readonly libraryService = inject(LibraryService);
   protected userService = inject(UserService);
   private dashboardConfigService = inject(DashboardConfigService);
   private magicShelfService = inject(MagicShelfService);
@@ -200,11 +195,18 @@ export class MainDashboardComponent implements OnInit {
     return shuffled.slice(0, maxItems);
   }
 
+  shouldHideScroller(config: ScrollerConfig): boolean {
+    if (config.type === ScrollerType.LAST_READ || config.type === ScrollerType.LAST_LISTENED) {
+      return this.getBooksForScroller(config).length === 0;
+    }
+    return false;
+  }
+
   openDashboardSettings(): void {
-    this.dialogLauncher.openDashboardSettingsDialog();
+    // TODO: migrate to ModalService
   }
 
   createNewLibrary() {
-    this.dialogLauncher.openLibraryCreateDialog();
+    // TODO: migrate to ModalService
   }
 }

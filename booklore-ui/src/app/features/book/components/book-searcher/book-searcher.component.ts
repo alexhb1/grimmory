@@ -14,6 +14,7 @@ import {IconField} from 'primeng/iconfield';
 import {InputIcon} from 'primeng/inputicon';
 import {filterBooksBySearchTerm} from '../book-browser/filters/HeaderFilter';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {CoverPlaceholderComponent} from '../../../../shared/components/cover-generator/cover-generator.component';
 
 @Component({
   selector: 'app-book-searcher',
@@ -27,6 +28,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
     IconField,
     InputIcon,
     TranslocoDirective,
+    CoverPlaceholderComponent,
   ],
   styleUrls: ['./book-searcher.component.scss'],
   standalone: true

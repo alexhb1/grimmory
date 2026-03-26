@@ -14,8 +14,6 @@ import java.nio.file.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -33,7 +31,6 @@ public class BookdropMonitoringService {
     private WatchKey watchKey;
     private volatile boolean paused;
     private volatile boolean disabled;
-    private final Lock monitorLock = new ReentrantLock();
 
     public BookdropMonitoringService(
             AppProperties appProperties,
@@ -94,44 +91,34 @@ public class BookdropMonitoringService {
         log.info("Stopped bookdrop folder monitor");
     }
 
-    public void pauseMonitoring() {
+    public synchronized void pauseMonitoring() {
         if (disabled) return;
-        monitorLock.lock();
-        try {
-            if (!paused) {
-                if (watchKey != null) {
-                    watchKey.cancel();
-                    watchKey = null;
-                }
-                paused = true;
-                log.info("Bookdrop monitoring paused.");
-            } else {
-                log.info("Bookdrop monitoring already paused.");
+        if (!paused) {
+            if (watchKey != null) {
+                watchKey.cancel();
+                watchKey = null;
             }
-        } finally {
-            monitorLock.unlock();
+            paused = true;
+            log.info("Bookdrop monitoring paused.");
+        } else {
+            log.info("Bookdrop monitoring already paused.");
         }
     }
 
-    public void resumeMonitoring() {
+    public synchronized void resumeMonitoring() {
         if (disabled) return;
-        monitorLock.lock();
-        try {
-            if (paused) {
-                try {
-                    watchKey = bookdrop.register(watchService,
-                            StandardWatchEventKinds.ENTRY_CREATE,
-                            StandardWatchEventKinds.ENTRY_DELETE);
-                    paused = false;
-                    log.info("Bookdrop monitoring resumed.");
-                } catch (IOException e) {
-                    log.error("Error reregistering bookdrop folder during resume", e);
-                }
-            } else {
-                log.info("Bookdrop monitoring is not paused, cannot resume.");
+        if (paused) {
+            try {
+                watchKey = bookdrop.register(watchService,
+                        StandardWatchEventKinds.ENTRY_CREATE,
+                        StandardWatchEventKinds.ENTRY_DELETE);
+                paused = false;
+                log.info("Bookdrop monitoring resumed.");
+            } catch (IOException e) {
+                log.error("Error reregistering bookdrop folder during resume", e);
             }
-        } finally {
-            monitorLock.unlock();
+        } else {
+            log.info("Bookdrop monitoring is not paused, cannot resume.");
         }
     }
 

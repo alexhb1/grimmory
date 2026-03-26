@@ -95,7 +95,9 @@
       "resetGrimmoryProgress": "Reset Grimmory Progress",
       "resetKOReaderProgress": "Reset KOReader Progress",
       "book": "Book",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "read": "Read",
+      "play": "Play"
     },
     "confirm": {
       "deleteBookMessage": "Are you sure you want to delete \"{{ title }}\"?\n\nThis will permanently remove the book file from your filesystem.\n\nThis action cannot be undone.",
@@ -604,9 +606,9 @@
   },
   "shelfAssigner": {
     "title": "Assign Books to Shelves",
-    "descriptionMulti": "Select shelves for {{ count }} book(s)",
+    "descriptionMulti": "Select shelves for {{ count }} books",
     "descriptionSingle": "Organize \"{{ title }}\" into your shelves",
-    "shelvesAvailable": "{{ count }} shelf(ves) available",
+    "shelvesAvailable": "{{ count }} shelves",
     "searchPlaceholder": "Search shelves...",
     "emptyTitle": "No Shelves Available",
     "emptyDescription": "Create your first shelf to start organizing your books.<br/>Click the button below to get started.",
@@ -614,7 +616,7 @@
     "cancelButton": "Cancel",
     "saveChanges": "Save Changes",
     "loading": {
-      "updatingShelves": "Updating shelves for {{ count }} book(s)..."
+      "updatingShelves": "Updating shelves for {{ count }} books..."
     },
     "toast": {
       "updateSuccessDetail": "Book shelves updated",
@@ -628,7 +630,7 @@
     "shelfNameLabel": "Shelf Name",
     "shelfNamePlaceholder": "e.g., Favorites, To Read, Currently Reading",
     "shelfIconLabel": "Shelf Icon (Optional)",
-    "chooseIcon": "Choose an Icon",
+    "chooseIcon": "Choose icon",
     "chooseIconSubtitle": "Select from available icons",
     "selectedIcon": "Selected Icon",
     "removeIconTooltip": "Remove icon",
@@ -649,7 +651,7 @@
     "shelfNameLabel": "Shelf Name:",
     "shelfNamePlaceholder": "Enter shelf name...",
     "shelfIconLabel": "Shelf Icon:",
-    "selectIcon": "Select Icon",
+    "selectIcon": "Choose icon",
     "visibilityLabel": "Visibility:",
     "publicShelfLabel": "Public Shelf",
     "cancelButton": "Cancel",
@@ -758,7 +760,7 @@
     "unknownFilename": "Unknown filename"
   },
   "searcher": {
-    "placeholder": "Title, Author, Series, Genre, or ISBN...",
+    "placeholder": "Search books, libraries, shelves, and more...",
     "clearSearch": "Clear Search",
     "bookCoverAlt": "Book Cover",
     "byPrefix": "by",

@@ -1,228 +1,214 @@
 <ng-container *transloco="let t; prefix: 'book.duplicateMerger'">
-<div class="duplicate-merger-container">
-  <div class="panel-header">
-    <div class="header-icon-wrapper">
-      <i class="pi pi-copy header-icon"></i>
-    </div>
-    <div class="header-text">
-      <h2 class="panel-title">{{ t('title') }}</h2>
-      <p class="panel-description">{{ t('description') }}</p>
-    </div>
-    <p-button
-      icon="pi pi-times"
-      [rounded]="true"
-      [text]="true"
-      severity="secondary"
-      (click)="closeDialog()"
-      class="close-button">
-    </p-button>
-  </div>
+  <!-- Scrollable body -->
+  <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-4" (scroll)="modalRef.reportScroll($event)">
 
-  <div class="dialog-content">
     <!-- Preset Mode Selector -->
-    <div class="preset-section">
-      <p-selectButton
+    <div class="flex items-center">
+      <app-select-button
         [options]="presetOptions"
-        [(ngModel)]="presetMode"
-        (onChange)="onPresetChange()"
-        optionLabel="label"
-        optionValue="value"
-        [disabled]="isScanning || isMerging">
-      </p-selectButton>
+        [value]="presetMode"
+        (valueChange)="onPresetChange($event)"
+        [disabled]="isScanning || isMerging"
+      />
     </div>
 
     <!-- Advanced Toggles -->
-    <div class="advanced-section">
-      <button class="advanced-toggle" (click)="showAdvanced = !showAdvanced">
-        <i class="pi" [class.pi-chevron-right]="!showAdvanced" [class.pi-chevron-down]="showAdvanced"></i>
+    <div>
+      <button
+        type="button"
+        class="flex items-center gap-2 bg-transparent border-none text-ink-muted text-sm font-medium cursor-pointer py-1 px-0 hover:text-ink-light transition-colors"
+        (click)="showAdvanced = !showAdvanced"
+      >
+        @if (showAdvanced) {
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        } @else {
+          <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        }
         {{ t('advanced') }}
       </button>
 
       @if (showAdvanced) {
-        <div class="signal-checkboxes">
-          <div class="signal-checkbox">
-            <p-checkbox [(ngModel)]="matchByIsbn" [binary]="true" inputId="isbn" (onChange)="onSignalToggle()" [disabled]="isScanning || isMerging"></p-checkbox>
-            <label for="isbn">{{ t('signalIsbn') }}</label>
-          </div>
-          <div class="signal-checkbox">
-            <p-checkbox [(ngModel)]="matchByExternalId" [binary]="true" inputId="externalId" (onChange)="onSignalToggle()" [disabled]="isScanning || isMerging"></p-checkbox>
-            <label for="externalId">{{ t('signalExternalId') }}</label>
-          </div>
-          <div class="signal-checkbox">
-            <p-checkbox [(ngModel)]="matchByTitleAuthor" [binary]="true" inputId="titleAuthor" (onChange)="onSignalToggle()" [disabled]="isScanning || isMerging"></p-checkbox>
-            <label for="titleAuthor">{{ t('signalTitleAuthor') }}</label>
-          </div>
-          <div class="signal-checkbox">
-            <p-checkbox [(ngModel)]="matchByDirectory" [binary]="true" inputId="directory" (onChange)="onSignalToggle()" [disabled]="isScanning || isMerging"></p-checkbox>
-            <label for="directory">{{ t('signalDirectory') }}</label>
-          </div>
-          <div class="signal-checkbox">
-            <p-checkbox [(ngModel)]="matchByFilename" [binary]="true" inputId="filename" (onChange)="onSignalToggle()" [disabled]="isScanning || isMerging"></p-checkbox>
-            <label for="filename">{{ t('signalFilename') }}</label>
-          </div>
+        <div class="flex flex-wrap gap-y-3 gap-x-6 pt-3">
+          <app-checkbox [checked]="matchByIsbn" (checkedChange)="matchByIsbn = $event; onSignalToggle()" [disabled]="isScanning || isMerging">
+            {{ t('signalIsbn') }}
+          </app-checkbox>
+          <app-checkbox [checked]="matchByExternalId" (checkedChange)="matchByExternalId = $event; onSignalToggle()" [disabled]="isScanning || isMerging">
+            {{ t('signalExternalId') }}
+          </app-checkbox>
+          <app-checkbox [checked]="matchByTitleAuthor" (checkedChange)="matchByTitleAuthor = $event; onSignalToggle()" [disabled]="isScanning || isMerging">
+            {{ t('signalTitleAuthor') }}
+          </app-checkbox>
+          <app-checkbox [checked]="matchByDirectory" (checkedChange)="matchByDirectory = $event; onSignalToggle()" [disabled]="isScanning || isMerging">
+            {{ t('signalDirectory') }}
+          </app-checkbox>
+          <app-checkbox [checked]="matchByFilename" (checkedChange)="matchByFilename = $event; onSignalToggle()" [disabled]="isScanning || isMerging">
+            {{ t('signalFilename') }}
+          </app-checkbox>
         </div>
       }
     </div>
 
     <!-- Action Bar -->
-    <div class="action-bar">
-      <div class="action-bar-left">
-        <p-button
-          [label]="t('scan')"
-          icon="pi pi-search"
-          (click)="scan()"
-          [disabled]="!canScan"
-          [loading]="isScanning">
-        </p-button>
+    <div class="flex items-center justify-between gap-4 py-3 border-t border-b border-edge">
+      <div class="flex items-center gap-3">
+        <app-button variant="primary" [disabled]="!canScan" (click)="scan()">
+          @if (isScanning) {
+            <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          } @else {
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          }
+          {{ t('scan') }}
+        </app-button>
       </div>
-      <div class="action-bar-right">
-        <div class="delete-option">
-          <p-checkbox
-            [(ngModel)]="moveFiles"
-            [binary]="true"
-            inputId="moveFiles"
-            [disabled]="isMerging">
-          </p-checkbox>
-          <label for="moveFiles">{{ 'book.fileAttacher.moveFilesLabel' | transloco }}</label>
-        </div>
+      <div class="flex items-center gap-4">
+        <app-checkbox [checked]="moveFiles" (checkedChange)="moveFiles = $event" [disabled]="isMerging">
+          {{ 'book.fileAttacher.moveFilesLabel' | transloco }}
+        </app-checkbox>
         @if (activeGroups.length > 0) {
-          <p-button
-            [label]="t('mergeAll', { count: activeGroups.length })"
-            icon="pi pi-check-circle"
-            severity="success"
-            (click)="mergeAll()"
-            [disabled]="isMerging"
-            [loading]="isMerging">
-          </p-button>
+          <app-button variant="primary" [disabled]="isMerging" (click)="mergeAll()">
+            @if (isMerging) {
+              <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            } @else {
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12 11 14 15 10"/><circle cx="12" cy="12" r="10"/></svg>
+            }
+            {{ t('mergeAll', { count: activeGroups.length }) }}
+          </app-button>
         }
       </div>
     </div>
 
     <!-- Merge Progress -->
     @if (isMerging) {
-      <p-progressBar [value]="mergeTotal > 0 ? (mergeProgress / mergeTotal) * 100 : 0" [showValue]="false"></p-progressBar>
+      <div class="w-full h-2 bg-surface-raised rounded-full overflow-hidden">
+        <div class="h-full bg-accent rounded-full transition-all duration-300" [style.width.%]="mergeTotal > 0 ? (mergeProgress / mergeTotal) * 100 : 0"></div>
+      </div>
     }
 
     <!-- Help Text -->
     @if (hasScanned && activeGroups.length > 0) {
-      <div class="help-text">
-        <i class="pi pi-info-circle"></i>
+      <div class="flex items-start gap-2 px-3 py-2.5 text-[13px] text-ink-muted bg-surface-hover rounded-[6px] leading-relaxed">
+        <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
         <span>{{ t('helpText') }}</span>
       </div>
     }
 
     <!-- Results Area -->
-    <div class="results-area">
+    <div class="flex-1 min-h-0">
       @if (isScanning) {
-        <div class="empty-state">
-          <i class="pi pi-spin pi-spinner"></i>
-          <p>{{ t('scanning') }}</p>
+        <div class="flex flex-col items-center justify-center py-12 text-ink-muted gap-3">
+          <svg class="w-10 h-10 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          <p class="text-[15px] m-0">{{ t('scanning') }}</p>
         </div>
       } @else if (!hasScanned) {
-        <div class="empty-state">
-          <i class="pi pi-search"></i>
-          <p>{{ t('scanPrompt') }}</p>
+        <div class="flex flex-col items-center justify-center py-12 text-ink-muted gap-3">
+          <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <p class="text-[15px] m-0">{{ t('scanPrompt') }}</p>
         </div>
       } @else if (activeGroups.length === 0 && groups.length === 0) {
-        <div class="empty-state">
-          <i class="pi pi-check-circle"></i>
-          <p>{{ t('noDuplicates') }}</p>
+        <div class="flex flex-col items-center justify-center py-12 text-ink-muted gap-3">
+          <svg class="w-10 h-10 text-status-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12 11 14 15 10"/><circle cx="12" cy="12" r="10"/></svg>
+          <p class="text-[15px] m-0">{{ t('noDuplicates') }}</p>
         </div>
       } @else if (activeGroups.length === 0 && groups.length > 0) {
-        <div class="empty-state">
-          <i class="pi pi-check-circle"></i>
-          <p>{{ t('allMerged') }}</p>
+        <div class="flex flex-col items-center justify-center py-12 text-ink-muted gap-3">
+          <svg class="w-10 h-10 text-status-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12 11 14 15 10"/><circle cx="12" cy="12" r="10"/></svg>
+          <p class="text-[15px] m-0">{{ t('allMerged') }}</p>
         </div>
       } @else {
-        <div class="groups-list">
+        <div class="flex flex-col gap-3">
           @for (group of pagedGroups; track group.suggestedTargetBookId) {
-            <div class="duplicate-group">
-              <div class="group-header">
-                <span class="group-label">{{ t('groupLabel', { index: pageFirst + $index + 1 }) }}</span>
-                <p-tag [value]="getMatchReasonLabel(group.matchReason)" [severity]="getMatchReasonSeverity(group.matchReason)"></p-tag>
+            <div class="border border-edge rounded-lg overflow-hidden">
+              <!-- Group Header -->
+              <div class="flex items-center gap-3 px-3 py-2 border-b border-edge">
+                <span class="font-semibold text-[13px] text-ink-muted">{{ t('groupLabel', { index: pageFirst + $index + 1 }) }}</span>
+                <app-tag [severity]="getMatchReasonSeverity(group.matchReason)">{{ getMatchReasonLabel(group.matchReason) }}</app-tag>
                 @if (hasSameFormatConflict(group)) {
-                  <p-tag [value]="t('sameFormatWarning')" severity="warn" icon="pi pi-exclamation-triangle"></p-tag>
+                  <app-tag severity="warn">
+                    <svg class="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    {{ t('sameFormatWarning') }}
+                  </app-tag>
                 }
-                <div class="group-actions">
-                  <p-button
-                    [label]="t('merge')"
-                    icon="pi pi-check"
-                    size="small"
-                    severity="success"
-                    (click)="mergeGroup(group)"
-                    [disabled]="isMerging">
-                  </p-button>
+                <div class="ml-auto flex gap-2">
+                  <app-button variant="primary" [disabled]="isMerging" (click)="mergeGroup(group)">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                    {{ t('merge') }}
+                  </app-button>
                   @if (getDeleteSelectedCount(group) > 0) {
-                    <p-button
-                      [label]="t('deleteSelected', { count: getDeleteSelectedCount(group) })"
-                      icon="pi pi-trash"
-                      size="small"
-                      severity="danger"
-                      [outlined]="true"
-                      (click)="deleteGroup(group)"
-                      [disabled]="isMerging">
-                    </p-button>
+                    <app-button variant="danger" [disabled]="isMerging" (click)="deleteGroup(group)">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                      {{ t('deleteSelected', { count: getDeleteSelectedCount(group) }) }}
+                    </app-button>
                   }
-                  <p-button
-                    [label]="t('dismiss')"
-                    icon="pi pi-times"
-                    size="small"
-                    severity="secondary"
-                    [outlined]="true"
-                    (click)="dismissGroup(group)"
-                    [disabled]="isMerging">
-                  </p-button>
+                  <app-button variant="secondary" [disabled]="isMerging" (click)="dismissGroup(group)">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    {{ t('dismiss') }}
+                  </app-button>
                 </div>
               </div>
-              <div class="group-books">
+              <!-- Group Books -->
+              <div class="flex flex-col">
                 @for (book of group.books; track book.id) {
-                  <div class="book-row" [class.selected-target]="book.id === group.selectedTargetBookId" [class.marked-for-deletion]="group.selectedForDeletion.has(book.id)">
+                  <div
+                    class="flex items-center gap-3 px-3 py-2.5 transition-colors"
+                    [class.bg-accent-wash]="book.id === group.selectedTargetBookId"
+                    [class.bg-status-abandoned-bg]="group.selectedForDeletion.has(book.id)"
+                    [class.border-b]="!$last"
+                    [class.border-edge/50]="!$last"
+                  >
                     @if (book.id !== group.selectedTargetBookId) {
-                      <p-checkbox
-                        [binary]="true"
-                        [ngModel]="group.selectedForDeletion.has(book.id)"
-                        (onChange)="toggleDeleteSelection(group, book.id)"
-                        [disabled]="isMerging"
-                        class="delete-checkbox">
-                      </p-checkbox>
+                      <div class="shrink-0">
+                        <app-checkbox
+                          [checked]="group.selectedForDeletion.has(book.id)"
+                          (checkedChange)="toggleDeleteSelection(group, book.id)"
+                          [disabled]="isMerging"
+                        />
+                      </div>
                     }
-                    <img class="book-cover"
-                         [src]="urlHelper.getThumbnailUrl(book.id, book.metadata?.coverUpdatedOn)"
-                         [alt]="book.metadata?.title || ''"
-                         loading="lazy"/>
-                    <div class="book-info">
-                      <div class="book-title">{{ book.metadata?.title || ('book.fileAttacher.unknownTitle' | transloco) }}</div>
+                    @if (urlHelper.getThumbnailUrl(book.id, book.metadata?.coverUpdatedOn); as coverSrc) {
+                      <img
+                        class="w-9 h-[52px] shrink-0 rounded-[3px] object-cover bg-surface-hover"
+                        [src]="coverSrc"
+                        [alt]="book.metadata?.title || ''"
+                        loading="lazy"
+                      />
+                    } @else {
+                      <div class="w-9 h-[52px] shrink-0 rounded-[3px] overflow-hidden">
+                        <app-cover-placeholder [title]="book.metadata?.title ?? ''" [author]="(book.metadata?.authors ?? []).join(', ')" />
+                      </div>
+                    }
+                    <div class="flex-1 min-w-0 flex flex-col gap-px">
+                      <div class="font-semibold text-sm text-ink truncate">{{ book.metadata?.title || ('book.fileAttacher.unknownTitle' | transloco) }}</div>
                       @if (book.metadata?.authors?.length) {
-                        <div class="book-authors">{{ book.metadata?.authors?.join(', ') }}</div>
+                        <div class="text-[13px] text-ink-muted truncate">{{ book.metadata?.authors?.join(', ') }}</div>
                       }
-                      <div class="book-formats">
+                      <div class="flex flex-wrap gap-1 mt-0.5">
                         @for (format of getBookFormats(book); track format) {
-                          <span class="format-badge">{{ format }}</span>
+                          <span class="inline-block text-[10px] font-bold px-1.5 py-px rounded-[3px] bg-accent-wash text-accent-text uppercase tracking-wide">{{ format }}</span>
                         }
                         @if (getFileCount(book) > 1) {
-                          <span class="file-count">{{ t('fileCount', { count: getFileCount(book) }) }}</span>
+                          <span class="text-xs text-ink-muted">{{ t('fileCount', { count: getFileCount(book) }) }}</span>
                         }
                         @if (book.primaryFile?.fileSizeKb) {
-                          <span class="file-detail">{{ formatFileSize(book.primaryFile?.fileSizeKb) }}</span>
+                          <span class="text-xs text-ink-muted">{{ formatFileSize(book.primaryFile?.fileSizeKb) }}</span>
                         }
                       </div>
                       @if (book.primaryFile?.fileName) {
-                        <div class="book-file-path" [title]="getBookFilePath(book)">
-                          <i class="pi pi-file"></i>
+                        <div class="flex items-center gap-1 text-xs text-ink-muted truncate mt-0.5" [title]="getBookFilePath(book)">
+                          <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
                           {{ getBookFilePath(book) }}
                         </div>
                       }
                     </div>
-                    <div class="book-select">
-                      <p-radioButton
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <app-radio
                         [name]="'target-' + group.suggestedTargetBookId"
-                        [value]="book.id"
-                        [(ngModel)]="group.selectedTargetBookId"
-                        (onClick)="onTargetChange(group)"
-                        [disabled]="isMerging">
-                      </p-radioButton>
+                        [value]="'' + book.id"
+                        [selected]="'' + group.selectedTargetBookId"
+                        (selectedChange)="onTargetChange(group, $event)"
+                        [disabled]="isMerging"
+                      />
                       @if (book.id === group.selectedTargetBookId) {
-                        <span class="target-label">{{ t('target') }}</span>
+                        <span class="text-[11px] text-accent uppercase font-bold tracking-wide">{{ t('target') }}</span>
                       }
                     </div>
                   </div>
@@ -244,5 +230,4 @@
       }
     </div>
   </div>
-</div>
 </ng-container>

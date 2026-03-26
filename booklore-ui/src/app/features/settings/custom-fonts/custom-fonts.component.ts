@@ -6,11 +6,11 @@ import {CustomFontService} from '../../../shared/service/custom-font.service';
 import {CustomFont, formatFileSize} from '../../../shared/model/custom-font.model';
 import {ConfirmDialog} from 'primeng/confirmdialog';
 import {ConfirmationService} from 'primeng/api';
+import {ConfirmService} from '../../../shared/components/ui/confirm-modal/confirm.service';
 import {Tooltip} from 'primeng/tooltip';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FontUploadDialogComponent} from './font-upload-dialog/font-upload-dialog.component';
 import {Skeleton} from 'primeng/skeleton';
-import {DialogSize, DialogStyle} from '../../../shared/services/dialog-launcher.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 
 @Component({
@@ -30,6 +30,7 @@ export class CustomFontsComponent implements OnInit {
   readonly maxFonts = 10;
 
   private t = inject(TranslocoService);
+  private confirmService = inject(ConfirmService);
 
   constructor(
     private customFontService: CustomFontService,
@@ -78,7 +79,7 @@ export class CustomFontsComponent implements OnInit {
 
     this.uploadDialogRef = this.dialogService.open(FontUploadDialogComponent, {
       showHeader: false,
-      styleClass: `${DialogSize.MD} ${DialogStyle.MINIMAL}`,
+      styleClass: 'dialog-md dialog-minimal',
       modal: true,
       dismissableMask: false,
       closable: false,
@@ -95,30 +96,30 @@ export class CustomFontsComponent implements OnInit {
   }
 
   deleteFont(font: CustomFont): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('settingsReader.fonts.deleteFontHeader'),
       message: this.t.translate('settingsReader.fonts.deleteFontConfirm', {name: font.fontName}),
-      header: this.t.translate('settingsReader.fonts.deleteFontHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => {
-        this.customFontService.deleteFont(font.id).subscribe({
-          next: () => {
-            this.customFonts = this.customFonts.filter(f => f.id !== font.id);
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('common.success'),
-              detail: this.t.translate('settingsReader.fonts.deleteSuccess', {name: font.fontName})
-            });
-          },
-          error: (error) => {
-            console.error('Failed to delete font:', error);
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('settingsReader.fonts.deleteFailed'),
-              detail: this.t.translate('settingsReader.fonts.deleteError')
-            });
-          }
-        });
-      }
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.customFontService.deleteFont(font.id).subscribe({
+        next: () => {
+          this.customFonts = this.customFonts.filter(f => f.id !== font.id);
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('common.success'),
+            detail: this.t.translate('settingsReader.fonts.deleteSuccess', {name: font.fontName})
+          });
+        },
+        error: (error) => {
+          console.error('Failed to delete font:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('settingsReader.fonts.deleteFailed'),
+            detail: this.t.translate('settingsReader.fonts.deleteError')
+          });
+        }
+      });
     });
   }
 

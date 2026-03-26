@@ -1,6 +1,6 @@
 package org.booklore.service.user;
 
-import org.springframework.transaction.annotation.Transactional;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.booklore.model.dto.BookLoreUser;
@@ -15,8 +15,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 @RequiredArgsConstructor
 @Service
@@ -27,27 +25,21 @@ public class DefaultSettingInitializer {
     private final ObjectMapper objectMapper;
     private final DefaultUserSettingsProvider settingsProvider;
     private static final Set<Long> initializedUsers = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private static final ConcurrentHashMap<Long, Lock> userLocks = new ConcurrentHashMap<>();
 
     @Transactional
     public void ensureDefaultSettings(BookLoreUser bookLoreUser) {
         if (initializedUsers.contains(bookLoreUser.getId())) {
             return;
         }
-        Lock lock = userLocks.computeIfAbsent(bookLoreUser.getId(), _ -> new ReentrantLock());
-        lock.lock();
-        try {
+        synchronized (("user-init-" + bookLoreUser.getId()).intern()) {
             if (initializedUsers.contains(bookLoreUser.getId())) return;
-            BookLoreUserEntity user = userRepository.findByIdWithSettings(bookLoreUser.getId()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            BookLoreUserEntity user = userRepository.findById(bookLoreUser.getId()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
             for (UserSettingKey key : settingsProvider.getAllKeys()) {
                 addSettingIfMissing(user, key, settingsProvider.getDefaultValue(key));
             }
             patchPerBookSetting(user);
             userRepository.save(user);
             initializedUsers.add(bookLoreUser.getId());
-        } finally {
-            lock.unlock();
-            userLocks.remove(bookLoreUser.getId());
         }
     }
 

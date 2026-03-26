@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, Input} from '@angular/core';
+import {Component, computed, inject, Input} from '@angular/core';
 import {Book} from '../../model/book.model';
 import {UrlHelperService} from '../../../../shared/service/url-helper.service';
 import {Button} from 'primeng/button';
@@ -7,14 +7,15 @@ import {Router} from '@angular/router';
 import {NgClass} from '@angular/common';
 import {BookMetadataHostService} from '../../../../shared/service/book-metadata-host.service';
 import {TooltipModule} from 'primeng/tooltip';
+import {CoverPlaceholderComponent} from '../../../../shared/components/cover-generator/cover-generator.component';
 
 @Component({
   selector: 'app-book-card-lite-component',
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     Button,
     NgClass,
-    TooltipModule
+    TooltipModule,
+    CoverPlaceholderComponent
   ],
   templateUrl: './book-card-lite-component.html',
   styleUrl: './book-card-lite-component.scss'

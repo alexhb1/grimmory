@@ -9,8 +9,6 @@ import {Ripple} from 'primeng/ripple';
 import {Button} from 'primeng/button';
 import {Menu} from 'primeng/menu';
 import {UserService} from '../../../../features/settings/user-management/user.service';
-import {DialogLauncherService} from '../../../services/dialog-launcher.service';
-import {BookDialogHelperService} from '../../../../features/book/components/book-browser/book-dialog-helper.service';
 import {IconDisplayComponent} from '../../../components/icon-display/icon-display.component';
 import {Tooltip} from 'primeng/tooltip';
 import {MenuItem} from 'primeng/api';
@@ -71,8 +69,6 @@ export class AppMenuitemComponent implements OnInit, OnDestroy {
   constructor(
     public router: Router,
     private menuService: MenuService,
-    private dialogLauncher: DialogLauncherService,
-    private bookDialogHelperService: BookDialogHelperService
   ) {
     effect(() => {
       const user = this.userService.currentUser();
@@ -162,15 +158,7 @@ export class AppMenuitemComponent implements OnInit, OnDestroy {
   }
 
   openDialog(item: any) {
-    if (item.type === 'library' && this.canManipulateLibrary) {
-      this.dialogLauncher.openLibraryCreateDialog();
-    }
-    if (item.type === 'magicShelf') {
-      this.dialogLauncher.openMagicShelfCreateDialog();
-    }
-    if (item.type === 'shelf') {
-      this.bookDialogHelperService.openShelfCreatorDialog();
-    }
+    // TODO: migrate to ModalService
   }
 
   triggerLink() {

@@ -3,10 +3,10 @@ package org.booklore.model.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.booklore.model.enums.ProvisioningMethod;
-import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -53,38 +53,32 @@ public class BookLoreUserEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private UserPermissionsEntity permissions;
 
-    @BatchSize(size = 20)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private Set<ShelfEntity> shelves = new HashSet<>();
 
-    @BatchSize(size = 20)
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_library_mapping",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "library_id")
     )
-    @Builder.Default
-    private Set<LibraryEntity> libraries = new HashSet<>();
+    private List<LibraryEntity> libraries;
 
-    @BatchSize(size = 20)
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private Set<UserSettingEntity> settings = new HashSet<>();
 
-    @OneToOne(mappedBy = "bookLoreUser", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "bookLoreUser", cascade = CascadeType.ALL, orphanRemoval = true)
     private KoreaderUserEntity koreaderUser;
 
-    @BatchSize(size = 20)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private Set<ReadingSessionEntity> readingSessions = new HashSet<>();
 
-    @BatchSize(size = 20)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private Set<UserContentRestrictionEntity> contentRestrictions = new HashSet<>();

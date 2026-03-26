@@ -1,12 +1,7 @@
-<div class="layout-wrapper" [ngClass]="containerClass">
-  <app-topbar></app-topbar>
-  <div class="layout-sidebar">
-    <app-sidebar></app-sidebar>
-  </div>
-  <div class="layout-main-container">
-    <div class="layout-main">
-      <router-outlet></router-outlet>
-    </div>
-  </div>
-  <div class="layout-mask"></div>
+<div class="flex h-screen overflow-hidden">
+  <app-sidebar></app-sidebar>
+  <main #mainContent class="scrollbar-stable flex-1 overflow-y-auto bg-surface" style="view-transition-name: main-content">
+    <router-outlet></router-outlet>
+  </main>
+  <app-global-search></app-global-search>
 </div>

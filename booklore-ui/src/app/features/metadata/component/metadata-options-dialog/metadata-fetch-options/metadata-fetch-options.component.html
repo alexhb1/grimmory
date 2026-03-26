@@ -1,11 +1,21 @@
 <ng-container *transloco="let t; prefix: 'metadata.fetchOptions'">
-<div class="metadata-fetch-options-container">
-  <div class="dialog-content">
+  <!-- Scrollable body -->
+  <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5">
     <app-metadata-advanced-fetch-options
+      #advancedOptions
       (metadataOptionsSubmitted)="onMetadataSubmit($event)"
       [currentMetadataOptions]="currentMetadataOptions"
-      [submitButtonLabel]="t('startRefresh')">
+      [submitButtonLabel]="t('startRefresh')"
+      [showFooter]="false">
     </app-metadata-advanced-fetch-options>
   </div>
-</div>
+
+  <!-- Footer -->
+  <div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+    <app-button variant="secondary" (click)="advancedOptions.reset()">Reset</app-button>
+    <div class="flex items-center gap-2">
+      <app-button variant="secondary" (click)="modalRef.close()">Cancel</app-button>
+      <app-button variant="primary" (click)="advancedOptions.submit()">{{ t('startRefresh') }}</app-button>
+    </div>
+  </div>
 </ng-container>

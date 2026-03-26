@@ -2,7 +2,6 @@ import {Component, computed, effect, ElementRef, inject, OnDestroy, ViewChild} f
 import {MenuItem} from 'primeng/api';
 import {LayoutService} from '../layout-main/service/app.layout.service';
 import {Router, RouterLink} from '@angular/router';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {TooltipModule} from 'primeng/tooltip';
 import {FormsModule} from '@angular/forms';
 import {InputTextModule} from 'primeng/inputtext';
@@ -21,7 +20,6 @@ import {takeUntil} from 'rxjs/operators';
 import {Subject} from 'rxjs';
 import {MetadataBatchProgressNotification} from '../../../model/metadata-batch-progress.model';
 import {BookdropFileService} from '../../../../features/bookdrop/service/bookdrop-file.service';
-import {DialogLauncherService} from '../../../services/dialog-launcher.service';
 import {UnifiedNotificationBoxComponent} from '../../../components/unified-notification-popover/unified-notification-popover-component';
 import {Severity, LogNotification} from '../../../websocket/model/log-notification.model';
 import {Menu} from 'primeng/menu';
@@ -56,7 +54,7 @@ export class AppTopBarComponent implements OnDestroy {
   protected readonly userService = inject(UserService);
   protected readonly user = this.userService.currentUser;
   items!: MenuItem[];
-  ref?: DynamicDialogRef;
+  ref?: any;
   statsMenuItems: MenuItem[] = [];
 
   @ViewChild('menubutton') menuButton!: ElementRef;
@@ -91,7 +89,6 @@ export class AppTopBarComponent implements OnDestroy {
     private authService: AuthService,
     private metadataProgressService: MetadataProgressService,
     private bookdropFileService: BookdropFileService,
-    private dialogLauncher: DialogLauncherService,
     translocoService: TranslocoService
   ) {
     this.translocoService = translocoService;
@@ -148,15 +145,15 @@ export class AppTopBarComponent implements OnDestroy {
   }
 
   openLibraryCreatorDialog(): void {
-    this.dialogLauncher.openLibraryCreateDialog();
+    // TODO: migrate to ModalService
   }
 
   openFileUploadDialog(): void {
-    this.dialogLauncher.openFileUploadDialog();
+    // TODO: migrate to ModalService
   }
 
   openUserProfileDialog(): void {
-    this.dialogLauncher.openUserProfileDialog();
+    // TODO: migrate to ModalService
   }
 
   navigateToSettings() {

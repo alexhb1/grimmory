@@ -1,57 +1,32 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
-import {UtilityService} from './utility.service';
-import {TableModule} from 'primeng/table';
-import {InputText} from 'primeng/inputtext';
-
 import {FormsModule} from '@angular/forms';
-import {ProgressSpinner} from 'primeng/progressspinner';
-import {MenuItem} from 'primeng/api';
-import {CheckboxModule} from 'primeng/checkbox';
-import {InputIcon} from 'primeng/inputicon';
-import {Button} from 'primeng/button';
-import {IconField} from 'primeng/iconfield';
-import {Tooltip} from 'primeng/tooltip';
 import {TranslocoDirective, TranslocoPipe} from '@jsverse/transloco';
+import {UtilityService} from './utility.service';
+import {ModalRef} from '../ui/modal/modal.service';
+import {InputDirective} from '../ui/input/input';
+import {ButtonComponent} from '../ui/button/button';
+import {CheckboxComponent} from '../ui/checkbox/checkbox';
 
 @Component({
   selector: 'app-directory-picker-v2',
   standalone: true,
   templateUrl: './directory-picker.component.html',
-  imports: [
-    TableModule,
-    InputText,
-    FormsModule,
-    ProgressSpinner,
-    CheckboxModule,
-    InputIcon,
-    Button,
-    InputIcon,
-    IconField,
-    Tooltip,
-    TranslocoDirective,
-    TranslocoPipe
-  ],
-  styleUrls: ['./directory-picker.component.scss']
+  imports: [FormsModule, InputDirective, ButtonComponent, CheckboxComponent, TranslocoDirective, TranslocoPipe],
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class DirectoryPickerComponent implements OnInit {
-  value: unknown;
   paths: string[] = [];
   filteredPaths: string[] = [];
-  selectedProductName: string = '';
+  selectedProductName = '';
   selectedFolders: string[] = [];
-  selectedFoldersMap: Record<string, boolean> = {};
-  searchQuery: string = '';
-  isLoading: boolean = false;
-  breadcrumbItems: MenuItem[] = [];
-  home: MenuItem = {icon: 'pi pi-home', command: () => this.navigateToRoot()};
+  searchQuery = '';
+  isLoading = false;
 
   private utilityService = inject(UtilityService);
-  private dynamicDialogRef = inject(DynamicDialogRef);
+  readonly modalRef = inject(ModalRef);
 
   ngOnInit() {
-    const initialPath = '/';
-    this.getFolders(initialPath);
+    this.getFolders('/');
   }
 
   getFolders(path: string): void {
@@ -59,15 +34,10 @@ export class DirectoryPickerComponent implements OnInit {
     this.filteredPaths = [];
     this.utilityService.getFolders(path).subscribe({
       next: (folders: string[]) => {
-        setTimeout(() => {
-          this.paths = folders;
-          this.filteredPaths = folders;
-          this.isLoading = false;
-          this.updateBreadcrumb(path);
-          folders.forEach(folder => {
-            this.selectedFoldersMap[folder] = this.selectedFolders.includes(folder);
-          });
-        }, 100);
+        this.paths = folders;
+        this.filteredPaths = folders;
+        this.isLoading = false;
+        this.selectedProductName = path;
       },
       error: (error) => {
         console.error('Error fetching folders:', error);
@@ -76,60 +46,15 @@ export class DirectoryPickerComponent implements OnInit {
     });
   }
 
-  updateBreadcrumb(path: string): void {
-    if (path === '/' || path === '') {
-      this.breadcrumbItems = [];
-      return;
-    }
-
-    const parts = path.split('/').filter(p => p);
-    this.breadcrumbItems = parts.map((part, index) => {
-      const fullPath = '/' + parts.slice(0, index + 1).join('/');
-      return {
-        label: part,
-        command: () => this.navigateToPath(fullPath)
-      };
-    });
-  }
-
-  navigateToRoot(): void {
-    this.selectedProductName = '/';
-    this.getFolders('/');
-    this.searchQuery = '';
-  }
-
-  navigateToPath(path: string): void {
-    this.selectedProductName = path;
-    this.getFolders(path);
-    this.searchQuery = '';
-  }
-
   onRowClick(path: string): void {
-    this.selectedProductName = path;
     this.getFolders(path);
     this.searchQuery = '';
-  }
-
-  onCheckboxChange(path: string, checked: boolean): void {
-    const index = this.selectedFolders.indexOf(path);
-    if (checked && index === -1) {
-      this.selectedFolders.push(path);
-    } else if (!checked && index > -1) {
-      this.selectedFolders.splice(index, 1);
-    }
-  }
-
-  isFolderSelected(path: string): boolean {
-    return this.selectedFolders.includes(path);
   }
 
   goUp(): void {
-    if (this.selectedProductName === '' || this.selectedProductName === '/') {
-      return;
-    }
-    const result = this.selectedProductName.substring(0, this.selectedProductName.lastIndexOf('/')) || '/';
-    this.selectedProductName = result;
-    this.getFolders(result);
+    if (!this.selectedProductName || this.selectedProductName === '/') return;
+    const parent = this.selectedProductName.substring(0, this.selectedProductName.lastIndexOf('/')) || '/';
+    this.getFolders(parent);
     this.searchQuery = '';
   }
 
@@ -138,35 +63,37 @@ export class DirectoryPickerComponent implements OnInit {
       this.filteredPaths = this.paths;
       return;
     }
-
     const query = this.searchQuery.toLowerCase();
-    this.filteredPaths = this.paths.filter(path =>
-      path.toLowerCase().includes(query)
-    );
+    this.filteredPaths = this.paths.filter(path => path.toLowerCase().includes(query));
   }
 
-  onSelect(): void {
-    this.dynamicDialogRef.close(this.selectedFolders);
+  onCheckboxChange(path: string, checked: boolean): void {
+    if (checked && !this.selectedFolders.includes(path)) {
+      this.selectedFolders.push(path);
+    } else if (!checked) {
+      this.selectedFolders = this.selectedFolders.filter(f => f !== path);
+    }
   }
 
-  onCancel(): void {
-    this.dynamicDialogRef.close(null);
+  isFolderSelected(path: string): boolean {
+    return this.selectedFolders.includes(path);
   }
 
-  selectAll(): void {
-    this.filteredPaths.forEach(folder => {
-      if (!this.selectedFolders.includes(folder)) {
-        this.selectedFolders.push(folder);
-      }
-      this.selectedFoldersMap[folder] = true;
-    });
+  get allVisibleSelected(): boolean {
+    return this.filteredPaths.length > 0 && this.filteredPaths.every(f => this.selectedFolders.includes(f));
   }
 
-  deselectAll(): void {
-    this.selectedFolders = [];
-    Object.keys(this.selectedFoldersMap).forEach(key => {
-      this.selectedFoldersMap[key] = false;
-    });
+  toggleSelectAll(checked: boolean): void {
+    if (checked) {
+      this.filteredPaths.forEach(folder => {
+        if (!this.selectedFolders.includes(folder)) {
+          this.selectedFolders.push(folder);
+        }
+      });
+    } else {
+      const visible = new Set(this.filteredPaths);
+      this.selectedFolders = this.selectedFolders.filter(f => !visible.has(f));
+    }
   }
 
   selectCurrent(): void {
@@ -174,10 +101,17 @@ export class DirectoryPickerComponent implements OnInit {
     if (!this.selectedFolders.includes(currentPath)) {
       this.selectedFolders.push(currentPath);
     }
-    this.selectedFoldersMap[currentPath] = true;
   }
 
   getFolderName(path: string): string {
     return path.split('/').filter(p => p).pop() || path;
+  }
+
+  onSelect(): void {
+    this.modalRef.close(this.selectedFolders);
+  }
+
+  onCancel(): void {
+    this.modalRef.close(null);
   }
 }

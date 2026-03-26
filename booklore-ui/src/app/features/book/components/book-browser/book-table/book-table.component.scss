@@ -10,31 +10,31 @@
 }
 
 .status-read {
-  color: #22c55e;
+  color: var(--color-status-finished);
 }
 
 .status-reading {
-  color: #3b82f6;
+  color: var(--color-status-reading);
 }
 
 .status-re-reading {
-  color: #06b6d4;
+  color: var(--color-status-reading);
 }
 
 .status-partially-read {
-  color: #f59e0b;
+  color: var(--color-status-to-read);
 }
 
 .status-paused {
-  color: #eab308;
+  color: var(--color-status-to-read);
 }
 
 .status-abandoned {
-  color: #ef4444;
+  color: var(--color-status-abandoned);
 }
 
 .status-wont-read {
-  color: #ec4899;
+  color: var(--color-status-abandoned);
 }
 
 .cover-header-cell {
@@ -101,7 +101,7 @@
 .cell-link {
   &:hover {
     text-decoration: underline;
-    color: #60a5fa;
+    color: var(--color-accent);
   }
 }
 

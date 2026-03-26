@@ -1,153 +1,146 @@
 <ng-container *transloco="let t; prefix: 'book.bulkIsbnImport'">
-<div class="bulk-isbn-import">
-  <div class="panel-header">
-    <div class="header-icon-wrapper">
-      <i class="pi pi-barcode header-icon"></i>
-    </div>
-    <div class="header-text">
-      <h2 class="panel-title">{{ t('title') }}</h2>
-      <p class="panel-description">{{ t('description') }}</p>
-    </div>
-    <p-button
-      icon="pi pi-times"
-      (click)="close()"
-      severity="secondary"
-      [text]="true"
-      [rounded]="true"
-      class="close-button"
-      [pTooltip]="t('closeTooltip')"
-      tooltipPosition="left"/>
-  </div>
 
   <!-- Phase 1: Upload & Parse -->
   @if (phase === 'upload') {
-    <div class="form-container">
-      <div class="form-group highlight-group">
-        <label for="library" class="form-label">
-          <i class="pi pi-folder label-icon"></i>
-          {{ t('libraryLabel') }}
-          <span class="required-indicator">*</span>
+    <!-- Scrollable body -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+
+      <!-- Library selector -->
+      <div>
+        <label class="block text-sm font-medium text-ink mb-1.5">
+          {{ t('libraryLabel') }} <span class="text-status-abandoned">*</span>
         </label>
         <p-select
-          id="library"
           [options]="libraries"
           [(ngModel)]="selectedLibraryId"
           optionLabel="name"
           optionValue="id"
           [placeholder]="t('libraryPlaceholder')"
-          [style]="{'width': '100%'}"/>
+          [style]="{'width': '100%'}"
+        />
       </div>
 
-      <div class="gradient-divider"></div>
+      <app-divider />
 
       @if (entries.length === 0 && skipped.length === 0 && duplicatesRemoved === 0) {
-        <p-tabs value="file">
-          <p-tablist>
-            <p-tab value="file">{{ t('tabFile') }}</p-tab>
-            <p-tab value="paste">{{ t('tabPaste') }}</p-tab>
-          </p-tablist>
-          <p-tabpanels>
-            <p-tabpanel value="file">
-              <div class="upload-section">
-                <p-fileupload
-                  mode="basic"
-                  [auto]="true"
-                  [customUpload]="true"
-                  accept=".txt,.csv,.tsv"
-                  [maxFileSize]="1048576"
-                  (onSelect)="onFileSelect($event)"
-                  [chooseLabel]="t('chooseFile')"
-                  chooseIcon="pi pi-upload"/>
-                <p class="upload-hint">{{ t('fileFormatsHint') }}</p>
-              </div>
-            </p-tabpanel>
-            <p-tabpanel value="paste">
-              <div class="paste-section">
-                <textarea
-                  pTextarea
-                  [(ngModel)]="pasteText"
-                  rows="6"
-                  [placeholder]="t('pastePlaceholder')"
-                  class="input-full"></textarea>
-                <p-button
-                  [label]="t('parseButton')"
-                  icon="pi pi-check"
-                  severity="info"
-                  [outlined]="true"
-                  (onClick)="parsePastedText()"
-                  [disabled]="!pasteText.trim()"/>
-              </div>
-            </p-tabpanel>
-          </p-tabpanels>
-        </p-tabs>
+        <!-- File upload -->
+        <app-file-drop
+          accept=".txt,.csv,.tsv"
+          [multiple]="false"
+          (filesSelected)="onFileDrop($event)"
+        />
+        <p class="text-xs text-ink-muted text-center">{{ t('fileFormatsHint') }}</p>
+
+        <!-- Or divider -->
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-edge"></div>
+          <span class="text-xs text-ink-muted uppercase tracking-widest">or paste</span>
+          <div class="flex-1 h-px bg-edge"></div>
+        </div>
+
+        <!-- Paste area -->
+        <div class="space-y-2">
+          <textarea
+            appInput
+            [(ngModel)]="pasteText"
+            rows="4"
+            [placeholder]="t('pastePlaceholder')"></textarea>
+          <div class="flex justify-end">
+            <app-button variant="secondary" [disabled]="!pasteText.trim()" (click)="parsePastedText()">
+              {{ t('parseButton') }}
+            </app-button>
+          </div>
+        </div>
 
         @if (parseError === 'fileTooLarge') {
-          <div class="parse-error">
-            <i class="pi pi-exclamation-triangle"></i>
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-[6px] bg-status-abandoned/10 border border-status-abandoned/30 text-status-abandoned text-sm">
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+            </svg>
             {{ t('errorFileTooLarge') }}
           </div>
         }
         @if (parseError === 'empty') {
-          <div class="parse-error">
-            <i class="pi pi-exclamation-triangle"></i>
+          <div class="flex items-center gap-2 px-3 py-2.5 rounded-[6px] bg-status-abandoned/10 border border-status-abandoned/30 text-status-abandoned text-sm">
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+            </svg>
             {{ t('errorNoIsbns') }}
           </div>
         }
       } @else {
-        <div class="parse-results">
-          <div class="parse-summary">
-            <div class="summary-stat success">
-              <i class="pi pi-check-circle"></i>
+        <!-- Parse results -->
+        <div class="space-y-3">
+          <!-- Summary stats -->
+          <div class="flex flex-wrap gap-2">
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-status-finished/10 border border-status-finished/30 text-status-finished text-sm font-medium">
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+              </svg>
               {{ t('validCount', { count: entries.length }) }}
             </div>
             @if (skipped.length > 0) {
-              <div class="summary-stat warn" (click)="showSkipped = !showSkipped">
-                <i class="pi pi-exclamation-triangle"></i>
+              <button type="button" (click)="showSkipped = !showSkipped"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-status-to-read/10 border border-status-to-read/30 text-status-to-read text-sm font-medium cursor-pointer">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                </svg>
                 {{ t('skippedCount', { count: skipped.length }) }}
-                <i class="pi" [class.pi-chevron-down]="!showSkipped" [class.pi-chevron-up]="showSkipped"></i>
-              </div>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  @if (!showSkipped) {
+                    <path d="m6 9 6 6 6-6"/>
+                  } @else {
+                    <path d="m18 15-6-6-6 6"/>
+                  }
+                </svg>
+              </button>
             }
             @if (duplicatesRemoved > 0) {
-              <div class="summary-stat info">
-                <i class="pi pi-copy"></i>
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-accent/10 border border-accent/30 text-accent text-sm font-medium">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                </svg>
                 {{ t('duplicatesRemoved', { count: duplicatesRemoved }) }}
               </div>
             }
             @if (parseError === 'tooMany') {
-              <div class="summary-stat warn">
-                <i class="pi pi-exclamation-triangle"></i>
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-status-to-read/10 border border-status-to-read/30 text-status-to-read text-sm font-medium">
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                </svg>
                 {{ t('errorTooMany', { max: maxIsbnCount }) }}
               </div>
             }
           </div>
 
+          <!-- Skipped list -->
           @if (showSkipped && skipped.length > 0) {
-            <div class="skipped-list">
+            <div class="flex flex-col gap-1 p-2 rounded-[6px] bg-status-to-read/5 border border-status-to-read/20 max-h-[150px] overflow-y-auto">
               @for (item of skipped; track item.value) {
-                <div class="skipped-item">
-                  <code>{{ item.value }}</code>
-                  <span class="skipped-reason">{{ t('reason.' + item.reason) }}</span>
+                <div class="flex items-center gap-2 text-xs">
+                  <code class="text-ink bg-surface-raised px-1.5 py-0.5 rounded">{{ item.value }}</code>
+                  <span class="text-ink-muted italic">{{ t('reason.' + item.reason) }}</span>
                 </div>
               }
             </div>
           }
 
-          <div class="isbn-preview">
-            <div class="preview-header">
-              <span class="preview-label">{{ t('previewLabel') }}</span>
-              <p-button
-                [label]="t('clearButton')"
-                icon="pi pi-times"
-                severity="secondary"
-                [text]="true"
-                size="small"
-                (onClick)="clearParsed()"/>
+          <!-- ISBN preview -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-semibold text-ink">{{ t('previewLabel') }}</span>
+              <app-button variant="ghost" (click)="clearParsed()">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                </svg>
+                {{ t('clearButton') }}
+              </app-button>
             </div>
-            <div class="preview-list">
+            <div class="flex flex-col gap-1 max-h-[200px] overflow-y-auto p-2 bg-surface-raised border border-edge rounded-[6px]">
               @for (entry of entries; track entry.isbn; let i = $index) {
-                <div class="preview-item">
-                  <span class="preview-index">{{ i + 1 }}.</span>
-                  <code class="preview-isbn">{{ entry.isbn }}</code>
+                <div class="flex items-center gap-2 px-1.5 py-1 text-sm">
+                  <span class="text-ink-muted min-w-[2rem] text-right">{{ i + 1 }}.</span>
+                  <code class="text-ink">{{ entry.isbn }}</code>
                 </div>
               }
             </div>
@@ -156,71 +149,114 @@
       }
     </div>
 
-    <div class="dialog-footer">
-      <div class="validation-status">
+    <!-- Footer -->
+    <div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+      <div class="flex-1 min-w-0">
         @if (!selectedLibraryId) {
-          <div class="validation-message error">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>{{ t('validationLibraryRequired') }}</span>
+          <div class="flex items-center gap-1.5 text-sm text-status-to-read">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+            </svg>
+            {{ t('validationLibraryRequired') }}
           </div>
         } @else if (entries.length === 0) {
-          <div class="validation-message error">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>{{ t('validationNoIsbns') }}</span>
+          <div class="flex items-center gap-1.5 text-sm text-status-to-read">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+            </svg>
+            {{ t('validationNoIsbns') }}
           </div>
         } @else {
-          <div class="validation-message success">
-            <i class="pi pi-check-circle"></i>
-            <span>{{ t('validationReady', { count: entries.length }) }}</span>
+          <div class="flex items-center gap-1.5 text-sm text-status-finished">
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+            {{ t('validationReady', { count: entries.length }) }}
           </div>
         }
       </div>
-      <div class="footer-actions">
-        <p-button
-          [label]="t('cancelButton')"
-          severity="secondary"
-          [outlined]="true"
-          (onClick)="close()"/>
-        <p-button
-          [label]="t('startImportButton')"
-          icon="pi pi-play"
-          severity="success"
-          (onClick)="startImport()"
-          [disabled]="!canStartImport()"/>
+      <div class="flex items-center gap-2">
+        <app-button variant="secondary" (click)="modalRef.close()">{{ t('cancelButton') }}</app-button>
+        <app-button variant="primary" [disabled]="!canStartImport()" (click)="startImport()">{{ t('startImportButton') }}</app-button>
       </div>
     </div>
   }
 
   <!-- Phase 2: Processing -->
   @if (phase === 'processing') {
-    <div class="form-container processing-container">
-      <div class="progress-section">
-        <div class="progress-header">
-          <span class="progress-label">{{ t('processingLabel', { current: processedCount, total: entries.length }) }}</span>
-          <span class="progress-percent">{{ progressPercent }}%</span>
+    <!-- Scrollable body -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+
+      <!-- Progress section -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium text-ink">{{ t('processingLabel', { current: processedCount, total: entries.length }) }}</span>
+          <span class="text-sm font-semibold text-accent">{{ progressPercent }}%</span>
         </div>
-        <p-progressbar [value]="progressPercent" [showValue]="false"/>
-        <div class="progress-stats">
-          <span class="stat-created"><i class="pi pi-check-circle"></i> {{ createdCount }}</span>
-          <span class="stat-no-metadata"><i class="pi pi-exclamation-triangle"></i> {{ noMetadataCount }}</span>
-          <span class="stat-failed"><i class="pi pi-times-circle"></i> {{ failedCount }}</span>
+        <!-- Progress bar -->
+        <div class="w-full h-2 bg-surface-raised rounded-full overflow-hidden">
+          <div class="h-full bg-accent rounded-full transition-all duration-300" [style.width.%]="progressPercent"></div>
+        </div>
+        <div class="flex gap-4 text-sm">
+          <span class="flex items-center gap-1 text-status-finished">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+            {{ createdCount }}
+          </span>
+          <span class="flex items-center gap-1 text-status-to-read">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+            </svg>
+            {{ noMetadataCount }}
+          </span>
+          <span class="flex items-center gap-1 text-status-abandoned">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+            </svg>
+            {{ failedCount }}
+          </span>
         </div>
       </div>
 
-      <div class="isbn-progress-list">
+      <!-- ISBN progress list -->
+      <div class="flex flex-col gap-1">
         @for (entry of entries; track entry.isbn) {
-          <div class="progress-item" [class]="'status-' + entry.status">
-            <div class="progress-item-icon">
+          <div class="flex items-center gap-2 px-2 py-1.5 rounded text-sm"
+            [class.opacity-50]="entry.status === 'pending'"
+            [class.bg-accent/5]="entry.status === 'looking-up'"
+            [class.bg-status-finished/5]="entry.status === 'created'"
+            [class.bg-status-to-read/5]="entry.status === 'created-no-metadata'"
+            [class.bg-status-abandoned/5]="entry.status === 'failed'">
+            <div class="w-5 text-center shrink-0">
               @switch (entry.status) {
-                @case ('pending') { <i class="pi pi-clock"></i> }
-                @case ('looking-up') { <i class="pi pi-spin pi-spinner"></i> }
-                @case ('created') { <i class="pi pi-check-circle"></i> }
-                @case ('created-no-metadata') { <i class="pi pi-exclamation-triangle"></i> }
-                @case ('failed') { <i class="pi pi-times-circle"></i> }
+                @case ('pending') {
+                  <svg class="w-4 h-4 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                }
+                @case ('looking-up') {
+                  <svg class="w-4 h-4 text-accent animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                }
+                @case ('created') {
+                  <svg class="w-4 h-4 text-status-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+                  </svg>
+                }
+                @case ('created-no-metadata') {
+                  <svg class="w-4 h-4 text-status-to-read" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                  </svg>
+                }
+                @case ('failed') {
+                  <svg class="w-4 h-4 text-status-abandoned" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+                  </svg>
+                }
               }
             </div>
-            <code class="progress-item-isbn">{{ entry.isbn }}</code>
-            <span class="progress-item-detail">
+            <code class="min-w-[8rem] shrink-0 text-ink">{{ entry.isbn }}</code>
+            <span class="flex-1 min-w-0 truncate text-xs text-ink-muted">
               @if (entry.status === 'created' && entry.title) {
                 {{ entry.title }}
               } @else if (entry.status === 'created-no-metadata') {
@@ -236,87 +272,124 @@
       </div>
     </div>
 
-    <div class="dialog-footer">
-      <div class="validation-status">
-        <div class="validation-message info">
-          <i class="pi pi-info-circle"></i>
-          <span>{{ t('processingHint') }}</span>
+    <!-- Footer -->
+    <div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5 text-sm text-accent">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+          </svg>
+          {{ t('processingHint') }}
         </div>
       </div>
-      <div class="footer-actions">
-        <p-button
-          [label]="t('cancelImportButton')"
-          icon="pi pi-stop"
-          severity="danger"
-          [outlined]="true"
-          (onClick)="cancelImport()"/>
+      <div class="flex items-center gap-2">
+        <app-button variant="danger" (click)="cancelImport()">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9"/>
+          </svg>
+          {{ t('cancelImportButton') }}
+        </app-button>
       </div>
     </div>
   }
 
   <!-- Phase 3: Summary -->
   @if (phase === 'summary') {
-    <div class="form-container">
-      <div class="summary-header-bar">
-        <span class="summary-title">{{ t('summaryTitle') }}</span>
+    <!-- Scrollable body -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+
+      <!-- Summary header -->
+      <div class="flex justify-between items-center">
+        <span class="text-base font-semibold text-ink">{{ t('summaryTitle') }}</span>
         @if (selectedLibraryName) {
-          <span class="summary-library">
-            <i class="pi pi-folder"></i>
+          <span class="flex items-center gap-1.5 text-sm text-ink-muted">
+            <svg class="w-4 h-4 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+            </svg>
             {{ selectedLibraryName }}
           </span>
         }
       </div>
 
-      <div class="summary-results">
-        <div class="summary-card success">
-          <i class="pi pi-check-circle"></i>
-          <div class="summary-card-content">
-            <span class="summary-card-count">{{ createdCount }}</span>
-            <span class="summary-card-label">{{ t('summaryCreated') }}</span>
+      <!-- Summary cards -->
+      <div class="flex flex-wrap gap-3">
+        <div class="flex items-center gap-3 flex-1 min-w-[120px] px-4 py-3 rounded-lg bg-status-finished/10 border border-status-finished/30">
+          <svg class="w-5 h-5 text-status-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+          <div class="flex flex-col">
+            <span class="text-xl font-bold text-ink">{{ createdCount }}</span>
+            <span class="text-xs text-ink-muted">{{ t('summaryCreated') }}</span>
           </div>
         </div>
         @if (noMetadataCount > 0) {
-          <div class="summary-card warn">
-            <i class="pi pi-exclamation-triangle"></i>
-            <div class="summary-card-content">
-              <span class="summary-card-count">{{ noMetadataCount }}</span>
-              <span class="summary-card-label">{{ t('summaryNoMetadata') }}</span>
+          <div class="flex items-center gap-3 flex-1 min-w-[120px] px-4 py-3 rounded-lg bg-status-to-read/10 border border-status-to-read/30">
+            <svg class="w-5 h-5 text-status-to-read" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-xl font-bold text-ink">{{ noMetadataCount }}</span>
+              <span class="text-xs text-ink-muted">{{ t('summaryNoMetadata') }}</span>
             </div>
           </div>
         }
         @if (failedCount > 0) {
-          <div class="summary-card error">
-            <i class="pi pi-times-circle"></i>
-            <div class="summary-card-content">
-              <span class="summary-card-count">{{ failedCount }}</span>
-              <span class="summary-card-label">{{ t('summaryFailed') }}</span>
+          <div class="flex items-center gap-3 flex-1 min-w-[120px] px-4 py-3 rounded-lg bg-status-abandoned/10 border border-status-abandoned/30">
+            <svg class="w-5 h-5 text-status-abandoned" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-xl font-bold text-ink">{{ failedCount }}</span>
+              <span class="text-xs text-ink-muted">{{ t('summaryFailed') }}</span>
             </div>
           </div>
         }
         @if (cancelled) {
-          <div class="summary-card info">
-            <i class="pi pi-info-circle"></i>
-            <div class="summary-card-content">
-              <span class="summary-card-count">{{ entries.length - processedCount }}</span>
-              <span class="summary-card-label">{{ t('summaryCancelled') }}</span>
+          <div class="flex items-center gap-3 flex-1 min-w-[120px] px-4 py-3 rounded-lg bg-accent/10 border border-accent/30">
+            <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+            </svg>
+            <div class="flex flex-col">
+              <span class="text-xl font-bold text-ink">{{ entries.length - processedCount }}</span>
+              <span class="text-xs text-ink-muted">{{ t('summaryCancelled') }}</span>
             </div>
           </div>
         }
       </div>
 
-      <div class="summary-detail-list">
+      <!-- Detail list -->
+      <div class="flex flex-col gap-0.5">
         @for (entry of entries; track entry.isbn) {
           @if (entry.status !== 'pending') {
-            <div class="summary-detail-item" [class]="'status-' + entry.status">
-              <div class="summary-detail-icon">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded text-sm"
+              [class.bg-status-finished/[0.04]]="entry.status === 'created'"
+              [class.bg-status-to-read/[0.04]]="entry.status === 'created-no-metadata'"
+              [class.bg-status-abandoned/[0.04]]="entry.status === 'failed'">
+              <div class="w-5 text-center shrink-0">
                 @switch (entry.status) {
-                  @case ('created') { <i class="pi pi-check-circle"></i> }
-                  @case ('created-no-metadata') { <i class="pi pi-exclamation-triangle"></i> }
-                  @case ('failed') { <i class="pi pi-times-circle"></i> }
+                  @case ('created') {
+                    <svg class="w-4 h-4 text-status-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+                    </svg>
+                  }
+                  @case ('created-no-metadata') {
+                    <svg class="w-4 h-4 text-status-to-read" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+                    </svg>
+                  }
+                  @case ('failed') {
+                    <svg class="w-4 h-4 text-status-abandoned" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+                    </svg>
+                  }
                 }
               </div>
-              <code class="summary-detail-isbn">{{ entry.isbn }}</code>
-              <span class="summary-detail-info">
+              <code class="min-w-[8rem] shrink-0 text-ink text-xs">{{ entry.isbn }}</code>
+              <span class="flex-1 min-w-0 truncate text-xs"
+                [class.text-ink]="entry.status === 'created'"
+                [class.text-status-to-read]="entry.status === 'created-no-metadata'"
+                [class.italic]="entry.status === 'created-no-metadata' || entry.status === 'failed'"
+                [class.text-status-abandoned]="entry.status === 'failed'">
                 @if (entry.status === 'created' && entry.title) {
                   {{ entry.title }}
                 } @else if (entry.status === 'created-no-metadata') {
@@ -331,16 +404,13 @@
       </div>
     </div>
 
-    <div class="dialog-footer">
-      <div class="validation-status"></div>
-      <div class="footer-actions">
-        <p-button
-          [label]="t('doneButton')"
-          icon="pi pi-check"
-          severity="success"
-          (onClick)="close()"/>
+    <!-- Footer -->
+    <div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+      <div class="flex-1"></div>
+      <div class="flex items-center gap-2">
+        <app-button variant="primary" (click)="modalRef.close()">{{ t('doneButton') }}</app-button>
       </div>
     </div>
   }
-</div>
+
 </ng-container>

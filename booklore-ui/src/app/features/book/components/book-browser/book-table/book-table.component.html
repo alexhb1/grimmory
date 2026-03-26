@@ -8,12 +8,11 @@
   columnResizeMode="expand"
   [rowTrackBy]="trackByBookId"
   [metaKeySelection]="true"
-  showGridlines
-  stripedRows
+  styleClass="grimmory-table"
   [scrollable]="true"
-  [scrollHeight]="scrollHeight"
-  [virtualScroll]="true"
-  [virtualScrollItemSize]="46"
+  [paginator]="true"
+  [rows]="50"
+  [rowsPerPageOptions]="[25, 50, 100]"
   [(selection)]="selectedBooks"
   (onHeaderCheckboxToggle)="onHeaderCheckboxToggle($event)"
   (onRowSelect)="onRowSelect($event)"
@@ -51,22 +50,34 @@
         </td>
         <td>
           <a [routerLink]="urlHelper.getBookUrl(book)">
-            <img
-              [attr.src]="urlHelper.getThumbnailUrl(metadata.bookId, metadata.coverUpdatedOn)"
-              [alt]="t('bookCoverAlt')"
-              class="cover-thumbnail"
-              tooltipPosition="left"
-              [pTooltip]="tooltipContent"
-              tooltipStyleClass="cover-tooltip"
-            />
+            @if (urlHelper.getThumbnailUrl(metadata.bookId, metadata.coverUpdatedOn); as coverSrc) {
+              <img
+                [attr.src]="coverSrc"
+                [alt]="t('bookCoverAlt')"
+                class="cover-thumbnail"
+                tooltipPosition="left"
+                [pTooltip]="tooltipContent"
+                tooltipStyleClass="cover-tooltip"
+              />
+            } @else {
+              <div class="cover-thumbnail overflow-hidden">
+                <app-cover-placeholder [title]="metadata.title ?? ''" [author]="(metadata.authors ?? []).join(', ')" />
+              </div>
+            }
           </a>
           <ng-template #tooltipContent>
             <div class="tooltip-cover-container">
-              <img
-                [attr.src]="urlHelper.getThumbnailUrl(metadata.bookId, metadata.coverUpdatedOn)"
-                [alt]="t('bookCoverAlt')"
-                class="tooltip-cover-image"
-              />
+              @if (urlHelper.getThumbnailUrl(metadata.bookId, metadata.coverUpdatedOn); as coverSrc) {
+                <img
+                  [attr.src]="coverSrc"
+                  [alt]="t('bookCoverAlt')"
+                  class="tooltip-cover-image"
+                />
+              } @else {
+                <div class="tooltip-cover-image overflow-hidden">
+                  <app-cover-placeholder [title]="metadata.title ?? ''" [author]="(metadata.authors ?? []).join(', ')" />
+                </div>
+              }
               <em class="tooltip-cover-title">{{ metadata.title }}</em>
             </div>
           </ng-template>
@@ -87,14 +98,13 @@
           } @else if (col.field === 'amazonRating' || col.field === 'goodreadsRating' || col.field === 'hardcoverRating' || col.field == 'ranobedbRating') {
             <td class="cell-rating">
               <span class="rating-wrapper">
-                <p-rating
-                  [(ngModel)]="metadata[col.field]"
-                  readonly
-                  stars="5"
-                  [style.--p-rating-icon-active-color]="getStarColor(metadata[col.field])"
-                ></p-rating>
+                <app-rating
+                  [value]="metadata[col.field] ?? 0"
+                  [readonly]="true"
+                  [stars]="5"
+                />
                 @if (metadata[col.field] != null) {
-                  <span>({{ metadata[col.field]?.toFixed(1) }})</span>
+                  <span class="text-ink-muted text-xs tabular-nums">({{ metadata[col.field]?.toFixed(1) }})</span>
                 }
               </span>
             </td>

@@ -1,5 +1,6 @@
 import {Component, effect, inject, OnDestroy, OnInit} from '@angular/core';
 import {ConfirmationService, MessageService} from 'primeng/api';
+import {ConfirmService} from '../../../../../shared/components/ui/confirm-modal/confirm.service';
 import {KoboService, KoboSyncSettings} from './kobo.service';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
@@ -31,6 +32,7 @@ export class KoboSyncSettingsComponent implements OnInit, OnDestroy {
   private koboService = inject(KoboService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
   protected userService = inject(UserService);
   protected appSettingsService = inject(AppSettingsService);
   protected settingsHelperService = inject(SettingsHelperService);
@@ -167,11 +169,12 @@ export class KoboSyncSettingsComponent implements OnInit, OnDestroy {
 
 
   confirmRegenerateToken() {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('settingsDevice.kobo.confirmRegenerateHeader'),
       message: this.t.translate('settingsDevice.kobo.confirmRegenerate'),
-      header: this.t.translate('settingsDevice.kobo.confirmRegenerateHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => this.regenerateToken()
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.regenerateToken();
     });
   }
 
@@ -198,12 +201,13 @@ export class KoboSyncSettingsComponent implements OnInit, OnDestroy {
 
   onSyncToggle() {
     if (!this.koboSyncSettings.syncEnabled) {
-      this.confirmationService.confirm({
+      this.confirmService.open({
+        title: this.t.translate('settingsDevice.kobo.confirmDisableHeader'),
         message: this.t.translate('settingsDevice.kobo.confirmDisable'),
-        header: this.t.translate('settingsDevice.kobo.confirmDisableHeader'),
-        icon: 'pi pi-exclamation-triangle',
-        accept: () => this.updateKoboSettings(this.t.translate('settingsDevice.kobo.syncDisabled')),
-        reject: () => {
+      }).subscribe(confirmed => {
+        if (confirmed) {
+          this.updateKoboSettings(this.t.translate('settingsDevice.kobo.syncDisabled'));
+        } else {
           this.koboSyncSettings.syncEnabled = true;
         }
       });

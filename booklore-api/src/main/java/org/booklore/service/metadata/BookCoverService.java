@@ -1,7 +1,6 @@
 package org.booklore.service.metadata;
 
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.booklore.config.AppProperties;
 import org.booklore.exception.ApiError;
 import org.booklore.model.dto.settings.MetadataPersistenceSettings;
 import org.booklore.model.entity.AuthorEntity;
@@ -22,8 +21,9 @@ import org.booklore.service.metadata.writer.MetadataWriter;
 import org.booklore.service.metadata.writer.MetadataWriterFactory;
 import org.booklore.util.BookCoverUtils;
 import org.booklore.util.FileService;
-import org.booklore.config.AppProperties;
 import org.booklore.util.SecurityContextVirtualThread;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,7 +39,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @AllArgsConstructor
-@Transactional
 public class BookCoverService {
 
     private static final int BATCH_SIZE = 100;
@@ -69,7 +68,7 @@ public class BookCoverService {
      * Generate a custom cover for a single book.
      */
     public void generateCustomCover(long bookId) {
-        BookEntity bookEntity = bookRepository.findByIdWithBookFiles(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
+        BookEntity bookEntity = bookRepository.findById(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
 
         if (isCoverLocked(bookEntity)) {
             throw ApiError.METADATA_LOCKED.createException();
@@ -91,7 +90,7 @@ public class BookCoverService {
      */
     @Transactional
     public void updateCoverFromFile(Long bookId, MultipartFile file) {
-        BookEntity bookEntity = bookRepository.findByIdWithBookFiles(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
+        BookEntity bookEntity = bookRepository.findById(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
 
         if (isCoverLocked(bookEntity)) {
             throw ApiError.METADATA_LOCKED.createException();
@@ -109,7 +108,7 @@ public class BookCoverService {
      */
     @Transactional
     public void updateCoverFromUrl(Long bookId, String url) {
-        BookEntity bookEntity = bookRepository.findByIdWithBookFiles(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
+        BookEntity bookEntity = bookRepository.findById(bookId).orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
 
         if (isCoverLocked(bookEntity)) {
             throw ApiError.METADATA_LOCKED.createException();
@@ -320,7 +319,7 @@ public class BookCoverService {
                         notificationService.sendMessage(Topic.LOG, LogNotification.info(progress + "Regenerating cover for: " + bookInfo.title()));
 
                         transactionTemplate.execute(status -> {
-                            bookRepository.findByIdWithBookFiles(bookInfo.id()).ifPresent(book -> {
+                            bookRepository.findById(bookInfo.id()).ifPresent(book -> {
                                 var primaryFile = book.getPrimaryBookFile();
                                 if (primaryFile == null) {
                                     log.warn("{}Skipping physical book ID {} ({}) - no file to regenerate cover from", progress, book.getId(), bookInfo.title());
@@ -373,7 +372,7 @@ public class BookCoverService {
                     notificationService.sendMessage(Topic.LOG, LogNotification.info(progress + "Updating cover for: " + bookInfo.title()));
 
                     transactionTemplate.execute(status -> {
-                        bookRepository.findByIdWithBookFiles(bookInfo.id()).ifPresent(book -> {
+                        bookRepository.findById(bookInfo.id()).ifPresent(book -> {
                             fileService.createThumbnailFromBytes(bookInfo.id(), coverImageBytes);
                             writeCoverToBookFile(book, (writer, b) -> writer.replaceCoverImageFromBytes(b, coverImageBytes));
                             updateBookCoverMetadata(book);
@@ -412,7 +411,7 @@ public class BookCoverService {
                     notificationService.sendMessage(Topic.LOG, LogNotification.info(progress + "Regenerating cover for: " + bookInfo.title()));
 
                     transactionTemplate.execute(status -> {
-                        bookRepository.findByIdWithBookFiles(bookInfo.id()).ifPresent(book -> {
+                        bookRepository.findById(bookInfo.id()).ifPresent(book -> {
                             BookFileProcessor processor = processorRegistry.getProcessorOrThrow(bookInfo.bookType());
                             boolean success = processor.generateCover(book);
 
@@ -454,7 +453,7 @@ public class BookCoverService {
                     notificationService.sendMessage(Topic.LOG, LogNotification.info(progress + "Generating custom cover for: " + bookInfo.title()));
 
                     transactionTemplate.execute(status -> {
-                        bookRepository.findByIdWithBookFiles(bookInfo.id()).ifPresent(book -> {
+                        bookRepository.findById(bookInfo.id()).ifPresent(book -> {
                             String title = book.getMetadata().getTitle();
                             String author = getAuthorNames(book);
                             byte[] coverBytes = coverImageGenerator.generateCover(title, author);

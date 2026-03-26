@@ -1,9 +1,6 @@
 import {Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
 import {Select} from 'primeng/select';
 import {FormsModule} from '@angular/forms';
-
-import {Checkbox} from 'primeng/checkbox';
-import {Button} from 'primeng/button';
 import {MessageService} from 'primeng/api';
 import {
   FieldOptions,
@@ -12,19 +9,24 @@ import {
 } from '../../../model/request/metadata-refresh-options.model';
 import {Tooltip} from 'primeng/tooltip';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {CheckboxComponent} from '../../../../../shared/components/ui/checkbox/checkbox';
+import {ButtonComponent} from '../../../../../shared/components/ui/button/button';
+import {ModalRef} from '../../../../../shared/components/ui/modal/modal.service';
 
 @Component({
   selector: 'app-metadata-advanced-fetch-options',
   templateUrl: './metadata-advanced-fetch-options.component.html',
-  imports: [Select, FormsModule, Checkbox, Button, Tooltip, TranslocoDirective],
-  styleUrl: './metadata-advanced-fetch-options.component.scss',
-  standalone: true
+  imports: [Select, FormsModule, Tooltip, TranslocoDirective, CheckboxComponent, ButtonComponent],
+  standalone: true,
+  host: {class: 'flex flex-col flex-1 min-h-0'}
 })
 export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
 
   @Output() metadataOptionsSubmitted = new EventEmitter<MetadataRefreshOptions>();
   @Input() currentMetadataOptions!: MetadataRefreshOptions;
   @Input() submitButtonLabel!: string;
+  @Input() showFooter = true;
+  @Input() modalRef?: ModalRef;
 
   fields: (keyof FieldOptions)[] = [
     'title', 'subtitle', 'description', 'authors', 'publisher', 'publishedDate',

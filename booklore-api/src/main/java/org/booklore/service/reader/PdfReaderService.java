@@ -103,7 +103,7 @@ public class PdfReaderService {
     }
 
     private Path getBookPath(Long bookId, String bookType) {
-        BookEntity bookEntity = bookRepository.findByIdWithBookFiles(bookId)
+        BookEntity bookEntity = bookRepository.findById(bookId)
                 .orElseThrow(() -> ApiError.BOOK_NOT_FOUND.createException(bookId));
         if (bookType != null) {
             BookFileType requestedType = BookFileType.valueOf(bookType.toUpperCase());

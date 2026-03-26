@@ -14,7 +14,6 @@ import {MetadataProgressService} from '../../service/metadata-progress.service';
 import {MetadataTaskService} from '../../../features/book/service/metadata-task';
 import {Tag} from 'primeng/tag';
 import {TaskService} from '../../../features/settings/task-management/task.service';
-import {DialogLauncherService} from '../../services/dialog-launcher.service';
 
 @Component({
   selector: 'app-metadata-progress-widget',
@@ -27,7 +26,6 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
   activeTasks: Record<string, MetadataBatchProgressNotification> = {};
 
   private destroy$ = new Subject<void>();
-  private dialogLauncherService = inject(DialogLauncherService);
   private metadataProgressService = inject(MetadataProgressService);
   private metadataTaskService = inject(MetadataTaskService);
   private taskService = inject(TaskService);
@@ -103,7 +101,7 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
   }
 
   reviewTask(taskId: string): void {
-    this.dialogLauncherService.openMetadataReviewDialog(taskId);
+    // TODO: migrate to ModalService
   }
 
   cancelTask(taskId: string): void {

@@ -8,6 +8,7 @@ import {Tag} from 'primeng/tag';
 import {Button} from 'primeng/button';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {UserService} from '../../../settings/user-management/user.service';
 import {FormsModule} from '@angular/forms';
 import {Tooltip} from 'primeng/tooltip';
@@ -31,6 +32,7 @@ export class BookReviewsComponent implements OnInit, OnChanges {
   private bookService = inject(BookService);
   private bookMetadataManageService = inject(BookMetadataManageService);
   private confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
   private messageService = inject(MessageService);
   private userService = inject(UserService);
   private appSettingsService = inject(AppSettingsService);
@@ -135,39 +137,37 @@ export class BookReviewsComponent implements OnInit, OnChanges {
   deleteAllReviews(): void {
     if (!this.reviews || this.reviews.length === 0 || this.reviewsLocked) return;
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.reviews.confirm.deleteAllHeader'),
       message: this.t.translate('book.reviews.confirm.deleteAllMessage', {count: this.reviews.length}),
-      header: this.t.translate('book.reviews.confirm.deleteAllHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        if (!this.bookId) return;
+      confirmLabel: this.t.translate('common.delete'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      if (!this.bookId) return;
 
-        this.reviewService.deleteAllByBookId(this.bookId).subscribe({
-          next: () => {
-            this.reviews = [];
-            this.revealedSpoilers.clear();
-            this.allSpoilersRevealed = false;
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('book.reviews.toast.allDeletedSummary'),
-              detail: this.t.translate('book.reviews.toast.allDeletedDetail'),
-              life: 3000
-            });
-          },
-          error: (error) => {
-            console.error('Failed to delete all reviews:', error);
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('book.reviews.toast.deleteAllFailedSummary'),
-              detail: this.t.translate('book.reviews.toast.deleteAllFailedDetail'),
-              life: 3000
-            });
-          }
-        });
-      }
+      this.reviewService.deleteAllByBookId(this.bookId).subscribe({
+        next: () => {
+          this.reviews = [];
+          this.revealedSpoilers.clear();
+          this.allSpoilersRevealed = false;
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('book.reviews.toast.allDeletedSummary'),
+            detail: this.t.translate('book.reviews.toast.allDeletedDetail'),
+            life: 3000
+          });
+        },
+        error: (error) => {
+          console.error('Failed to delete all reviews:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.reviews.toast.deleteAllFailedSummary'),
+            detail: this.t.translate('book.reviews.toast.deleteAllFailedDetail'),
+            life: 3000
+          });
+        }
+      });
     });
   }
 
@@ -255,36 +255,34 @@ export class BookReviewsComponent implements OnInit, OnChanges {
   deleteReview(review: BookReview): void {
     if (!review.id || this.reviewsLocked) return;
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.reviews.confirm.deleteHeader'),
       message: this.t.translate('book.reviews.confirm.deleteMessage', {reviewer: review.reviewerName || 'Anonymous'}),
-      header: this.t.translate('book.reviews.confirm.deleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.reviewService.delete(review.id!).subscribe({
-          next: () => {
-            this.reviews = this.reviews?.filter(r => r.id !== review.id);
-            this.updateSpoilerState();
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('book.reviews.toast.deleteSuccessSummary'),
-              detail: this.t.translate('book.reviews.toast.deleteSuccessDetail'),
-              life: 2000
-            });
-          },
-          error: (error) => {
-            console.error('Failed to delete review:', error);
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('book.reviews.toast.deleteFailedSummary'),
-              detail: this.t.translate('book.reviews.toast.deleteFailedDetail'),
-              life: 3000
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('common.delete'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.reviewService.delete(review.id!).subscribe({
+        next: () => {
+          this.reviews = this.reviews?.filter(r => r.id !== review.id);
+          this.updateSpoilerState();
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('book.reviews.toast.deleteSuccessSummary'),
+            detail: this.t.translate('book.reviews.toast.deleteSuccessDetail'),
+            life: 2000
+          });
+        },
+        error: (error) => {
+          console.error('Failed to delete review:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.reviews.toast.deleteFailedSummary'),
+            detail: this.t.translate('book.reviews.toast.deleteFailedDetail'),
+            life: 3000
+          });
+        }
+      });
     });
   }
 

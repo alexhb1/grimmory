@@ -1,44 +1,45 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {MessageService} from 'primeng/api';
 import {Router} from '@angular/router';
 import {LibraryService} from '../book/service/library.service';
 import {FormsModule} from '@angular/forms';
-import {InputText} from 'primeng/inputtext';
 import {Library, MetadataSource, OrganizationMode} from '../book/model/library.model';
 import {BookType} from '../book/model/book.model';
-import {ToggleSwitch} from 'primeng/toggleswitch';
 import {Tooltip} from 'primeng/tooltip';
 import {IconPickerService, IconSelection} from '../../shared/service/icon-picker.service';
-import {Button} from 'primeng/button';
 import {IconDisplayComponent} from '../../shared/components/icon-display/icon-display.component';
-import {DialogLauncherService} from '../../shared/services/dialog-launcher.service';
 import {switchMap} from 'rxjs/operators';
 import {map} from 'rxjs';
 import {CdkDragDrop, DragDropModule, moveItemInArray} from '@angular/cdk/drag-drop';
-import {Checkbox} from 'primeng/checkbox';
 import {Select} from 'primeng/select';
+import {MultiSelect} from 'primeng/multiselect';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {ModalRef, ModalService} from '../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../shared/components/ui/modal/modal-host';
+import {DirectoryPickerComponent} from '../../shared/components/directory-picker/directory-picker.component';
+import {InputDirective} from '../../shared/components/ui/input/input';
+import {ButtonComponent} from '../../shared/components/ui/button/button';
+import {ToggleComponent} from '../../shared/components/ui/toggle/toggle';
+import {DividerComponent} from '../../shared/components/ui/divider/divider';
 
 @Component({
   selector: 'app-library-creator',
   standalone: true,
   templateUrl: './library-creator.component.html',
-  imports: [FormsModule, InputText, ToggleSwitch, Tooltip, Button, IconDisplayComponent, DragDropModule, Checkbox, Select, TranslocoDirective, TranslocoPipe],
-  styleUrl: './library-creator.component.scss'
+  imports: [FormsModule, InputDirective, Tooltip, ButtonComponent, ToggleComponent, DividerComponent, IconDisplayComponent, DragDropModule, Select, MultiSelect, TranslocoDirective, TranslocoPipe],
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class LibraryCreatorComponent implements OnInit {
-  chosenLibraryName: string = '';
+  chosenLibraryName = '';
   folders: string[] = [];
   selectedIcon: IconSelection | null = null;
 
   mode!: string;
   library!: Library | undefined;
-  editModeLibraryName: string = '';
-  watch: boolean = false;
+  editModeLibraryName = '';
+  watch = false;
   formatPriority: {type: BookType, label: string}[] = [];
-  allowAllFormats: boolean = true;
-  selectedAllowedFormats: Set<BookType> = new Set();
+  selectedFormats: BookType[] = [];
   formatCounts: Record<string, number> = {};
   metadataSource: MetadataSource = 'EMBEDDED';
   organizationMode: OrganizationMode = 'BOOK_PER_FILE';
@@ -56,9 +57,9 @@ export class LibraryCreatorComponent implements OnInit {
     {type: 'AUDIOBOOK', label: 'Audiobook'}
   ];
 
-  private dialogLauncherService = inject(DialogLauncherService);
-  private dynamicDialogRef = inject(DynamicDialogRef);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  readonly modalRef = inject(ModalRef);
+  private modalService = inject(ModalService);
+  private data = inject(MODAL_DATA) as {mode?: string; libraryId?: number} | null;
   private libraryService = inject(LibraryService);
   private messageService = inject(MessageService);
   private router = inject(Router);
@@ -74,13 +75,12 @@ export class LibraryCreatorComponent implements OnInit {
       {label: this.t.translate('libraryCreator.creator.metadataSourceNone'), value: 'NONE'}
     ];
     this.initializeFormatPriority();
-    this.initializeAllowedFormats();
+    this.selectedFormats = this.allBookFormats.map(f => f.type);
     this.initializeOrganizationModeOptions();
 
-    const data = this.dynamicDialogConfig?.data;
-    if (data?.mode === 'edit') {
-      this.mode = data.mode;
-      this.library = this.libraryService.findLibraryById(data.libraryId);
+    if (this.data?.mode === 'edit') {
+      this.mode = this.data.mode;
+      this.library = this.libraryService.findLibraryById(this.data.libraryId!);
       if (this.library) {
         const {name, icon, iconType, paths, watch, formatPriority, allowedFormats} = this.library;
         this.chosenLibraryName = name;
@@ -109,11 +109,7 @@ export class LibraryCreatorComponent implements OnInit {
         }
 
         if (allowedFormats && allowedFormats.length > 0) {
-          this.allowAllFormats = false;
-          this.selectedAllowedFormats = new Set(allowedFormats);
-        } else {
-          this.allowAllFormats = true;
-          this.selectedAllowedFormats = new Set(this.allBookFormats.map(f => f.type));
+          this.selectedFormats = [...allowedFormats];
         }
 
         if (this.library.metadataSource) {
@@ -150,54 +146,30 @@ export class LibraryCreatorComponent implements OnInit {
     ];
   }
 
-  private initializeAllowedFormats(): void {
-    this.selectedAllowedFormats = new Set(this.allBookFormats.map(f => f.type));
-  }
-
-  onAllowAllFormatsChange(): void {
-    if (this.allowAllFormats) {
-      this.selectedAllowedFormats = new Set(this.allBookFormats.map(f => f.type));
-    }
-  }
-
-  onFormatCheckboxChange(formatType: BookType, checked: boolean): void {
-    if (checked) {
-      this.selectedAllowedFormats.add(formatType);
-    } else {
-      this.selectedAllowedFormats.delete(formatType);
-    }
-    this.allowAllFormats = this.selectedAllowedFormats.size === this.allBookFormats.length;
-  }
-
-  isFormatSelected(formatType: BookType): boolean {
-    return this.selectedAllowedFormats.has(formatType);
-  }
-
-  getFormatWarning(formatType: BookType): string | null {
-    if (this.mode !== 'edit') return null;
-    const count = this.formatCounts[formatType];
-    if (count && count > 0 && !this.selectedAllowedFormats.has(formatType)) {
-      return this.t.translate('libraryCreator.creator.formatWarning', {count});
-    }
-    return null;
-  }
-
   hasAnyFormatWarning(): boolean {
     if (this.mode !== 'edit') return false;
-    return this.allBookFormats.some(f => this.getFormatWarning(f.type) !== null);
+    const selected = new Set(this.selectedFormats);
+    return this.allBookFormats.some(f => {
+      const count = this.formatCounts[f.type];
+      return count && count > 0 && !selected.has(f.type);
+    });
   }
 
-  closeDialog(): void {
-    this.dynamicDialogRef.close();
+  close(): void {
+    this.modalRef.close();
   }
 
   openDirectoryPicker(): void {
-    const ref = this.dialogLauncherService.openDirectoryPickerDialog();
-    ref?.onClose.subscribe((selectedFolders: string[] | null) => {
+    const ref = this.modalService.open<void, string[] | null>(DirectoryPickerComponent, {
+      title: 'Select Directories',
+      size: 'md',
+      height: '85vh',
+    });
+    ref.onClose.subscribe(selectedFolders => {
       if (selectedFolders && selectedFolders.length > 0) {
         selectedFolders.forEach(folder => {
           if (!this.folders.includes(folder)) {
-            this.addFolder(folder);
+            this.folders.push(folder);
           }
         });
       }
@@ -256,7 +228,7 @@ export class LibraryCreatorComponent implements OnInit {
       paths: this.folders.map(folder => ({path: folder})),
       watch: this.watch,
       formatPriority: this.formatPriority.map(f => f.type),
-      allowedFormats: this.allowAllFormats ? [] : Array.from(this.selectedAllowedFormats),
+      allowedFormats: this.selectedFormats.length === this.allBookFormats.length ? [] : [...this.selectedFormats],
       metadataSource: this.metadataSource,
       organizationMode: this.organizationMode
     };
@@ -267,7 +239,7 @@ export class LibraryCreatorComponent implements OnInit {
       ).subscribe({
         next: () => {
           this.messageService.add({severity: 'success', summary: this.t.translate('libraryCreator.creator.toast.updatedSummary'), detail: this.t.translate('libraryCreator.creator.toast.updatedDetail')});
-          this.dynamicDialogRef.close();
+          this.modalRef.close();
         },
         error: (e) => {
           this.messageService.add({severity: 'error', summary: this.t.translate('libraryCreator.creator.toast.updateFailedSummary'), detail: this.t.translate('libraryCreator.creator.toast.updateFailedDetail')});
@@ -277,20 +249,16 @@ export class LibraryCreatorComponent implements OnInit {
     } else {
       this.libraryService.scanLibraryPaths(library).pipe(
         switchMap(count => {
-          if (count < 500) {
-            return this.libraryService.createLibrary(library).pipe(
-              map(createdLibrary => ({ createdLibrary, count }))
-            );
-          } else {
+          if (count >= 500) {
             console.warn(`Library has ${count} processable files (>500). Will use buffered loading.`);
             this.libraryService.setLargeLibraryLoading(true, count);
-            return this.libraryService.createLibrary(library).pipe(
-              map(createdLibrary => ({ createdLibrary, count }))
-            );
           }
+          return this.libraryService.createLibrary(library).pipe(
+            map(createdLibrary => ({createdLibrary, count}))
+          );
         })
       ).subscribe({
-        next: ({ createdLibrary, count }) => {
+        next: ({createdLibrary, count}) => {
           if (createdLibrary) {
             this.router.navigate(['/library', createdLibrary.id, 'books']);
             this.messageService.add({
@@ -300,7 +268,7 @@ export class LibraryCreatorComponent implements OnInit {
                 ? this.t.translate('libraryCreator.creator.toast.createdLargeDetail', {count})
                 : this.t.translate('libraryCreator.creator.toast.createdDetail')
             });
-            this.dynamicDialogRef.close();
+            this.modalRef.close();
           }
         },
         error: (e) => {

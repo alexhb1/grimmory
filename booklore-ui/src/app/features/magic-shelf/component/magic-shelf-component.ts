@@ -1,8 +1,6 @@
 import {Component, computed, effect, inject, OnInit} from '@angular/core';
 import {AbstractControl, FormArray, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
-import {Button} from 'primeng/button';
 import {NgTemplateOutlet} from '@angular/common';
-import {InputText} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {DatePicker} from 'primeng/datepicker';
 import {InputNumber} from 'primeng/inputnumber';
@@ -10,19 +8,22 @@ import {ReadStatus} from '../../book/model/book.model';
 import {LibraryService} from '../../book/service/library.service';
 import {MagicShelf, MagicShelfService} from '../service/magic-shelf.service';
 import {MessageService} from 'primeng/api';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {MultiSelect} from 'primeng/multiselect';
 import {AutoComplete} from 'primeng/autocomplete';
 import {EMPTY_CHECK_OPERATORS, MULTI_VALUE_OPERATORS, RELATIVE_DATE_OPERATORS, parseValue, removeNulls, serializeDateRules} from '../service/magic-shelf-utils';
 import {IconPickerService, IconSelection} from '../../../shared/service/icon-picker.service';
-import {CheckboxChangeEvent, CheckboxModule} from "primeng/checkbox";
 import {UserService} from "../../settings/user-management/user.service";
 import {IconDisplayComponent} from '../../../shared/components/icon-display/icon-display.component';
 import {Tooltip} from 'primeng/tooltip';
 import {BookService} from '../../book/service/book.service';
 import {ShelfService} from '../../book/service/shelf.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {TextareaModule} from 'primeng/textarea';
+import {ModalRef} from '../../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../../shared/components/ui/modal/modal-host';
+import {ButtonComponent} from '../../../shared/components/ui/button/button';
+import {InputDirective} from '../../../shared/components/ui/input/input';
+import {ToggleComponent} from '../../../shared/components/ui/toggle/toggle';
+import {DividerComponent} from '../../../shared/components/ui/divider/divider';
 
 export type RuleOperator =
   | 'equals'
@@ -225,24 +226,24 @@ const READ_STATUS_KEYS: Record<string, string> = {
 @Component({
   selector: 'app-magic-shelf',
   templateUrl: './magic-shelf-component.html',
-  styleUrl: './magic-shelf-component.scss',
   standalone: true,
+  host: {class: 'flex flex-col flex-1 min-h-0'},
   imports: [
     ReactiveFormsModule,
     FormsModule,
     NgTemplateOutlet,
-    InputText,
     Select,
-    Button,
     DatePicker,
     InputNumber,
     MultiSelect,
     AutoComplete,
-    CheckboxModule,
     IconDisplayComponent,
     Tooltip,
     TranslocoDirective,
-    TextareaModule
+    ButtonComponent,
+    InputDirective,
+    ToggleComponent,
+    DividerComponent
   ]
 })
 export class MagicShelfComponent implements OnInit {
@@ -479,9 +480,9 @@ export class MagicShelfComponent implements OnInit {
   shelfService = inject(ShelfService);
   bookService = inject(BookService);
   magicShelfService = inject(MagicShelfService);
-  ref = inject(DynamicDialogRef);
+  readonly modalRef = inject(ModalRef);
   messageService = inject(MessageService);
-  config = inject(DynamicDialogConfig);
+  private data = inject(MODAL_DATA) as {id?: number; editMode?: boolean} | null;
   userService = inject(UserService);
   private iconPicker = inject(IconPickerService);
 
@@ -509,8 +510,8 @@ export class MagicShelfComponent implements OnInit {
 
   ngOnInit(): void {
     this.isAdmin = this.userService.getCurrentUser()?.permissions.admin ?? false;
-    const id = this.config?.data?.id;
-    this.editMode = !!this.config?.data?.editMode;
+    const id = this.data?.id;
+    this.editMode = !!this.data?.editMode;
 
     if (id) {
       this.shelfId = id;
@@ -807,8 +808,7 @@ export class MagicShelfComponent implements OnInit {
     }
   }
 
-  onIsPublicChange(event: CheckboxChangeEvent): void {
-    const checked = event.checked ?? false;
+  onIsPublicChange(checked: boolean): void {
     this.form.get('isPublic')?.setValue(checked);
   }
 
@@ -885,6 +885,6 @@ export class MagicShelfComponent implements OnInit {
   }
 
   cancel() {
-    this.ref.close();
+    this.modalRef.close();
   }
 }

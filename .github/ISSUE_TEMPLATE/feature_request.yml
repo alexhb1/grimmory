@@ -1,19 +1,18 @@
 name: Feature Request
-description: Propose a significant new feature for Grimmory
-labels: ["needs-triage"]
-type: Feature
+description: Suggest a new feature or enhancement for Booklore
+title: "[Feature] "
+labels: ["feature"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please share as much detail as you can to help us understand the feature.
-        Use this template for larger capabilities, new workflows, or major product additions.
+        Please share as much detail as you can to help us understand your suggestion.
 
   - type: textarea
     id: description
     attributes:
       label: What's Your Idea?
-      description: Tell us about the larger feature you'd like to see
+      description: Tell us about the feature you'd like to see
       placeholder: "Example: Add a 'Currently Reading' shelf where I can track books I'm reading and see my progress"
     validations:
       required: true
@@ -22,7 +21,7 @@ body:
     id: problem
     attributes:
       label: Why Would This Be Helpful?
-      description: Help us understand the problem this solves or the value it brings to Grimmory users
+      description: Help us understand the problem this solves or the value it brings
       placeholder: "Example: Right now, it's hard to keep track of multiple books I'm reading at once. Having a dedicated shelf with progress tracking would help me stay organized"
     validations:
       required: true

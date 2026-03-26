@@ -210,7 +210,7 @@ class UserProvisioningServiceTest {
                 provisionDetails);
 
         verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getLibraries()).isNullOrEmpty();
+        assertThat(userCaptor.getValue().getLibraries()).isNull();
         verifyNoInteractions(libraryRepository);
     }
 
@@ -224,7 +224,7 @@ class UserProvisioningServiceTest {
                 provisionDetails);
 
         verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getLibraries()).isNullOrEmpty();
+        assertThat(userCaptor.getValue().getLibraries()).isNull();
         verifyNoInteractions(libraryRepository);
     }
 

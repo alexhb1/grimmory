@@ -5,10 +5,8 @@ import {RadioButton} from 'primeng/radiobutton';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {TableModule} from 'primeng/table';
 import {Tooltip} from 'primeng/tooltip';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {EmailV2RecipientService} from './email-v2-recipient.service';
 import {EmailRecipient} from '../email-recipient.model';
-import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 
 @Component({
@@ -29,8 +27,7 @@ import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/tran
 export class EmailV2RecipientComponent implements OnInit {
   recipientEmails: EmailRecipient[] = [];
   editingRecipientIds: number[] = [];
-  ref: DynamicDialogRef | undefined | null;
-  private dialogLauncherService = inject(DialogLauncherService);
+  ref: any;
   private emailRecipientService = inject(EmailV2RecipientService);
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
@@ -113,12 +110,7 @@ export class EmailV2RecipientComponent implements OnInit {
   }
 
   openAddRecipientDialog() {
-    this.ref = this.dialogLauncherService.openEmailRecipientDialog();
-    this.ref?.onClose.subscribe((result) => {
-      if (result) {
-        this.loadRecipientEmails();
-      }
-    });
+    // TODO: migrate to ModalService
   }
 
   setDefaultRecipient(recipient: EmailRecipient) {

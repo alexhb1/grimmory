@@ -8,13 +8,11 @@ import {ShelfService} from '../../../../features/book/service/shelf.service';
 import {BookService} from '../../../../features/book/service/book.service';
 import {LibraryShelfMenuService} from '../../../../features/book/service/library-shelf-menu.service';
 import {AppVersion, VersionService} from '../../../service/version.service';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {UserService} from '../../../../features/settings/user-management/user.service';
 import {MagicShelfService} from '../../../../features/magic-shelf/service/magic-shelf.service';
 import {SeriesDataService} from '../../../../features/series-browser/service/series-data.service';
 import {AuthorService} from '../../../../features/author-browser/service/author.service';
 import {MenuItem} from 'primeng/api';
-import {DialogLauncherService} from '../../../services/dialog-launcher.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Slider} from 'primeng/slider';
 import {FormsModule} from '@angular/forms';
@@ -30,7 +28,6 @@ import {LocalStorageService} from '../../../service/local-storage.service';
 })
 export class AppMenuComponent implements OnInit {
   versionInfo: AppVersion | null = null;
-  dynamicDialogRef: DynamicDialogRef | undefined | null;
 
   private libraryService = inject(LibraryService);
   private libraryHealthService = inject(LibraryHealthService);
@@ -38,7 +35,6 @@ export class AppMenuComponent implements OnInit {
   private bookService = inject(BookService);
   private versionService = inject(VersionService);
   private libraryShelfMenuService = inject(LibraryShelfMenuService);
-  private dialogLauncherService = inject(DialogLauncherService);
   private userService = inject(UserService);
   private magicShelfService = inject(MagicShelfService);
   private seriesDataService = inject(SeriesDataService);
@@ -308,7 +304,7 @@ export class AppMenuComponent implements OnInit {
   }
 
   openChangelogDialog() {
-    this.dialogLauncherService.openVersionChangelogDialog();
+    // TODO: migrate to ModalService
   }
 
   getVersionUrl(version: string | undefined): string {

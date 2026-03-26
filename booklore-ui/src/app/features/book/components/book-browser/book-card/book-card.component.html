@@ -1,115 +1,140 @@
-<div class="book-card"
-     [class.selected]="isSelected"
-     (click)="onCardClick($event)">
-
-  <div class="cover-container" [ngClass]="{ 'center-info-btn': _isSeriesViewActive || !hasDigitalFile(), 'loaded': isImageLoaded, 'audiobook-cover': _isAudiobook, 'square-library-cover': useSquareCovers }">
-    <img
-      [src]="coverImageUrl"
-      class="book-cover"
-      [class.loaded]="isImageLoaded"
-      [class.square-cover]="_isAudiobook || useSquareCovers"
-      [alt]="('book.card.alt.cover' | transloco: { title: displayTitle })"
-      loading="lazy"
-      decoding="async"
-      (load)="onImageLoad()"/>
-
-    <div class="top-left-overlay-stack">
-      @if ((overlayPreferenceService?.showBookTypePill() ?? true) && getDisplayFormat(); as displayFormat) {
-        <div class="book-type-pill-overlay" [ngClass]="'book-type-' + displayFormat.toLowerCase()">
-          {{ displayFormat }}
-        </div>
-      }
-      @if (!book.seriesCount && book.metadata?.seriesNumber != null) {
-        <div class="series-number-overlay">
-          #{{ book.metadata?.seriesNumber }}
-        </div>
-      }
-      @if (book.seriesCount && book.seriesCount >= 1) {
-        <div class="series-items-count-overlay">
-          <i class="pi pi-book series-items-count-icon"></i>{{ book.seriesCount }}
-        </div>
-      }
-    </div>
-
-    @if (_isSeriesViewActive) {
-      <p-button [rounded]="true" icon="pi pi-info" class="info-btn" (click)="openSeriesInfo()" [ariaLabel]="'book.card.alt.viewSeriesInfo' | transloco"></p-button>
+<div
+  class="book-card group relative cursor-pointer rounded-[7px] bg-surface-raised block"
+  [class.menu-open]="menuVisible"
+  [class.ring-2]="isSelected"
+  [class.ring-accent]="isSelected"
+  (click)="onCardClick($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <!-- Cover -->
+  <div
+    class="relative rounded-t-[7px] overflow-hidden cover-depth cover-spine aspect-[2/3]"
+    [class.!aspect-square]="_isAudiobook || useSquareCovers"
+  >
+    @if (coverImageUrl) {
+      <img
+        [src]="coverImageUrl"
+        class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+        [class.opacity-0]="!isImageLoaded"
+        [class.opacity-100]="isImageLoaded"
+        [alt]="('book.card.alt.cover' | transloco: { title: displayTitle })"
+        loading="lazy"
+        decoding="async"
+        (load)="onImageLoad()"
+      />
     } @else {
-      <p-button [rounded]="true" icon="pi pi-info" class="info-btn" (click)="openBookInfo(book)" [ariaLabel]="'book.card.alt.viewDetails' | transloco">
-      </p-button>
+      <div class="absolute inset-0">
+        <app-cover-placeholder [title]="book.metadata?.title ?? ''" [author]="(book.metadata?.authors ?? []).join(', ')" />
+      </div>
     }
 
-    @if (!_isSeriesViewActive && hasDigitalFile()) {
-      <a [routerLink]="urlHelper.getBookPrimaryReadingUrl(book)" (click)="readBook(book)"><p-button [rounded]="true" [icon]="readButtonIcon" class="read-btn" (click)="readBook(book)"
-        [pTooltip]="_isContinueReading ? ('book.card.alt.continueReading' | transloco) : ''"
-        tooltipPosition="bottom"
-        [ariaLabel]="_isContinueReading ? ('book.card.alt.continueReading' | transloco) : (_isAudiobook ? ('book.card.alt.playAudiobook' | transloco) : ('book.card.alt.readBook' | transloco))"></p-button></a>
-    }
-
+    <!-- Selection checkbox — top left, hides series info when visible -->
     @if (isCheckboxEnabled) {
-      <p-checkbox
-        [binary]="true"
-        class="select-checkbox"
-        (click)="captureMouseEvent($event)"
-        [ngModel]="isSelected"
-        (onChange)="toggleSelection($event)">
-      </p-checkbox>
+      <div
+        class="absolute top-2 left-2 z-[5] transition-opacity duration-150"
+        [class.opacity-0]="!isSelected && !hasSelection"
+        [class.group-hover:opacity-100]="!isSelected && !hasSelection"
+        (click)="$event.stopPropagation()"
+      >
+        <input
+          type="checkbox"
+          [checked]="isSelected"
+          (change)="toggleSelection({ checked: !isSelected })"
+          (click)="captureMouseEvent($event)"
+          class="h-4 w-4 rounded-[3px] border border-edge bg-surface-raised accent-accent cursor-pointer"
+        />
+      </div>
     }
 
+    <!-- Series info — top left (hidden when checkbox is visible) -->
+    @if (!isSelected && !hasSelection) {
+      <div class="absolute top-2 left-2 z-[3] flex flex-col gap-1 transition-opacity duration-150 group-hover:opacity-0">
+        @if (!book.seriesCount && book.metadata?.seriesNumber != null) {
+          <div class="bg-black/60 text-white text-[10px] font-semibold rounded-[4px] px-1.5 py-0.5 tracking-wide">
+            #{{ book.metadata?.seriesNumber }}
+          </div>
+        }
+        @if (book.seriesCount && book.seriesCount >= 1) {
+          <div class="bg-black/60 text-white text-[10px] font-semibold rounded-[4px] px-1.5 py-0.5 tracking-wide flex items-center gap-1">
+            <i class="pi pi-book text-[9px]"></i>{{ book.seriesCount }}
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Format badge — top right -->
+    @if ((overlayPreferenceService?.showBookTypePill() ?? true) && getDisplayFormat(); as displayFormat) {
+      <div class="absolute top-2 right-2 z-[3] bg-black/60 text-white text-[9px] font-semibold uppercase tracking-wider rounded-[4px] px-1.5 py-0.5">
+        {{ displayFormat }}
+      </div>
+    }
+
+    <!-- Progress bars -->
     @if (hasProgress) {
-      <div class="cover-progress-bar-container" [pTooltip]="progressTooltip" tooltipPosition="top">
+      <div class="absolute bottom-0 left-0 right-0 z-[3] flex flex-col gap-px" [pTooltip]="progressTooltip" tooltipPosition="top">
         @if (_progressPercentage !== null) {
-          <p-progressBar
-            [value]="_progressPercentage"
-            [showValue]="false"
-            class="cover-progress-bar"
-            [ngClass]="{ 'progress-complete': _progressPercentage === 100, 'progress-incomplete': _progressPercentage < 100 }">
-          </p-progressBar>
+          <div class="h-[3px]" [class]="_progressPercentage === 100 ? 'bg-status-finished/60' : 'bg-black/20'">
+            <div class="h-full bg-accent-light rounded-r-full transition-all duration-300" [style.width.%]="_progressPercentage"></div>
+          </div>
         }
         @if (_koProgressPercentage !== null) {
-          <p-progressBar
-            [value]="_koProgressPercentage"
-            [showValue]="false"
-            class="cover-progress-bar"
-            [ngClass]="_koProgressPercentage === 100 ? 'progress-complete-ko' : 'progress-incomplete-ko'">
-          </p-progressBar>
+          <div class="h-[3px]" [class]="_koProgressPercentage === 100 ? 'bg-status-finished/60' : 'bg-black/20'">
+            <div class="h-full bg-blue-400 rounded-r-full transition-all duration-300" [style.width.%]="_koProgressPercentage"></div>
+          </div>
         }
         @if (_koboProgressPercentage !== null) {
-          <p-progressBar
-            [value]="_koboProgressPercentage"
-            [showValue]="false"
-            class="cover-progress-bar"
-            [ngClass]="_koboProgressPercentage === 100 ? 'progress-complete-kobo' : 'progress-incomplete-kobo'">
-          </p-progressBar>
+          <div class="h-[3px]" [class]="_koboProgressPercentage === 100 ? 'bg-status-finished/60' : 'bg-black/20'">
+            <div class="h-full bg-sky-400 rounded-r-full transition-all duration-300" [style.width.%]="_koboProgressPercentage"></div>
+          </div>
         }
       </div>
     }
+
+    <!-- Hover actions overlay -->
+    <div
+      class="absolute bottom-0 left-0 right-0 z-[4] p-2 flex items-center gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150"
+      [class.!opacity-100]="menuVisible"
+      [class.!translate-y-0]="menuVisible"
+    >
+      @if (!_isSeriesViewActive && hasDigitalFile()) {
+        <a
+          [routerLink]="urlHelper.getBookPrimaryReadingUrl(book)"
+          (click)="readBook(book); $event.stopPropagation()"
+          class="flex-1 h-7 flex items-center justify-center gap-1.5 bg-black/50 hover:bg-black/70 text-white text-[11px] font-medium rounded-[5px] transition-colors no-underline"
+        >
+          <i [class]="readButtonIcon" class="text-xs"></i>
+          {{ _isAudiobook ? ('book.card.alt.playAudiobook' | transloco) : ('book.card.menu.read' | transloco) }}
+        </a>
+      } @else if (_isSeriesViewActive) {
+        <button
+          (click)="openSeriesInfo(); $event.stopPropagation()"
+          class="flex-1 h-7 flex items-center justify-center gap-1.5 bg-black/50 hover:bg-black/70 text-white text-[11px] font-medium rounded-[5px] transition-colors"
+        >
+          <i class="pi pi-info text-xs"></i>
+          Series
+        </button>
+      }
+      <button
+        (click)="onMenuClick($event)"
+        class="h-7 w-7 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-[5px] transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      <p-tieredMenu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="onMenuShow()" (onHide)="onMenuHide()" />
+    </div>
   </div>
 
+  <!-- Info below cover -->
   @if (!bottomBarHidden) {
-    <div class="book-title-container">
-      <div class="read-status-indicator"
-           [ngClass]="_readStatusClass"
-           [pTooltip]="readStatusTooltip"
-           tooltipPosition="bottom"
-           (click)="toggleReadStatusMenu($event, readStatusMenu)"
-           [attr.aria-label]="'book.card.alt.readStatusMenu' | transloco">
-        <i [class]="_readStatusIcon" style="font-size: 0.9rem"></i>
-      </div>
-      <p-tieredmenu #readStatusMenu [model]="readStatusMenuItems" [popup]="true" appendTo="body"></p-tieredmenu>
-      <h4 class="book-title"
-          tooltipPosition="bottom"
-          [pTooltip]="titleTooltip">
+    <div class="px-3 pt-2.5 pb-3">
+      <div class="text-sm font-semibold text-ink leading-snug truncate text-left" [pTooltip]="titleTooltip" tooltipPosition="bottom">
         {{ displayTitle }}
-      </h4>
-      <p-tieredmenu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="onMenuShow()" (onHide)="onMenuHide()"></p-tieredmenu>
-      <p-button
-        class="custom-button-padding"
-        size="small"
-        [text]="true"
-        (click)="onMenuToggle($event, menu)"
-        icon="pi pi-ellipsis-v"
-        [ariaLabel]="'book.card.alt.bookMenu' | transloco">
-      </p-button>
+      </div>
+      @if (book.metadata?.authors; as authors) {
+        <div class="text-xs text-ink-light mt-0.5 truncate text-left">{{ authors }}</div>
+      }
     </div>
   }
 </div>

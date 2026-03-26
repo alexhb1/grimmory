@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, Input} from '@angular/core';
+import {Component, Input} from '@angular/core';
 import {CommonModule} from '@angular/common';
 
 export type ReaderIconName =
@@ -205,7 +205,6 @@ const ICONS: Record<ReaderIconName, IconPath[]> = {
 @Component({
   selector: 'app-reader-icon',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     <svg

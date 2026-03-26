@@ -1,12 +1,6 @@
-import {Component, computed, effect, inject} from '@angular/core';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
+import {Component, effect, inject} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Button} from 'primeng/button';
-import {InputText} from 'primeng/inputtext';
-import {Tooltip} from 'primeng/tooltip';
 import {Select} from 'primeng/select';
-import {Textarea} from 'primeng/textarea';
-import {InputNumber} from 'primeng/inputnumber';
 import {AutoComplete, AutoCompleteCompleteEvent} from 'primeng/autocomplete';
 import {BookService} from '../../service/book.service';
 import {BookMetadataService} from '../../service/book-metadata.service';
@@ -14,64 +8,57 @@ import {LibraryService} from '../../service/library.service';
 import {Library} from '../../model/library.model';
 import {CreatePhysicalBookRequest} from '../../model/book.model';
 import {TranslocoDirective} from '@jsverse/transloco';
+import {ModalRef} from '../../../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../../../shared/components/ui/modal/modal-host';
+import {InputDirective} from '../../../../shared/components/ui/input/input';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button';
+import {DividerComponent} from '../../../../shared/components/ui/divider/divider';
 
 @Component({
   selector: 'app-add-physical-book-dialog',
   standalone: true,
   templateUrl: './add-physical-book-dialog.component.html',
-  imports: [
-    FormsModule,
-    Button,
-    InputText,
-    Tooltip,
-    Select,
-    Textarea,
-    InputNumber,
-    AutoComplete,
-    TranslocoDirective
-  ],
-  styleUrl: './add-physical-book-dialog.component.scss',
+  imports: [FormsModule, Select, AutoComplete, InputDirective, ButtonComponent, DividerComponent, TranslocoDirective],
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class AddPhysicalBookDialogComponent {
-  private dynamicDialogRef = inject(DynamicDialogRef);
-  private dialogConfig = inject(DynamicDialogConfig);
+  readonly modalRef = inject(ModalRef);
+  private data = inject(MODAL_DATA) as {libraryId?: number} | null;
   private bookService = inject(BookService);
   private bookMetadataService = inject(BookMetadataService);
   private libraryService = inject(LibraryService);
 
   selectedLibraryId: number | null = null;
-  title: string = '';
-  isbn: string = '';
+  title = '';
+  isbn = '';
   authors: string[] = [];
-  description: string = '';
-  publisher: string = '';
-  publishedDate: string = '';
-  language: string = '';
+  description = '';
+  publisher = '';
+  publishedDate = '';
+  language = '';
   pageCount: number | null = null;
   categories: string[] = [];
 
-  private readonly metadata = computed(() => this.bookService.uniqueMetadata());
-  get allAuthors(): string[] { return this.metadata().authors; }
-  get allCategories(): string[] { return this.metadata().categories; }
+  get allAuthors(): string[] { return this.bookService.uniqueMetadata().authors; }
+  get allCategories(): string[] { return this.bookService.uniqueMetadata().categories; }
   filteredAuthors: string[] = [];
   filteredCategories: string[] = [];
 
   coverUrl: string | null = null;
-  isLoading: boolean = false;
-  isFetchingMetadata: boolean = false;
+  isLoading = false;
+  isFetchingMetadata = false;
+
   private readonly initializeSelectedLibraryEffect = effect(() => {
     const libraries = this.libraries;
-    if (libraries.length === 0) {
+    if (libraries.length === 0) return;
+
+    if (this.data?.libraryId) {
+      this.selectedLibraryId = this.data.libraryId;
       return;
     }
 
-    if (this.dialogConfig.data?.libraryId) {
-      this.selectedLibraryId = this.dialogConfig.data.libraryId;
-      return;
-    }
-
-    if (this.selectedLibraryId == null && this.libraries[0].id !== undefined) {
-      this.selectedLibraryId = this.libraries[0].id;
+    if (this.selectedLibraryId == null && libraries[0].id !== undefined) {
+      this.selectedLibraryId = libraries[0].id;
     }
   });
 
@@ -81,16 +68,12 @@ export class AddPhysicalBookDialogComponent {
 
   filterAuthors(event: AutoCompleteCompleteEvent): void {
     const query = event.query.toLowerCase();
-    this.filteredAuthors = this.allAuthors.filter((author) =>
-      author.toLowerCase().includes(query)
-    );
+    this.filteredAuthors = this.allAuthors.filter(a => a.toLowerCase().includes(query));
   }
 
   filterCategories(event: AutoCompleteCompleteEvent): void {
     const query = event.query.toLowerCase();
-    this.filteredCategories = this.allCategories.filter((category) =>
-      category.toLowerCase().includes(query)
-    );
+    this.filteredCategories = this.allCategories.filter(c => c.toLowerCase().includes(query));
   }
 
   onAutoCompleteKeyUp(fieldName: 'authors' | 'categories', event: KeyboardEvent): void {
@@ -107,7 +90,7 @@ export class AddPhysicalBookDialogComponent {
     }
   }
 
-  onAutoCompleteSelect(fieldName: 'authors' | 'categories', event: { value: string, originalEvent: Event }): void {
+  onAutoCompleteSelect(fieldName: 'authors' | 'categories', event: {value: string, originalEvent: Event}): void {
     const values = this[fieldName];
     if (!values.includes(event.value)) {
       this[fieldName] = [...values, event.value];
@@ -139,10 +122,6 @@ export class AddPhysicalBookDialogComponent {
     });
   }
 
-  cancel(): void {
-    this.dynamicDialogRef.close();
-  }
-
   canCreate(): boolean {
     return !!this.selectedLibraryId && (!!this.title.trim() || !!this.isbn.trim());
   }
@@ -169,7 +148,7 @@ export class AddPhysicalBookDialogComponent {
     this.bookService.createPhysicalBook(request).subscribe({
       next: (book) => {
         this.isLoading = false;
-        this.dynamicDialogRef.close(book);
+        this.modalRef.close(book);
       },
       error: () => {
         this.isLoading = false;

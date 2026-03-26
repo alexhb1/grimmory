@@ -9,6 +9,7 @@ import {Dialog} from 'primeng/dialog';
 import {FormsModule} from '@angular/forms';
 import {ConfirmDialog} from 'primeng/confirmdialog';
 import {ConfirmationService, MessageService} from 'primeng/api';
+import {ConfirmService} from '../../../shared/components/ui/confirm-modal/confirm.service';
 import {OpdsService, OpdsSortOrder, OpdsUserV2, OpdsUserV2CreateRequest} from './opds.service';
 import {catchError, takeUntil} from 'rxjs/operators';
 import {UserService} from '../user-management/user.service';
@@ -50,6 +51,7 @@ export class OpdsSettings implements OnInit, OnDestroy {
 
   private opdsService = inject(OpdsService);
   private confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
   private messageService = inject(MessageService);
   private userService = inject(UserService);
   private appSettingsService = inject(AppSettingsService);
@@ -146,12 +148,13 @@ export class OpdsSettings implements OnInit, OnDestroy {
   }
 
   confirmDelete(user: OpdsUserV2): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('settingsOpds.deleteHeader'),
       message: this.t.translate('settingsOpds.deleteConfirm', {username: user.username}),
-      header: this.t.translate('settingsOpds.deleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.deleteUser(user)
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.deleteUser(user);
     });
   }
 

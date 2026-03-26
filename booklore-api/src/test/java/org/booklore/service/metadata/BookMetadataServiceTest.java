@@ -59,7 +59,6 @@ class BookMetadataServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private BookMetadataRepository bookMetadataRepository;
     @Mock private BookQueryService bookQueryService;
-    @Mock private org.booklore.service.audit.AuditService auditService;
     @Mock private CbxMetadataExtractor cbxMetadataExtractor;
     @Mock private MetadataExtractorFactory metadataExtractorFactory;
     @Mock private MetadataClearFlagsMapper metadataClearFlagsMapper;
@@ -75,7 +74,7 @@ class BookMetadataServiceTest {
         service = new BookMetadataService(
                 bookRepository, bookMapper, bookMetadataMapper, bookMetadataUpdater,
                 notificationService, bookMetadataRepository, bookQueryService,
-                auditService, parserMap, cbxMetadataExtractor, metadataExtractorFactory,
+                parserMap, cbxMetadataExtractor, metadataExtractorFactory,
                 metadataClearFlagsMapper, transactionManager, appSettingService
         );
     }
@@ -450,7 +449,7 @@ class BookMetadataServiceTest {
 
         @Test
         void throwsWhenBookNotFound() {
-            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.empty());
+            when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.getComicInfoMetadata(1L))
                     .isInstanceOf(APIException.class);
@@ -459,7 +458,7 @@ class BookMetadataServiceTest {
         @Test
         void returnsNullWhenPrimaryFileIsNull() {
             BookEntity bookEntity = BookEntity.builder().id(1L).bookFiles(new ArrayList<>()).build();
-            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(bookEntity));
+            when(bookRepository.findById(1L)).thenReturn(Optional.of(bookEntity));
 
             BookMetadata result = service.getComicInfoMetadata(1L);
 
@@ -470,7 +469,7 @@ class BookMetadataServiceTest {
         void returnsNullWhenFileTypeIsNotCbx() {
             BookFileEntity file = BookFileEntity.builder().bookType(BookFileType.PDF).isBookFormat(true).build();
             BookEntity bookEntity = BookEntity.builder().id(1L).bookFiles(List.of(file)).build();
-            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(bookEntity));
+            when(bookRepository.findById(1L)).thenReturn(Optional.of(bookEntity));
 
             BookMetadata result = service.getComicInfoMetadata(1L);
 
@@ -515,8 +514,8 @@ class BookMetadataServiceTest {
 
             BookEntity book1 = BookEntity.builder().id(1L).build();
             BookEntity book2 = BookEntity.builder().id(2L).build();
-            when(bookRepository.findByIdFull(1L)).thenReturn(Optional.of(book1));
-            when(bookRepository.findByIdFull(2L)).thenReturn(Optional.of(book2));
+            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(book1));
+            when(bookRepository.findByIdWithBookFiles(2L)).thenReturn(Optional.of(book2));
 
             var txStatus = mock(org.springframework.transaction.TransactionStatus.class);
             when(transactionManager.getTransaction(any())).thenReturn(txStatus);
@@ -543,8 +542,8 @@ class BookMetadataServiceTest {
             when(transactionManager.getTransaction(any())).thenReturn(txStatus);
 
             BookEntity book2 = BookEntity.builder().id(2L).build();
-            when(bookRepository.findByIdFull(1L)).thenReturn(Optional.empty());
-            when(bookRepository.findByIdFull(2L)).thenReturn(Optional.of(book2));
+            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.empty());
+            when(bookRepository.findByIdWithBookFiles(2L)).thenReturn(Optional.of(book2));
 
             service.bulkUpdateMetadata(request, false, false, false);
 
@@ -566,7 +565,7 @@ class BookMetadataServiceTest {
             when(transactionManager.getTransaction(any())).thenReturn(txStatus);
 
             BookEntity book = BookEntity.builder().id(1L).build();
-            when(bookRepository.findByIdFull(1L)).thenReturn(Optional.of(book));
+            when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(book));
 
             service.bulkUpdateMetadata(request, false, false, false);
 
@@ -582,7 +581,7 @@ class BookMetadataServiceTest {
 
         @Test
         void throwsWhenBookNotFound() {
-            when(bookRepository.findByIdWithBookFiles(99L)).thenReturn(Optional.empty());
+            when(bookRepository.findById(99L)).thenReturn(Optional.empty());
             FetchMetadataRequest request = FetchMetadataRequest.builder()
                     .providers(List.of(MetadataProvider.Google))
                     .build();

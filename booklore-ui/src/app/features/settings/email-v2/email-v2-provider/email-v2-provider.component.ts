@@ -6,11 +6,9 @@ import {RadioButton} from 'primeng/radiobutton';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {TableModule} from 'primeng/table';
 import {Tooltip} from 'primeng/tooltip';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {EmailV2ProviderService} from './email-v2-provider.service';
 import {EmailProvider} from '../email-provider.model';
 import {UserService} from '../../user-management/user.service';
-import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 
 @Component({
@@ -32,8 +30,7 @@ import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/tran
 export class EmailV2ProviderComponent implements OnInit {
   emailProviders: EmailProvider[] = [];
   editingProviderIds: number[] = [];
-  ref: DynamicDialogRef | undefined | null;
-  private dialogLauncherService = inject(DialogLauncherService);
+  ref: any;
   private emailProvidersService = inject(EmailV2ProviderService);
   private messageService = inject(MessageService);
   private userService = inject(UserService);
@@ -126,12 +123,7 @@ export class EmailV2ProviderComponent implements OnInit {
   }
 
   openCreateProviderDialog() {
-    this.ref = this.dialogLauncherService.openEmailProviderDialog();
-    this.ref?.onClose.subscribe((result) => {
-      if (result) {
-        this.loadEmailProviders();
-      }
-    });
+    // TODO: migrate to ModalService
   }
 
   setDefaultProvider(provider: EmailProvider) {

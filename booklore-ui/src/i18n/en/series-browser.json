@@ -12,7 +12,12 @@
     "notStarted": "Not Started",
     "inProgress": "In Progress",
     "completed": "Completed",
-    "abandoned": "Abandoned"
+    "abandoned": "Abandoned",
+    "clear": "Clear"
+  },
+  "menu": {
+    "viewSeries": "View Series",
+    "readNext": "Read Next"
   },
   "sort": {
     "nameAsc": "Name (A-Z)",

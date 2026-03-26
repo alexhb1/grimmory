@@ -1,13 +1,9 @@
-import {Component, HostListener, computed, inject, OnInit, signal} from '@angular/core';
-import {NgStyle} from '@angular/common';
+import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {ProgressSpinner} from 'primeng/progressspinner';
-import {InputText} from 'primeng/inputtext';
-import {Select} from 'primeng/select';
 import {Slider} from 'primeng/slider';
 import {Popover} from 'primeng/popover';
+import {Paginator} from 'primeng/paginator';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {VirtualScrollerModule} from '@iharbeck/ngx-virtual-scroller';
 import {SeriesDataService} from '../../service/series-data.service';
 import {SeriesSummary} from '../../model/series.model';
 import {SeriesCardComponent} from '../series-card/series-card.component';
@@ -16,13 +12,17 @@ import {ReadStatus} from '../../../book/model/book.model';
 import {PageTitleService} from '../../../../shared/service/page-title.service';
 import {SeriesScalePreferenceService} from '../../service/series-scale-preference.service';
 import {Router} from '@angular/router';
+import {BrowsePageComponent} from '../../../../shared/components/browse/browse-page.component';
+import {BrowseToolbarComponent} from '../../../../shared/components/browse/browse-toolbar.component';
+import {BrowseGridComponent} from '../../../../shared/components/browse/browse-grid.component';
+import {SpinnerComponent} from '../../../../shared/components/ui/spinner/spinner';
 
-interface FilterOption {
+interface SortOption {
   label: string;
   value: string;
 }
 
-interface SortOption {
+interface FilterOption {
   label: string;
   value: string;
 }
@@ -31,26 +31,20 @@ interface SortOption {
   selector: 'app-series-browser',
   standalone: true,
   templateUrl: './series-browser.component.html',
-  styleUrls: ['./series-browser.component.scss'],
   imports: [
-    NgStyle,
     FormsModule,
-    ProgressSpinner,
-    InputText,
-    Select,
     Slider,
     Popover,
+    Paginator,
     TranslocoDirective,
     SeriesCardComponent,
-    VirtualScrollerModule
+    BrowsePageComponent,
+    BrowseToolbarComponent,
+    BrowseGridComponent,
+    SpinnerComponent
   ]
 })
 export class SeriesBrowserComponent implements OnInit {
-
-  private static readonly BASE_WIDTH = 230;
-  private static readonly BASE_HEIGHT = 285;
-  private static readonly MOBILE_BASE_WIDTH = 180;
-  private static readonly MOBILE_BASE_HEIGHT = 250;
 
   private seriesDataService = inject(SeriesDataService);
   private bookService = inject(BookService);
@@ -60,9 +54,17 @@ export class SeriesBrowserComponent implements OnInit {
   protected seriesScaleService = inject(SeriesScalePreferenceService);
 
   readonly isBooksLoading = this.bookService.isBooksLoading;
-  private readonly searchTerm = signal('');
-  private readonly statusFilter = signal('all');
-  private readonly sortBy = signal('name-asc');
+
+  readonly searchTerm = signal('');
+  readonly statusFilter = signal('all');
+  readonly sortBy = signal('name-asc');
+
+  readonly pageFirst = signal(0);
+  readonly pageRows = signal(50);
+
+  sortOptions: SortOption[] = [];
+  filterOptions: FilterOption[] = [];
+
   readonly filteredSeries = computed(() => {
     let result = this.seriesDataService.allSeries();
 
@@ -78,47 +80,24 @@ export class SeriesBrowserComponent implements OnInit {
     return this.applySort(result, this.sortBy());
   });
 
-  screenWidth = window.innerWidth;
-  filterOptions: FilterOption[] = [];
-  sortOptions: SortOption[] = [];
+  readonly pagedSeries = computed(() => {
+    const all = this.filteredSeries();
+    const start = this.pageFirst();
+    return all.slice(start, start + this.pageRows());
+  });
 
-  @HostListener('window:resize')
-  onResize(): void {
-    this.screenWidth = window.innerWidth;
+  get currentSortLabel(): string {
+    const current = this.sortBy();
+    return this.sortOptions.find(o => o.value === current)?.label ?? 'Sort';
   }
 
-  get isMobile(): boolean {
-    return this.screenWidth <= 767;
+  get currentFilterLabel(): string {
+    const current = this.statusFilter();
+    return this.filterOptions.find(o => o.value === current)?.label ?? 'Status';
   }
 
-  get cardWidth(): number {
-    const base = this.isMobile
-      ? SeriesBrowserComponent.MOBILE_BASE_WIDTH
-      : SeriesBrowserComponent.BASE_WIDTH;
-    return Math.round(base * this.seriesScaleService.scaleFactor());
-  }
-
-  get cardHeight(): number {
-    const base = this.isMobile
-      ? SeriesBrowserComponent.MOBILE_BASE_HEIGHT
-      : SeriesBrowserComponent.BASE_HEIGHT;
-    return Math.round(base * this.seriesScaleService.scaleFactor());
-  }
-
-  get gridColumnMinWidth(): string {
-    return `${this.cardWidth}px`;
-  }
-
-  get searchValue(): string {
-    return this.searchTerm();
-  }
-
-  get statusFilterValue(): string {
-    return this.statusFilter();
-  }
-
-  get sortByValue(): string {
-    return this.sortBy();
+  get isFilterActive(): boolean {
+    return this.statusFilter() !== 'all';
   }
 
   ngOnInit(): void {
@@ -144,14 +123,27 @@ export class SeriesBrowserComponent implements OnInit {
 
   onSearchChange(value: string): void {
     this.searchTerm.set(value);
-  }
-
-  onStatusFilterChange(value: string): void {
-    this.statusFilter.set(value);
+    this.pageFirst.set(0);
   }
 
   onSortChange(value: string): void {
     this.sortBy.set(value);
+    this.pageFirst.set(0);
+  }
+
+  onStatusFilterChange(value: string): void {
+    this.statusFilter.set(value);
+    this.pageFirst.set(0);
+  }
+
+  clearFilter(): void {
+    this.statusFilter.set('all');
+    this.pageFirst.set(0);
+  }
+
+  onPageChange(event: { first?: number; rows?: number }): void {
+    if (event.first != null) this.pageFirst.set(event.first);
+    if (event.rows != null) this.pageRows.set(event.rows);
   }
 
   navigateToSeries(series: SeriesSummary): void {

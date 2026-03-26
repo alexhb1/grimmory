@@ -1,102 +1,171 @@
 <ng-container *transloco="let t; prefix: 'seriesBrowser'">
-  @if (isBooksLoading()) {
-    <div class="loading-state">
-      <p-progressSpinner
-        [style]="{'width': '60px', 'height': '60px'}"
-        strokeWidth="3"
-        fill="transparent"
-        animationDuration="1.5s">
-      </p-progressSpinner>
-    </div>
-  }
-
-  @if (!isBooksLoading()) {
-    <div class="browse-header">
-      <h2 class="browse-title">{{ t('browseAllSeries') }}</h2>
-
-      <div class="browse-controls">
-        <div class="search-wrapper">
-          <i class="pi pi-search search-icon"></i>
-          <input
-            pInputText
-            type="text"
-            [placeholder]="t('searchPlaceholder')"
-            [ngModel]="searchValue"
-            (ngModelChange)="onSearchChange($event)"
-            class="search-input"/>
-        </div>
-
-        <div class="filter-sort-wrapper">
-          <p-select
-            [options]="filterOptions"
-            [ngModel]="statusFilterValue"
-            (ngModelChange)="onStatusFilterChange($event)"
-            optionLabel="label"
-            optionValue="value"
-            class="filter-dropdown">
-          </p-select>
-
-          <p-select
-            [options]="sortOptions"
-            [ngModel]="sortByValue"
-            (ngModelChange)="onSortChange($event)"
-            optionLabel="label"
-            optionValue="value"
-            class="sort-dropdown">
-          </p-select>
-
-          @if (!isMobile) {
-            <button class="display-settings-btn" (click)="displaySettingsPopover.toggle($event)">
-              <i class="pi pi-sliders-h"></i>
-            </button>
-            <p-popover #displaySettingsPopover>
-              <div class="display-settings-content">
-                <span class="display-settings-label">{{ t('cardSize') }}</span>
-                <p-slider
-                  [ngModel]="seriesScaleService.scaleFactor()"
-                  (ngModelChange)="seriesScaleService.setScale($event)"
-                  [min]="0.7"
-                  [max]="1.3"
-                  [step]="0.01"
-                  [style]="{ width: '100%' }">
-                </p-slider>
-                <div class="scale-value-display">
-                  {{ seriesScaleService.scaleFactor().toFixed(2) }}x
-                </div>
-              </div>
-            </p-popover>
-          }
-        </div>
+<app-browse-page
+  [title]="t('browseAllSeries')"
+>
+  <app-browse-toolbar
+    [searchPlaceholder]="t('searchPlaceholder')"
+    [(searchTerm)]="searchTerm"
+    (searchTermChange)="onSearchChange($event)"
+    [showViewToggle]="false"
+  >
+    <ng-container toolbarStart>
+      <!-- Cover scale popover -->
+      <div>
+        <button
+          (click)="scalePopover.toggle($event)"
+          class="h-8 w-8 flex items-center justify-center rounded-[6px] bg-surface-raised text-ink-muted shadow-paper hover:bg-surface-hover hover:text-ink hover:shadow-paper-hover transition-all cursor-pointer"
+          title="Card size"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <p-popover #scalePopover [dismissable]="true" appendTo="body">
+          <div class="flex items-center gap-3" style="width: 180px;">
+            <svg class="w-3 h-3 text-ink-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            <p-slider
+              [ngModel]="seriesScaleService.scaleFactor()"
+              (ngModelChange)="seriesScaleService.setScale($event)"
+              [min]="0.5"
+              [max]="1.5"
+              [step]="0.01"
+              [style]="{ width: '100%' }"
+            />
+            <svg class="w-4.5 h-4.5 text-ink-muted flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+          </div>
+        </p-popover>
       </div>
-    </div>
+    </ng-container>
 
-    @if (filteredSeries(); as seriesList) {
-      @if (seriesList.length === 0) {
-        <div class="empty-state">
-          <i class="pi pi-list empty-icon"></i>
-          <p>{{ t('noSeriesFound') }}</p>
-        </div>
-      } @else {
-        <virtual-scroller
-          #scroll
-          [items]="seriesList"
-          class="virtual-scroller">
-          <div class="series-grid"
-            #container
-            [ngStyle]="{'grid-template-columns': 'repeat(auto-fill, minmax(' + gridColumnMinWidth + ', 1fr))'}">
-            @for (series of scroll.viewPortItems; track series.seriesName) {
-              <div class="virtual-scroller-item"
-                [ngStyle]="{width: cardWidth + 'px', height: cardHeight + 'px'}"
-                [style.--card-scale]="seriesScaleService.scaleFactor()">
-                <app-series-card
-                  [series]="series"
-                  (cardClick)="navigateToSeries($event)">
-                </app-series-card>
-              </div>
+    <ng-container toolbarEnd>
+      <!-- Sort button -->
+      <div>
+        <button
+          (click)="sortPopover.toggle($event)"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] bg-surface-raised text-ink-light shadow-paper hover:bg-surface-hover hover:text-ink hover:shadow-paper-hover transition-all cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>
+          </svg>
+          {{ currentSortLabel }}
+        </button>
+        <p-popover #sortPopover [dismissable]="true" appendTo="body">
+          <div class="flex flex-col min-w-[180px]">
+            @for (option of sortOptions; track option.value) {
+              <button
+                (click)="onSortChange(option.value); sortPopover.hide()"
+                class="flex items-center gap-2 px-3 py-2 text-sm text-left rounded-[4px] transition-colors cursor-pointer"
+                [class.bg-surface-hover]="sortBy() === option.value"
+                [class.text-ink]="sortBy() === option.value"
+                [class.font-medium]="sortBy() === option.value"
+                [class.text-ink-light]="sortBy() !== option.value"
+                [class.hover:bg-surface-hover]="sortBy() !== option.value"
+              >
+                @if (sortBy() === option.value) {
+                  <svg class="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                } @else {
+                  <span class="w-3.5"></span>
+                }
+                {{ option.label }}
+              </button>
             }
           </div>
-        </virtual-scroller>
+        </p-popover>
+      </div>
+
+      <!-- Status filter button -->
+      <div>
+        <button
+          (click)="filterPopover.toggle($event)"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] shadow-paper transition-all cursor-pointer"
+          [class.bg-accent]="isFilterActive"
+          [class.text-white]="isFilterActive"
+          [class.bg-surface-raised]="!isFilterActive"
+          [class.text-ink-light]="!isFilterActive"
+          [class.hover:bg-surface-hover]="!isFilterActive"
+          [class.hover:text-ink]="!isFilterActive"
+          [class.hover:shadow-paper-hover]="!isFilterActive"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          {{ currentFilterLabel }}
+        </button>
+        <p-popover #filterPopover [dismissable]="true" appendTo="body">
+          <div class="flex flex-col min-w-[160px]">
+            @for (option of filterOptions; track option.value) {
+              <button
+                (click)="onStatusFilterChange(option.value); filterPopover.hide()"
+                class="flex items-center gap-2 px-3 py-2 text-sm text-left rounded-[4px] transition-colors cursor-pointer"
+                [class.bg-surface-hover]="statusFilter() === option.value"
+                [class.text-ink]="statusFilter() === option.value"
+                [class.font-medium]="statusFilter() === option.value"
+                [class.text-ink-light]="statusFilter() !== option.value"
+                [class.hover:bg-surface-hover]="statusFilter() !== option.value"
+              >
+                @if (statusFilter() === option.value) {
+                  <svg class="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                } @else {
+                  <span class="w-3.5"></span>
+                }
+                {{ option.label }}
+              </button>
+            }
+          </div>
+        </p-popover>
+      </div>
+
+      <!-- Clear filters -->
+      @if (isFilterActive) {
+        <button
+          (click)="clearFilter()"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] bg-surface-raised text-status-abandoned shadow-paper hover:bg-status-abandoned-bg hover:shadow-paper-hover transition-all cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+          {{ t('filters.clear') || 'Clear' }}
+        </button>
       }
+    </ng-container>
+  </app-browse-toolbar>
+
+  <!-- Content -->
+  @if (isBooksLoading()) {
+    <div class="flex items-center justify-center h-64">
+      <app-spinner size="lg" />
+    </div>
+  } @else if (filteredSeries(); as seriesList) {
+    @if (seriesList.length === 0) {
+      <div class="flex items-center justify-center h-64 text-ink-muted text-sm">
+        {{ t('noSeriesFound') }}
+      </div>
+    } @else {
+      <app-browse-grid [scale]="seriesScaleService.scaleFactor()" [baseWidth]="170">
+        @for (series of pagedSeries(); track series.seriesName) {
+          <app-series-card
+            [series]="series"
+            (cardClick)="navigateToSeries($event)"
+          />
+        }
+      </app-browse-grid>
+      <p-paginator
+        [rows]="pageRows()"
+        [totalRecords]="seriesList.length"
+        [first]="pageFirst()"
+        [rowsPerPageOptions]="[25, 50, 100]"
+        (onPageChange)="onPageChange($event)"
+      />
     }
   }
+</app-browse-page>
 </ng-container>

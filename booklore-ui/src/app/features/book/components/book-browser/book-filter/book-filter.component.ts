@@ -3,12 +3,6 @@ import {Subject, takeUntil} from 'rxjs';
 import {Library} from '../../../model/library.model';
 import {Shelf} from '../../../model/shelf.model';
 import {EntityType} from '../book-browser.component';
-import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from 'primeng/accordion';
-import {CdkFixedSizeVirtualScroll, CdkVirtualForOf, CdkVirtualScrollViewport} from '@angular/cdk/scrolling';
-import {NgClass} from '@angular/common';
-import {Badge} from 'primeng/badge';
-import {FormsModule} from '@angular/forms';
-import {SelectButton} from 'primeng/selectbutton';
 import {BookFilterMode, DEFAULT_VISIBLE_FILTERS, UserService, VisibleFilterType} from '../../../../settings/user-management/user.service';
 import {MagicShelf} from '../../../../magic-shelf/service/magic-shelf.service';
 import {Filter, FILTER_LABEL_KEYS, FilterType} from './book-filter.config';
@@ -26,12 +20,7 @@ interface FilterModeOption {
   styleUrls: ['./book-filter.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [
-    Accordion, AccordionPanel, AccordionHeader, AccordionContent,
-    CdkVirtualScrollViewport, CdkFixedSizeVirtualScroll, CdkVirtualForOf,
-    NgClass, Badge, FormsModule, SelectButton,
-    TranslocoDirective
-  ]
+  imports: [TranslocoDirective]
 })
 export class BookFilterComponent implements OnInit, OnDestroy {
   @Input() set entity(value: Library | Shelf | MagicShelf | null | undefined) {
@@ -56,7 +45,7 @@ export class BookFilterComponent implements OnInit, OnDestroy {
   private readonly activeFiltersSignal = signal<Record<string, unknown[]> | null>(null);
   private readonly filterModeSignal = signal<BookFilterMode>('and');
 
-  activeFilters: Record<string, unknown[]> = {};
+  readonly activeFilters = signal<Record<string, unknown[]>>({});
   filterSignals: Record<FilterType, Signal<Filter[]>> = this.filterService.createFilterSignals(
     this.entitySignal,
     this.entityTypeSignal,
@@ -64,12 +53,19 @@ export class BookFilterComponent implements OnInit, OnDestroy {
     this.filterModeSignal
   );
   filterTypes: FilterType[] = Object.keys(this.filterSignals) as FilterType[];
-  visibleFilterTypes: FilterType[] = [];
-  expandedPanels: number[] = [0];
+  readonly visibleFilterTypes = signal<FilterType[]>([]);
+  readonly expandedPanels = signal<number[]>([0]);
   truncatedFilters: Record<string, boolean> = {};
 
   private _selectedFilterMode: BookFilterMode = 'and';
   private _visibleFilters: VisibleFilterType[] = [...DEFAULT_VISIBLE_FILTERS];
+
+  private readonly userSettingsEffect = effect(() => {
+    const user = this.userService.currentUser();
+    if (!user) return;
+    this._visibleFilters = user.userSettings.visibleFilters ?? [...DEFAULT_VISIBLE_FILTERS];
+    this.updateVisibleFilterTypes();
+  }, {allowSignalWrites: true});
 
   readonly filterLabelKeys = FILTER_LABEL_KEYS;
 
@@ -99,7 +95,6 @@ export class BookFilterComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.updateVisibleFilterTypes();
     this.updateExpandedPanels();
-    this.subscribeToUserSettings();
     this.subscribeToReset();
   }
 
@@ -118,29 +113,29 @@ export class BookFilterComponent implements OnInit, OnDestroy {
   }
 
   setFilters(filters: Record<string, unknown>): void {
-    this.activeFilters = {};
+    const newFilters: Record<string, unknown[]> = {};
     for (const [key, value] of Object.entries(filters)) {
       const values = Array.isArray(value) ? value : [value];
-      this.activeFilters[key] = values.map(v => this.filterService.processFilterValue(key, v));
+      newFilters[key] = values.map(v => this.filterService.processFilterValue(key, v));
     }
+    this.activeFilters.set(newFilters);
     this.emitFilters();
   }
 
   clearActiveFilter(): void {
-    this.activeFilters = {};
-    this.expandedPanels = [0];
+    this.activeFilters.set({});
+    this.expandedPanels.set([0]);
     this.activeFiltersSignal.set(null);
     this.filterSelected.emit(null);
   }
 
-  onExpandedPanelsChange(value: string | number | string[] | number[] | null | undefined): void {
-    if (Array.isArray(value)) {
-      this.expandedPanels = value.map(Number);
+  togglePanel(index: number): void {
+    const panels = this.expandedPanels();
+    if (panels.includes(index)) {
+      this.expandedPanels.set(panels.filter(p => p !== index));
+    } else {
+      this.expandedPanels.set([...panels, index]);
     }
-  }
-
-  onFiltersChanged(): void {
-    this.updateExpandedPanels();
   }
 
   getVirtualScrollHeight = (itemCount: number): number => Math.min(itemCount * 28, 440);
@@ -164,19 +159,12 @@ export class BookFilterComponent implements OnInit, OnDestroy {
     return String(value ?? '');
   }
 
-  private subscribeToUserSettings(): void {
-    effect(() => {
-      const user = this.userService.currentUser();
-      if (!user) return;
-      this._visibleFilters = user.userSettings.visibleFilters ?? [...DEFAULT_VISIBLE_FILTERS];
-      this.updateVisibleFilterTypes();
-    });
-  }
-
   private updateVisibleFilterTypes(): void {
-    this.visibleFilterTypes = this._visibleFilters.filter(
-      vf => this.filterTypes.includes(vf as FilterType)
-    ) as FilterType[];
+    this.visibleFilterTypes.set(
+      this._visibleFilters.filter(
+        vf => this.filterTypes.includes(vf as FilterType)
+      ) as FilterType[]
+    );
   }
 
   private subscribeToReset(): void {
@@ -185,27 +173,28 @@ export class BookFilterComponent implements OnInit, OnDestroy {
 
   private handleSingleMode(filterType: string, value: unknown): void {
     const id = this.extractId(value);
-    const current = this.activeFilters[filterType];
+    const current = this.activeFilters()[filterType];
     const isSame = current?.length === 1 && this.valuesMatch(current[0], id);
 
-    this.activeFilters = isSame ? {} : {[filterType]: [id]};
+    this.activeFilters.set(isSame ? {} : {[filterType]: [id]});
   }
 
   private handleMultiMode(filterType: string, value: unknown): void {
     const id = this.extractId(value);
-
-    if (!this.activeFilters[filterType]) {
-      this.activeFilters[filterType] = [];
-    }
-
-    const arr = this.activeFilters[filterType];
+    const current = this.activeFilters();
+    const arr = current[filterType] ?? [];
     const index = arr.findIndex(v => this.valuesMatch(v, id));
 
     if (index > -1) {
-      arr.splice(index, 1);
-      if (arr.length === 0) delete this.activeFilters[filterType];
+      const newArr = arr.filter((_, i) => i !== index);
+      if (newArr.length === 0) {
+        const {[filterType]: _, ...rest} = current;
+        this.activeFilters.set(rest);
+      } else {
+        this.activeFilters.set({...current, [filterType]: newArr});
+      }
     } else {
-      arr.push(id);
+      this.activeFilters.set({...current, [filterType]: [...arr, id]});
     }
   }
 
@@ -220,17 +209,19 @@ export class BookFilterComponent implements OnInit, OnDestroy {
   }
 
   private emitFilters(): void {
-    const hasFilters = Object.keys(this.activeFilters).length > 0;
-    const filtersToEmit = hasFilters ? {...this.activeFilters} : null;
+    const filters = this.activeFilters();
+    const hasFilters = Object.keys(filters).length > 0;
+    const filtersToEmit = hasFilters ? {...filters} : null;
     this.activeFiltersSignal.set(filtersToEmit);
     this.filterSelected.emit(filtersToEmit);
   }
 
   private updateExpandedPanels(): void {
-    const panels = new Set(this.expandedPanels);
-    this.visibleFilterTypes.forEach((type, i) => {
-      if (this.activeFilters[type]?.length) panels.add(i);
+    const panels = new Set(this.expandedPanels());
+    const filters = this.activeFilters();
+    this.visibleFilterTypes().forEach((type, i) => {
+      if (filters[type]?.length) panels.add(i);
     });
-    this.expandedPanels = panels.size > 0 ? [...panels] : [0];
+    this.expandedPanels.set(panels.size > 0 ? [...panels] : [0]);
   }
 }

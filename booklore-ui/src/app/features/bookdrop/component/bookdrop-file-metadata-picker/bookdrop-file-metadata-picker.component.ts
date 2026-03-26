@@ -11,6 +11,7 @@ import {AutoComplete} from 'primeng/autocomplete';
 import {Image} from 'primeng/image';
 import {LazyLoadImageModule} from 'ng-lazyload-image';
 import {ConfirmationService} from 'primeng/api';
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/drag-drop';
 import {AutoCompleteSelectEvent} from 'primeng/autocomplete';
 import {DatePicker} from 'primeng/datepicker';
@@ -44,6 +45,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 export class BookdropFileMetadataPickerComponent implements OnInit {
 
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly metadataUtils = inject(MetadataUtilsService);
   protected readonly urlHelper = inject(UrlHelperService);
   private readonly appSettingsService = inject(AppSettingsService);
@@ -192,12 +194,13 @@ export class BookdropFileMetadataPickerComponent implements OnInit {
   }
 
   confirmReset(): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('bookdrop.metadataPicker.confirmResetHeader'),
       message: this.t.translate('bookdrop.metadataPicker.confirmResetMessage'),
-      header: this.t.translate('bookdrop.metadataPicker.confirmResetHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.resetAll()
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.resetAll();
     });
   }
 

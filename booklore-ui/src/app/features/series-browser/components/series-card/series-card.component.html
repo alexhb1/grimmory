@@ -1,48 +1,71 @@
-<div class="series-card" (click)="onCardClick($event)">
-  <div class="stacked-covers" [ngClass]="'covers-' + series.coverBooks.length">
-    @for (book of series.coverBooks; track book.id; let i = $index) {
+<div
+  class="series-card group relative cursor-pointer rounded-[7px] bg-surface-raised block"
+  [class.menu-open]="menuVisible"
+  (click)="onCardClick($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <!-- Cover -->
+  <div class="relative rounded-t-[7px] overflow-hidden cover-depth aspect-square">
+    @if (coverUrl) {
       <img
-        [src]="getCoverUrl(i)"
-        class="cover-img"
-        [ngClass]="'cover-' + i"
+        [src]="coverUrl"
+        class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+        [class.opacity-0]="!isImageLoaded"
+        [class.opacity-100]="isImageLoaded"
         [alt]="series.seriesName"
         loading="lazy"
-        decoding="async"/>
+        decoding="async"
+        (load)="onImageLoad()"
+      />
+    } @else {
+      <div class="absolute inset-0">
+        <app-cover-placeholder [title]="series.seriesName" [author]="authorsDisplay" />
+      </div>
     }
-  </div>
 
-  <div class="card-body">
-    <h4 class="series-name" [pTooltip]="series.seriesName" tooltipPosition="bottom">
-      {{ series.seriesName }}
-    </h4>
-
-    <p class="series-authors" [pTooltip]="series.authors.join(', ')" tooltipPosition="bottom">
-      {{ authorsDisplay }}
-    </p>
-
-    <div class="progress-section">
-      <p-progressBar
-        [value]="progressPercent"
-        [showValue]="false"
-        class="series-progress-bar"
-        [ngClass]="progressPercent === 100 ? 'progress-complete' : 'progress-incomplete'">
-      </p-progressBar>
-      <span class="progress-label">{{ series.readCount }}/{{ series.bookCount }}</span>
+    <!-- Book count badge -->
+    <div class="absolute top-2 left-2 z-[3] bg-black/60 text-white text-[10px] font-semibold rounded-[4px] px-1.5 py-0.5 tracking-wide flex items-center gap-1">
+      <i class="pi pi-book text-[9px]"></i>{{ series.bookCount }}
     </div>
 
-    @if (series.nextUnread) {
-      <div class="card-actions">
-        <p-button
-          size="small"
-          icon="pi pi-book"
-          [label]="'seriesBrowser.readNext' | transloco"
-          [pTooltip]="series.nextUnread.metadata?.title || ''"
-          tooltipPosition="bottom"
-          severity="info"
-          [text]="true"
-          (click)="readNext($event)">
-        </p-button>
+    <!-- Progress bar -->
+    @if (series.bookCount > 0) {
+      <div class="absolute bottom-0 left-0 right-0 z-[3]">
+        <div class="h-[3px]" [class]="progressPercent === 100 ? 'bg-status-finished/60' : 'bg-black/20'">
+          <div
+            class="h-full rounded-r-full transition-all duration-300"
+            [class]="progressPercent === 100 ? 'bg-status-finished' : 'bg-accent-light'"
+            [style.width.%]="progressPercent"
+          ></div>
+        </div>
       </div>
+    }
+
+    <!-- Hover actions overlay -->
+    <div
+      class="absolute bottom-0 left-0 right-0 z-[4] p-2 flex items-center justify-end gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150"
+      [class.!opacity-100]="menuVisible"
+      [class.!translate-y-0]="menuVisible"
+    >
+      <button
+        (click)="onMenuClick($event)"
+        class="h-7 w-7 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-[5px] transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      <p-tieredMenu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="onMenuShow()" (onHide)="onMenuHide()" />
+    </div>
+  </div>
+
+  <!-- Info below cover -->
+  <div class="px-3 pt-2.5 pb-3">
+    <div class="text-sm font-semibold text-ink leading-snug truncate text-left" [pTooltip]="series.seriesName" tooltipPosition="bottom">
+      {{ series.seriesName }}
+    </div>
+    @if (authorsDisplay) {
+      <div class="text-xs text-ink-light mt-0.5 truncate text-left">{{ authorsDisplay }}</div>
     }
   </div>
 </div>

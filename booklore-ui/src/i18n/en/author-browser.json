@@ -5,7 +5,8 @@
   "noAuthorsFound": "No authors match your search.",
   "cardSize": "Card Size",
   "sort": {
-    "name": "Name",
+    "nameAsc": "Name (A-Z)",
+    "nameDesc": "Name (Z-A)",
     "bookCount": "Book Count",
     "matched": "Matched",
     "recentlyAdded": "Recently Added",
@@ -31,7 +32,8 @@
     "bookCount": "Book Count",
     "library": "Library",
     "genre": "Genre",
-    "reset": "Reset Filters"
+    "reset": "Reset Filters",
+    "clear": "Clear"
   },
   "footer": {
     "selected": "selected",

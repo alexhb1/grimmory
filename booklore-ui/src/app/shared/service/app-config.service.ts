@@ -1,7 +1,5 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
-import { $t, updatePreset, updateSurfacePalette } from '@primeuix/themes';
-import Aura from '@primeuix/themes/aura';
+import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { AppState } from '../model/app-state.model';
 
 type ColorPalette = Record<string, string>;
@@ -11,6 +9,11 @@ interface Palette {
   palette: ColorPalette;
 }
 
+/**
+ * AppConfigService — legacy config state persistence.
+ * PrimeNG theming is now handled by ThemeService + CSS custom properties.
+ * This service is kept for AppState persistence but no longer applies PrimeNG themes.
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -19,7 +22,6 @@ export class AppConfigService {
   appState = signal<AppState>({});
   document = inject(DOCUMENT);
   platformId = inject(PLATFORM_ID);
-  private initialized = false;
 
   readonly surfaces: Palette[] = [
     {
@@ -333,21 +335,6 @@ export class AppConfigService {
   constructor() {
     const initialState = this.loadAppState();
     this.appState.set({ ...initialState });
-    this.document.documentElement.classList.add('p-dark');
-
-    if (isPlatformBrowser(this.platformId)) {
-      this.onPresetChange();
-    }
-
-    effect(() => {
-      const state = this.appState();
-      if (!this.initialized || !state) {
-        this.initialized = true;
-        return;
-      }
-      this.saveAppState(state);
-      this.onPresetChange();
-    });
   }
 
   private loadAppState(): AppState {
@@ -374,62 +361,4 @@ export class AppConfigService {
     return this.surfaces.find(s => s.name === surface)?.palette ?? {};
   }
 
-  getPresetExt(): object {
-    const surfacePalette = this.getSurfacePalette(this.appState().surface ?? 'neutral');
-    const primaryName = this.appState().primary ?? 'green';
-    const presetPalette = (Aura.primitive ?? {}) as Record<string, ColorPalette>;
-    const color = presetPalette[primaryName] ?? {};
-
-    if (primaryName === 'noir') {
-      return {
-        semantic: {
-          primary: { ...surfacePalette },
-          colorScheme: {
-            dark: {
-              primary: {
-                color: '{primary.50}',
-                contrastColor: '{primary.950}',
-                hoverColor: '{primary.200}',
-                activeColor: '{primary.300}'
-              },
-              highlight: {
-                background: '{primary.50}',
-                focusBackground: '{primary.300}',
-                color: '{primary.950}',
-                focusColor: '{primary.950}'
-              }
-            }
-          }
-        }
-      };
-    }
-
-    return {
-      semantic: {
-        primary: color,
-        colorScheme: {
-          dark: {
-            primary: {
-              color: '{primary.400}',
-              contrastColor: '{surface.900}',
-              hoverColor: '{primary.300}',
-              activeColor: '{primary.200}'
-            },
-            highlight: {
-              background: 'color-mix(in srgb, {primary.400}, transparent 84%)',
-              focusBackground: 'color-mix(in srgb, {primary.400}, transparent 76%)',
-              color: 'rgba(255,255,255,.87)',
-              focusColor: 'rgba(255,255,255,.87)'
-            }
-          }
-        }
-      }
-    };
-  }
-
-  onPresetChange(): void {
-    const surfacePalette = this.getSurfacePalette(this.appState().surface ?? 'neutral');
-    const preset = this.getPresetExt();
-    $t().preset(Aura).preset(preset).surfacePalette(surfacePalette).use({ useDefaultOptions: true });
-  }
 }

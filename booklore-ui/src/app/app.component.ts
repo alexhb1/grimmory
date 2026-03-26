@@ -3,8 +3,8 @@ import {RxStompService} from './shared/websocket/rx-stomp.service';
 import {BookService} from './features/book/service/book.service';
 import {NotificationEventService} from './shared/websocket/notification-event.service';
 import {parseLogNotification} from './shared/websocket/model/log-notification.model';
-import {ConfirmDialog} from 'primeng/confirmdialog';
 import {Toast} from 'primeng/toast';
+import {ModalHostComponent} from './shared/components/ui/modal/modal-host';
 import {RouterOutlet} from '@angular/router';
 import {TranslocoDirective, TranslocoPipe} from '@jsverse/transloco';
 import {AuthInitializationService} from './core/security/auth-initialization-service';
@@ -25,7 +25,7 @@ import {AuthService} from './shared/service/auth.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   standalone: true,
-  imports: [ConfirmDialog, Toast, RouterOutlet, TranslocoDirective, TranslocoPipe]
+  imports: [ModalHostComponent, Toast, RouterOutlet, TranslocoDirective, TranslocoPipe]
 })
 export class AppComponent implements OnInit, OnDestroy {
 

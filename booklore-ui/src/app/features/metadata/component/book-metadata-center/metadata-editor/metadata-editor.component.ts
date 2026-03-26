@@ -24,7 +24,6 @@ import {Image} from "primeng/image";
 import {LazyLoadImageModule} from "ng-lazyload-image";
 import {Select} from "primeng/select";
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
-import {BookDialogHelperService} from "../../../../book/components/book-browser/book-dialog-helper.service";
 import {BookNavigationService} from '../../../../book/service/book-navigation.service';
 import {BookMetadataHostService} from '../../../../../shared/service/book-metadata-host.service';
 import {Router} from '@angular/router';
@@ -96,7 +95,6 @@ export class MetadataEditorComponent implements OnInit {
   private bookMetadataManageService = inject(BookMetadataManageService);
   private taskHelperService = inject(TaskHelperService);
   protected urlHelper = inject(UrlHelperService);
-  private bookDialogHelperService = inject(BookDialogHelperService);
   private bookNavigationService = inject(BookNavigationService);
   private metadataHostService = inject(BookMetadataHostService);
   private router = inject(Router);
@@ -1088,12 +1086,7 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   openCoverSearch() {
-    const ref = this.bookDialogHelperService.openCoverSearchDialog(this.currentBookId, 'ebook');
-    ref?.onClose.pipe(
-      take(1),
-      filter(result => !!result),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe();
+    // TODO: migrate to ModalService
   }
 
   navigatePrevious(): void {
@@ -1178,12 +1171,7 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   openAudiobookCoverSearch() {
-    const ref = this.bookDialogHelperService.openCoverSearchDialog(this.currentBookId, 'audiobook');
-    ref?.onClose.pipe(
-      take(1),
-      filter(result => !!result),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe();
+    // TODO: migrate to ModalService
   }
 
   onAudiobookCoverUpload(event: FileUploadEvent): void {

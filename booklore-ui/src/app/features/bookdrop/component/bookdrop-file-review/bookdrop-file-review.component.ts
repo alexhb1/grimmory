@@ -14,6 +14,7 @@ import {Select} from 'primeng/select';
 import {Tooltip} from 'primeng/tooltip';
 import {Divider} from 'primeng/divider';
 import {ConfirmationService, MessageService} from 'primeng/api';
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {Subscription} from 'rxjs';
 import {InputGroup} from 'primeng/inputgroup';
 import {InputGroupAddonModule} from 'primeng/inputgroupaddon';
@@ -26,9 +27,7 @@ import {NgClass} from '@angular/common';
 import {Paginator} from 'primeng/paginator';
 import {ActivatedRoute} from '@angular/router';
 import {BookdropFileMetadataPickerComponent} from '../bookdrop-file-metadata-picker/bookdrop-file-metadata-picker.component';
-import {BookdropBulkEditDialogComponent, BulkEditResult} from '../bookdrop-bulk-edit-dialog/bookdrop-bulk-edit-dialog.component';
-import {BookdropPatternExtractDialogComponent} from '../bookdrop-pattern-extract-dialog/bookdrop-pattern-extract-dialog.component';
-import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
+import {BulkEditResult} from '../bookdrop-bulk-edit-dialog/bookdrop-bulk-edit-dialog.component';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 
 export interface BookdropFileUI {
@@ -68,8 +67,8 @@ export class BookdropFileReviewComponent implements OnInit {
   private readonly bookdropService = inject(BookdropService);
   private readonly libraryService = inject(LibraryService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly dialogLauncherService = inject(DialogLauncherService);
   private readonly appSettingsService = inject(AppSettingsService);
   private readonly messageService = inject(MessageService);
   private readonly urlHelper = inject(UrlHelperService);
@@ -379,21 +378,14 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('bookdrop.fileReview.toast.confirmResetHeader'),
       message: this.t.translate('bookdrop.fileReview.toast.confirmResetMessage'),
-      header: this.t.translate('bookdrop.fileReview.toast.confirmResetHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.t.translate('bookdrop.fileReview.toast.confirmResetAccept'),
-      rejectLabel: this.t.translate('common.cancel'),
-      rejectButtonProps: {
-        severity: 'secondary',
-        outlined: true
-      },
-      acceptButtonProps: {
-        severity: 'danger',
-        outlined: true
-      },
-      accept: () => this.resetMetadata()
+      confirmLabel: this.t.translate('bookdrop.fileReview.toast.confirmResetAccept'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.resetMetadata();
     });
   }
 
@@ -408,22 +400,13 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('bookdrop.fileReview.toast.confirmFinalizeHeader'),
       message: this.t.translate('bookdrop.fileReview.toast.confirmFinalizeMessage', {count: selectedCount}),
-      header: this.t.translate('bookdrop.fileReview.toast.confirmFinalizeHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.t.translate('bookdrop.fileReview.toast.confirmFinalizeAccept'),
-      rejectLabel: this.t.translate('common.cancel'),
-      rejectButtonProps: {
-        severity: 'secondary',
-        outlined: true
-      },
-      acceptButtonProps: {
-        severity: 'success',
-        outlined: true
-      },
-      acceptIcon: 'pi pi-check',
-      accept: () => this.finalizeImport(),
+      confirmLabel: this.t.translate('bookdrop.fileReview.toast.confirmFinalizeAccept'),
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.finalizeImport();
     });
   }
 
@@ -438,57 +421,48 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('bookdrop.fileReview.toast.confirmDeleteHeader'),
       message: this.t.translate('bookdrop.fileReview.toast.confirmDeleteMessage', {count: selectedCount}),
-      header: this.t.translate('bookdrop.fileReview.toast.confirmDeleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.t.translate('bookdrop.fileReview.toast.confirmDeleteAccept'),
-      rejectLabel: this.t.translate('common.cancel'),
-      rejectButtonProps: {
-        severity: 'secondary',
-        outlined: true
-      },
-      acceptButtonProps: {
-        severity: 'danger',
-        outlined: true
-      },
-      accept: () => {
-        const payload: { selectAll: boolean; excludedIds?: number[]; selectedIds?: number[] } = {
-          selectAll: this.selectAllAcrossPages,
-        };
+      confirmLabel: this.t.translate('bookdrop.fileReview.toast.confirmDeleteAccept'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      const payload: { selectAll: boolean; excludedIds?: number[]; selectedIds?: number[] } = {
+        selectAll: this.selectAllAcrossPages,
+      };
 
-        if (this.selectAllAcrossPages) {
-          payload.excludedIds = Array.from(this.excludedFiles);
-        } else {
-          payload.selectedIds = Object.values(this.fileUiCache)
-            .filter(file => file.selected)
-            .map(file => file.file.id);
-        }
+      if (this.selectAllAcrossPages) {
+        payload.excludedIds = Array.from(this.excludedFiles);
+      } else {
+        payload.selectedIds = Object.values(this.fileUiCache)
+          .filter(file => file.selected)
+          .map(file => file.file.id);
+      }
 
-        this.bookdropService.discardFiles(payload).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('bookdrop.fileReview.toast.filesDeletedSummary'),
-              detail: this.t.translate('bookdrop.fileReview.toast.filesDeletedDetail'),
-            });
+      this.bookdropService.discardFiles(payload).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('bookdrop.fileReview.toast.filesDeletedSummary'),
+            detail: this.t.translate('bookdrop.fileReview.toast.filesDeletedDetail'),
+          });
 
-            this.getSelectedFiles().forEach(file => delete this.fileUiCache[file.file.id]);
+          this.getSelectedFiles().forEach(file => delete this.fileUiCache[file.file.id]);
 
-            this.selectAllAcrossPages = false;
-            this.excludedFiles.clear();
-            this.loadPage(this.currentPage);
-          },
-          error: (err) => {
-            console.error('Error deleting files:', err);
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('bookdrop.fileReview.toast.deleteFailedSummary'),
-              detail: this.t.translate('bookdrop.fileReview.toast.deleteFailedDetail'),
-            });
-          },
-        });
-      },
+          this.selectAllAcrossPages = false;
+          this.excludedFiles.clear();
+          this.loadPage(this.currentPage);
+        },
+        error: (err) => {
+          console.error('Error deleting files:', err);
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('bookdrop.fileReview.toast.deleteFailedSummary'),
+            detail: this.t.translate('bookdrop.fileReview.toast.deleteFailedDetail'),
+          });
+        },
+      });
     });
   }
 
@@ -553,7 +527,7 @@ export class BookdropFileReviewComponent implements OnInit {
           detail: this.t.translate('bookdrop.fileReview.toast.importCompleteDetail'),
         });
 
-        this.dialogLauncherService.openBookdropFinalizeResultDialog(result);
+        // TODO: migrate to ModalService — openBookdropFinalizeResultDialog(result)
 
         const finalizedIds = new Set(files.map(f => f.fileId));
         Object.keys(this.fileUiCache).forEach(idStr => {
@@ -665,19 +639,7 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
-    const dialogRef = this.dialogLauncherService.openDialog(BookdropBulkEditDialogComponent, {
-      header: this.t.translate('bookdrop.fileReview.toast.bulkEditDialogHeader', {count: totalCount}),
-      width: '600px',
-      modal: true,
-      closable: true,
-      data: {fileCount: totalCount},
-    });
-
-    dialogRef?.onClose.subscribe((result: BulkEditResult | null) => {
-      if (result) {
-        this.applyBulkMetadataViaBackend(result);
-      }
-    });
+    // TODO: migrate to ModalService — openDialog(BookdropBulkEditDialogComponent, ...)
   }
 
   openPatternExtractDialog(): void {
@@ -698,25 +660,7 @@ export class BookdropFileReviewComponent implements OnInit {
     const sampleFiles = selectedFiles.slice(0, 5).map(f => f.file.fileName);
     const selectedIds = selectedFiles.map(f => f.file.id);
 
-    const dialogRef = this.dialogLauncherService.openDialog(BookdropPatternExtractDialogComponent, {
-      header: this.t.translate('bookdrop.fileReview.toast.extractMetadataDialogHeader'),
-      width: '700px',
-      modal: true,
-      closable: true,
-      data: {
-        sampleFiles,
-        fileCount: totalCount,
-        selectAll: this.selectAllAcrossPages,
-        excludedIds: Array.from(this.excludedFiles),
-        selectedIds,
-      },
-    });
-
-    dialogRef?.onClose.subscribe((result: { results: FileExtractionResult[] } | null) => {
-      if (result?.results) {
-        this.applyExtractedMetadata(result.results);
-      }
-    });
+    // TODO: migrate to ModalService — openDialog(BookdropPatternExtractDialogComponent, ...)
   }
 
   private getSelectedFiles(): BookdropFileUI[] {

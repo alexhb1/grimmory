@@ -11,7 +11,6 @@ import org.booklore.model.entity.BookFileEntity;
 import org.booklore.model.entity.LibraryPathEntity;
 import org.booklore.model.entity.UserBookFileProgressEntity;
 import org.booklore.model.entity.UserBookProgressEntity;
-import org.booklore.repository.BookFileRepository;
 import org.booklore.repository.BookRepository;
 import org.booklore.repository.UserBookProgressRepository;
 import org.booklore.service.file.FileMoveHelper;
@@ -37,7 +36,6 @@ import java.util.stream.Collectors;
 public class BookFileAttachmentService {
 
     private final BookRepository bookRepository;
-    private final BookFileRepository bookFileRepository;
     private final UserBookProgressRepository userBookProgressRepository;
     private final AuthenticationService authenticationService;
     private final ReadingProgressService readingProgressService;
@@ -121,7 +119,11 @@ public class BookFileAttachmentService {
                     List<Long> bookFileIds = bookFormatFiles.stream()
                             .map(BookFileEntity::getId)
                             .toList();
-                    bookFileRepository.reassignFilesToBook(targetBook.getId(), bookFileIds);
+                    entityManager.createQuery(
+                            "UPDATE BookFileEntity bf SET bf.book.id = :targetId WHERE bf.id IN :fileIds")
+                            .setParameter("targetId", targetBook.getId())
+                            .setParameter("fileIds", bookFileIds)
+                            .executeUpdate();
                 } else {
                     Path sourceLibraryRoot = Paths.get(sourceBook.getLibraryPath().getPath()).toAbsolutePath().normalize();
                     for (BookFileEntity file : bookFormatFiles) {
@@ -129,7 +131,12 @@ public class BookFileAttachmentService {
                         String newSubPath = fileDir.equals(targetLibraryRoot)
                                 ? ""
                                 : targetLibraryRoot.relativize(fileDir).toString();
-                        bookFileRepository.reassignFileToBookWithPath(targetBook.getId(), newSubPath, file.getId());
+                        entityManager.createQuery(
+                                "UPDATE BookFileEntity bf SET bf.book.id = :targetId, bf.fileSubPath = :subPath WHERE bf.id = :fileId")
+                                .setParameter("targetId", targetBook.getId())
+                                .setParameter("subPath", newSubPath)
+                                .setParameter("fileId", file.getId())
+                                .executeUpdate();
                     }
                 }
             }

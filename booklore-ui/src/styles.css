@@ -1,0 +1,419 @@
+@import "tailwindcss" source("../src");
+@import "./styles/primeng-theme.css";
+@import "./styles/components.css";
+
+/* --- PrimeIcons (kept from previous setup) --- */
+@import "../node_modules/primeicons/primeicons.css";
+
+/* ==========================================================================
+   THEME SYSTEM
+
+   Theming is controlled by data attributes on <html>:
+     data-mode="dark|light"              — colour mode
+     data-surface="default|slate|neutral" — surface palette + accent
+     data-heading="serif|sans"           — headline font choice
+
+   All design tokens are CSS custom properties. Tailwind references them
+   via @theme so utility classes like bg-surface, text-ink etc. stay the same
+   regardless of which theme is active.
+   ========================================================================== */
+
+
+/* --- Dark + Default ------------------------------------------------------
+   Surfaces: stone    Accent: warm bronze    Sidebar: stone-950            */
+:root,
+[data-mode="dark"][data-surface="default"] {
+  --color-surface: var(--color-stone-900);
+  --color-surface-raised: var(--color-stone-800);
+  --color-surface-hover: var(--color-stone-700);
+  --color-surface-sunken: var(--color-stone-950);
+
+  --color-walnut: var(--color-stone-950);
+  --color-walnut-light: var(--color-stone-900);
+  --color-walnut-lighter: var(--color-stone-800);
+
+  --color-accent: #c89338;
+  --color-accent-hover: #daa548;
+  --color-accent-light: #d4a84a;
+  --color-accent-text: #d4a84a;
+  --color-accent-wash: rgba(200, 147, 56, 0.1);
+
+  --color-edge: var(--color-stone-800);
+  --color-edge-light: var(--color-stone-900);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* --- Dark + Slate --------------------------------------------------------
+   Surfaces: slate    Accent: sky    Sidebar: slate-950                  */
+[data-mode="dark"][data-surface="slate"] {
+  --color-surface: var(--color-slate-900);
+  --color-surface-raised: var(--color-slate-800);
+  --color-surface-hover: var(--color-slate-700);
+  --color-surface-sunken: var(--color-slate-950);
+
+  --color-walnut: var(--color-slate-950);
+  --color-walnut-light: var(--color-slate-900);
+  --color-walnut-lighter: var(--color-slate-800);
+
+  --color-accent: var(--color-sky-400);
+  --color-accent-hover: var(--color-sky-300);
+  --color-accent-light: var(--color-sky-300);
+  --color-accent-text: var(--color-sky-300);
+  --color-accent-wash: color-mix(in oklch, var(--color-sky-400) 10%, transparent);
+
+  --color-edge: var(--color-slate-800);
+  --color-edge-light: var(--color-slate-900);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* --- Dark + Neutral ------------------------------------------------------
+   Surfaces: zinc     Accent: zinc     Sidebar: zinc-950                 */
+[data-mode="dark"][data-surface="neutral"] {
+  --color-surface: var(--color-zinc-900);
+  --color-surface-raised: var(--color-zinc-800);
+  --color-surface-hover: var(--color-zinc-700);
+  --color-surface-sunken: var(--color-zinc-950);
+
+  --color-walnut: var(--color-zinc-950);
+  --color-walnut-light: var(--color-zinc-900);
+  --color-walnut-lighter: var(--color-zinc-800);
+
+  --color-accent: var(--color-zinc-500);
+  --color-accent-hover: var(--color-zinc-400);
+  --color-accent-light: var(--color-zinc-300);
+  --color-accent-text: var(--color-zinc-300);
+  --color-accent-wash: color-mix(in oklch, var(--color-zinc-500) 10%, transparent);
+
+  --color-edge: var(--color-zinc-800);
+  --color-edge-light: var(--color-zinc-900);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.22);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.25);
+}
+
+/* --- Light + Default -----------------------------------------------------
+   Surfaces: stone    Accent: warm bronze    Sidebar: walnut              */
+[data-mode="light"][data-surface="default"] {
+  --color-surface: #f5f2ed;
+  --color-surface-raised: white;
+  --color-surface-hover: #ece8e1;
+  --color-surface-sunken: #eeeae4;
+
+  --color-walnut: #2c221a;
+  --color-walnut-light: #3d2f22;
+  --color-walnut-lighter: #55412f;
+
+  --color-accent: #b07e2e;
+  --color-accent-hover: #c89338;
+  --color-accent-light: #d4a84a;
+  --color-accent-text: #8a6218;
+  --color-accent-wash: rgba(176, 126, 46, 0.1);
+
+  --color-edge: var(--color-stone-300);
+  --color-edge-light: var(--color-stone-200);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.18), 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* --- Light + Slate -------------------------------------------------------
+   Surfaces: slate    Accent: sky    Sidebar: slate-900                  */
+[data-mode="light"][data-surface="slate"] {
+  --color-surface: var(--color-slate-100);
+  --color-surface-raised: white;
+  --color-surface-hover: var(--color-slate-200);
+  --color-surface-sunken: var(--color-slate-200);
+
+  --color-walnut: var(--color-slate-900);
+  --color-walnut-light: var(--color-slate-800);
+  --color-walnut-lighter: var(--color-slate-700);
+
+  --color-accent: var(--color-sky-500);
+  --color-accent-hover: var(--color-sky-600);
+  --color-accent-light: var(--color-sky-400);
+  --color-accent-text: var(--color-sky-700);
+  --color-accent-wash: color-mix(in oklch, var(--color-sky-500) 10%, transparent);
+
+  --color-edge: var(--color-slate-300);
+  --color-edge-light: var(--color-slate-200);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.18), 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* --- Light + Neutral -----------------------------------------------------
+   Surfaces: zinc     Accent: zinc     Sidebar: zinc-900                 */
+[data-mode="light"][data-surface="neutral"] {
+  --color-surface: var(--color-zinc-100);
+  --color-surface-raised: white;
+  --color-surface-hover: var(--color-zinc-200);
+  --color-surface-sunken: var(--color-zinc-200);
+
+  --color-walnut: var(--color-zinc-900);
+  --color-walnut-light: var(--color-zinc-800);
+  --color-walnut-lighter: var(--color-zinc-700);
+
+  --color-accent: var(--color-zinc-500);
+  --color-accent-hover: var(--color-zinc-600);
+  --color-accent-light: var(--color-zinc-400);
+  --color-accent-text: var(--color-zinc-700);
+  --color-accent-wash: color-mix(in oklch, var(--color-zinc-500) 10%, transparent);
+
+  --color-edge: var(--color-zinc-300);
+  --color-edge-light: var(--color-zinc-200);
+
+  --shadow-paper: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+  --shadow-paper-hover: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
+  --shadow-paper-lifted: 0 8px 24px rgba(0,0,0,0.18), 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* --- Text colours (shared across all surface palettes) ------------------- */
+:root,
+[data-mode="dark"] {
+  --color-ink: var(--color-zinc-50);
+  --color-ink-light: var(--color-zinc-200);
+  --color-ink-muted: var(--color-zinc-400);
+  --color-walnut-text: var(--color-zinc-200);
+  --color-walnut-text-muted: var(--color-zinc-400);
+}
+[data-mode="light"] {
+  --color-ink: var(--color-zinc-950);
+  --color-ink-light: var(--color-zinc-800);
+  --color-ink-muted: var(--color-zinc-600);
+  --color-walnut-text: var(--color-zinc-200);
+  --color-walnut-text-muted: var(--color-zinc-400);
+}
+
+/* --- Status colours ------------------------------------------------------ */
+:root {
+  --color-status-finished: var(--color-green-400);
+  --color-status-finished-bg: color-mix(in oklch, var(--color-green-400) 12%, transparent);
+  --color-status-reading: var(--color-blue-400);
+  --color-status-reading-bg: color-mix(in oklch, var(--color-blue-400) 12%, transparent);
+  --color-status-to-read: var(--color-amber-400);
+  --color-status-to-read-bg: color-mix(in oklch, var(--color-amber-400) 12%, transparent);
+  --color-status-unread: var(--color-zinc-500);
+  --color-status-unread-bg: color-mix(in oklch, var(--color-zinc-500) 10%, transparent);
+  --color-status-abandoned: var(--color-red-500);
+  --color-status-abandoned-bg: color-mix(in oklch, var(--color-red-500) 12%, transparent);
+}
+[data-mode="light"] {
+  --color-status-finished: var(--color-green-700);
+  --color-status-finished-bg: color-mix(in oklch, var(--color-green-700) 10%, transparent);
+  --color-status-reading: var(--color-blue-600);
+  --color-status-reading-bg: color-mix(in oklch, var(--color-blue-600) 10%, transparent);
+  --color-status-to-read: var(--color-amber-700);
+  --color-status-to-read-bg: color-mix(in oklch, var(--color-amber-700) 10%, transparent);
+  --color-status-unread: var(--color-zinc-600);
+  --color-status-unread-bg: color-mix(in oklch, var(--color-zinc-600) 8%, transparent);
+  --color-status-abandoned: var(--color-red-600);
+  --color-status-abandoned-bg: color-mix(in oklch, var(--color-red-600) 10%, transparent);
+}
+
+/* --- Book type colours (carried from existing app) ----------------------- */
+:root {
+  --book-type-pdf-color: #dc2626;
+  --book-type-epub-color: #16a34a;
+  --book-type-cbx-color: #3b82f6;
+  --book-type-cbz-color: #06b6d4;
+  --book-type-cbr-color: #f97316;
+  --book-type-cb7-color: #8b5cf6;
+  --book-type-fb2-color: #ec4899;
+  --book-type-mobi-color: #6366f1;
+  --book-type-azw3-color: #14b8a6;
+  --book-type-audiobook-color: #eab308;
+  --book-type-m4b-color: #eab308;
+  --book-type-mp3-color: #84cc16;
+  --book-type-m4a-color: #f43f5e;
+  --book-type-opus-color: #06b6d4;
+  --book-type-physical-color: #8b5cf6;
+}
+
+/* --- Heading font: serif (default) --------------------------------------- */
+:root,
+[data-heading="serif"] {
+  --font-heading: 'Libre Baskerville', 'Georgia', serif;
+}
+
+/* --- Heading font: sans -------------------------------------------------- */
+[data-heading="sans"] {
+  --font-heading: 'DM Sans', system-ui, -apple-system, sans-serif;
+}
+
+
+/* ==========================================================================
+   TAILWIND THEME — maps CSS vars to utility classes
+   ========================================================================== */
+
+@theme {
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-sunken: var(--color-surface-sunken);
+
+  --color-walnut: var(--color-walnut);
+  --color-walnut-light: var(--color-walnut-light);
+  --color-walnut-lighter: var(--color-walnut-lighter);
+  --color-walnut-text: var(--color-walnut-text);
+  --color-walnut-text-muted: var(--color-walnut-text-muted);
+
+  --color-ink: var(--color-ink);
+  --color-ink-light: var(--color-ink-light);
+  --color-ink-muted: var(--color-ink-muted);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-light: var(--color-accent-light);
+  --color-accent-text: var(--color-accent-text);
+  --color-accent-wash: var(--color-accent-wash);
+
+  --color-edge: var(--color-edge);
+  --color-edge-light: var(--color-edge-light);
+
+  --color-status-finished: var(--color-status-finished);
+  --color-status-finished-bg: var(--color-status-finished-bg);
+  --color-status-reading: var(--color-status-reading);
+  --color-status-reading-bg: var(--color-status-reading-bg);
+  --color-status-to-read: var(--color-status-to-read);
+  --color-status-to-read-bg: var(--color-status-to-read-bg);
+  --color-status-unread: var(--color-status-unread);
+  --color-status-unread-bg: var(--color-status-unread-bg);
+  --color-status-abandoned: var(--color-status-abandoned);
+  --color-status-abandoned-bg: var(--color-status-abandoned-bg);
+
+  --shadow-paper: var(--shadow-paper);
+  --shadow-paper-hover: var(--shadow-paper-hover);
+  --shadow-paper-lifted: var(--shadow-paper-lifted);
+
+  --font-serif: 'Libre Baskerville', 'Georgia', serif;
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-heading);
+}
+
+
+/* ==========================================================================
+   TYPOGRAPHY SCALE
+
+   Page titles:     font-heading text-3xl font-semibold text-ink tracking-tight
+   Section titles:  font-heading text-xl font-bold text-ink tracking-tight
+   Modal titles:    font-heading text-2xl font-bold text-ink tracking-tight
+   Field labels:    text-[15px] font-semibold text-ink
+   Body text:       text-sm (14px) text-ink
+   Secondary text:  text-sm text-ink-light
+   Hint/help text:  text-xs (12px) text-ink-muted
+   Nav items:       text-sm (walnut-text or white when active)
+   Nav headers:     text-[11px] font-semibold uppercase tracking-[0.1em] text-walnut-text-muted
+   Badges/tags:     text-[10px] or text-[9px] font-semibold uppercase tracking-wider
+
+   ========================================================================== */
+
+
+/* ==========================================================================
+   COMPONENT PATTERNS
+
+   Buttons:             Use .btn + variant class (.btn-primary, .btn-secondary, .btn-danger, .btn-ghost)
+                        Or use <app-button variant="primary|secondary|danger|ghost"> component
+                        All buttons: h-8 (32px), px-3, text-sm, rounded-[6px]
+
+   Inputs:              h-9 px-3 bg-surface-raised shadow-paper rounded-[4px] text-sm text-ink
+                        focus:border-accent/50 focus:ring-1 focus:ring-accent/20
+   Selects:             same as inputs + appearance-none cursor-pointer
+
+   Cards:               bg-surface-raised rounded-[7px] shadow-paper
+   Modals:              bg-surface rounded-[6px] shadow-[0_16px_48px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)]
+
+   Toggles:             w-9 h-5 rounded-full (bg-accent when on, bg-walnut-lighter when off)
+                        dot: w-4 h-4 rounded-full bg-white (left-[2px] off, left-[18px] on)
+
+   Dividers:            border-t border-edge (with pt-5 below for spacing)
+
+   ========================================================================== */
+
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
+*:focus {
+  outline: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+
+/* ==========================================================================
+   SCROLLBARS
+   ========================================================================== */
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-stable { scrollbar-gutter: stable; }
+
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+/* --- Page Transitions (View Transitions API) --- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(main-content) {
+  animation: 0.12s ease both slide-out;
+}
+::view-transition-new(main-content) {
+  animation: 0.12s ease both slide-in;
+}
+
+@keyframes slide-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.search-overlay-enter { animation: 0.12s ease both fadeIn; }
+.search-overlay-exit { animation: 0.1s ease forwards fadeOut; }
+.search-dialog-enter { animation: 0.12s ease both slide-in; }
+.search-dialog-exit { animation: 0.1s ease forwards slide-out; }
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes modalOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.grid-stagger > * {
+  animation: fadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

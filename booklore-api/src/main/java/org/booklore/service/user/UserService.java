@@ -13,20 +13,17 @@ import org.booklore.model.dto.settings.UserSettingKey;
 import org.booklore.model.entity.BookLoreUserEntity;
 import org.booklore.model.entity.LibraryEntity;
 import org.booklore.model.entity.UserSettingEntity;
-import org.booklore.model.enums.AuditAction;
 import org.booklore.model.enums.UserPermission;
 import org.booklore.repository.LibraryRepository;
 import org.booklore.repository.UserRepository;
-import org.booklore.service.audit.AuditService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
+import org.booklore.model.enums.AuditAction;
+import org.booklore.service.audit.AuditService;
 
 @Service
 @RequiredArgsConstructor
@@ -40,17 +37,15 @@ public class UserService {
     private final BookLoreUserTransformer bookLoreUserTransformer;
     private final AuditService auditService;
 
-    @Transactional(readOnly = true)
     public List<BookLoreUser> getBookLoreUsers() {
-        return userRepository.findAllWithDetails()
+        return userRepository.findAll()
                 .stream()
                 .map(bookLoreUserTransformer::toDTO)
                 .collect(Collectors.toList());
     }
 
-    @Transactional
     public BookLoreUser updateUser(Long id, UserUpdateRequest updateRequest) {
-        BookLoreUserEntity user = userRepository.findByIdWithDetails(id).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(id));
+        BookLoreUserEntity user = userRepository.findById(id).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(id));
         user.setName(updateRequest.getName());
         user.setEmail(updateRequest.getEmail());
 
@@ -61,7 +56,7 @@ public class UserService {
 
         if (updateRequest.getAssignedLibraries() != null && getMyself().getPermissions().isAdmin()) {
             List<Long> libraryIds = updateRequest.getAssignedLibraries();
-            Set<LibraryEntity> updatedLibraries = new HashSet<>(libraryRepository.findAllById(libraryIds));
+            List<LibraryEntity> updatedLibraries = libraryRepository.findAllById(libraryIds);
             user.setLibraries(updatedLibraries);
         }
 
@@ -70,7 +65,6 @@ public class UserService {
         return bookLoreUserTransformer.toDTO(user);
     }
 
-    @Transactional
     public void deleteUser(Long id) {
         BookLoreUserEntity userToDelete = userRepository.findById(id).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(id));
         BookLoreUser currentUser = authenticationService.getAuthenticatedUser();
@@ -85,9 +79,8 @@ public class UserService {
         auditService.log(AuditAction.USER_DELETED, "User", id, "Deleted user: " + userToDelete.getUsername());
     }
 
-    @Transactional(readOnly = true)
     public BookLoreUser getBookLoreUser(Long id) {
-        BookLoreUserEntity user = userRepository.findByIdWithDetails(id).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(id));
+        BookLoreUserEntity user = userRepository.findById(id).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(id));
         return bookLoreUserTransformer.toDTO(user);
     }
 
@@ -95,11 +88,10 @@ public class UserService {
         return authenticationService.getAuthenticatedUser();
     }
 
-    @Transactional
     public void changePassword(ChangePasswordRequest changePasswordRequest) {
         BookLoreUser bookLoreUser = authenticationService.getAuthenticatedUser();
 
-        BookLoreUserEntity bookLoreUserEntity = userRepository.findByIdWithPermissions(bookLoreUser.getId())
+        BookLoreUserEntity bookLoreUserEntity = userRepository.findById(bookLoreUser.getId())
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(bookLoreUser.getId()));
 
         if (bookLoreUserEntity.getPermissions().isPermissionDemoUser()) {
@@ -124,9 +116,8 @@ public class UserService {
         auditService.log(AuditAction.PASSWORD_CHANGED, "User", bookLoreUser.getId(), "Password changed by user: " + bookLoreUser.getUsername());
     }
 
-    @Transactional
     public void changeUserPassword(ChangeUserPasswordRequest request) {
-        BookLoreUserEntity userEntity = userRepository.findByIdWithPermissions(request.getUserId()).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(request.getUserId()));
+        BookLoreUserEntity userEntity = userRepository.findById(request.getUserId()).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(request.getUserId()));
         if (!meetsMinimumPasswordRequirements(request.getNewPassword())) {
             throw ApiError.PASSWORD_TOO_SHORT.createException();
         }
@@ -135,9 +126,8 @@ public class UserService {
         auditService.log(AuditAction.PASSWORD_CHANGED, "User", request.getUserId(), "Password changed for user: " + userEntity.getUsername());
     }
 
-    @Transactional
     public void updateUserSetting(Long userId, UpdateUserSettingRequest request) {
-        BookLoreUserEntity user = userRepository.findByIdWithSettings(userId).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
+        BookLoreUserEntity user = userRepository.findById(userId).orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
 
         String key = request.getKey();
         Object value = request.getValue();

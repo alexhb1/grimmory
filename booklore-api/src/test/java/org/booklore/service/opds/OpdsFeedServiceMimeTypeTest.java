@@ -105,12 +105,7 @@ class OpdsFeedServiceMimeTypeTest {
     }
 
     @Test
-    void testMimeTypeForCbr() throws IOException {
-        File rarFile = tempDir.resolve("comic.cbr").toFile();
-        try (FileOutputStream fos = new FileOutputStream(rarFile)) {
-            // RAR 4.x magic bytes
-            fos.write(new byte[]{0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00});
-        }
+    void testMimeTypeForCbr() {
         Book book = createBook(BookFileType.CBX, "comic.cbr");
         mockBooksPage(book);
         String xml = opdsFeedService.generateCatalogFeed(request);
@@ -118,12 +113,7 @@ class OpdsFeedServiceMimeTypeTest {
     }
 
     @Test
-    void testMimeTypeForCb7() throws IOException {
-        File sevenZFile = tempDir.resolve("comic.cb7").toFile();
-        try (FileOutputStream fos = new FileOutputStream(sevenZFile)) {
-            // 7z magic bytes
-            fos.write(new byte[]{0x37, 0x7A, (byte) 0xBC, (byte) 0xAF, 0x27, 0x1C});
-        }
+    void testMimeTypeForCb7() {
         Book book = createBook(BookFileType.CBX, "comic.cb7");
         mockBooksPage(book);
         String xml = opdsFeedService.generateCatalogFeed(request);
@@ -132,12 +122,10 @@ class OpdsFeedServiceMimeTypeTest {
 
     @Test
     void testMimeTypeForCbt() {
-        // CBT is TAR-based; ArchiveUtils has no TAR magic byte detection,
-        // so an unrecognised archive defaults to the CBX fallback mime type.
         Book book = createBook(BookFileType.CBX, "comic.cbt");
         mockBooksPage(book);
         String xml = opdsFeedService.generateCatalogFeed(request);
-        assertThat(xml).contains("type=\"application/vnd.comicbook+zip\"");
+        assertThat(xml).contains("type=\"application/x-tar\"");
     }
 
     @Test

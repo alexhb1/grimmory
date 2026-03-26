@@ -10,8 +10,8 @@ import {Book} from '../../model/book.model';
 export class CoverScalePreferenceService {
 
   private readonly BASE_WIDTH = 135;
-  private readonly BASE_HEIGHT = 220;
-  private readonly TITLE_BAR_HEIGHT = 31;
+  private readonly BASE_HEIGHT = 238;
+  private readonly TITLE_BAR_HEIGHT = 35;
   private readonly DEBOUNCE_MS = 1000;
   private readonly STORAGE_KEY = 'coverScalePreference';
 

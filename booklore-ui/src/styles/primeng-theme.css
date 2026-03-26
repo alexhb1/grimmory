@@ -1,0 +1,1400 @@
+/* ==========================================================================
+   PRIMENG THEMELESS OVERRIDES
+
+   All PrimeNG components run with theme:none. These styles give them our
+   design-system look using the semantic tokens from styles.css.
+
+   Components:
+     - Shared (hidden-accessible, host wrappers)
+     - Select & MultiSelect
+     - DatePicker
+     - Table
+     - Checkbox (inline in multiselect header etc.)
+   ========================================================================== */
+
+
+/* ==========================================================================
+   SHARED
+   ========================================================================== */
+
+.p-hidden-accessible {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+.p-hidden-accessible input,
+.p-hidden-accessible select {
+  transform: scale(0);
+}
+
+
+/* ==========================================================================
+   SELECT & MULTISELECT
+   ========================================================================== */
+
+/* --- Host wrapper (positioning context) --- */
+p-select,
+p-multiSelect,
+p-multiselect,
+p-multi-select {
+  display: block;
+  position: relative;
+}
+
+/* --- Trigger --- */
+.p-select,
+.p-multiselect {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-surface-raised);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+  font-size: 14px;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+  outline: none;
+}
+.p-select:hover,
+.p-multiselect:hover {
+  box-shadow: var(--shadow-paper-hover);
+}
+.p-select.p-select-open,
+.p-multiselect.p-multiselect-open {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-accent) 50%, transparent);
+}
+
+/* --- Label --- */
+.p-select-label,
+.p-multiselect-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1;
+}
+.p-select-label.p-placeholder,
+.p-multiselect-label.p-placeholder,
+.p-multiselect-label-empty {
+  color: var(--color-ink-muted);
+}
+
+/* --- Dropdown arrow --- */
+.p-select-dropdown,
+.p-multiselect-dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  color: var(--color-ink-muted);
+}
+.p-select-dropdown-icon,
+.p-multiselect-dropdown-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* --- Clear icon --- */
+.p-select-clear-icon {
+  color: var(--color-ink-muted);
+  margin-right: 4px;
+  cursor: pointer;
+}
+.p-select-clear-icon:hover {
+  color: var(--color-ink-light);
+}
+
+/* --- Overlay / dropdown panel --- */
+.p-select-overlay,
+.p-multiselect-overlay {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  overflow: hidden;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+/* --- Filter input --- */
+.p-select-header,
+.p-multiselect-header {
+  padding: 8px;
+  border-bottom: 1px solid var(--color-edge);
+}
+.p-iconfield {
+  position: relative;
+  width: 100%;
+}
+.p-inputicon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 8px;
+  display: flex;
+  align-items: center;
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+.p-inputicon svg,
+.p-inputicon .p-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.p-select-filter,
+.p-multiselect-filter {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px 0 30px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-ink);
+  outline: none;
+}
+.p-select-filter:focus,
+.p-multiselect-filter:focus {
+  border-color: color-mix(in oklch, var(--color-accent) 50%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-accent) 20%, transparent);
+}
+
+/* --- List --- */
+.p-select-list-container,
+.p-multiselect-list-container {
+  max-height: 180px;
+  overflow-y: auto;
+}
+.p-select-list,
+.p-multiselect-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+/* --- Options --- */
+.p-select-option,
+.p-multiselect-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.p-select-option:hover,
+.p-multiselect-option:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-select-option-selected,
+.p-multiselect-option-selected {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+}
+.p-select-option-selected:hover,
+.p-multiselect-option-selected:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+}
+
+/* Focus via keyboard */
+.p-select-option.p-focus,
+.p-multiselect-option.p-focus {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-select-option-selected.p-focus,
+.p-multiselect-option-selected.p-focus {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+}
+
+/* --- Option group --- */
+.p-select-option-group,
+.p-multiselect-option-group {
+  padding: 6px 10px;
+}
+.p-select-option-group-label,
+.p-multiselect-option-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+}
+
+/* --- Empty message --- */
+.p-select-empty-message,
+.p-multiselect-empty-message {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* --- MultiSelect chips --- */
+.p-multiselect-label-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+.p-multiselect-chip-item {
+  display: inline-flex;
+  margin-right: 4px;
+}
+.p-multiselect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.p-multiselect-chip-icon {
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  color: var(--color-accent-text);
+  opacity: 0.7;
+}
+.p-multiselect-chip-icon:hover {
+  opacity: 1;
+}
+
+/* --- MultiSelect header --- */
+.p-multiselect-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Small variant --- */
+.p-select-sm,
+.p-multiselect-sm {
+  height: 32px;
+  font-size: 13px;
+}
+.p-select-sm .p-select-label,
+.p-multiselect-sm .p-multiselect-label {
+  font-size: 13px;
+}
+
+
+/* ==========================================================================
+   CHECKBOX (PrimeNG inline — e.g. multiselect header)
+   ========================================================================== */
+
+.p-checkbox-box {
+  display: none;
+}
+p-checkbox,
+p-check-box {
+  display: inline-flex;
+  align-items: center;
+}
+p-checkbox input[type="checkbox"],
+p-check-box input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+
+/* ==========================================================================
+   DATEPICKER
+   ========================================================================== */
+
+/* --- Host --- */
+p-datepicker,
+.p-datepicker {
+  display: block;
+  position: relative;
+}
+
+/* --- Input field --- */
+.p-datepicker-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  padding-right: 36px;
+  background: var(--color-surface-raised);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+  font-size: 14px;
+  color: var(--color-ink);
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+.p-datepicker-input::placeholder {
+  color: var(--color-ink-muted);
+}
+.p-datepicker-input:hover {
+  box-shadow: var(--shadow-paper-hover);
+}
+.p-datepicker-input:focus {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-accent) 50%, transparent);
+}
+
+/* --- Icon container (overlaid on right side of input) --- */
+.p-datepicker-input-icon-container {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* --- Calendar icon --- */
+.p-datepicker-input-icon {
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.p-datepicker-input-icon svg,
+.p-datepicker-input-icon .p-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- Overlay wrapper (p-motion element gets inline min-width from PrimeNG JS) --- */
+p-datepicker > p-motion,
+body > p-motion:has(.p-datepicker-panel) {
+  min-width: 0 !important;
+  width: fit-content !important;
+}
+
+/* --- Panel / overlay --- */
+.p-datepicker-panel {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  z-index: 1000;
+  margin-top: 4px;
+  padding: 12px;
+  min-width: 280px;
+}
+
+/* --- Header (month/year nav) --- */
+.p-datepicker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.p-datepicker-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.p-datepicker-select-month,
+.p-datepicker-select-year {
+  background: none;
+  border: none;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.1s ease;
+}
+.p-datepicker-select-month:hover,
+.p-datepicker-select-year:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Nav arrows */
+.p-datepicker-prev-button,
+.p-datepicker-next-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.p-datepicker-prev-button:hover,
+.p-datepicker-next-button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-datepicker-prev-button svg,
+.p-datepicker-next-button svg,
+.p-datepicker-prev-button .p-icon,
+.p-datepicker-next-button .p-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- Calendar grid --- */
+.p-datepicker-calendar-container {
+  width: 100%;
+}
+.p-datepicker-calendar {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Weekday headers */
+.p-datepicker-weekday-cell {
+  padding: 4px 0;
+  text-align: center;
+}
+.p-datepicker-weekday {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+}
+
+/* Day cells */
+.p-datepicker-day-cell {
+  padding: 1px;
+  text-align: center;
+}
+.p-datepicker-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.p-datepicker-day:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+
+/* Today */
+.p-datepicker-today > .p-datepicker-day {
+  font-weight: 700;
+  color: var(--color-accent-text);
+}
+.p-datepicker-today > .p-datepicker-day:not(.p-datepicker-day-selected) {
+  border: 1px solid color-mix(in oklch, var(--color-accent) 40%, transparent);
+}
+
+/* Selected day */
+.p-datepicker-day-selected {
+  background: var(--color-accent) !important;
+  color: white !important;
+  font-weight: 600;
+}
+.p-datepicker-day-selected:hover {
+  background: var(--color-accent-hover) !important;
+}
+
+/* Range highlight (between start and end) */
+.p-datepicker-day-selected-range {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+  border-radius: 0;
+}
+
+/* Other month days */
+.p-datepicker-day.p-datepicker-day-other-month {
+  color: var(--color-ink-muted);
+  opacity: 0.5;
+}
+
+/* Disabled */
+.p-datepicker-day.p-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* --- Button bar (Today / Clear) --- */
+.p-datepicker-buttonbar {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--color-edge-light);
+}
+.p-datepicker-buttonbar button {
+  background: none;
+  border: none;
+  color: var(--color-accent-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.1s ease;
+}
+.p-datepicker-buttonbar button:hover {
+  background: var(--color-accent-wash);
+}
+
+/* --- Month/Year picker views --- */
+.p-datepicker-month-view,
+.p-datepicker-year-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px 0;
+}
+.p-datepicker-month,
+.p-datepicker-year {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.p-datepicker-month:hover,
+.p-datepicker-year:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-datepicker-month-selected,
+.p-datepicker-year-selected {
+  background: var(--color-accent) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+/* --- Small variant --- */
+p-datepicker[size="small"] .p-datepicker-input,
+.p-datepicker-sm .p-datepicker-input {
+  height: 32px;
+  font-size: 13px;
+}
+p-datepicker[size="small"] .p-datepicker-input-icon-container,
+.p-datepicker-sm .p-datepicker-input-icon-container {
+  height: 32px;
+}
+
+/* --- Fluid (full width) --- */
+p-datepicker[fluid="true"],
+p-datepicker[ng-reflect-fluid="true"] {
+  width: 100%;
+}
+
+
+/* ==========================================================================
+   PAGINATOR
+   ========================================================================== */
+
+/* --- Host (p-paginator element gets class="p-paginator", no inner wrapper) --- */
+.p-paginator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+/* --- Nav buttons (first, prev, next, last) --- */
+.p-paginator-first,
+.p-paginator-prev,
+.p-paginator-next,
+.p-paginator-last {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.p-paginator-first:hover,
+.p-paginator-prev:hover,
+.p-paginator-next:hover,
+.p-paginator-last:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-paginator-first:disabled,
+.p-paginator-prev:disabled,
+.p-paginator-next:disabled,
+.p-paginator-last:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: none;
+  color: var(--color-ink-muted);
+}
+
+/* --- Nav button icons --- */
+.p-paginator-first-icon,
+.p-paginator-prev-icon,
+.p-paginator-next-icon,
+.p-paginator-last-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- Page number buttons --- */
+.p-paginator-pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.p-paginator-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.p-paginator-page:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-paginator-page-selected {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+.p-paginator-page-selected:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+}
+
+/* --- "Page X of Y" text --- */
+.p-paginator-current {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+/* --- Rows-per-page & jump-to-page dropdowns --- */
+.p-paginator-rpp-dropdown,
+.p-paginator-jtp-dropdown {
+  margin-left: 8px;
+  width: auto;
+}
+.p-paginator-rpp-dropdown .p-select,
+.p-paginator-jtp-dropdown .p-select {
+  width: auto;
+  min-width: 70px;
+  height: 32px;
+  font-size: 13px;
+}
+.p-paginator-rpp-dropdown .p-select-label,
+.p-paginator-jtp-dropdown .p-select-label {
+  font-size: 13px;
+}
+
+/* --- Content start/end slots --- */
+.p-paginator-content-start,
+.p-paginator-content-end {
+  display: flex;
+  align-items: center;
+}
+
+
+/* ==========================================================================
+   TABLE
+   ========================================================================== */
+
+.p-datatable {
+  width: 100%;
+  position: relative;
+}
+.p-datatable-table-container {
+  width: 100%;
+}
+
+.grimmory-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+
+.grimmory-table thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-edge);
+  border-right: 1px solid var(--color-edge);
+  white-space: nowrap;
+  user-select: none;
+}
+.grimmory-table thead th:first-child {
+  border-radius: 6px 0 0 0;
+}
+.grimmory-table thead th:last-child {
+  border-radius: 0 6px 0 0;
+  border-right: none;
+}
+
+.grimmory-table tbody td {
+  padding: 10px 16px;
+  color: var(--color-ink);
+  border-bottom: 1px solid var(--color-edge);
+  border-right: 1px solid var(--color-edge);
+  vertical-align: middle;
+}
+.grimmory-table tbody td:last-child {
+  border-right: none;
+}
+
+.grimmory-table tbody tr {
+  transition: background 0.1s ease;
+}
+.grimmory-table tbody tr:hover {
+  background: var(--color-surface-raised);
+}
+
+/* --- Column resize handle --- */
+.grimmory-table .p-datatable-column-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent;
+}
+
+/* --- Resize indicator line (shown while dragging) --- */
+.p-datatable-column-resize-indicator {
+  position: absolute;
+  z-index: 10;
+  width: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+
+/* ==========================================================================
+   IMAGE (preview / lightbox)
+   ========================================================================== */
+
+/* --- Host --- */
+p-image,
+.p-image {
+  display: inline-block;
+  position: relative;
+}
+
+/* --- Base image --- */
+.p-image img {
+  display: block;
+}
+
+/* --- Preview hover mask --- */
+.p-image-preview {
+  cursor: pointer;
+}
+.p-image-preview-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.2s ease;
+  border-radius: inherit;
+}
+.p-image-preview:hover .p-image-preview-mask {
+  background: rgba(0, 0, 0, 0.4);
+}
+.p-image-preview-icon {
+  color: white;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.p-image-preview-icon svg,
+.p-image-preview-icon .p-icon {
+  width: 24px;
+  height: 24px;
+}
+.p-image-preview:hover .p-image-preview-icon {
+  opacity: 1;
+}
+
+/* --- Fullscreen overlay mask --- */
+.p-image-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* --- Toolbar (rotate, zoom, close buttons) --- */
+.p-image-toolbar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
+}
+.p-image-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.p-image-action:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.p-image-action:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.p-image-action svg,
+.p-image-action .p-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Preview image --- */
+.p-image-original {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+/* --- Overlay enter/leave animation --- */
+.p-overlay-mask-enter-active {
+  animation: fadeIn 0.15s ease;
+}
+.p-overlay-mask-leave-active {
+  animation: fadeOut 0.15s ease;
+}
+
+
+/* ==========================================================================
+   TOOLTIP
+   ========================================================================== */
+
+.p-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1200;
+  max-width: 240px;
+}
+
+.p-tooltip-text {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: white;
+  background: var(--color-walnut);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+}
+
+/* --- Arrow --- */
+.p-tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: solid transparent;
+  border-width: 5px;
+}
+
+.p-tooltip-top .p-tooltip-arrow {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: var(--color-walnut);
+  border-bottom-width: 0;
+}
+.p-tooltip-bottom .p-tooltip-arrow {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: var(--color-walnut);
+  border-top-width: 0;
+}
+.p-tooltip-left .p-tooltip-arrow {
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--color-walnut);
+  border-right-width: 0;
+}
+.p-tooltip-right .p-tooltip-arrow {
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--color-walnut);
+  border-left-width: 0;
+}
+
+
+/* ==========================================================================
+   MENU & TIERED MENU
+   ========================================================================== */
+
+/* --- Shared root (both p-menu and p-tieredmenu) --- */
+.p-menu,
+.p-tieredmenu {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  min-width: 160px;
+}
+.p-menu-overlay,
+.p-tieredmenu-overlay {
+  position: absolute;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+/* --- Enter/leave animations (PrimeNG p-motion) --- */
+.p-anchored-overlay-enter-active {
+  animation: menuIn 0.15s ease;
+}
+.p-anchored-overlay-leave-active {
+  animation: menuOut 0.12s ease forwards;
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes menuOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.95) translateY(-4px); }
+}
+
+/* --- List reset --- */
+.p-menu-list,
+.p-tieredmenu-root-list,
+.p-tieredmenu-submenu {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+/* --- Menu items --- */
+.p-menu-item,
+.p-tieredmenu-item {
+  position: relative;
+}
+
+/* --- Item content (clickable area) --- */
+.p-menu-item-content,
+.p-tieredmenu-item-content {
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+.p-menu-item-content:hover,
+.p-tieredmenu-item-content:hover {
+  background: var(--color-surface-hover);
+}
+.p-tieredmenu-item-active > .p-tieredmenu-item-content {
+  background: var(--color-surface-hover);
+}
+
+/* --- Item link --- */
+.p-menu-item-link,
+.p-tieredmenu-item-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  text-decoration: none;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.p-menu-item-content:hover .p-menu-item-link,
+.p-tieredmenu-item-content:hover .p-tieredmenu-item-link {
+  color: var(--color-ink);
+}
+
+/* --- Item icon --- */
+.p-menu-item-icon,
+.p-tieredmenu-item-icon {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+.p-menu-item-content:hover .p-menu-item-icon,
+.p-tieredmenu-item-content:hover .p-tieredmenu-item-icon {
+  color: var(--color-ink-light);
+}
+
+/* --- Item label --- */
+.p-menu-item-label,
+.p-tieredmenu-item-label {
+  flex: 1;
+}
+
+/* --- Submenu icon (arrow for nested items) --- */
+.p-tieredmenu-submenu-icon {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-ink-muted);
+}
+.p-tieredmenu-submenu-icon svg,
+.p-tieredmenu-submenu-icon .p-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* --- Submenu (nested dropdown) --- */
+.p-tieredmenu-submenu {
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  min-width: 160px;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* --- Separator --- */
+.p-menu-separator,
+.p-tieredmenu-separator {
+  border-top: 1px solid var(--color-edge);
+  margin: 4px 0;
+}
+
+/* --- Submenu label (group header) --- */
+.p-menu-submenu-label {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+}
+
+/* --- Disabled items --- */
+.p-menu-item.p-disabled .p-menu-item-content,
+.p-tieredmenu-item.p-disabled .p-tieredmenu-item-content {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Focus (keyboard nav) --- */
+.p-menu-item.p-focus > .p-menu-item-content,
+.p-tieredmenu-item.p-focus > .p-tieredmenu-item-content {
+  background: var(--color-surface-hover);
+}
+
+
+/* ==========================================================================
+   POPOVER
+   ========================================================================== */
+
+.p-popover {
+  position: absolute;
+  z-index: 1000;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  margin-top: 4px;
+}
+.p-popover-content {
+  padding: 12px;
+}
+.p-popover-flipped {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+
+/* ==========================================================================
+   AUTOCOMPLETE
+   ========================================================================== */
+
+/* --- Host --- */
+p-autoComplete,
+p-autocomplete,
+p-auto-complete {
+  display: block;
+  position: relative;
+}
+
+/* --- Single input --- */
+.p-autocomplete-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-surface-raised);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+  font-size: 14px;
+  color: var(--color-ink);
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+.p-autocomplete-input::placeholder {
+  color: var(--color-ink-muted);
+}
+.p-autocomplete-input:hover {
+  box-shadow: var(--shadow-paper-hover);
+}
+.p-autocomplete-input:focus {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-accent) 50%, transparent);
+}
+
+/* --- Multiple (chips) input --- */
+.p-autocomplete-input-multiple {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 36px;
+  padding: 4px 8px;
+  background: var(--color-surface-raised);
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper);
+  cursor: text;
+  transition: box-shadow 0.15s ease;
+}
+.p-autocomplete-input-multiple:hover {
+  box-shadow: var(--shadow-paper-hover);
+}
+p-autoComplete.p-focus .p-autocomplete-input-multiple,
+p-autocomplete.p-focus .p-autocomplete-input-multiple,
+p-auto-complete.p-focus .p-autocomplete-input-multiple {
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--color-accent) 50%, transparent);
+}
+
+/* --- Chips --- */
+.p-autocomplete-chip-item {
+  display: inline-flex;
+  align-items: center;
+}
+.p-autocomplete-chip,
+p-chip.p-autocomplete-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+.p-autocomplete-chip .p-chip-remove-icon,
+.p-autocomplete-chip .p-autocomplete-chip-icon {
+  cursor: pointer;
+  color: var(--color-accent-text);
+  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+}
+.p-autocomplete-chip .p-chip-remove-icon svg,
+.p-autocomplete-chip .p-autocomplete-chip-icon svg {
+  width: 12px;
+  height: 12px;
+}
+.p-autocomplete-chip-icon:hover {
+  opacity: 1;
+}
+
+/* --- Inline text input (inside multiple) --- */
+.p-autocomplete-input-chip {
+  flex: 1;
+  min-width: 60px;
+}
+.p-autocomplete-input-chip input,
+.p-autocomplete-input-multiple .p-autocomplete-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+  color: var(--color-ink);
+  padding: 2px 0;
+  height: auto;
+  border-radius: 0;
+}
+.p-autocomplete-input-chip input::placeholder,
+.p-autocomplete-input-multiple .p-autocomplete-input::placeholder {
+  color: var(--color-ink-muted);
+}
+.p-autocomplete-input-multiple .p-autocomplete-input:hover {
+  box-shadow: none;
+}
+.p-autocomplete-input-multiple .p-autocomplete-input:focus {
+  box-shadow: none;
+}
+
+/* --- Dropdown button --- */
+.p-autocomplete-dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--color-surface-hover);
+  border-radius: 0 6px 6px 0;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.p-autocomplete-dropdown:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+
+/* --- Loading spinner --- */
+.p-autocomplete-loader {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+}
+
+/* --- Suggestions overlay --- */
+.p-autocomplete-overlay {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-paper-lifted);
+  overflow: hidden;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+/* --- List --- */
+.p-autocomplete-list-container {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.p-autocomplete-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+/* --- Options --- */
+.p-autocomplete-option {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-ink-light);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.p-autocomplete-option:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+.p-autocomplete-option-selected {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-text);
+}
+
+/* --- Focus (keyboard nav) --- */
+.p-autocomplete-option.p-focus {
+  background: var(--color-surface-hover);
+  color: var(--color-ink);
+}
+
+/* --- Option group --- */
+.p-autocomplete-option-group {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+}
+
+/* --- Empty message --- */
+.p-autocomplete-empty-message {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+/* --- Fluid --- */
+.p-autocomplete-fluid {
+  width: 100%;
+}

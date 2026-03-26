@@ -1,13 +1,9 @@
 package org.booklore.service.opds;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.booklore.exception.ApiError;
 import org.booklore.mapper.BookMapper;
 import org.booklore.mapper.custom.BookLoreUserTransformer;
-import org.booklore.model.dto.Book;
-import org.booklore.model.dto.BookLoreUser;
-import org.booklore.model.dto.Library;
+import org.booklore.model.dto.*;
 import org.booklore.model.entity.AuthorEntity;
 import org.booklore.model.entity.BookEntity;
 import org.booklore.model.entity.BookLoreUserEntity;
@@ -16,17 +12,17 @@ import org.booklore.model.enums.OpdsSortOrder;
 import org.booklore.repository.BookOpdsRepository;
 import org.booklore.repository.ShelfRepository;
 import org.booklore.repository.UserRepository;
-import org.booklore.util.BookUtils;
 import org.booklore.repository.BookRepository;
+import org.booklore.util.BookUtils;
 import org.booklore.service.library.LibraryService;
 import org.booklore.service.restriction.ContentRestrictionService;
-import org.booklore.util.BookUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.function.Function;
@@ -35,7 +31,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional(readOnly = true)
 public class OpdsBookService {
 
     private final BookOpdsRepository bookOpdsRepository;
@@ -52,7 +47,7 @@ public class OpdsBookService {
             return List.of();
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -73,7 +68,7 @@ public class OpdsBookService {
             throw ApiError.FORBIDDEN.createException("Authentication required");
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
 
         if (entity.getPermissions() == null ||
@@ -120,7 +115,7 @@ public class OpdsBookService {
             throw ApiError.FORBIDDEN.createException("Authentication required");
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -185,7 +180,7 @@ public class OpdsBookService {
             return List.of();
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -213,7 +208,7 @@ public class OpdsBookService {
             throw ApiError.FORBIDDEN.createException("Authentication required");
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -247,7 +242,7 @@ public class OpdsBookService {
             return List.of();
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -267,7 +262,7 @@ public class OpdsBookService {
             throw ApiError.FORBIDDEN.createException("Authentication required");
         }
 
-        BookLoreUserEntity entity = userRepository.findByIdWithDetails(userId)
+        BookLoreUserEntity entity = userRepository.findById(userId)
                 .orElseThrow(() -> ApiError.USER_NOT_FOUND.createException(userId));
         BookLoreUser user = bookLoreUserTransformer.toDTO(entity);
 
@@ -405,7 +400,7 @@ public class OpdsBookService {
     }
 
     private void validateShelfAccess(Long shelfId, Long userId, boolean isAdmin) {
-        var shelf = shelfRepository.findByIdWithUser(shelfId)
+        var shelf = shelfRepository.findById(shelfId)
                 .orElseThrow(() -> ApiError.SHELF_NOT_FOUND.createException(shelfId));
         if (!shelf.getUser().getId().equals(userId) && !isAdmin) {
             throw ApiError.FORBIDDEN.createException("You are not allowed to access this shelf");

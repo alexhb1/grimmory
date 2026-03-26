@@ -37,6 +37,7 @@ class IconServiceTest {
         iconService = new IconService(appProperties);
         iconsSvgPath = Paths.get(TEST_DIR, "icons", SVG_DIR);
         Files.createDirectories(iconsSvgPath);
+        iconService.init();
     }
 
     @AfterEach

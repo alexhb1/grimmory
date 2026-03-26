@@ -1,48 +1,45 @@
 import {Component, computed, effect, inject} from '@angular/core';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {Book} from '../../model/book.model';
 import {MessageService} from 'primeng/api';
 import {ShelfService} from '../../service/shelf.service';
 import {finalize} from 'rxjs';
 import {BookService} from '../../service/book.service';
 import {Shelf} from '../../model/shelf.model';
-import {Button} from 'primeng/button';
-import {Checkbox} from 'primeng/checkbox';
 import {FormsModule} from '@angular/forms';
-import {BookDialogHelperService} from '../book-browser/book-dialog-helper.service';
 import {LoadingService} from '../../../../core/services/loading.service';
 import {UserService} from '../../../settings/user-management/user.service';
 import {IconDisplayComponent} from '../../../../shared/components/icon-display/icon-display.component';
 import {IconSelection} from '../../../../shared/service/icon-picker.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {InputText} from 'primeng/inputtext';
-import {IconField} from 'primeng/iconfield';
-import {InputIcon} from 'primeng/inputicon';
+import {ModalRef, ModalService} from '../../../../shared/components/ui/modal/modal.service';
+import {ShelfCreatorComponent} from '../shelf-creator/shelf-creator.component';
+import {MODAL_DATA} from '../../../../shared/components/ui/modal/modal-host';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button';
+import {CheckboxComponent} from '../../../../shared/components/ui/checkbox/checkbox';
+import {InputDirective} from '../../../../shared/components/ui/input/input';
 
 @Component({
   selector: 'app-shelf-assigner',
   standalone: true,
   templateUrl: './shelf-assigner.component.html',
-  styleUrl: './shelf-assigner.component.scss',
+  host: {class: 'flex flex-col flex-1 min-h-0'},
   imports: [
-    Button,
-    Checkbox,
+    ButtonComponent,
+    CheckboxComponent,
     FormsModule,
     IconDisplayComponent,
     TranslocoDirective,
-    InputText,
-    IconField,
-    InputIcon
+    InputDirective
   ]
 })
 export class ShelfAssignerComponent {
 
   private shelfService = inject(ShelfService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
-  private dynamicDialogRef = inject(DynamicDialogRef);
+  private data = inject(MODAL_DATA) as { book: Book; bookIds: Set<number>; isMultiBooks: boolean } | null;
+  readonly modalRef = inject(ModalRef);
+  private modalService = inject(ModalService);
   private messageService = inject(MessageService);
   private bookService = inject(BookService);
-  private bookDialogHelper = inject(BookDialogHelperService);
   private loadingService = inject(LoadingService);
   private userService = inject(UserService);
   private readonly t = inject(TranslocoService);
@@ -50,10 +47,10 @@ export class ShelfAssignerComponent {
   searchQuery = '';
   private currentUser = this.userService.currentUser;
 
-  book: Book = this.dynamicDialogConfig.data.book;
+  book: Book = this.data!.book;
   selectedShelves: Shelf[] = [];
-  bookIds: Set<number> = this.dynamicDialogConfig.data.bookIds;
-  isMultiBooks: boolean = this.dynamicDialogConfig.data.isMultiBooks;
+  bookIds: Set<number> = this.data!.bookIds;
+  isMultiBooks: boolean = this.data!.isMultiBooks;
   private readonly shelfSortField = computed<'name' | 'id'>(() => {
     const sorting = this.currentUser()?.userSettings.sidebarShelfSorting;
     return sorting ? this.validateSortField(sorting.field) : 'name';
@@ -98,11 +95,11 @@ export class ShelfAssignerComponent {
       .subscribe({
         next: () => {
           this.messageService.add({severity: 'info', summary: this.t.translate('common.success'), detail: this.t.translate('book.shelfAssigner.toast.updateSuccessDetail')});
-          this.dynamicDialogRef.close({assigned: true});
+          this.modalRef.close({assigned: true});
         },
         error: () => {
           this.messageService.add({severity: 'error', summary: this.t.translate('common.error'), detail: this.t.translate('book.shelfAssigner.toast.updateFailedDetail')});
-          this.dynamicDialogRef.close({assigned: false});
+          this.modalRef.close({assigned: false});
         }
       });
   }
@@ -118,15 +115,21 @@ export class ShelfAssignerComponent {
   }
 
   createShelfDialog(): void {
-    this.bookDialogHelper.openShelfCreatorDialog();
-  }
-
-  closeDialog(): void {
-    this.dynamicDialogRef.close({assigned: false});
+    this.modalService.open(ShelfCreatorComponent, {title: 'New Shelf', size: 'sm'});
   }
 
   isShelfSelected(shelf: Shelf): boolean {
     return this.selectedShelves.some(s => s.id === shelf.id);
+  }
+
+  toggleShelf(shelf: Shelf, checked: boolean): void {
+    if (checked) {
+      if (!this.isShelfSelected(shelf)) {
+        this.selectedShelves = [...this.selectedShelves, shelf];
+      }
+    } else {
+      this.selectedShelves = this.selectedShelves.filter(s => s.id !== shelf.id);
+    }
   }
 
   getShelfIcon(shelf: Shelf): IconSelection {

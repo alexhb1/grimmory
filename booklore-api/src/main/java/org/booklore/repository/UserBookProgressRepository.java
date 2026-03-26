@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -73,7 +72,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
     List<CompletionTimelineDto> findCompletionTimelineByUser(@Param("userId") Long userId, @Param("year") int year);
 
     @Modifying
-    @Transactional
     @Query("""
         UPDATE UserBookProgressEntity ubp
         SET ubp.readStatus = :readStatus,
@@ -98,7 +96,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
     Set<Long> findExistingProgressBookIds(@Param("userId") Long userId, @Param("bookIds") Set<Long> bookIds);
 
     @Modifying
-    @Transactional
     @Query("""
         UPDATE UserBookProgressEntity ubp
         SET ubp.readStatus = NULL,
@@ -117,7 +114,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
     int bulkResetBookloreProgress(@Param("userId") Long userId, @Param("bookIds") List<Long> bookIds, @Param("modifiedTime") java.time.Instant modifiedTime);
 
     @Modifying
-    @Transactional
     @Query("""
         UPDATE UserBookProgressEntity ubp
         SET ubp.koreaderProgress = NULL,
@@ -131,7 +127,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
     int bulkResetKoreaderProgress(@Param("userId") Long userId, @Param("bookIds") List<Long> bookIds);
 
     @Modifying
-    @Transactional
     @Query("""
         UPDATE UserBookProgressEntity ubp
         SET ubp.koboProgressPercent = NULL,
@@ -145,7 +140,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
     int bulkResetKoboProgress(@Param("userId") Long userId, @Param("bookIds") List<Long> bookIds);
 
     @Modifying
-    @Transactional
     @Query("""
         UPDATE UserBookProgressEntity ubp
         SET ubp.personalRating = :rating

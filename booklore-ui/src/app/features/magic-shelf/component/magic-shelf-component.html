@@ -1,227 +1,186 @@
 <ng-container *transloco="let t; prefix: 'magicShelf'">
-<div class="magic-shelf-container">
-  <div class="panel-header">
-    <div class="header-icon-wrapper">
-      <i class="pi pi-sparkles header-icon"></i>
-    </div>
-    <div class="header-text">
-      <h2 class="panel-title">
-        {{ editMode ? t('header.titleEdit') : t('header.titleCreate') }}
-      </h2>
-      <p class="panel-description">{{ t('header.description') }}</p>
-    </div>
-    <p-button
-      icon="pi pi-times"
-      [text]="true"
-      [rounded]="true"
-      severity="secondary"
-      (onClick)="cancel()"
-      class="close-button">
-    </p-button>
-  </div>
-
-  <div class="magic-shelf-content" [formGroup]="form">
+<div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+  <div [formGroup]="form">
     <fieldset [disabled]="form.get('isPublic')?.value && !isAdmin">
-      <div class="form-header">
-        <div class="form-field">
-          <label for="shelfName">{{ t('form.shelfName') }}</label>
-          <input pInputText id="shelfName" type="text" formControlName="name" [placeholder]="t('form.namePlaceholder')"/>
-        </div>
-        <div class="icon-picker-section">
-          <div class="icon-picker-wrapper">
-            <span>{{ t('form.shelfIcon') }}</span>
-            @if (selectedIcon) {
-              <div class="selected-icon-display">
-                <div class="icon-display-container" (click)="openIconPicker()" (keydown.enter)="openIconPicker()" tabindex="0" role="button">
-                  <app-icon-display
-                    [icon]="selectedIcon"
-                    [size]="'16px'"
-                    iconClass="selected-icon"
-                    alt="Selected shelf icon">
-                  </app-icon-display>
-                  <span class="icon-label">{{ t('form.clickToChange') }}</span>
-                </div>
-                <p-button
-                  icon="pi pi-times"
-                  severity="danger"
-                  [outlined]="true"
-                  [rounded]="true"
-                  size="small"
-                  (onClick)="clearSelectedIcon()"
-                  [pTooltip]="t('form.removeIcon')"
-                  tooltipPosition="left"
-                />
-              </div>
-            } @else {
-              <div class="icon-display-container" (click)="openIconPicker()" (keydown.enter)="openIconPicker()" tabindex="0" role="button">
-                <div class="icon-placeholder">
-                  <i class="pi pi-plus"></i>
-                  <span>{{ t('form.selectIcon') }}</span>
-                </div>
-              </div>
-            }
+      <div class="flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-ink mb-1.5" for="shelfName">{{ t('form.shelfName') }}</label>
+          <div class="relative">
+            <input appInput id="shelfName" type="text" formControlName="name" [placeholder]="t('form.namePlaceholder')" class="!pr-10" />
+            <button type="button" (click)="selectedIcon ? clearSelectedIcon() : openIconPicker()"
+              class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-[4px] transition-colors cursor-pointer hover:bg-surface-hover px-1.5 h-7"
+              [class]="selectedIcon ? 'text-accent' : 'text-ink-muted'">
+              @if (selectedIcon) {
+                <app-icon-display [icon]="selectedIcon" [size]="'16px'" />
+              } @else {
+                <span class="text-xs">{{ t('form.selectIcon') }}</span>
+              }
+            </button>
           </div>
         </div>
         @if (isAdmin) {
-          <div class="public-checkbox-section">
-            <div class="checkbox-wrapper">
-              <p-checkbox formControlName="isPublic" [binary]="true" inputId="isPublic" (onChange)="onIsPublicChange($event)"></p-checkbox>
-              <label for="isPublic">{{ t('form.public') }}</label>
+          <div>
+            <span class="block text-sm font-medium text-ink mb-1.5">{{ t('form.public') }}</span>
+            <div class="h-9 flex items-center">
+              <app-toggle [checked]="!!form.get('isPublic')?.value" (checkedChange)="onIsPublicChange($event)" />
             </div>
           </div>
         }
       </div>
 
       @if (showImportPanel) {
-        <div class="import-panel">
-          <textarea pTextarea [(ngModel)]="importJson" [ngModelOptions]="{standalone: true}" rows="10" [placeholder]="t('importJson.placeholder')" class="import-textarea"></textarea>
-          <div class="import-actions">
-            <p-button [label]="t('actions.cancel')" severity="secondary" [outlined]="true" (onClick)="toggleImportPanel()" size="small"/>
-            <p-button [label]="t('importJson.apply')" icon="pi pi-check" severity="success" (onClick)="applyImportedJson()" size="small"/>
+        <div class="mt-4 p-4 bg-surface-raised border border-edge rounded-lg">
+          <textarea appInput [(ngModel)]="importJson" [ngModelOptions]="{standalone: true}" rows="10" [placeholder]="t('importJson.placeholder')" class="font-mono text-sm resize-y"></textarea>
+          <div class="flex justify-end gap-2 mt-3">
+            <app-button variant="secondary" (click)="toggleImportPanel()">{{ t('actions.cancel') }}</app-button>
+            <app-button variant="primary" (click)="applyImportedJson()">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ t('importJson.apply') }}
+            </app-button>
           </div>
         </div>
       }
 
-      <div class="rules-container">
+      <div class="mt-4 overflow-auto max-h-[40rem] p-2">
         <ng-container *ngTemplateOutlet="groupTemplate; context: { group: form.get('group') }"></ng-container>
       </div>
     </fieldset>
   </div>
+</div>
 
-  <div class="dialog-footer">
+<div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+  <div class="flex items-center gap-2">
     @if (!editMode) {
-      <p-button
-        icon="pi pi-file-import"
-        [label]="t('importJson.buttonLabel')"
-        [outlined]="true"
-        severity="info"
-        size="small"
-        (onClick)="toggleImportPanel()"
-      />
+      <app-button variant="ghost" (click)="toggleImportPanel()">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        {{ t('importJson.buttonLabel') }}
+      </app-button>
     }
-    <div class="footer-actions">
-      <p-button
-        [label]="t('actions.cancel')"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="cancel()"
-      />
-      <p-button
-        [label]="t('actions.saveFilter')"
-        icon="pi pi-save"
-        severity="success"
-        (onClick)="submit()"
-        [disabled]="form.invalid"
-      />
-    </div>
   </div>
+  <div class="flex items-center gap-2">
+    <app-button variant="secondary" (click)="cancel()">{{ t('actions.cancel') }}</app-button>
+    <app-button variant="primary" (click)="submit()" [disabled]="form.invalid">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      {{ t('actions.saveFilter') }}
+    </app-button>
+  </div>
+</div>
 
-      <ng-template #groupTemplate let-group="group">
-    <div class="group-container" [formGroup]="group">
-      <div class="group-header">
-        <label [for]="getControlId(group.get('join'), 'magic-shelf-group-join')">{{ t('group.condition') }}</label>
-        <p-select [inputId]="getControlId(group.get('join'), 'magic-shelf-group-join')" [options]="conditionOptions" formControlName="join" class="condition-select" appendTo="body" [showClear]="false"/>
-        <p-button icon="pi pi-plus" size="small" text (click)="addRule(group)" [label]="t('actions.addRule')" outlined></p-button>
-        <p-button icon="pi pi-folder-open" size="small" text (click)="addGroup(group)" [label]="t('actions.addGroup')" outlined></p-button>
-        @if (group.parent) {
-          <p-button icon="pi pi-trash" text (click)="deleteGroup(group)" severity="danger"></p-button>
-        }
-      </div>
+<ng-template #groupTemplate let-group="group">
+  <div class="p-4 border-l-4 border-l-accent border border-edge rounded-lg mt-3 w-full transition-all hover:shadow-md" [formGroup]="group">
+    <div class="mb-3 flex items-center gap-3 flex-wrap">
+      <label class="text-sm font-semibold text-ink" [for]="getControlId(group.get('join'), 'magic-shelf-group-join')">{{ t('group.condition') }}</label>
+      <p-select [inputId]="getControlId(group.get('join'), 'magic-shelf-group-join')" [options]="conditionOptions" formControlName="join" class="w-36" appendTo="body" [showClear]="false"/>
+      <app-button variant="ghost" (click)="addRule(group)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        {{ t('actions.addRule') }}
+      </app-button>
+      <app-button variant="ghost" (click)="addGroup(group)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        {{ t('actions.addGroup') }}
+      </app-button>
+      @if (group.parent) {
+        <app-button variant="danger" (click)="deleteGroup(group)">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </app-button>
+      }
+    </div>
 
-      <div formArrayName="rules">
-        @for (ruleCtrl of group.get('rules')['controls']; let i = $index; track trackByFn(ruleCtrl, i)) {
-          <div [formGroupName]="i" class="rule-item">
-            @if (isGroup(ruleCtrl)) {
-              <ng-container>
-                <ng-container *ngTemplateOutlet="groupTemplate; context: { group: ruleCtrl }"></ng-container>
-              </ng-container>
-            } @else {
-              <p-select [options]="fieldOptions" [group]="true" optionGroupLabel="label" optionGroupChildren="items" [filter]="true" filterBy="label" formControlName="field" (onChange)="onFieldChange(ruleCtrl)" [placeholder]="t('placeholders.field')" appendTo="body" class="field-select"/>
-              <p-select [options]="getOperatorOptionsForField(ruleCtrl.get('field')?.value)" appendTo="body" formControlName="operator" [placeholder]="t('placeholders.operator')" class="operator-select" (onChange)="onOperatorChange(ruleCtrl)"/>
+    <div formArrayName="rules">
+      @for (ruleCtrl of group.get('rules')['controls']; let i = $index; track trackByFn(ruleCtrl, i)) {
+        <div [formGroupName]="i" class="ml-4 mt-3 flex items-center p-0.5 gap-3 transition-all">
+          @if (isGroup(ruleCtrl)) {
+            <ng-container>
+              <ng-container *ngTemplateOutlet="groupTemplate; context: { group: ruleCtrl }"></ng-container>
+            </ng-container>
+          } @else {
+            <p-select [options]="fieldOptions" [group]="true" optionGroupLabel="label" optionGroupChildren="items" [filter]="true" filterBy="label" formControlName="field" (onChange)="onFieldChange(ruleCtrl)" [placeholder]="t('placeholders.field')" appendTo="body" class="min-w-56"/>
+            <p-select [options]="getOperatorOptionsForField(ruleCtrl.get('field')?.value)" appendTo="body" formControlName="operator" [placeholder]="t('placeholders.operator')" class="min-w-56" (onChange)="onOperatorChange(ruleCtrl)"/>
 
-              @if (!['is_empty', 'is_not_empty'].includes(ruleCtrl.get('operator')?.value)) {
-                @if (['within_last', 'older_than'].includes(ruleCtrl.get('operator')?.value)) {
-                  <p-inputNumber formControlName="value" class="value-input" [min]="1" [placeholder]="t('placeholders.amount')" [showButtons]="true"></p-inputNumber>
-                  <p-select [options]="dateUnitOptions" formControlName="valueEnd" [placeholder]="t('placeholders.selectUnit')" appendTo="body" class="value-input"></p-select>
-                } @else if (ruleCtrl.get('operator')?.value === 'this_period') {
-                  <p-select [options]="datePeriodOptions" formControlName="value" [placeholder]="t('placeholders.selectPeriod')" appendTo="body" class="value-input"></p-select>
-                } @else if (ruleCtrl.get('operator')?.value === 'in_between') {
-                  @if (ruleCtrl.get('field')?.value === 'publishedDate') {
-                    <p-datepicker [formControl]="ruleCtrl.get('valueStart')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.startYear')" appendTo="body" fluid class="value-input"></p-datepicker>
-                    <p-datepicker [formControl]="ruleCtrl.get('valueEnd')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.endYear')" appendTo="body" fluid class="value-input"></p-datepicker>
-                  } @else if (['dateFinished', 'addedOn', 'lastReadTime'].includes(ruleCtrl.get('field')?.value)) {
-                    <p-datepicker [formControl]="ruleCtrl.get('valueStart')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.startDate')" appendTo="body" fluid class="value-input"></p-datepicker>
-                    <p-datepicker [formControl]="ruleCtrl.get('valueEnd')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.endDate')" appendTo="body" fluid class="value-input"></p-datepicker>
-                  } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'number') {
-                    <p-inputNumber [formControl]="ruleCtrl.get('valueStart')" [min]="0" class="value-input" [placeholder]="t('placeholders.startValue')" [showButtons]="true"></p-inputNumber>
-                    <p-inputNumber [formControl]="ruleCtrl.get('valueEnd')" [min]="0" class="value-input" [placeholder]="t('placeholders.endValue')" [showButtons]="true"></p-inputNumber>
-                  } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'decimal') {
-                    <p-inputNumber [formControl]="ruleCtrl.get('valueStart')" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="value-input" [placeholder]="t('placeholders.startValue')" [showButtons]="true"></p-inputNumber>
-                    <p-inputNumber [formControl]="ruleCtrl.get('valueEnd')" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="value-input" [placeholder]="t('placeholders.endValue')" [showButtons]="true"></p-inputNumber>
-                  } @else {
-                    <input pInputText [formControl]="ruleCtrl.get('valueStart')" class="value-input" [placeholder]="t('placeholders.startValue')"/>
-                    <input pInputText [formControl]="ruleCtrl.get('valueEnd')" class="value-input" [placeholder]="t('placeholders.endValue')"/>
-                  }
+            @if (!['is_empty', 'is_not_empty'].includes(ruleCtrl.get('operator')?.value)) {
+              @if (['within_last', 'older_than'].includes(ruleCtrl.get('operator')?.value)) {
+                <p-inputNumber formControlName="value" class="w-full" [min]="1" [placeholder]="t('placeholders.amount')" [showButtons]="true"></p-inputNumber>
+                <p-select [options]="dateUnitOptions" formControlName="valueEnd" [placeholder]="t('placeholders.selectUnit')" appendTo="body" class="w-full"></p-select>
+              } @else if (ruleCtrl.get('operator')?.value === 'this_period') {
+                <p-select [options]="datePeriodOptions" formControlName="value" [placeholder]="t('placeholders.selectPeriod')" appendTo="body" class="w-full"></p-select>
+              } @else if (ruleCtrl.get('operator')?.value === 'in_between') {
+                @if (ruleCtrl.get('field')?.value === 'publishedDate') {
+                  <p-datepicker [formControl]="ruleCtrl.get('valueStart')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.startYear')" appendTo="body" fluid class="w-full"></p-datepicker>
+                  <p-datepicker [formControl]="ruleCtrl.get('valueEnd')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.endYear')" appendTo="body" fluid class="w-full"></p-datepicker>
+                } @else if (['dateFinished', 'addedOn', 'lastReadTime'].includes(ruleCtrl.get('field')?.value)) {
+                  <p-datepicker [formControl]="ruleCtrl.get('valueStart')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.startDate')" appendTo="body" fluid class="w-full"></p-datepicker>
+                  <p-datepicker [formControl]="ruleCtrl.get('valueEnd')" dateFormat="dd-M-yy" [placeholder]="t('placeholders.endDate')" appendTo="body" fluid class="w-full"></p-datepicker>
+                } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'number') {
+                  <p-inputNumber [formControl]="ruleCtrl.get('valueStart')" [min]="0" class="w-full" [placeholder]="t('placeholders.startValue')" [showButtons]="true"></p-inputNumber>
+                  <p-inputNumber [formControl]="ruleCtrl.get('valueEnd')" [min]="0" class="w-full" [placeholder]="t('placeholders.endValue')" [showButtons]="true"></p-inputNumber>
+                } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'decimal') {
+                  <p-inputNumber [formControl]="ruleCtrl.get('valueStart')" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="w-full" [placeholder]="t('placeholders.startValue')" [showButtons]="true"></p-inputNumber>
+                  <p-inputNumber [formControl]="ruleCtrl.get('valueEnd')" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="w-full" [placeholder]="t('placeholders.endValue')" [showButtons]="true"></p-inputNumber>
                 } @else {
-                  @if (ruleCtrl.get('field')?.value === 'publishedDate') {
-                    <p-datepicker formControlName="value" dateFormat="dd-M-yy" appendTo="body" fluid class="value-input"></p-datepicker>
-                  } @else if (['dateFinished', 'addedOn', 'lastReadTime'].includes(ruleCtrl.get('field')?.value)) {
-                    <p-datepicker formControlName="value" dateFormat="dd-M-yy" appendTo="body" fluid class="value-input"></p-datepicker>
-                  } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'boolean') {
-                    <p-select [options]="booleanOptions" formControlName="value" [placeholder]="t('placeholders.selectValue')" appendTo="body" class="value-input"></p-select>
-                  } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'number') {
-                    <p-inputNumber formControlName="value" class="value-input" mode="decimal" [placeholder]="t('placeholders.value')" [showButtons]="true"></p-inputNumber>
-                  } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'decimal') {
-                    <p-inputNumber formControlName="value" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="value-input" [placeholder]="t('placeholders.value')"></p-inputNumber>
-                  } @else if (ruleCtrl.get('field')?.value === 'seriesStatus') {
-                    <p-select [options]="seriesStatusOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesStatus')" appendTo="body" class="value-input"></p-select>
-                  } @else if (ruleCtrl.get('field')?.value === 'seriesGaps') {
-                    <p-select [options]="seriesGapsOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesGap')" appendTo="body" class="value-input"></p-select>
-                  } @else if (ruleCtrl.get('field')?.value === 'seriesPosition') {
-                    <p-select [options]="seriesPositionOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesPosition')" appendTo="body" class="value-input"></p-select>
-                  } @else if (ruleCtrl.get('field')?.value === 'metadataPresence') {
-                    <p-select [options]="metadataPresenceOptions" [group]="true" optionGroupLabel="label" optionGroupChildren="items" [filter]="true" filterBy="label" formControlName="value" [placeholder]="t('placeholders.selectMetadataField')" appendTo="body" class="value-input"></p-select>
-                  } @else if (['includes_any', 'includes_all', 'excludes_all'].includes(ruleCtrl.get('operator')?.value)) {
-                    @if (ruleCtrl.get('field')?.value === 'readStatus') {
-                      <p-multiSelect [options]="readStatusOptions" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectStatuses')"></p-multiSelect>
-                    } @else if (ruleCtrl.get('field')?.value === 'fileType') {
-                      <p-multiSelect [options]="fileType" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectFileTypes')"></p-multiSelect>
-                    } @else if (ruleCtrl.get('field')?.value === 'library') {
-                      <p-multiSelect [options]="libraryOptions()" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectLibraries')"></p-multiSelect>
-                    } @else if (ruleCtrl.get('field')?.value === 'shelf') {
-                      <p-multiSelect [options]="shelfOptions()" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectShelves')"></p-multiSelect>
-                    } @else if (ruleCtrl.get('field')?.value === 'categories') {
-                      <p-multiSelect [options]="categoryOptions()" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectGenres')"></p-multiSelect>
-                    } @else if (ruleCtrl.get('field')?.value === 'contentRating') {
-                      <p-multiSelect [options]="contentRatingOptions" formControlName="value" display="chip" class="value-input" appendTo="body" [placeholder]="t('placeholders.selectContentRatings')"></p-multiSelect>
-                    } @else {
-                      <div class="autocomplete-wrapper">
-                        <p-autoComplete [formControl]="ruleCtrl.get('value')" [multiple]="true" [typeahead]="false" [dropdown]="false" [forceSelection]="false" [placeholder]="t('placeholders.enterValues')" (onBlur)="onAutoCompleteBlur(ruleCtrl.get('value'), $event)"></p-autoComplete>
-                      </div>
-                    }
-                  } @else if (ruleCtrl.get('field')?.value === 'readStatus') {
-                    <p-select [options]="readStatusOptions" formControlName="value" [placeholder]="t('placeholders.selectStatus')" appendTo="body" class="value-input"></p-select>
+                  <input appInput [formControl]="ruleCtrl.get('valueStart')" class="w-full" [placeholder]="t('placeholders.startValue')"/>
+                  <input appInput [formControl]="ruleCtrl.get('valueEnd')" class="w-full" [placeholder]="t('placeholders.endValue')"/>
+                }
+              } @else {
+                @if (ruleCtrl.get('field')?.value === 'publishedDate') {
+                  <p-datepicker formControlName="value" dateFormat="dd-M-yy" appendTo="body" fluid class="w-full"></p-datepicker>
+                } @else if (['dateFinished', 'addedOn', 'lastReadTime'].includes(ruleCtrl.get('field')?.value)) {
+                  <p-datepicker formControlName="value" dateFormat="dd-M-yy" appendTo="body" fluid class="w-full"></p-datepicker>
+                } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'boolean') {
+                  <p-select [options]="booleanOptions" formControlName="value" [placeholder]="t('placeholders.selectValue')" appendTo="body" class="w-full"></p-select>
+                } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'number') {
+                  <p-inputNumber formControlName="value" class="w-full" mode="decimal" [placeholder]="t('placeholders.value')" [showButtons]="true"></p-inputNumber>
+                } @else if (numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.type === 'decimal') {
+                  <p-inputNumber formControlName="value" mode="decimal" [minFractionDigits]="1" [maxFractionDigits]="1" [min]="0" [max]="numericFieldConfigMap.get(ruleCtrl.get('field')?.value)?.max || 10" class="w-full" [placeholder]="t('placeholders.value')"></p-inputNumber>
+                } @else if (ruleCtrl.get('field')?.value === 'seriesStatus') {
+                  <p-select [options]="seriesStatusOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesStatus')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'seriesGaps') {
+                  <p-select [options]="seriesGapsOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesGap')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'seriesPosition') {
+                  <p-select [options]="seriesPositionOptions" formControlName="value" [placeholder]="t('placeholders.selectSeriesPosition')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'metadataPresence') {
+                  <p-select [options]="metadataPresenceOptions" [group]="true" optionGroupLabel="label" optionGroupChildren="items" [filter]="true" filterBy="label" formControlName="value" [placeholder]="t('placeholders.selectMetadataField')" appendTo="body" class="w-full"></p-select>
+                } @else if (['includes_any', 'includes_all', 'excludes_all'].includes(ruleCtrl.get('operator')?.value)) {
+                  @if (ruleCtrl.get('field')?.value === 'readStatus') {
+                    <p-multiSelect [options]="readStatusOptions" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectStatuses')"></p-multiSelect>
                   } @else if (ruleCtrl.get('field')?.value === 'fileType') {
-                    <p-select [options]="fileType" formControlName="value" [placeholder]="t('placeholders.selectFileType')" appendTo="body" class="value-input"></p-select>
+                    <p-multiSelect [options]="fileType" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectFileTypes')"></p-multiSelect>
                   } @else if (ruleCtrl.get('field')?.value === 'library') {
-                    <p-select [options]="libraryOptions()" formControlName="value" [placeholder]="t('placeholders.selectLibrary')" appendTo="body" class="value-input"></p-select>
+                    <p-multiSelect [options]="libraryOptions()" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectLibraries')"></p-multiSelect>
                   } @else if (ruleCtrl.get('field')?.value === 'shelf') {
-                    <p-select [options]="shelfOptions()" formControlName="value" [placeholder]="t('placeholders.selectShelf')" appendTo="body" class="value-input"></p-select>
+                    <p-multiSelect [options]="shelfOptions()" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectShelves')"></p-multiSelect>
                   } @else if (ruleCtrl.get('field')?.value === 'categories') {
-                    <p-select [options]="categoryOptions()" formControlName="value" [placeholder]="t('placeholders.selectGenre')" appendTo="body" class="value-input"></p-select>
+                    <p-multiSelect [options]="categoryOptions()" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectGenres')"></p-multiSelect>
                   } @else if (ruleCtrl.get('field')?.value === 'contentRating') {
-                    <p-select [options]="contentRatingOptions" formControlName="value" [placeholder]="t('placeholders.selectContentRating')" appendTo="body" class="value-input"></p-select>
+                    <p-multiSelect [options]="contentRatingOptions" formControlName="value" display="chip" class="w-full" appendTo="body" [placeholder]="t('placeholders.selectContentRatings')"></p-multiSelect>
                   } @else {
-                    <input pInputText formControlName="value" class="value-input" [placeholder]="t('placeholders.value')"/>
+                    <div class="w-full">
+                      <p-autoComplete [formControl]="ruleCtrl.get('value')" [multiple]="true" [typeahead]="false" [dropdown]="false" [forceSelection]="false" [placeholder]="t('placeholders.enterValues')" (onBlur)="onAutoCompleteBlur(ruleCtrl.get('value'), $event)"></p-autoComplete>
+                    </div>
                   }
+                } @else if (ruleCtrl.get('field')?.value === 'readStatus') {
+                  <p-select [options]="readStatusOptions" formControlName="value" [placeholder]="t('placeholders.selectStatus')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'fileType') {
+                  <p-select [options]="fileType" formControlName="value" [placeholder]="t('placeholders.selectFileType')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'library') {
+                  <p-select [options]="libraryOptions()" formControlName="value" [placeholder]="t('placeholders.selectLibrary')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'shelf') {
+                  <p-select [options]="shelfOptions()" formControlName="value" [placeholder]="t('placeholders.selectShelf')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'categories') {
+                  <p-select [options]="categoryOptions()" formControlName="value" [placeholder]="t('placeholders.selectGenre')" appendTo="body" class="w-full"></p-select>
+                } @else if (ruleCtrl.get('field')?.value === 'contentRating') {
+                  <p-select [options]="contentRatingOptions" formControlName="value" [placeholder]="t('placeholders.selectContentRating')" appendTo="body" class="w-full"></p-select>
+                } @else {
+                  <input appInput formControlName="value" class="w-full" [placeholder]="t('placeholders.value')"/>
                 }
               }
-              <p-button icon="pi pi-trash" text severity="danger" (click)="removeRule(group, i)"></p-button>
             }
-          </div>
-        }
-      </div>
+            <app-button variant="danger" (click)="removeRule(group, i)">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </app-button>
+          }
+        </div>
+      }
     </div>
-  </ng-template>
-</div>
+  </div>
+</ng-template>
 </ng-container>

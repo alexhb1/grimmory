@@ -1,7 +1,6 @@
 import {Component, inject, OnDestroy, OnInit} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
 import {TableModule} from 'primeng/table';
 import {LowerCasePipe, TitleCasePipe} from '@angular/common';
 import {User, UserService, UserUpdateRequest} from './user.service';
@@ -16,7 +15,6 @@ import {InputText} from 'primeng/inputtext';
 import {takeUntil} from 'rxjs/operators';
 import {Subject} from 'rxjs';
 import {Tooltip} from 'primeng/tooltip';
-import {DialogLauncherService} from '../../../shared/services/dialog-launcher.service';
 import {ContentRestrictionsEditorComponent} from './content-restrictions-editor/content-restrictions-editor.component';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 
@@ -48,8 +46,7 @@ interface UserWithEditing extends User {
   styleUrls: ['./user-management.component.scss'],
 })
 export class UserManagementComponent implements OnInit, OnDestroy {
-  ref: DynamicDialogRef | undefined | null;
-  private dialogLauncherService = inject(DialogLauncherService);
+  ref: any;
   private userService = inject(UserService);
   private libraryService = inject(LibraryService);
   private messageService = inject(MessageService);
@@ -107,12 +104,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   }
 
   openCreateUserDialog() {
-    this.ref = this.dialogLauncherService.openCreateUserDialog();
-    this.ref?.onClose.subscribe((result) => {
-      if (result) {
-        this.loadUsers();
-      }
-    });
+    // TODO: migrate to ModalService
   }
 
   toggleEdit(user: UserWithEditing) {

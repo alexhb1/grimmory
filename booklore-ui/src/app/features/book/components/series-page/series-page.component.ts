@@ -13,12 +13,11 @@ import {Tab, TabList, TabPanel, TabPanels, Tabs} from "primeng/tabs";
 import {VirtualScrollerModule} from "@iharbeck/ngx-virtual-scroller";
 import {ProgressSpinner} from "primeng/progressspinner";
 import {ProgressBar} from "primeng/progressbar";
-import {DynamicDialogRef} from "primeng/dynamicdialog";
 import {ConfirmationService, MenuItem, MessageService} from "primeng/api";
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {UserService} from "../../../settings/user-management/user.service";
 import {BookMenuService} from "../../service/book-menu.service";
 import {LoadingService} from "../../../../core/services/loading.service";
-import {BookDialogHelperService} from "../book-browser/book-dialog-helper.service";
 import {TaskHelperService} from "../../../settings/task-management/task-helper.service";
 import {MetadataRefreshType} from "../../../metadata/model/request/metadata-refresh-type.enum";
 import {TieredMenu} from "primeng/tieredmenu";
@@ -110,13 +109,13 @@ export class SeriesPageComponent implements AfterViewChecked {
   private bookMetadataManageService = inject(BookMetadataManageService);
   protected coverScalePreferenceService = inject(CoverScalePreferenceService);
   private metadataCenterViewMode: "route" | "dialog" = "route";
-  private dialogRef?: DynamicDialogRef | null;
+  private dialogRef?: any;
   private router = inject(Router);
   protected userService = inject(UserService);
   private bookMenuService = inject(BookMenuService);
   protected confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
   private loadingService = inject(LoadingService);
-  private dialogHelperService = inject(BookDialogHelperService);
   protected taskHelperService = inject(TaskHelperService);
   private messageService = inject(MessageService);
   protected bookCardOverlayPreferenceService = inject(BookCardOverlayPreferenceService);
@@ -579,47 +578,30 @@ export class SeriesPageComponent implements AfterViewChecked {
   }
 
   confirmDeleteBooks(): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.browser.confirm.deleteHeader'),
       message: this.t.translate('book.browser.confirm.deleteMessage', {count: this.selectedBooks.size}),
-      header: this.t.translate('book.browser.confirm.deleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptLabel: this.t.translate('common.delete'),
-      rejectLabel: this.t.translate('common.cancel'),
-      acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-outlined',
-      accept: () => {
-        const count = this.selectedBooks.size;
-        const loader = this.loadingService.show(this.t.translate('book.browser.loading.deleting', {count}));
+      confirmLabel: this.t.translate('common.delete'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      const count = this.selectedBooks.size;
+      const loader = this.loadingService.show(this.t.translate('book.browser.loading.deleting', {count}));
 
-        this.bookService.deleteBooks(this.selectedBooks)
-          .pipe(finalize(() => this.loadingService.hide(loader)))
-          .subscribe(() => {
-            this.selectedBooks.clear();
-          });
-      }
+      this.bookService.deleteBooks(this.selectedBooks)
+        .pipe(finalize(() => this.loadingService.hide(loader)))
+        .subscribe(() => {
+          this.selectedBooks.clear();
+        });
     });
   }
 
   openShelfAssigner(): void {
-    this.dialogRef = this.dialogHelperService.openShelfAssignerDialog(null, this.selectedBooks);
-    if (this.dialogRef) {
-      this.dialogRef.onClose.subscribe(result => {
-        if (result.assigned) {
-          this.selectedBooks.clear();
-        }
-      });
-    }
+    // TODO: migrate to ModalService
   }
 
   lockUnlockMetadata(): void {
-    this.dialogRef = this.dialogHelperService.openLockUnlockMetadataDialog(this.selectedBooks);
-    if (this.dialogRef) {
-      this.dialogRef.onClose.subscribe(() => {
-        this.deselectAllBooks();
-      });
-    }
+    // TODO: migrate to ModalService
   }
 
   autoFetchMetadata(): void {
@@ -631,109 +613,79 @@ export class SeriesPageComponent implements AfterViewChecked {
   }
 
   fetchMetadata(): void {
-    this.dialogHelperService.openMetadataRefreshDialog(this.selectedBooks);
+    // TODO: migrate to ModalService
   }
 
   bulkEditMetadata(): void {
-    this.dialogRef = this.dialogHelperService.openBulkMetadataEditDialog(this.selectedBooks);
-    if (this.dialogRef) {
-      this.dialogRef.onClose.subscribe(() => {
-        this.deselectAllBooks();
-      });
-    }
+    // TODO: migrate to ModalService
   }
 
   multiBookEditMetadata(): void {
-    this.dialogRef = this.dialogHelperService.openMultibookMetadataEditorDialog(this.selectedBooks);
-    if (this.dialogRef) {
-      this.dialogRef.onClose.subscribe(() => {
-        this.deselectAllBooks();
-      });
-    }
+    // TODO: migrate to ModalService
   }
 
   regenerateCoversForSelected(): void {
     if (!this.selectedBooks || this.selectedBooks.size === 0) return;
     const count = this.selectedBooks.size;
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.browser.confirm.regenCoverHeader'),
       message: this.t.translate('book.browser.confirm.regenCoverMessage', {count}),
-      header: this.t.translate('book.browser.confirm.regenCoverHeader'),
-      icon: 'pi pi-image',
-      acceptLabel: this.t.translate('common.yes'),
-      rejectLabel: this.t.translate('common.no'),
-      acceptButtonProps: {
-        label: this.t.translate('common.yes'),
-        severity: 'success'
-      },
-      rejectButtonProps: {
-        label: this.t.translate('common.no'),
-        severity: 'secondary'
-      },
-      accept: () => {
-        this.bookMetadataManageService.regenerateCoversForBooks(Array.from(this.selectedBooks)).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('book.browser.toast.regenCoverStartedSummary'),
-              detail: this.t.translate('book.browser.toast.regenCoverStartedDetail', {count}),
-              life: 3000
-            });
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('book.browser.toast.failedSummary'),
-              detail: this.t.translate('book.browser.toast.regenCoverFailedDetail'),
-              life: 3000
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('common.yes'),
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookMetadataManageService.regenerateCoversForBooks(Array.from(this.selectedBooks)).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('book.browser.toast.regenCoverStartedSummary'),
+            detail: this.t.translate('book.browser.toast.regenCoverStartedDetail', {count}),
+            life: 3000
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.browser.toast.failedSummary'),
+            detail: this.t.translate('book.browser.toast.regenCoverFailedDetail'),
+            life: 3000
+          });
+        }
+      });
     });
   }
 
   generateCustomCoversForSelected(): void {
     if (!this.selectedBooks || this.selectedBooks.size === 0) return;
     const count = this.selectedBooks.size;
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.browser.confirm.customCoverHeader'),
       message: this.t.translate('book.browser.confirm.customCoverMessage', {count}),
-      header: this.t.translate('book.browser.confirm.customCoverHeader'),
-      icon: 'pi pi-palette',
-      acceptLabel: this.t.translate('common.yes'),
-      rejectLabel: this.t.translate('common.no'),
-      acceptButtonProps: {
-        label: this.t.translate('common.yes'),
-        severity: 'success'
-      },
-      rejectButtonProps: {
-        label: this.t.translate('common.no'),
-        severity: 'secondary'
-      },
-      accept: () => {
-        this.bookMetadataManageService.generateCustomCoversForBooks(Array.from(this.selectedBooks)).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('book.browser.toast.customCoverStartedSummary'),
-              detail: this.t.translate('book.browser.toast.customCoverStartedDetail', {count}),
-              life: 3000
-            });
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('book.browser.toast.failedSummary'),
-              detail: this.t.translate('book.browser.toast.customCoverFailedDetail'),
-              life: 3000
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('common.yes'),
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookMetadataManageService.generateCustomCoversForBooks(Array.from(this.selectedBooks)).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('book.browser.toast.customCoverStartedSummary'),
+            detail: this.t.translate('book.browser.toast.customCoverStartedDetail', {count}),
+            life: 3000
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.browser.toast.failedSummary'),
+            detail: this.t.translate('book.browser.toast.customCoverFailedDetail'),
+            life: 3000
+          });
+        }
+      });
     });
   }
 
   moveFiles() {
-    this.dialogHelperService.openFileMoverDialog(this.selectedBooks);
+    // TODO: migrate to ModalService
   }
 
   user() {

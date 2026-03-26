@@ -1,7 +1,6 @@
 package org.booklore.service.progress;
 
-import
-        org.booklore.config.security.service.AuthenticationService;
+import org.booklore.config.security.service.AuthenticationService;
 import org.booklore.exception.ApiError;
 import org.booklore.model.dto.*;
 import org.booklore.model.dto.progress.AudiobookProgress;
@@ -250,18 +249,6 @@ public class ReadingProgressService {
             }
         }
 
-        if (percentage != null) {
-            ReadStatus newStatus = calculateReadStatus(percentage, progress.getReadStatus());
-            progress.setReadStatus(newStatus);
-            BookFileEntity primaryFile = book.getPrimaryBookFile();
-            if (primaryFile != null) {
-                setProgressPercent(progress, primaryFile.getBookType(), percentage);
-            }
-            // Auto-set dateFinished when the book transitions to READ and no date is set yet
-            if (newStatus == ReadStatus.READ && progress.getDateFinished() == null) {
-                progress.setDateFinished(now);
-            }
-        }
         if (request.getDateFinished() != null) {
             progress.setDateFinished(request.getDateFinished());
         }

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, EventEmitter, inject, Input, Output} from '@angular/core';
+import {Component, EventEmitter, inject, Input, Output} from '@angular/core';
 import {SortDirection, SortOption} from '../../../../model/sort.model';
 import {CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray} from '@angular/cdk/drag-drop';
 import {Select} from 'primeng/select';
@@ -10,7 +10,6 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 @Component({
   selector: 'app-multi-sort-popover',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CdkDropList,
     CdkDrag,

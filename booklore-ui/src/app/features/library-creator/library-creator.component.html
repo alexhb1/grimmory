@@ -1,295 +1,202 @@
 <ng-container *transloco="let t; prefix: 'libraryCreator.creator'">
-  <div class="library-creator">
-    <header class="dialog-header">
-      <div class="header-content">
-        <div class="header-icon">
-          <i class="pi pi-book"></i>
-        </div>
-        <div class="header-text">
-          <h1>{{ mode === 'edit' ? t('titleEdit') : t('titleNew') }}</h1>
-          <p>{{ t('subtitle') }}</p>
+  <!-- Scrollable body -->
+  <div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-6" (scroll)="modalRef.reportScroll($event)">
+
+    <!-- Library Details -->
+    <section>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ t('libraryDetails') }}</span>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-ink mb-1.5">
+          {{ t('nameLabel') }} <span class="text-status-abandoned">*</span>
+        </label>
+        <div class="relative">
+          <input appInput [(ngModel)]="chosenLibraryName" [placeholder]="t('namePlaceholder')" class="!pr-10" />
+          <button type="button" (click)="selectedIcon ? clearSelectedIcon() : openIconPicker()"
+            class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-[4px] transition-colors cursor-pointer hover:bg-surface-hover px-1.5 h-7"
+            [class]="selectedIcon ? 'text-accent' : 'text-ink-muted'">
+            @if (selectedIcon) {
+              <app-icon-display [icon]="selectedIcon" size="16px" />
+            } @else {
+              <span class="text-xs">{{ t('chooseIcon') }}</span>
+            }
+          </button>
         </div>
       </div>
-      <p-button
-        icon="pi pi-times"
-        [text]="true"
-        [rounded]="true"
-        severity="secondary"
-        (onClick)="closeDialog()"
-      />
-    </header>
+    </section>
 
-    <div class="dialog-body">
-      <section class="form-section">
-        <div class="section-header">
-          <i class="pi pi-info-circle"></i>
-          <span>{{ t('libraryDetails') }}</span>
+    <!-- Book Folders -->
+    <section>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ t('bookFolders') }}</span>
+        @if (folders.length > 0) {
+          <span class="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-semibold">{{ folders.length }}</span>
+        }
+      </div>
+
+      <div class="rounded-[6px] bg-surface-raised shadow-paper p-3 space-y-3">
+        <div class="flex items-start gap-2.5 px-3 py-2.5 rounded-[6px] bg-status-to-read/5 border border-status-to-read/20 text-xs text-ink-light leading-relaxed">
+          <svg class="w-3.5 h-3.5 text-status-to-read shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>
+          </svg>
+          <span [innerHTML]="t('folderStructureHint')"></span>
         </div>
 
-        <div class="form-row two-col">
-          <div class="form-field">
-            <label>
-              {{ t('nameLabel') }} <span class="required">*</span>
-            </label>
-            <div class="input-container">
-              <input
-                pInputText
-                [(ngModel)]="chosenLibraryName"
-                [placeholder]="t('namePlaceholder')"
-                class="input-full"
-              />
-              @if (chosenLibraryName.trim()) {
-                <i class="pi pi-check-circle field-status success"></i>
-              }
-            </div>
-          </div>
+        <button type="button" (click)="openDirectoryPicker()"
+          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-[6px] border border-dashed border-edge text-sm font-medium text-accent hover:bg-accent/5 hover:border-accent transition-all cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+          {{ t('addFolder') }}
+        </button>
 
-          <div class="form-field">
-            <label>
-              {{ t('iconLabel') }}
-            </label>
-            @if (!selectedIcon) {
-              <button class="icon-picker-trigger" (click)="openIconPicker()" type="button">
-                <i class="pi pi-plus"></i>
-                <span>{{ t('chooseIcon') }}</span>
-              </button>
-            } @else {
-              <div class="icon-selected">
-                <div class="icon-preview">
-                  <app-icon-display [icon]="selectedIcon" size="16px" />
-                </div>
-                <span class="icon-value">
-                  @if (selectedIcon.type === 'PRIME_NG') {
-                    {{ selectedIcon.value }}
-                  } @else {
-                    {{ t('customSvg') }}
-                  }
-                </span>
-                <button class="icon-clear" (click)="clearSelectedIcon()" type="button">
-                  <i class="pi pi-times"></i>
+        @if (folders.length > 0) {
+          <div class="space-y-2 max-h-[180px] overflow-y-auto">
+            @for (folder of folders; track folder; let i = $index) {
+              <div class="group flex items-center gap-2 px-3 py-2 rounded-[6px] bg-surface border border-edge hover:border-accent/30 transition-all">
+                <svg class="w-3.5 h-3.5 text-ink-muted shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                </svg>
+                <span class="flex-1 text-sm text-ink truncate" [pTooltip]="folder" tooltipPosition="top">{{ folder }}</span>
+                <button type="button" (click)="removeFolder(i)"
+                  class="flex items-center justify-center w-5 h-5 rounded opacity-0 group-hover:opacity-100 text-ink-muted hover:text-status-abandoned hover:bg-status-abandoned-bg transition-all cursor-pointer">
+                  <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
             }
           </div>
-        </div>
-      </section>
+        }
+      </div>
+    </section>
 
-      <section class="form-section">
-        <div class="section-header">
-          <i class="pi pi-folder-open"></i>
-          <span>{{ t('bookFolders') }}</span>
-          <span class="section-badge">{{ folders.length }}</span>
-        </div>
+    <!-- Options -->
+    <section>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ t('options') }}</span>
+      </div>
 
-        <div class="folders-zone">
-          <div class="folder-structure-hint">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span [innerHTML]="t('folderStructureHint')"></span>
-          </div>
-
-          <button class="add-folder-trigger" (click)="openDirectoryPicker()" type="button">
-            <i class="pi pi-plus-circle"></i>
-            <span>{{ t('addFolder') }}</span>
-          </button>
-
-          @if (folders.length > 0) {
-            <div class="folders-list">
-              @for (folder of folders; track folder; let i = $index) {
-                <div class="folder-item">
-                  <div class="folder-info">
-                    <i class="pi pi-folder"></i>
-                    <span class="folder-path" [pTooltip]="folder" tooltipPosition="top">
-                      {{ folder }}
-                    </span>
-                  </div>
-                  <button class="folder-remove" (click)="removeFolder(i)" type="button">
-                    <i class="pi pi-times"></i>
-                  </button>
-                </div>
-              }
-            </div>
-          }
-        </div>
-      </section>
-
-      <section class="form-section">
-        <div class="section-header">
-          <i class="pi pi-cog"></i>
-          <span>{{ t('options') }}</span>
+      <div class="space-y-5">
+        <!-- Watch folders -->
+        <div>
+          <span class="text-sm font-medium text-ink">{{ t('watchFolders') }}</span>
+          <div class="mt-1.5"><app-toggle [(checked)]="watch" /></div>
+          <p class="text-xs text-ink-muted mt-1.5">{{ t('watchFoldersTooltip') }}</p>
         </div>
 
-        <div class="options-list">
-          <div class="option-row">
-            <div class="option-label">
-              <span>{{ t('watchFolders') }}</span>
-              <i
-                class="pi pi-question-circle info-icon"
-                [pTooltip]="t('watchFoldersTooltip')"
-                tooltipPosition="top"
-              ></i>
-            </div>
-            <p-toggleswitch [(ngModel)]="watch" />
-          </div>
-
-          <div class="option-row">
-            <div class="option-label">
-              <span>{{ t('metadataSource') }}</span>
-              <i
-                class="pi pi-question-circle info-icon"
-                [pTooltip]="t('metadataSourceTooltip')"
-                tooltipPosition="top"
-              ></i>
-            </div>
+        <!-- Metadata source -->
+        <div>
+          <span class="text-sm font-medium text-ink">{{ t('metadataSource') }}</span>
+          <div class="mt-1.5">
             <p-select
               [(ngModel)]="metadataSource"
               [options]="metadataSourceOptions"
               optionLabel="label"
               optionValue="value"
               [placeholder]="t('metadataSourcePlaceholder')"
-              class="metadata-source-select"
               appendTo="body"
             />
           </div>
+          <p class="text-xs text-ink-muted mt-1.5">{{ t('metadataSourceTooltip') }}</p>
+        </div>
 
-          <div class="option-row">
-            <div class="option-label">
-              <span>{{ t('organizationMode') }}</span>
-              <i
-                class="pi pi-question-circle info-icon"
-                [pTooltip]="organizationMode === 'AUTO_DETECT' ? t('organizationModeLockedTooltip') : t('organizationModeTooltip')"
-                tooltipPosition="top"
-              ></i>
-            </div>
+        <!-- Organization mode -->
+        <div>
+          <span class="text-sm font-medium text-ink">{{ t('organizationMode') }}</span>
+          <div class="mt-1.5">
             <p-select
               [(ngModel)]="organizationMode"
               [options]="organizationModeOptions"
               optionLabel="label"
               optionValue="value"
               [disabled]="organizationMode === 'AUTO_DETECT'"
-              class="metadata-source-select"
               appendTo="body"
             />
           </div>
+          <p class="text-xs text-ink-muted mt-1.5">
+            {{ organizationMode === 'AUTO_DETECT' ? t('organizationModeLockedTooltip') : t('organizationModeTooltip') }}
+          </p>
+        </div>
 
-          <div class="option-divider"></div>
+        <app-divider />
 
-          <div class="option-row option-row-stacked">
-            <div class="option-label">
-              <span>{{ t('formatPriority') }}</span>
-              <i
-                class="pi pi-question-circle info-icon"
-                [pTooltip]="t('formatPriorityTooltip')"
-                tooltipPosition="top"
-              ></i>
-            </div>
-            <div
-              class="format-chips"
-              cdkDropList
-              cdkDropListOrientation="mixed"
-              [cdkDropListData]="formatPriority"
-              (cdkDropListDropped)="onFormatPriorityDrop($event)"
-            >
-              @for (format of formatPriority; track format.type; let i = $index) {
-                <div class="format-chip" cdkDrag>
-                  <span class="chip-rank">{{ i + 1 }}</span>
-                  <span class="chip-label">{{ format.type }}</span>
-                  <i class="pi pi-arrows-alt drag-indicator" cdkDragHandle></i>
-                </div>
-              }
-            </div>
-          </div>
-
-          <div class="option-row">
-            <div class="option-label">
-              <span>{{ t('allowedFormats') }}</span>
-              <i
-                class="pi pi-question-circle info-icon"
-                [pTooltip]="t('allowedFormatsTooltip')"
-                tooltipPosition="top"
-              ></i>
-            </div>
-            <div class="allow-all-toggle">
-              <p-checkbox
-                [(ngModel)]="allowAllFormats"
-                [binary]="true"
-                inputId="allowAll"
-                (onChange)="onAllowAllFormatsChange()"
-              />
-              <label for="allowAll" class="allow-all-label">{{ t('allowAll') }}</label>
-            </div>
-          </div>
-
-          @if (!allowAllFormats) {
-            <div class="format-checkboxes">
-              @for (format of allBookFormats; track format.type) {
-                <div class="format-checkbox-item" [class.has-warning]="getFormatWarning(format.type)">
-                  <p-checkbox
-                    [ngModel]="isFormatSelected(format.type)"
-                    [binary]="true"
-                    [inputId]="'format-' + format.type"
-                    (onChange)="onFormatCheckboxChange(format.type, $event.checked)"
-                  />
-                  <label [for]="'format-' + format.type" class="format-checkbox-label">
-                    {{ format.label }}
-                  </label>
-                  @if (getFormatWarning(format.type); as warning) {
-                    <i
-                      class="pi pi-exclamation-triangle warning-icon"
-                      [pTooltip]="warning"
-                      tooltipPosition="top"
-                    ></i>
-                  }
-                </div>
-              }
-            </div>
-            @if (hasAnyFormatWarning()) {
-              <div class="format-warning-message">
-                <i class="pi pi-info-circle"></i>
-                <span>{{ t('deselectedFormatsWarning') }}</span>
+        <!-- Format priority -->
+        <div>
+          <span class="text-sm font-medium text-ink">{{ t('formatPriority') }}</span>
+          <div class="flex flex-wrap gap-2 mt-1.5"
+            cdkDropList cdkDropListOrientation="mixed"
+            [cdkDropListData]="formatPriority"
+            (cdkDropListDropped)="onFormatPriorityDrop($event)">
+            @for (format of formatPriority; track format.type; let i = $index) {
+              <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] bg-surface-raised border border-edge hover:border-accent/30 cursor-grab transition-colors shadow-paper" cdkDrag>
+                <span class="flex items-center justify-center w-4 h-4 rounded-full bg-accent text-white text-[9px] font-semibold">{{ i + 1 }}</span>
+                <span class="text-sm font-medium text-ink">{{ format.type }}</span>
+                <svg class="w-3 h-3 text-ink-muted opacity-40" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/>
+                  <circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                </svg>
               </div>
             }
+          </div>
+          <p class="text-xs text-ink-muted mt-1.5">{{ t('formatPriorityTooltip') }}</p>
+        </div>
+
+        <!-- Allowed formats -->
+        <div>
+          <span class="text-sm font-medium text-ink">{{ t('allowedFormats') }}</span>
+          <div class="mt-1.5">
+            <p-multiSelect
+              [options]="allBookFormats"
+              [(ngModel)]="selectedFormats"
+              optionLabel="label"
+              optionValue="type"
+              display="chip"
+              [placeholder]="t('allowedFormatsTooltip')"
+              appendTo="body"
+              [showToggleAll]="true"
+              [filter]="false"
+            />
+          </div>
+          @if (hasAnyFormatWarning()) {
+            <div class="flex items-center gap-2 px-3 py-2 mt-2 rounded-[6px] bg-status-to-read/5 border border-status-to-read/20 text-xs text-status-to-read">
+              <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+              </svg>
+              {{ t('deselectedFormatsWarning') }}
+            </div>
+          }
+          <p class="text-xs text-ink-muted mt-1.5">{{ t('allowedFormatsTooltip') }}</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+    <div class="flex-1 min-w-0">
+      @if (!isLibraryDetailsValid() || !isDirectorySelectionValid()) {
+        <div class="flex items-center gap-1.5 text-sm text-status-to-read">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+          </svg>
+          @if (!chosenLibraryName.trim()) {
+            {{ t('validation.enterName') }}
+          } @else {
+            {{ t('validation.addFolder') }}
           }
         </div>
-      </section>
+      } @else {
+        <div class="flex items-center gap-1.5 text-sm text-status-finished">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+          {{ mode === 'edit' ? t('validation.readyUpdate') : t('validation.readyCreate') }}
+        </div>
+      }
     </div>
-
-    <footer class="dialog-footer">
-      <div class="validation-status">
-        @if (!isLibraryDetailsValid() || !isDirectorySelectionValid()) {
-          <div class="status-message warning">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>
-              @if (!chosenLibraryName.trim()) {
-                {{ t('validation.enterName') }}
-              } @else if (!selectedIcon) {
-                {{ t('validation.selectIcon') }}
-              } @else {
-                {{ t('validation.addFolder') }}
-              }
-            </span>
-          </div>
-        } @else {
-          <div class="status-message ready">
-            <i class="pi pi-check-circle"></i>
-            <span>{{ mode === 'edit' ? t('validation.readyUpdate') : t('validation.readyCreate') }}</span>
-          </div>
-        }
-      </div>
-      <div class="footer-actions">
-        <p-button
-          [label]="'common.cancel' | transloco"
-          severity="secondary"
-          [outlined]="true"
-          (onClick)="closeDialog()"
-        />
-        <p-button
-          [label]="mode === 'edit' ? t('buttonUpdate') : t('buttonCreate')"
-          [icon]="mode === 'edit' ? 'pi pi-save' : 'pi pi-check'"
-          severity="primary"
-          [disabled]="!isLibraryDetailsValid() || !isDirectorySelectionValid()"
-          (onClick)="createOrUpdateLibrary()"
-        />
-      </div>
-    </footer>
+    <div class="flex items-center gap-2">
+      <app-button variant="secondary" (click)="close()">{{ 'common.cancel' | transloco }}</app-button>
+      <app-button variant="primary" [disabled]="!isLibraryDetailsValid() || !isDirectorySelectionValid()" (click)="createOrUpdateLibrary()">
+        {{ mode === 'edit' ? t('buttonUpdate') : t('buttonCreate') }}
+      </app-button>
+    </div>
   </div>
 </ng-container>

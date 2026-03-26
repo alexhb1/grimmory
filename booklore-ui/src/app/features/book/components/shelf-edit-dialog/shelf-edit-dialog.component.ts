@@ -1,38 +1,38 @@
 import {Component, effect, inject, Injector, OnInit} from '@angular/core';
 import {ShelfService} from '../../service/shelf.service';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
-import {Button} from 'primeng/button';
-import {InputText} from 'primeng/inputtext';
-
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {Shelf} from '../../model/shelf.model';
 import {MessageService} from 'primeng/api';
 import {IconPickerService, IconSelection} from '../../../../shared/service/icon-picker.service';
 import {IconDisplayComponent} from '../../../../shared/components/icon-display/icon-display.component';
-import {CheckboxModule} from 'primeng/checkbox';
 import {UserService} from '../../../settings/user-management/user.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {ModalRef} from '../../../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../../../shared/components/ui/modal/modal-host';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button';
+import {InputDirective} from '../../../../shared/components/ui/input/input';
+import {ToggleComponent} from '../../../../shared/components/ui/toggle/toggle';
 
 @Component({
   selector: 'app-shelf-edit-dialog',
   imports: [
-    Button,
-    InputText,
     ReactiveFormsModule,
     FormsModule,
     IconDisplayComponent,
-    CheckboxModule,
-    TranslocoDirective
+    TranslocoDirective,
+    ButtonComponent,
+    InputDirective,
+    ToggleComponent,
   ],
   templateUrl: './shelf-edit-dialog.component.html',
   standalone: true,
-  styleUrl: './shelf-edit-dialog.component.scss'
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class ShelfEditDialogComponent implements OnInit {
 
   private shelfService = inject(ShelfService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
-  private dynamicDialogRef = inject(DynamicDialogRef);
+  readonly modalRef = inject(ModalRef);
+  private data = inject(MODAL_DATA) as {shelfId?: number} | null;
   private messageService = inject(MessageService);
   private iconPickerService = inject(IconPickerService);
   private userService = inject(UserService);
@@ -47,7 +47,7 @@ export class ShelfEditDialogComponent implements OnInit {
   isAdmin: boolean = this.userService.getCurrentUser()?.permissions.admin ?? false;
 
   ngOnInit(): void {
-    const shelfId = this.dynamicDialogConfig?.data.shelfId;
+    const shelfId = this.data?.shelfId;
     effect(() => {
       if (this.shelfInitialized) {
         return;
@@ -98,7 +98,7 @@ export class ShelfEditDialogComponent implements OnInit {
     this.shelfService.updateShelf(shelf, this.shelf?.id).subscribe({
       next: () => {
         this.messageService.add({severity: 'success', summary: this.t.translate('book.shelfEditDialog.toast.updateSuccessSummary'), detail: this.t.translate('book.shelfEditDialog.toast.updateSuccessDetail')});
-        this.dynamicDialogRef.close();
+        this.modalRef.close();
       },
       error: (e) => {
         this.messageService.add({severity: 'error', summary: this.t.translate('book.shelfEditDialog.toast.updateFailedSummary'), detail: this.t.translate('book.shelfEditDialog.toast.updateFailedDetail')});
@@ -108,6 +108,6 @@ export class ShelfEditDialogComponent implements OnInit {
   }
 
   closeDialog() {
-    this.dynamicDialogRef.close();
+    this.modalRef.close();
   }
 }

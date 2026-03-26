@@ -43,11 +43,17 @@
         @for (book of books; track book; let idx = $index) {
           <div class="search-dropdown-item" [class.active]="activeIndex === idx" (click)="onBookClick(book)">
             <div class="search-item-content">
-              <img
-                [attr.src]="urlHelper.getThumbnailUrl(book.id, book.metadata?.coverUpdatedOn)"
-                [alt]="t('bookCoverAlt')"
-                class="search-book-cover"
-              />
+              @if (urlHelper.getThumbnailUrl(book.id, book.metadata?.coverUpdatedOn); as coverSrc) {
+                <img
+                  [attr.src]="coverSrc"
+                  [alt]="t('bookCoverAlt')"
+                  class="search-book-cover"
+                />
+              } @else {
+                <div class="search-book-cover overflow-hidden">
+                  <app-cover-placeholder [title]="book.metadata?.title ?? ''" [author]="(book.metadata?.authors ?? []).join(', ')" />
+                </div>
+              }
               <div class="search-book-details">
                 <div class="search-book-title-container">
                   <p class="search-book-name">

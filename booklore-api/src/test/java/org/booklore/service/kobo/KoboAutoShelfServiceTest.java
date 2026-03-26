@@ -15,10 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.mockito.Mockito.*;
 
@@ -92,7 +89,7 @@ class KoboAutoShelfServiceTest {
     void autoAddBookToKoboShelves_withNullBookId_shouldReturnEarly() {
         koboAutoShelfService.autoAddBookToKoboShelves(null);
 
-        verify(bookRepository, never()).findByIdWithBookFiles(anyLong());
+        verify(bookRepository, never()).findById(anyLong());
         verify(koboUserSettingsRepository, never()).findByAutoAddToShelfTrueAndSyncEnabledTrue();
         verify(shelfRepository, never()).findByUserIdInAndName(anyList(), anyString());
         verify(bookRepository, never()).save(any());
@@ -100,11 +97,11 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withNonExistentBook_shouldReturnEarly() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.empty());
+        when(bookRepository.findById(1L)).thenReturn(Optional.empty());
 
         koboAutoShelfService.autoAddBookToKoboShelves(1L);
 
-        verify(bookRepository).findByIdWithBookFiles(1L);
+        verify(bookRepository).findById(1L);
         verify(koboUserSettingsRepository, never()).findByAutoAddToShelfTrueAndSyncEnabledTrue();
         verify(shelfRepository, never()).findByUserIdInAndName(anyList(), anyString());
         verify(bookRepository, never()).save(any());
@@ -112,12 +109,12 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withIncompatibleBook_shouldReturnEarly() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(false);
 
         koboAutoShelfService.autoAddBookToKoboShelves(1L);
 
-        verify(bookRepository).findByIdWithBookFiles(1L);
+        verify(bookRepository).findById(1L);
         verify(koboCompatibilityService).isBookSupportedForKobo(testBook);
         verify(koboUserSettingsRepository, never()).findByAutoAddToShelfTrueAndSyncEnabledTrue();
         verify(shelfRepository, never()).findByUserIdInAndName(anyList(), anyString());
@@ -126,14 +123,14 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withNoEligibleUsers_shouldReturnEarly() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(Collections.emptyList());
 
         koboAutoShelfService.autoAddBookToKoboShelves(1L);
 
-        verify(bookRepository).findByIdWithBookFiles(1L);
+        verify(bookRepository).findById(1L);
         verify(koboCompatibilityService).isBookSupportedForKobo(testBook);
         verify(koboUserSettingsRepository).findByAutoAddToShelfTrueAndSyncEnabledTrue();
         verify(shelfRepository, never()).findByUserIdInAndName(anyList(), anyString());
@@ -142,7 +139,7 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_successfully_shouldAddBookToShelves() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1, settings2));
@@ -151,7 +148,7 @@ class KoboAutoShelfServiceTest {
 
         koboAutoShelfService.autoAddBookToKoboShelves(1L);
 
-        verify(bookRepository).findByIdWithBookFiles(1L);
+        verify(bookRepository).findById(1L);
         verify(koboCompatibilityService).isBookSupportedForKobo(testBook);
         verify(koboUserSettingsRepository).findByAutoAddToShelfTrueAndSyncEnabledTrue();
         verify(shelfRepository).findByUserIdInAndName(List.of(100L, 200L), ShelfType.KOBO.getName());
@@ -164,7 +161,7 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withOneUserMissingShelf_shouldAddOnlyToExistingShelves() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1, settings2));
@@ -183,7 +180,7 @@ class KoboAutoShelfServiceTest {
     void autoAddBookToKoboShelves_withBookAlreadyOnShelf_shouldNotDuplicate() {
         testBook.getShelves().add(koboShelf1);
 
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1, settings2));
@@ -203,7 +200,7 @@ class KoboAutoShelfServiceTest {
         testBook.getShelves().add(koboShelf1);
         testBook.getShelves().add(koboShelf2);
 
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1, settings2));
@@ -218,7 +215,7 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withNoKoboShelvesFound_shouldNotSave() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1, settings2));
@@ -234,7 +231,7 @@ class KoboAutoShelfServiceTest {
 
     @Test
     void autoAddBookToKoboShelves_withSingleUser_shouldAddToSingleShelf() {
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1));
@@ -255,7 +252,7 @@ class KoboAutoShelfServiceTest {
                 .shelves(null)
                 .build();
 
-        when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(testBook));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(testBook));
         when(koboCompatibilityService.isBookSupportedForKobo(testBook)).thenReturn(true);
         when(koboUserSettingsRepository.findByAutoAddToShelfTrueAndSyncEnabledTrue())
                 .thenReturn(List.of(settings1));

@@ -1,11 +1,7 @@
-import {ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges} from '@angular/core';
-import {NgClass} from '@angular/common';
+import {ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, ViewChild} from '@angular/core';
 import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
-import {Tooltip} from 'primeng/tooltip';
-import {CheckboxChangeEvent, CheckboxModule} from 'primeng/checkbox';
-import {FormsModule} from '@angular/forms';
+import {TooltipModule} from 'primeng/tooltip';
 import {TieredMenu} from 'primeng/tieredmenu';
-import {Button} from 'primeng/button';
 import {MenuItem, MessageService} from 'primeng/api';
 import {AuthorSummary} from '../../model/author.model';
 import {AuthorService} from '../../service/author.service';
@@ -14,8 +10,7 @@ import {AuthorService} from '../../service/author.service';
   selector: 'app-author-card',
   standalone: true,
   templateUrl: './author-card.component.html',
-  styleUrls: ['./author-card.component.scss'],
-  imports: [NgClass, TranslocoPipe, Tooltip, CheckboxModule, FormsModule, TieredMenu, Button]
+  imports: [TranslocoPipe, TooltipModule, TieredMenu]
 })
 export class AuthorCardComponent implements OnChanges {
 
@@ -24,28 +19,32 @@ export class AuthorCardComponent implements OnChanges {
   @Input() canDelete = false;
   @Input() isCheckboxEnabled = false;
   @Input() isSelected = false;
+  @Input() hasSelection = false;
+  @Input() index = 0;
+  @Input() cacheBuster = 0;
+
   @Output() cardClick = new EventEmitter<AuthorSummary>();
   @Output() quickMatched = new EventEmitter<AuthorSummary>();
   @Output() checkboxClick = new EventEmitter<{ index: number; author: AuthorSummary; selected: boolean; shiftKey: boolean }>();
   @Output() viewAuthor = new EventEmitter<AuthorSummary>();
   @Output() editAuthor = new EventEmitter<AuthorSummary>();
   @Output() deleteAuthor = new EventEmitter<AuthorSummary>();
-  @Output() menuToggled = new EventEmitter<boolean>();
-  @Input() index = 0;
-  @Input() cacheBuster = 0;
 
   private authorService = inject(AuthorService);
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
   private cdr = inject(ChangeDetectorRef);
-  private lastShiftKey = false;
 
   hasPhoto = false;
   isImageLoaded = false;
   quickMatching = false;
+  menuVisible = false;
+
+  @ViewChild('menu') menuRef: TieredMenu | undefined;
 
   items: MenuItem[] = [];
   private menuInitialized = false;
+  private lastShiftKey = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['author']) {
@@ -66,19 +65,14 @@ export class AuthorCardComponent implements OnChanges {
     return this.authorService.getAuthorThumbnailUrl(this.author.id, this.cacheBuster || undefined);
   }
 
-  get isMatched(): boolean {
-    return !!this.author.asin;
-  }
-
   onCardClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    if (target.closest('.menu-button-container')) {
-      return;
-    }
+    if (target.closest('.menu-trigger')) return;
+
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
       event.stopPropagation();
-      this.toggleCardSelection(!this.isSelected);
+      this.checkboxClick.emit({index: this.index, author: this.author, selected: !this.isSelected, shiftKey: false});
       return;
     }
     event.stopPropagation();
@@ -98,29 +92,44 @@ export class AuthorCardComponent implements OnChanges {
     this.lastShiftKey = event.shiftKey;
   }
 
-  toggleSelection(event: CheckboxChangeEvent): void {
-    this.checkboxClick.emit({index: this.index, author: this.author, selected: event.checked, shiftKey: this.lastShiftKey});
+  toggleSelection(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.checkboxClick.emit({index: this.index, author: this.author, selected: checked, shiftKey: this.lastShiftKey});
   }
 
-  toggleCardSelection(selected: boolean): void {
-    this.checkboxClick.emit({index: this.index, author: this.author, selected, shiftKey: false});
-  }
-
-  onMenuToggle(event: Event, menu: TieredMenu): void {
+  onMenuClick(event: MouseEvent): void {
+    event.stopPropagation();
     if (!this.menuInitialized) {
       this.menuInitialized = true;
       this.initMenu();
       this.cdr.markForCheck();
     }
-    menu.toggle(event);
+    this.menuRef?.toggle(event);
+  }
+
+  onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.menuInitialized) {
+      this.menuInitialized = true;
+      this.initMenu();
+      this.cdr.markForCheck();
+    }
+    const menu = this.menuRef;
+    if (!menu) return;
+    const anchor = document.createElement('span');
+    anchor.style.cssText = `position:fixed;left:${event.clientX}px;top:${event.clientY}px;width:0;height:0;pointer-events:none;`;
+    document.body.appendChild(anchor);
+    menu.toggle({...event, currentTarget: anchor, target: anchor} as any);
+    requestAnimationFrame(() => anchor.remove());
   }
 
   onMenuShow(): void {
-    this.menuToggled.emit(true);
+    this.menuVisible = true;
   }
 
   onMenuHide(): void {
-    this.menuToggled.emit(false);
+    this.menuVisible = false;
   }
 
   private initMenu(): void {

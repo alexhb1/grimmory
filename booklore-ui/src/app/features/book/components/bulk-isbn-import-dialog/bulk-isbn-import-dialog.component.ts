@@ -1,19 +1,19 @@
 import {Component, effect, inject} from '@angular/core';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormsModule} from '@angular/forms';
-import {Button} from 'primeng/button';
 import {Select} from 'primeng/select';
-import {Textarea} from 'primeng/textarea';
 import {Tooltip} from 'primeng/tooltip';
-import {ProgressBar} from 'primeng/progressbar';
-import {FileUpload, FileSelectEvent} from 'primeng/fileupload';
+import {FileDropComponent} from '../../../../shared/components/ui/file-drop/file-drop';
 import {BookService} from '../../service/book.service';
 import {BookMetadataService} from '../../service/book-metadata.service';
 import {LibraryService} from '../../service/library.service';
 import {Library} from '../../model/library.model';
 import {BookMetadata, CreatePhysicalBookRequest} from '../../model/book.model';
 import {TranslocoDirective} from '@jsverse/transloco';
-import {Tabs, TabList, Tab, TabPanels, TabPanel} from 'primeng/tabs';
+import {ModalRef} from '../../../../shared/components/ui/modal/modal.service';
+import {MODAL_DATA} from '../../../../shared/components/ui/modal/modal-host';
+import {InputDirective} from '../../../../shared/components/ui/input/input';
+import {ButtonComponent} from '../../../../shared/components/ui/button/button';
+import {DividerComponent} from '../../../../shared/components/ui/divider/divider';
 
 const MAX_ISBN_COUNT = 500;
 const MAX_FILE_SIZE_BYTES = 1_048_576; // 1 MB
@@ -42,24 +42,19 @@ type ImportPhase = 'upload' | 'processing' | 'summary';
   templateUrl: './bulk-isbn-import-dialog.component.html',
   imports: [
     FormsModule,
-    Button,
     Select,
-    Textarea,
     Tooltip,
-    ProgressBar,
-    FileUpload,
+    FileDropComponent,
     TranslocoDirective,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
+    InputDirective,
+    ButtonComponent,
+    DividerComponent,
   ],
-  styleUrl: './bulk-isbn-import-dialog.component.scss',
+  host: {class: 'flex flex-col flex-1 min-h-0'},
 })
 export class BulkIsbnImportDialogComponent {
-  private dynamicDialogRef = inject(DynamicDialogRef);
-  private dialogConfig = inject(DynamicDialogConfig);
+  readonly modalRef = inject(ModalRef);
+  private data = inject(MODAL_DATA) as {libraryId?: number} | null;
   private bookService = inject(BookService);
   private bookMetadataService = inject(BookMetadataService);
   private libraryService = inject(LibraryService);
@@ -87,8 +82,8 @@ export class BulkIsbnImportDialogComponent {
       return;
     }
 
-    if (this.dialogConfig.data?.libraryId) {
-      this.selectedLibraryId = this.dialogConfig.data.libraryId;
+    if (this.data?.libraryId) {
+      this.selectedLibraryId = this.data.libraryId;
       return;
     }
 
@@ -101,8 +96,8 @@ export class BulkIsbnImportDialogComponent {
     return this.libraryService.libraries();
   }
 
-  onFileSelect(event: FileSelectEvent): void {
-    const file = event.files?.[0];
+  onFileDrop(files: File[]): void {
+    const file = files[0];
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -196,10 +191,6 @@ export class BulkIsbnImportDialogComponent {
 
   cancelImport(): void {
     this.cancelled = true;
-  }
-
-  close(): void {
-    this.dynamicDialogRef.close();
   }
 
   get progressPercent(): number {

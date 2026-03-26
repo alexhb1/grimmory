@@ -1,82 +1,42 @@
 <ng-container *transloco="let t; prefix: 'book.shelfEditDialog'">
-<div class="shelf-form">
-  <div class="panel-header">
-    <div class="header-icon-wrapper">
-      <i class="pi pi-pencil header-icon"></i>
-    </div>
-    <div class="header-text">
-      <h2 class="panel-title">{{ t('title') }}</h2>
-      <p class="panel-description">
-        {{ t('description') }}
-      </p>
-    </div>
-    <p-button
-      icon="pi pi-times"
-      [text]="true"
-      [rounded]="true"
-      severity="secondary"
-      (onClick)="closeDialog()"
-      class="close-button">
-    </p-button>
-  </div>
-
-  <div class="shelf-container">
-    <div class="shelf-fields">
-      <div class="shelf-row">
-        <label class="label">{{ t('shelfNameLabel') }}</label>
-        <input type="text" pInputText [(ngModel)]="shelfName" [placeholder]="t('shelfNamePlaceholder')" class="input"/>
-      </div>
-
-      <div class="shelf-row">
-        <label class="label">{{ t('shelfIconLabel') }}</label>
-        <div class="icon-section">
-          @if (!selectedIcon) {
-            <p-button [label]="t('selectIcon')" icon="pi pi-search" [outlined]="true" severity="info" (onClick)="openIconPicker()"></p-button>
-          }
-
+<div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+  <div class="space-y-5">
+    <div>
+      <label class="block text-sm font-medium text-ink mb-1.5">{{ t('shelfNameLabel') }}</label>
+      <div class="relative">
+        <input type="text" appInput [(ngModel)]="shelfName" [placeholder]="t('shelfNamePlaceholder')" class="!pr-10" />
+        <button type="button" (click)="selectedIcon ? clearSelectedIcon() : openIconPicker()"
+          class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-[4px] transition-colors cursor-pointer hover:bg-surface-hover px-1.5 h-7"
+          [class]="selectedIcon ? 'text-accent' : 'text-ink-muted'">
           @if (selectedIcon) {
-            <div class="icon-container">
-              <div class="icon-wrapper">
-                <app-icon-display
-                  [icon]="selectedIcon"
-                  size="24px"
-                  iconClass="icon"
-                />
-              </div>
-              <p-button icon="pi pi-times" (onClick)="clearSelectedIcon()" [rounded]="true" [text]="true" severity="danger"></p-button>
-            </div>
+            <app-icon-display [icon]="selectedIcon" size="16px" />
+          } @else {
+            <span class="text-xs">{{ t('selectIcon') }}</span>
           }
-        </div>
+        </button>
       </div>
-
-      @if (isAdmin) {
-        <div class="shelf-row">
-          <label class="label">{{ t('visibilityLabel') }}</label>
-          <div class="visibility-section" style="display: flex; align-items: center; gap: 0.5rem;">
-            <p-checkbox [(ngModel)]="isPublic" [binary]="true" inputId="publicShelf"></p-checkbox>
-            <label for="publicShelf" style="cursor: pointer; user-select: none;">{{ t('publicShelfLabel') }}</label>
-          </div>
-        </div>
-      }
     </div>
+
+    @if (isAdmin) {
+      <div>
+        <span class="text-sm font-medium text-ink">{{ t('visibilityLabel') }}</span>
+        <div class="mt-1.5"><app-toggle [(checked)]="isPublic" /></div>
+        <p class="text-xs text-ink-muted mt-1.5">{{ t('publicShelfLabel') }}</p>
+      </div>
+    }
   </div>
+</div>
 
-  <div class="dialog-footer">
-    <div></div>
-    <div class="footer-actions">
-      <p-button
-        [label]="t('cancelButton')"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="closeDialog()"
-      />
-      <p-button
-        [label]="t('saveChanges')"
-        icon="pi pi-check"
-        severity="success"
-        (onClick)="save()"
-      />
-    </div>
+<div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+  <div></div>
+  <div class="flex items-center gap-2">
+    <app-button variant="secondary" (click)="closeDialog()">{{ t('cancelButton') }}</app-button>
+    <app-button variant="primary" (click)="save()">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      {{ t('saveChanges') }}
+    </app-button>
   </div>
 </div>
 </ng-container>

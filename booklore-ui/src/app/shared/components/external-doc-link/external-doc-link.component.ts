@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, Input} from '@angular/core';
+import {Component, Input} from '@angular/core';
 import {Tooltip} from 'primeng/tooltip';
 
 export type DocType = 'kobo' | 'opds' | 'metadataManager' | 'koReader' | 'email'
@@ -8,7 +8,6 @@ export type DocType = 'kobo' | 'opds' | 'metadataManager' | 'koReader' | 'email'
 @Component({
   selector: 'app-external-doc-link',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Tooltip],
   template: `
     <i class="pi pi-external-link external-link-icon"

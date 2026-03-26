@@ -1,48 +1,84 @@
-<div class="author-card" [class.selected]="isSelected" (click)="onCardClick($event)">
-  <div class="cover-container" [ngClass]="{'loaded': isImageLoaded}">
+<div
+  class="author-card group relative cursor-pointer rounded-[7px] bg-surface-raised block"
+  [class.menu-open]="menuVisible"
+  [class.ring-2]="isSelected"
+  [class.ring-accent]="isSelected"
+  (click)="onCardClick($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <!-- Cover -->
+  <div class="relative rounded-t-[7px] overflow-hidden cover-depth aspect-square bg-surface-sunken">
     @if (hasPhoto) {
       <img
         [src]="thumbnailUrl"
-        class="author-photo"
-        [class.loaded]="isImageLoaded"
+        class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+        [class.opacity-0]="!isImageLoaded"
+        [class.opacity-100]="isImageLoaded"
         [alt]="author.name"
         loading="lazy"
         decoding="async"
         (load)="onImageLoad()"
-        (error)="onPhotoError()"/>
+        (error)="onPhotoError()"
+      />
     } @else {
-      <div class="author-photo-placeholder">
-        <i class="pi pi-user"></i>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <svg class="w-10 h-10 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
       </div>
     }
 
-    <span class="book-count-badge">{{ author.bookCount }}</span>
+    <!-- Book count badge -->
+    <div class="absolute top-2 left-2 z-[3] bg-black/60 text-white text-[10px] font-semibold rounded-[4px] px-1.5 py-0.5 tracking-wide flex items-center gap-1 transition-opacity duration-150"
+      [class.opacity-0]="isSelected || hasSelection"
+      [class.group-hover:opacity-0]="true"
+    >
+      <i class="pi pi-book text-[9px]"></i>{{ author.bookCount }}
+    </div>
 
+    <!-- Selection checkbox -->
     @if (isCheckboxEnabled) {
-      <p-checkbox
-        [binary]="true"
-        class="select-checkbox"
-        (click)="captureMouseEvent($event)"
-        [ngModel]="isSelected"
-        (onChange)="toggleSelection($event)">
-      </p-checkbox>
+      <div
+        class="absolute top-2 left-2 z-[5] transition-opacity duration-150"
+        [class.opacity-0]="!isSelected && !hasSelection"
+        [class.group-hover:opacity-100]="!isSelected && !hasSelection"
+        (click)="$event.stopPropagation()"
+      >
+        <input
+          type="checkbox"
+          [checked]="isSelected"
+          (change)="toggleSelection($event)"
+          (click)="captureMouseEvent($event)"
+          class="h-4 w-4 rounded-[3px] border border-edge bg-surface-raised accent-accent cursor-pointer"
+        />
+      </div>
     }
 
-    <div class="card-overlay">
-      @if (isMatched) {
-        <i class="pi pi-check-circle matched-icon" [pTooltip]="'authorBrowser.card.matched' | transloco" tooltipPosition="top"></i>
-      }
-      <h4 class="author-name" [pTooltip]="author.name" tooltipPosition="bottom">{{ author.name }}</h4>
-      <div class="menu-button-container">
-        <p-tieredmenu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="onMenuShow()" (onHide)="onMenuHide()"></p-tieredmenu>
-        <p-button
-          class="card-menu-btn"
-          size="small"
-          [text]="true"
-          (click)="onMenuToggle($event, menu)"
-          icon="pi pi-ellipsis-v">
-        </p-button>
-      </div>
+    <!-- Hover actions overlay -->
+    <div
+      class="absolute bottom-0 left-0 right-0 z-[4] p-2 flex items-center justify-end gap-1.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150"
+      [class.!opacity-100]="menuVisible"
+      [class.!translate-y-0]="menuVisible"
+    >
+      <button
+        class="menu-trigger h-7 w-7 flex items-center justify-center bg-black/50 hover:bg-black/70 text-white rounded-[5px] transition-colors"
+        (click)="onMenuClick($event)"
+      >
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      <p-tieredMenu #menu [model]="items" [popup]="true" appendTo="body" (onShow)="onMenuShow()" (onHide)="onMenuHide()" />
+    </div>
+  </div>
+
+  <!-- Info below cover -->
+  <div class="px-3 pt-2.5 pb-3">
+    <div class="text-sm font-semibold text-ink leading-snug truncate text-left" [pTooltip]="author.name" tooltipPosition="bottom">
+      {{ author.name }}
+    </div>
+    <div class="text-xs text-ink-light mt-0.5 truncate text-left">
+      {{ author.bookCount }} {{ author.bookCount === 1 ? ('authorBrowser.card.book' | transloco) : ('authorBrowser.card.books' | transloco) }}
     </div>
   </div>
 </div>

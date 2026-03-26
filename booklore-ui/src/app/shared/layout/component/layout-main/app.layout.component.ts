@@ -1,125 +1,52 @@
-import {Component, OnDestroy, OnInit, Renderer2, ViewChild} from '@angular/core';
-import {NavigationEnd, Router, RouterOutlet} from '@angular/router';
-import {filter, Subscription} from 'rxjs';
-import {LayoutService} from "./service/app.layout.service";
-import {AppSidebarComponent} from "../layout-sidebar/app.sidebar.component";
-import {AppTopBarComponent} from '../layout-topbar/app.topbar.component';
-import {NgClass} from '@angular/common';
-import {ToastModule} from 'primeng/toast';
-import {LocalStorageService} from '../../../service/local-storage.service';
+import {Component, DestroyRef, ElementRef, inject, OnInit, viewChild} from '@angular/core';
+import {NavigationEnd, NavigationStart, Router, RouterOutlet} from '@angular/router';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {filter} from 'rxjs';
+import {AppSidebarComponent} from '../layout-sidebar/app.sidebar.component';
+import {AppGlobalSearchComponent} from '../global-search/app.global-search.component';
 
 @Component({
   selector: 'app-layout',
-  imports: [
-    RouterOutlet,
-    AppSidebarComponent,
-    AppTopBarComponent,
-    NgClass,
-    ToastModule
-  ],
-  templateUrl: './app.layout.component.html'
+  standalone: true,
+  imports: [RouterOutlet, AppSidebarComponent, AppGlobalSearchComponent],
+  templateUrl: './app.layout.component.html',
 })
-export class AppLayoutComponent implements OnInit, OnDestroy {
+export class AppLayoutComponent implements OnInit {
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
+  private mainContent = viewChild.required<ElementRef<HTMLElement>>('mainContent');
 
-  overlayMenuOpenSubscription: Subscription;
+  private scrollPositions = new Map<number, number>();
+  private navigationId = 0;
+  private restoringScroll = false;
 
-  menuOutsideClickListener: (() => void) | null = null;
-
-  profileMenuOutsideClickListener: (() => void) | null = null;
-
-  @ViewChild(AppSidebarComponent) appSidebar!: AppSidebarComponent;
-
-  @ViewChild(AppTopBarComponent) appTopbar!: AppTopBarComponent;
-
-  constructor(public layoutService: LayoutService, public renderer: Renderer2, public router: Router, private localStorageService: LocalStorageService) {
-    this.overlayMenuOpenSubscription = this.layoutService.overlayOpen$.subscribe(() => {
-      if (!this.menuOutsideClickListener) {
-        this.menuOutsideClickListener = this.renderer.listen('document', 'click', (event) => {
-          if (this.isOutsideClicked(event)) {
-            this.hideMenu();
-          }
-        });
-      }
-
-      if (this.layoutService.state.staticMenuMobileActive) {
-        this.blockBodyScroll();
-      }
-    });
-
-    this.router.events.pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => {
-        this.hideMenu();
-        this.hideProfileMenu();
+  ngOnInit() {
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationStart => e instanceof NavigationStart),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(e => {
+        const el = this.mainContent().nativeElement;
+        this.scrollPositions.set(this.navigationId, el.scrollTop);
+        this.restoringScroll = e.navigationTrigger === 'popstate';
       });
-  }
 
-  ngOnInit(): void {
-    const width = this.localStorageService.get<number>('sidebarWidth') ?? 225;
-    document.documentElement.style.setProperty('--sidebar-width', width + 'px');
-  }
-
-  isOutsideClicked(event: MouseEvent): boolean {
-    const sidebarEl = document.querySelector('.layout-sidebar');
-    const topbarEl = document.querySelector('.layout-menu-button');
-    const eventTarget = event.target as Node;
-    const clickedInsideSidebar = sidebarEl?.isSameNode(eventTarget) || sidebarEl?.contains(eventTarget);
-    const clickedInsideTopbar = topbarEl?.isSameNode(eventTarget) || topbarEl?.contains(eventTarget);
-    return !(clickedInsideSidebar || clickedInsideTopbar);
-  }
-
-  hideMenu() {
-    this.layoutService.state.overlayMenuActive = false;
-    this.layoutService.state.staticMenuMobileActive = false;
-    this.layoutService.state.menuHoverActive = false;
-    if (this.menuOutsideClickListener) {
-      this.menuOutsideClickListener();
-      this.menuOutsideClickListener = null;
-    }
-    this.unblockBodyScroll();
-  }
-
-  hideProfileMenu() {
-    this.layoutService.state.profileSidebarVisible = false;
-    if (this.profileMenuOutsideClickListener) {
-      this.profileMenuOutsideClickListener();
-      this.profileMenuOutsideClickListener = null;
-    }
-  }
-
-  blockBodyScroll(): void {
-    if (document.body.classList) {
-      document.body.classList.add('blocked-scroll');
-    } else {
-      document.body.className += ' blocked-scroll';
-    }
-  }
-
-  unblockBodyScroll(): void {
-    if (document.body.classList) {
-      document.body.classList.remove('blocked-scroll');
-    } else {
-      document.body.className = document.body.className.replace(new RegExp('(^|\\b)' +
-        'blocked-scroll'.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
-    }
-  }
-
-  get containerClass() {
-    return {
-      'layout-overlay': this.layoutService.config().menuMode === 'overlay',
-      'layout-static': this.layoutService.config().menuMode === 'static',
-      'layout-static-inactive': this.layoutService.state.staticMenuDesktopInactive && this.layoutService.config().menuMode === 'static',
-      'layout-overlay-active': this.layoutService.state.overlayMenuActive,
-      'layout-mobile-active': this.layoutService.state.staticMenuMobileActive
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.overlayMenuOpenSubscription) {
-      this.overlayMenuOpenSubscription.unsubscribe();
-    }
-
-    if (this.menuOutsideClickListener) {
-      this.menuOutsideClickListener();
-    }
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        const el = this.mainContent().nativeElement;
+        if (this.restoringScroll) {
+          this.navigationId--;
+          const saved = this.scrollPositions.get(this.navigationId) ?? 0;
+          requestAnimationFrame(() => el.scrollTop = saved);
+        } else {
+          this.navigationId++;
+          el.scrollTop = 0;
+        }
+      });
   }
 }

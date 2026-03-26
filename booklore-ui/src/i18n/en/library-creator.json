@@ -39,7 +39,7 @@
     "deselectedFormatsWarning": "Deselected formats won't appear in future scans",
     "validation": {
       "enterName": "Enter library name",
-      "selectIcon": "Select an icon",
+      "selectIcon": "Choose icon",
       "addFolder": "Add at least one folder",
       "readyCreate": "Ready to create",
       "readyUpdate": "Ready to update"

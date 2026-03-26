@@ -48,14 +48,8 @@ export class LayoutService {
   overlayOpen$ = this.overlayOpen.asObservable();
 
   constructor() {
-    effect(() => {
-      const config = this.config();
-      if (this.updateStyle(config)) {
-        this.changeTheme();
-      }
-      this.changeScale(config.scale);
-      this.onConfigUpdate();
-    });
+    // Theme switching is now handled by ThemeService + CSS custom properties.
+    // This constructor is intentionally empty.
   }
 
   updateStyle(config: AppConfig) {

@@ -1,140 +1,63 @@
 <ng-container *transloco="let t; prefix: 'book.shelfCreator'">
-<div class="shelf-creator">
-  <div class="panel-header">
-    <div class="header-icon-wrapper">
-      <i class="pi pi-bookmark header-icon"></i>
+<div class="flex-1 min-h-0 overflow-y-auto px-5 py-5 space-y-5" (scroll)="modalRef.reportScroll($event)">
+
+  <!-- Shelf name + icon -->
+  <div>
+    <label for="shelfName" class="block text-sm font-medium text-ink mb-1.5">
+      {{ t('shelfNameLabel') }}
+      <span class="text-status-abandoned">*</span>
+    </label>
+    <div class="relative">
+      <input id="shelfName" type="text" appInput [(ngModel)]="shelfName" [placeholder]="t('shelfNamePlaceholder')" class="!pr-10" />
+      <button type="button" (click)="selectedIcon ? clearSelectedIcon() : openIconPicker()"
+        class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-[4px] transition-colors cursor-pointer hover:bg-surface-hover px-1.5 h-7"
+        [class]="selectedIcon ? 'text-accent' : 'text-ink-muted'">
+        @if (selectedIcon) {
+          <app-icon-display [icon]="selectedIcon" size="16px" />
+        } @else {
+          <span class="text-xs">{{ t('chooseIcon') }}</span>
+        }
+      </button>
     </div>
-    <div class="header-text">
-      <h2 class="panel-title">{{ t('title') }}</h2>
-      <p class="panel-description">{{ t('description') }}</p>
-    </div>
-    <p-button
-      icon="pi pi-times"
-      (click)="cancel()"
-      severity="secondary"
-      [text]="true"
-      [rounded]="true"
-      class="close-button"
-      [pTooltip]="t('closeTooltip')"
-      tooltipPosition="left"/>
   </div>
 
-  <div class="form-container">
-    <div class="form-group highlight-group">
-      <label for="shelfName" class="form-label">
-        <i class="pi pi-tag label-icon"></i>
-        {{ t('shelfNameLabel') }}
-        <span class="required-indicator">*</span>
-      </label>
-      <div class="input-wrapper">
-        <input
-          id="shelfName"
-          type="text"
-          pInputText
-          [(ngModel)]="shelfName"
-          class="input-full"
-          [placeholder]="t('shelfNamePlaceholder')"
-          [class.filled]="shelfName.trim()"
+  @if (isAdmin) {
+    <app-divider />
 
-        />
-        @if (shelfName.trim()) {
-          <i class="pi pi-check-circle input-icon success"></i>
-        }
-      </div>
+    <div>
+      <span class="text-sm font-medium text-ink">{{ t('visibilityLabel') }}</span>
+      <div class="mt-1.5"><app-toggle [(checked)]="isPublic" /></div>
+      <p class="text-xs text-ink-muted mt-1.5">{{ t('makePublicLabel') }}</p>
     </div>
+  }
+</div>
 
-    <div class="gradient-divider"></div>
-
-    <div class="form-group highlight-group">
-      <label class="form-label">
-        <i class="pi pi-palette label-icon"></i>
-        {{ t('shelfIconLabel') }}
-      </label>
-      @if (!selectedIcon) {
-        <button class="icon-select-btn" (click)="openIconPicker()" type="button">
-          <i class="pi pi-plus"></i>
-          <div class="btn-content">
-            <span class="btn-title">{{ t('chooseIcon') }}</span>
-            <span class="btn-subtitle">{{ t('chooseIconSubtitle') }}</span>
-          </div>
-        </button>
-      } @else {
-        <div class="selected-icon-display">
-          <div class="icon-preview">
-            <app-icon-display
-              [icon]="selectedIcon"
-              size="24px"
-            />
-          </div>
-          <div class="icon-info">
-            <span class="icon-label">{{ t('selectedIcon') }}</span>
-            <span class="icon-name">
-              @if (selectedIcon.type === 'PRIME_NG') {
-                {{ selectedIcon.value }}
-              } @else {
-                {{ selectedIcon.value }}
-              }
-            </span>
-          </div>
-          <p-button
-            icon="pi pi-times"
-            severity="danger"
-            [outlined]="true"
-            [rounded]="true"
-            size="small"
-            (onClick)="clearSelectedIcon()"
-            [pTooltip]="t('removeIconTooltip')"
-            tooltipPosition="left"
-          />
-        </div>
-      }
-    </div>
-
-    @if (isAdmin) {
-      <div class="gradient-divider"></div>
-
-      <div class="form-group highlight-group">
-        <label class="form-label">
-          <i class="pi pi-globe label-icon"></i>
-          {{ t('visibilityLabel') }}
-        </label>
-        <div class="input-wrapper" style="display: flex; align-items: center; gap: 0.5rem;">
-          <p-checkbox [(ngModel)]="isPublic" [binary]="true" inputId="publicShelf"></p-checkbox>
-          <label for="publicShelf" style="cursor: pointer">{{ t('makePublicLabel') }}</label>
-        </div>
-      </div>
+<div class="shrink-0 flex items-center justify-between px-5 py-3.5 border-t border-edge">
+  <div>
+    @if (!shelfName.trim()) {
+      <span class="flex items-center gap-1.5 text-sm text-status-to-read">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+        </svg>
+        {{ t('validationRequired') }}
+      </span>
+    } @else {
+      <span class="flex items-center gap-1.5 text-sm text-status-finished">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+        </svg>
+        {{ t('validationReady') }}
+      </span>
     }
   </div>
-
-  <div class="dialog-footer">
-    <div class="validation-status">
-      @if (!shelfName.trim()) {
-        <div class="validation-message error">
-          <i class="pi pi-exclamation-circle"></i>
-          <span>{{ t('validationRequired') }}</span>
-        </div>
-      } @else {
-        <div class="validation-message success">
-          <i class="pi pi-check-circle"></i>
-          <span>{{ t('validationReady') }}</span>
-        </div>
-      }
-    </div>
-    <div class="footer-actions">
-      <p-button
-        [label]="t('cancelButton')"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="cancel()"
-      />
-      <p-button
-        [label]="t('createButton')"
-        icon="pi pi-plus"
-        severity="success"
-        (onClick)="createShelf()"
-        [disabled]="!shelfName.trim()"
-      />
-    </div>
+  <div class="flex items-center gap-2">
+    <app-button variant="primary" (click)="createShelf()" [disabled]="!shelfName.trim()">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14"/><path d="M12 5v14"/>
+      </svg>
+      {{ t('createButton') }}
+    </app-button>
+    <app-button variant="secondary" (click)="cancel()">{{ t('cancelButton') }}</app-button>
   </div>
 </div>
 </ng-container>

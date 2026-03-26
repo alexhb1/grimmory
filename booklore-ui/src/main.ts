@@ -1,15 +1,12 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { DialogService } from 'primeng/dynamicdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { RxStompService } from './app/shared/websocket/rx-stomp.service';
 import { rxStompServiceFactory } from './app/shared/websocket/rx-stomp-service-factory';
-import { provideRouter, RouteReuseStrategy } from '@angular/router';
-import { CustomReuseStrategy } from './app/core/custom-reuse-strategy';
+import { provideRouter, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
-import Aura from '@primeuix/themes/aura';
 import { routes } from './app/app.routes';
 import { AuthInterceptorService } from './app/core/security/auth-interceptor.service';
 import { AuthService, websocketInitializer } from './app/shared/service/auth.service';
@@ -47,18 +44,13 @@ bootstrapApplication(AppComponent, {
     }),
     provideHttpClient(withInterceptors([AuthInterceptorService])),
     provideAppInitializer(initializeAuthFactory()),
-    provideRouter(routes),
-    DialogService,
+    provideRouter(routes, withViewTransitions()),
     MessageService,
     ConfirmationService,
     {
       provide: RxStompService,
       useFactory: rxStompServiceFactory,
       deps: [AuthService],
-    },
-    {
-      provide: RouteReuseStrategy,
-      useClass: CustomReuseStrategy
     },
     ...provideTransloco({
       config: {
@@ -73,12 +65,7 @@ bootstrapApplication(AppComponent, {
     provideAppInitializer(initializeLanguage()),
     provideAnimationsAsync(),
     providePrimeNG({
-      theme: {
-        preset: Aura,
-        options: {
-          darkModeSelector: '.p-dark'
-        }
-      }
+      theme: 'none',
     }), provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'

@@ -14,7 +14,6 @@
         @for (s of series; track s.seriesName) {
           <app-series-card
             [series]="s"
-            [compact]="true"
             (cardClick)="onSeriesClick($event)">
           </app-series-card>
         }

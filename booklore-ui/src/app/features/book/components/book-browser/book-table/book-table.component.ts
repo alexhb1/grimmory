@@ -1,8 +1,7 @@
-import {Component, EventEmitter, inject, Input, OnChanges, OnDestroy, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, inject, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import {TableModule} from 'primeng/table';
 import {DatePipe, NgClass} from '@angular/common';
-import {Rating} from 'primeng/rating';
-import {FormsModule} from '@angular/forms';
+import {RatingComponent} from '../../../../../shared/components/ui/rating/rating';
 import {TooltipModule} from "primeng/tooltip";
 import {Book, BookMetadata, ReadStatus} from '../../../model/book.model';
 import {SortOption} from '../../../model/sort.model';
@@ -16,6 +15,7 @@ import {Subject} from 'rxjs';
 import {UserService} from '../../../../settings/user-management/user.service';
 import {ReadStatusHelper} from '../../../helpers/read-status.helper';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {CoverPlaceholderComponent} from '../../../../../shared/components/cover-generator/cover-generator.component';
 
 @Component({
   selector: 'app-book-table',
@@ -23,18 +23,19 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
   templateUrl: './book-table.component.html',
   imports: [
     TableModule,
-    Rating,
-    FormsModule,
+    RatingComponent,
     Button,
     TooltipModule,
     NgClass,
     RouterLink,
-    TranslocoDirective
+    TranslocoDirective,
+    CoverPlaceholderComponent
   ],
   styleUrls: ['./book-table.component.scss'],
-  providers: [DatePipe]
+  providers: [DatePipe],
+  host: { 'class': 'block' }
 })
-export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
+export class BookTableComponent implements OnInit, OnDestroy {
   selectedBooks: Book[] = [];
   selectedBookIds = new Set<number>();
 
@@ -81,8 +82,6 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
     {field: 'ranobedbRating', header: this.t.translate('book.columnPref.columns.ranobedbRating')},
   ];
 
-  scrollHeight = 'calc(100dvh - 160px)';
-
   ngOnInit(): void {
     const user = this.userService.currentUser();
     if (user) {
@@ -91,22 +90,6 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
 
     this.selectedBookIds = this.preselectedBookIds;
     this.selectedBooks = this.bookService.getBooksByIds([...this.selectedBookIds]);
-    this.setScrollHeight();
-    window.addEventListener('resize', this.setScrollHeight.bind(this));
-  }
-
-  setScrollHeight() {
-    const isMobile = window.innerWidth <= 768;
-    this.scrollHeight = isMobile
-      ? 'calc(100dvh - 125px)'
-      : 'calc(100dvh - 150px)';
-  }
-
-  ngOnChanges() {
-    const wrapperElements: HTMLCollection = document.getElementsByClassName('p-virtualscroller');
-    Array.prototype.forEach.call(wrapperElements, function (wrapperElement) {
-      wrapperElement.style["height"] = 'calc(100dvh - 160px)';
-    });
   }
 
   selectAllBooks(): void {
@@ -143,20 +126,6 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
       this.clearSelectedBooks();
     }
     this.selectedBooksChange.emit(this.selectedBookIds);
-  }
-
-  getStarColor(rating: number): string {
-    if (rating >= 4.5) {
-      return 'rgb(34, 197, 94)';
-    } else if (rating >= 4) {
-      return 'rgb(52, 211, 153)';
-    } else if (rating >= 3.5) {
-      return 'rgb(234, 179, 8)';
-    } else if (rating >= 2.5) {
-      return 'rgb(249, 115, 22)';
-    } else {
-      return 'rgb(239, 68, 68)';
-    }
   }
 
   getAuthorNames(authors: string[]): string {
@@ -343,6 +312,5 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    window.removeEventListener('resize', this.setScrollHeight.bind(this));
   }
 }

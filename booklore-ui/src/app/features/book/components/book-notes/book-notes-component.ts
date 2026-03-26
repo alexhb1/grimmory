@@ -11,6 +11,7 @@ import {ProgressSpinner} from 'primeng/progressspinner';
 import {Tooltip} from 'primeng/tooltip';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {TranslocoService} from '@jsverse/transloco';
+import {ConfirmService} from '../../../../shared/components/ui/confirm-modal/confirm.service';
 import {BookNote, BookNoteService, CreateBookNoteRequest} from '../../../../shared/service/book-note.service';
 
 @Component({
@@ -35,6 +36,7 @@ export class BookNotesComponent implements OnInit, OnChanges {
 
   private bookNoteService = inject(BookNoteService);
   private confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
   private messageService = inject(MessageService);
   private destroyRef = inject(DestroyRef);
   private readonly t = inject(TranslocoService);
@@ -188,18 +190,14 @@ export class BookNotesComponent implements OnInit, OnChanges {
   }
 
   deleteNote(note: BookNote): void {
-    this.confirmationService.confirm({
-      key: 'deleteNote',
+    this.confirmService.open({
+      title: this.t.translate('book.notes.confirm.deleteHeader'),
       message: this.t.translate('book.notes.confirm.deleteMessage', {title: note.title}),
-      header: this.t.translate('book.notes.confirm.deleteHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: 'p-button-danger, p-button-outlined p-button-danger',
-      rejectButtonStyleClass: 'p-button-danger, p-button-outlined p-button-info',
-      accept: () => {
-        this.performDelete(note.id);
-      }
+      confirmLabel: this.t.translate('common.delete'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.performDelete(note.id);
     });
   }
 

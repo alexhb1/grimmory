@@ -119,7 +119,7 @@ public interface AppBookMapper {
                 .id(shelf.getId())
                 .name(shelf.getName())
                 .icon(shelf.getIcon())
-                .bookCount(shelf.getBookCount())
+                .bookCount(shelf.getBookEntities() != null ? shelf.getBookEntities().size() : 0)
                 .publicShelf(shelf.isPublic())
                 .build();
     }
@@ -325,7 +325,7 @@ public interface AppBookMapper {
                 .id(shelf.getId())
                 .name(shelf.getName())
                 .icon(shelf.getIcon())
-                .bookCount(shelf.getBookCount())
+                .bookCount(shelf.getBookEntities() != null ? shelf.getBookEntities().size() : 0)
                 .publicShelf(shelf.isPublic())
                 .build();
     }

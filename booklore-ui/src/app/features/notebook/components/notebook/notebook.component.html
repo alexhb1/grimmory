@@ -1,203 +1,278 @@
-<ng-container *transloco="let t">
-  <div class="main-container">
+<ng-container *transloco="let t; prefix: 'notebook'">
+<app-browse-page [title]="t('pageTitle')" [subtitle]="t('pageDescription')">
 
-    <!-- Page Header -->
-    <div class="settings-header">
-      <h2 class="settings-title">
-        <i class="pi pi-pencil"></i>
-        {{ t('notebook.pageTitle') }}
-      </h2>
-      <p class="settings-description">{{ t('notebook.pageDescription') }}</p>
-    </div>
+  <!-- Header action: Export -->
+  <button headerActions
+    (click)="exportMarkdown()"
+    [disabled]="totalEntries() === 0 || exporting()"
+    class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] bg-surface-raised text-ink-light shadow-paper hover:bg-surface-hover hover:text-ink hover:shadow-paper-hover transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+  >
+    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    {{ t('export') }}
+  </button>
 
-    <!-- Filters Card -->
-    <div class="settings-card">
-      <div class="filters-bar">
-        <div class="filters-left">
-          <span class="p-input-icon-left search-wrapper">
-            <i class="pi pi-search"></i>
-            <input
-              pInputText
-              type="text"
-              [(ngModel)]="searchQuery"
-              (ngModelChange)="onSearchChange()"
-              [placeholder]="t('notebook.searchPlaceholder')"
-              class="search-input"
-            />
-          </span>
+  <app-browse-toolbar
+    [searchPlaceholder]="t('searchPlaceholder')"
+    [(searchTerm)]="searchTerm"
+    (searchTermChange)="onSearchChange($event)"
+    [showViewToggle]="false"
+  >
+    <ng-container toolbarStart>
+      <!-- Type filters -->
+      <app-select-button
+        [options]="typeFilterOptions"
+        [multiple]="true"
+        [(values)]="activeTypes"
+        (valuesChange)="onTypeFilterChange()"
+      />
+    </ng-container>
 
-          <p-select
-            [(ngModel)]="selectedBookId"
-            [options]="bookOptions"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            [lazy]="true"
-            [virtualScroll]="true"
-            [virtualScrollItemSize]="38"
-            [showClear]="true"
-            appendTo="body"
-            (ngModelChange)="onFilterChange()"
-            (onFilter)="onBookFilter($event)"
-            [placeholder]="t('notebook.filterByBook')"
-            [panelStyle]="{'min-width': '300px'}"
-            class="book-select"
-          />
-        </div>
-
-        <div class="filters-right">
-          <div class="type-filters">
-            <button
-              class="option-button"
-              [class.selected]="showHighlights"
-              (click)="showHighlights = !showHighlights; onFilterChange()"
-            >
-              <i class="pi pi-highlighter"></i>
-              <span class="option-text">{{ t('notebook.filterHighlights') }}</span>
-            </button>
-            <button
-              class="option-button"
-              [class.selected]="showNotes"
-              (click)="showNotes = !showNotes; onFilterChange()"
-            >
-              <i class="pi pi-file-edit"></i>
-              <span class="option-text">{{ t('notebook.filterNotes') }}</span>
-            </button>
-            <button
-              class="option-button"
-              [class.selected]="showBookmarks"
-              (click)="showBookmarks = !showBookmarks; onFilterChange()"
-            >
-              <i class="pi pi-bookmark"></i>
-              <span class="option-text">{{ t('notebook.filterBookmarks') }}</span>
-            </button>
-          </div>
-
-          <p-button
-            [icon]="sortNewest ? 'pi pi-sort-amount-down' : 'pi pi-sort-amount-up'"
-            [pTooltip]="sortNewest ? t('notebook.sortNewest') : t('notebook.sortOldest')"
-            tooltipPosition="bottom"
-            [outlined]="true"
-            size="small"
-            (onClick)="toggleSort()"
-          />
-          <p-button
-            icon="pi pi-download"
-            [label]="t('notebook.export')"
-            [outlined]="true"
-            size="small"
-            severity="info"
-            (onClick)="exportMarkdown()"
-            [disabled]="totalEntries === 0 || exporting"
-            [loading]="exporting"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Scrollable Content Area -->
-    <div class="entries-scroll-area">
-      <!-- Loading State -->
-      @if (loading) {
-        <div class="settings-card">
-          <div class="state-container">
-            <i class="pi pi-spin pi-spinner"></i>
-          </div>
-        </div>
-      }
-
-      <!-- Empty State: No annotations at all -->
-      @if (!loading && totalEntries === 0 && !searchQuery.trim() && selectedBookId === null && showHighlights && showNotes && showBookmarks) {
-        <div class="settings-card">
-          <div class="state-container">
-            <div class="state-icon">
-              <i class="pi pi-pencil"></i>
-            </div>
-            <p class="state-title">{{ t('notebook.noEntries') }}</p>
-            <p class="state-hint">{{ t('notebook.noEntriesHint') }}</p>
-          </div>
-        </div>
-      }
-
-      <!-- Empty State: No results match filters -->
-      @if (!loading && totalEntries === 0 && (searchQuery.trim() || selectedBookId !== null || !showHighlights || !showNotes || !showBookmarks)) {
-        <div class="settings-card">
-          <div class="state-container">
-            <div class="state-icon warn">
-              <i class="pi pi-filter-slash"></i>
-            </div>
-            <p class="state-title">{{ t('notebook.noResults') }}</p>
-          </div>
-        </div>
-      }
-
-      <!-- Book Groups -->
-      @if (!loading && filteredGroups.length > 0) {
-        @for (group of filteredGroups; track group.bookId) {
-          <div class="settings-card book-group-card">
-            <!-- Book Header -->
-            <div class="book-group-header" (click)="toggleGroup(group.bookId)">
-              <img [src]="group.thumbnailUrl" [alt]="group.bookTitle" class="book-thumbnail" />
-              <div class="book-info">
-                <span class="book-title">{{ group.bookTitle }}</span>
-                <span class="book-entry-count">
-                  {{ group.entries.length }} {{ group.entries.length === 1 ? t('notebook.annotation') : t('notebook.annotations') }}
-                </span>
-              </div>
-              <i class="pi toggle-icon" [class.pi-chevron-down]="!isGroupCollapsed(group.bookId)" [class.pi-chevron-right]="isGroupCollapsed(group.bookId)"></i>
-            </div>
-
-            <!-- Entries -->
-            @if (!isGroupCollapsed(group.bookId)) {
-              <div class="entries-list">
-                @for (entry of group.entries; track entry.id + '-' + entry.type) {
-                  <div
-                    class="entry-item"
-                    [style.border-left-color]="entry.color || 'var(--p-primary-color)'"
-                  >
-                    <div class="entry-top-row">
-                      <div class="entry-type-badge" [class]="'type-' + entry.type.toLowerCase()">
-                        <i [class]="getTypeIcon(entry.type)"></i>
-                        <span>{{ getTypeLabel(entry.type) }}</span>
-                      </div>
-                      @if (entry.chapterTitle) {
-                        <span class="entry-chapter">
-                          <i class="pi pi-list"></i>
-                          {{ entry.chapterTitle }}
-                        </span>
-                      }
-                      <span class="entry-date">{{ entry.createdAt | date:'mediumDate' }}</span>
-                    </div>
-                    @if (entry.text) {
-                      <div class="entry-text">{{ entry.text }}</div>
-                    }
-                    @if (entry.note) {
-                      <div class="entry-note">
-                        <i class="pi pi-comment"></i>
-                        <span>{{ entry.note }}</span>
-                      </div>
-                    }
-                  </div>
+    <ng-container toolbarEnd>
+      <!-- Sort button + popover -->
+      <div>
+        <button
+          (click)="sortPopover.toggle($event)"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] bg-surface-raised text-ink-light shadow-paper hover:bg-surface-hover hover:text-ink hover:shadow-paper-hover transition-all cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>
+          </svg>
+          {{ currentSortLabel }}
+        </button>
+        <p-popover #sortPopover [dismissable]="true" appendTo="body">
+          <div class="flex flex-col min-w-[180px]">
+            @for (option of sortOptions; track option.value) {
+              <button
+                (click)="onSortChange(option.value); sortPopover.hide()"
+                class="flex items-center gap-2 px-3 py-2 text-sm text-left rounded-[4px] transition-colors cursor-pointer"
+                [class.bg-surface-hover]="sortBy() === option.value"
+                [class.text-ink]="sortBy() === option.value"
+                [class.font-medium]="sortBy() === option.value"
+                [class.text-ink-light]="sortBy() !== option.value"
+                [class.hover:bg-surface-hover]="sortBy() !== option.value"
+              >
+                @if (sortBy() === option.value) {
+                  <svg class="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                } @else {
+                  <span class="w-3.5"></span>
                 }
-              </div>
+                {{ option.label }}
+              </button>
             }
           </div>
-        }
+        </p-popover>
+      </div>
 
-        <!-- Pagination -->
-        @if (totalEntries > pageSize) {
-          <div class="settings-card pagination-card">
-            <p-paginator
-              [rows]="pageSize"
-              [totalRecords]="totalEntries"
-              [first]="first"
-              [rowsPerPageOptions]="[25, 50, 100]"
-              (onPageChange)="onPageChange($event)"
-            />
+      <!-- Filters button + popover -->
+      <div>
+        <button
+          (click)="filterPopover.toggle($event)"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] shadow-paper transition-all cursor-pointer"
+          [class.bg-accent]="selectedBookId() !== null"
+          [class.text-white]="selectedBookId() !== null"
+          [class.bg-surface-raised]="selectedBookId() === null"
+          [class.text-ink-light]="selectedBookId() === null"
+          [class.hover:bg-surface-hover]="selectedBookId() === null"
+          [class.hover:text-ink]="selectedBookId() === null"
+          [class.hover:shadow-paper-hover]="selectedBookId() === null"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filters
+        </button>
+        <p-popover #filterPopover [dismissable]="true" appendTo="body">
+          <div class="flex flex-col min-w-[260px]">
+            <!-- Search -->
+            <div class="relative mb-1">
+              <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input
+                type="text"
+                [value]="bookSearchText()"
+                (input)="onBookSearchInput($event)"
+                placeholder="Search books..."
+                class="w-full h-8 pl-8 pr-3 bg-surface-raised shadow-paper rounded-[6px] text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:ring-1 focus:ring-accent/30 transition-all"
+              />
+            </div>
+            <!-- Options -->
+            <div class="flex flex-col max-h-[300px] overflow-y-auto">
+              <button
+                (click)="onBookChange(null); filterPopover.hide()"
+                class="flex items-center gap-2 px-3 py-2 text-sm text-left rounded-[4px] transition-colors cursor-pointer"
+                [class.bg-surface-hover]="selectedBookId() === null"
+                [class.text-ink]="selectedBookId() === null"
+                [class.font-medium]="selectedBookId() === null"
+                [class.text-ink-light]="selectedBookId() !== null"
+                [class.hover:bg-surface-hover]="selectedBookId() !== null"
+              >
+                @if (selectedBookId() === null) {
+                  <svg class="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                } @else {
+                  <span class="w-3.5"></span>
+                }
+                {{ t('allBooks') }}
+              </button>
+              @for (option of filteredBookOptions(); track option.value) {
+                <button
+                  (click)="onBookChange(option.value); filterPopover.hide()"
+                  class="flex items-center gap-2 px-3 py-2 text-sm text-left rounded-[4px] transition-colors cursor-pointer"
+                  [class.bg-surface-hover]="selectedBookId() === option.value"
+                  [class.text-ink]="selectedBookId() === option.value"
+                  [class.font-medium]="selectedBookId() === option.value"
+                  [class.text-ink-light]="selectedBookId() !== option.value"
+                  [class.hover:bg-surface-hover]="selectedBookId() !== option.value"
+                >
+                  @if (selectedBookId() === option.value) {
+                    <svg class="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  } @else {
+                    <span class="w-3.5"></span>
+                  }
+                  {{ option.label }}
+                </button>
+              }
+            </div>
           </div>
-        }
+        </p-popover>
+      </div>
+
+      <!-- Clear filters -->
+      @if (selectedBookId() !== null) {
+        <button
+          (click)="clearBookFilter()"
+          class="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-[6px] bg-surface-raised text-status-abandoned shadow-paper hover:bg-status-abandoned-bg hover:shadow-paper-hover transition-all cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+          Clear
+        </button>
+      }
+    </ng-container>
+  </app-browse-toolbar>
+
+  <!-- Content -->
+  @if (loading()) {
+    <div class="flex items-center justify-center h-64">
+      <app-spinner size="lg" />
+    </div>
+  } @else if (totalEntries() === 0 && !hasActiveFilters()) {
+    <div class="flex flex-col items-center justify-center h-64 text-center">
+      <div class="w-14 h-14 rounded-full bg-accent-wash flex items-center justify-center mb-4">
+        <i class="pi pi-pencil text-xl text-accent"></i>
+      </div>
+      <p class="text-sm font-semibold text-ink">{{ t('noEntries') }}</p>
+      <p class="text-xs text-ink-muted mt-1">{{ t('noEntriesHint') }}</p>
+    </div>
+  } @else if (totalEntries() === 0 && hasActiveFilters()) {
+    <div class="flex flex-col items-center justify-center h-64 text-center">
+      <div class="w-14 h-14 rounded-full bg-status-to-read-bg flex items-center justify-center mb-4">
+        <i class="pi pi-filter-slash text-xl text-status-to-read"></i>
+      </div>
+      <p class="text-sm font-semibold text-ink">{{ t('noResults') }}</p>
+    </div>
+  } @else {
+    <!-- Book groups -->
+    <div class="flex flex-col gap-4">
+      @for (group of filteredGroups(); track group.bookId) {
+        <div class="bg-surface-raised shadow-paper rounded-[8px] overflow-hidden">
+          <!-- Book header -->
+          <div
+            class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-surface-hover transition-colors"
+            (click)="toggleGroup(group.bookId)"
+          >
+            <img
+              [src]="group.thumbnailUrl"
+              [alt]="group.bookTitle"
+              class="w-9 h-[50px] object-cover rounded flex-shrink-0 border border-edge"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-ink text-sm truncate">{{ group.bookTitle }}</div>
+              <div class="text-xs text-ink-muted mt-0.5">
+                {{ group.entries.length }} {{ group.entries.length === 1 ? t('annotation') : t('annotations') }}
+              </div>
+            </div>
+            <svg
+              class="w-4 h-4 text-ink-muted flex-shrink-0 transition-transform duration-200"
+              [class.-rotate-90]="isGroupCollapsed(group.bookId)"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+
+          <!-- Entries -->
+          @if (!isGroupCollapsed(group.bookId)) {
+            <div class="flex flex-col gap-2 px-5 pb-4">
+              @for (entry of group.entries; track entry.id + '-' + entry.type) {
+                <div
+                  class="pl-4 py-3 pr-4 rounded-[6px] bg-surface border-l-[3px]"
+                  [style.border-left-color]="entry.color || 'var(--color-accent)'"
+                >
+                  <!-- Top row: badge, chapter, date -->
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span
+                      [class]="'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ' + getTypeBadgeClass(entry.type)"
+                    >
+                      <i [class]="getTypeIcon(entry.type) + ' text-[10px]'"></i>
+                      {{ getTypeLabel(entry.type) }}
+                    </span>
+                    @if (entry.chapterTitle) {
+                      <span class="inline-flex items-center gap-1 text-xs text-ink-muted">
+                        <i class="pi pi-list text-[10px]"></i>
+                        {{ entry.chapterTitle }}
+                      </span>
+                    }
+                    <span class="ml-auto text-[11px] text-ink-muted whitespace-nowrap">
+                      {{ entry.createdAt | date:'mediumDate' }}
+                    </span>
+                  </div>
+
+                  <!-- Highlighted text -->
+                  @if (entry.text) {
+                    <div class="mt-2 text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
+                      {{ entry.text }}
+                    </div>
+                  }
+
+                  <!-- Note -->
+                  @if (entry.note) {
+                    <div class="mt-2 pt-2 border-t border-dashed border-edge flex items-start gap-1.5 text-[13px] text-ink-muted italic leading-relaxed">
+                      <i class="pi pi-comment text-xs mt-0.5 flex-shrink-0 text-accent"></i>
+                      <span>{{ entry.note }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
       }
     </div>
-  </div>
+
+    <!-- Pagination -->
+    @if (totalEntries() > pageSize()) {
+      <p-paginator
+        [rows]="pageSize()"
+        [totalRecords]="totalEntries()"
+        [first]="first()"
+        [rowsPerPageOptions]="[25, 50, 100]"
+        (onPageChange)="onPageChange($event)"
+      />
+    }
+  }
+</app-browse-page>
 </ng-container>

@@ -1,39 +1,36 @@
 import {ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild} from '@angular/core';
 import {TooltipModule} from "primeng/tooltip";
 import {AdditionalFile, Book, BookType, ReadStatus} from '../../../model/book.model';
-import {Button} from 'primeng/button';
 import {MenuModule} from 'primeng/menu';
 import {ConfirmationService, MenuItem, MessageService} from 'primeng/api';
+import {ConfirmService} from '../../../../../shared/components/ui/confirm-modal/confirm.service';
 import {BookService} from '../../../service/book.service';
 import {BookFileService} from '../../../service/book-file.service';
 import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';
-import {CheckboxChangeEvent, CheckboxModule} from 'primeng/checkbox';
 import {FormsModule} from '@angular/forms';
 import {MetadataRefreshType} from '../../../../metadata/model/request/metadata-refresh-type.enum';
 import {UrlHelperService} from '../../../../../shared/service/url-helper.service';
-import {NgClass} from '@angular/common';
 import {User, UserService} from '../../../../settings/user-management/user.service';
 import {EmailService} from '../../../../settings/email-v2/email.service';
 import {TieredMenu} from 'primeng/tieredmenu';
-import {Router} from '@angular/router';
-import {RouterLink} from '@angular/router';
-import {ProgressBar} from 'primeng/progressbar';
+import {Router, RouterLink} from '@angular/router';
 import {readStatusLabels} from '../book-filter/book-filter.config';
 import {ResetProgressTypes} from '../../../../../shared/constants/reset-progress-type';
 import {ReadStatusHelper} from '../../../helpers/read-status.helper';
-import {BookDialogHelperService} from '../book-dialog-helper.service';
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
 import {BookNavigationService} from '../../../service/book-navigation.service';
 import {BookCardOverlayPreferenceService} from '../book-card-overlay-preference.service';
 import {AppSettingsService} from '../../../../../shared/service/app-settings.service';
 import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {CoverPlaceholderComponent} from '../../../../../shared/components/cover-generator/cover-generator.component';
 import {QueryClient} from '@tanstack/angular-query-experimental';
+import {ModalService} from '../../../../../shared/components/ui/modal/modal.service';
+import {ShelfAssignerComponent} from '../../shelf-assigner/shelf-assigner.component';
 
 @Component({
   selector: 'app-book-card',
   templateUrl: './book-card.component.html',
-  styleUrls: ['./book-card.component.scss'],
-  imports: [Button, MenuModule, CheckboxModule, FormsModule, NgClass, TieredMenu, ProgressBar, TooltipModule, RouterLink, TranslocoPipe],
+  imports: [MenuModule, FormsModule, TieredMenu, TooltipModule, RouterLink, TranslocoPipe, CoverPlaceholderComponent],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -53,13 +50,16 @@ export class BookCardComponent implements OnInit, OnChanges {
   @Input() overlayPreferenceService?: BookCardOverlayPreferenceService;
   @Input() forceEbookMode: boolean = false;
   @Input() useSquareCovers: boolean = false;
+  @Input() hasSelection: boolean = false;
 
   @ViewChild('checkboxElem') checkboxElem!: ElementRef<HTMLInputElement>;
+  @ViewChild('menu') menuRef: TieredMenu | undefined;
 
   items: MenuItem[] | undefined;
   readStatusMenuItems: MenuItem[] = [];
   isImageLoaded: boolean = false;
   isSubMenuLoading = false;
+  menuVisible = false;
   private additionalFilesLoaded = false;
 
   private bookService = inject(BookService);
@@ -72,12 +72,13 @@ export class BookCardComponent implements OnInit, OnChanges {
   private router = inject(Router);
   protected urlHelper = inject(UrlHelperService);
   private confirmationService = inject(ConfirmationService);
-  private bookDialogHelperService = inject(BookDialogHelperService);
+  private confirmService = inject(ConfirmService);
   private bookNavigationService = inject(BookNavigationService);
   private cdr = inject(ChangeDetectorRef);
   private appSettingsService = inject(AppSettingsService);
   private readonly t = inject(TranslocoService);
   private queryClient = inject(QueryClient);
+  private modalService = inject(ModalService);
 
   protected _progressPercentage: number | null = null;
   protected _koProgressPercentage: number | null = null;
@@ -280,11 +281,39 @@ export class BookCardComponent implements OnInit, OnChanges {
     return alternativeFormat?.bookType;
   }
 
+  onMenuClick(event: Event): void {
+    event.stopPropagation();
+    this.onMenuToggle(event, this.menuRef!);
+  }
+
+  onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.menuInitialized) {
+      this.menuInitialized = true;
+      this.initMenu();
+      this.cdr.markForCheck();
+    }
+    const menu = this.menuRef;
+    if (!menu) return;
+    const anchor = document.createElement('span');
+    anchor.style.cssText = `position:fixed;left:${event.clientX}px;top:${event.clientY}px;width:0;height:0;pointer-events:none;`;
+    document.body.appendChild(anchor);
+    const fakeEvent = { ...event, currentTarget: anchor, target: anchor };
+    menu.toggle(fakeEvent as any);
+    requestAnimationFrame(() => anchor.remove());
+
+    // Trigger lazy load of additional files for download/delete submenus
+    this.loadAdditionalFilesIfNeeded();
+  }
+
   onMenuShow(): void {
+    this.menuVisible = true;
     this.menuToggled.emit(true);
   }
 
   onMenuHide(): void {
+    this.menuVisible = false;
     this.menuToggled.emit(false);
   }
 
@@ -296,7 +325,10 @@ export class BookCardComponent implements OnInit, OnChanges {
     }
 
     menu.toggle(event);
+    this.loadAdditionalFilesIfNeeded();
+  }
 
+  private loadAdditionalFilesIfNeeded(): void {
     if (!this.additionalFilesLoaded && !this.isSubMenuLoading && this.needsAdditionalFilesData()) {
       this.isSubMenuLoading = true;
       this.cdr.markForCheck();
@@ -336,18 +368,51 @@ export class BookCardComponent implements OnInit, OnChanges {
   private initMenu() {
     this.items = [
       {
-        label: this.t.translate('book.card.menu.assignShelf'),
-        icon: 'pi pi-folder',
-        command: () => this.openShelfDialog()
-      },
-      {
         label: this.t.translate('book.card.menu.viewDetails'),
         icon: 'pi pi-info-circle',
         command: () => {
-          setTimeout(() => {
-            this.openBookInfo(this.book);
-          }, 150);
+          setTimeout(() => this.openBookInfo(this.book), 150);
         },
+      },
+      {
+        label: this.book.primaryFile?.bookType === 'AUDIOBOOK'
+          ? this.t.translate('book.card.menu.play')
+          : this.t.translate('book.card.menu.read'),
+        icon: this.book.primaryFile?.bookType === 'AUDIOBOOK' ? 'pi pi-play' : 'pi pi-book',
+        command: () => this.readBook(this.book),
+        visible: !this.book.isPhysical && !!this.book.primaryFile,
+      },
+      {
+        label: this.t.translate('book.card.menu.readStatus'),
+        icon: 'pi pi-bookmark',
+        items: Object.entries(readStatusLabels).map(([status, label]) => ({
+          label,
+          command: () => {
+            this.bookService.updateBookReadStatus(this.book.id, status as ReadStatus).subscribe({
+              next: () => {
+                this.messageService.add({
+                  severity: 'success',
+                  summary: this.t.translate('book.card.toast.readStatusUpdatedSummary'),
+                  detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label}),
+                  life: 2000
+                });
+              },
+              error: () => {
+                this.messageService.add({
+                  severity: 'error',
+                  summary: this.t.translate('book.card.toast.readStatusFailedSummary'),
+                  detail: this.t.translate('book.card.toast.readStatusFailedDetail'),
+                  life: 3000
+                });
+              }
+            });
+          }
+        }))
+      },
+      {
+        label: this.t.translate('book.card.menu.assignShelf'),
+        icon: 'pi pi-folder',
+        command: () => this.openShelfDialog()
       },
       ...this.getPermissionBasedMenuItems(),
       ...this.moreMenuItems(),
@@ -401,19 +466,14 @@ export class BookCardComponent implements OnInit, OnChanges {
           label: this.t.translate('book.card.menu.delete'),
           icon: 'pi pi-trash',
           command: () => {
-            this.confirmationService.confirm({
+            this.confirmService.open({
+              title: this.t.translate('book.card.confirm.deleteBookHeader'),
               message: this.t.translate('book.card.confirm.deleteBookMessage', {title: this.book.metadata?.title}),
-              header: this.t.translate('book.card.confirm.deleteBookHeader'),
-              icon: 'pi pi-exclamation-triangle',
-              acceptIcon: 'pi pi-trash',
-              rejectIcon: 'pi pi-times',
-              acceptLabel: this.t.translate('common.delete'),
-              rejectLabel: this.t.translate('common.cancel'),
-              acceptButtonStyleClass: 'p-button-danger',
-              rejectButtonStyleClass: 'p-button-outlined',
-              accept: () => {
-                this.bookService.deleteBooks(new Set([this.book.id])).subscribe();
-              }
+              confirmLabel: this.t.translate('common.delete'),
+              confirmVariant: 'danger',
+            }).subscribe(confirmed => {
+              if (!confirmed) return;
+              this.bookService.deleteBooks(new Set([this.book.id])).subscribe();
             });
           }
         });
@@ -456,15 +516,13 @@ export class BookCardComponent implements OnInit, OnChanges {
               };
 
               if (this.book.primaryFile?.fileSizeKb && this.book.primaryFile.fileSizeKb > 25 * 1024) {
-                this.confirmationService.confirm({
+                this.confirmService.open({
+                  title: this.t.translate('book.card.confirm.largeFileHeader'),
                   message: this.t.translate('book.card.confirm.largeFileMessage'),
-                  header: this.t.translate('book.card.confirm.largeFileHeader'),
-                  icon: 'pi pi-exclamation-triangle',
-                  acceptLabel: this.t.translate('book.card.confirm.sendAnyway'),
-                  rejectLabel: this.t.translate('common.cancel'),
-                  acceptButtonProps: { severity: 'warn' },
-                  rejectButtonProps: { severity: 'secondary' },
-                  accept: doSend,
+                  confirmLabel: this.t.translate('book.card.confirm.sendAnyway'),
+                }).subscribe(confirmed => {
+                  if (!confirmed) return;
+                  doSend();
                 });
               } else {
                 doSend();
@@ -475,7 +533,7 @@ export class BookCardComponent implements OnInit, OnChanges {
               label: this.t.translate('book.card.menu.customSend'),
               icon: 'pi pi-envelope',
               command: () => {
-                this.bookDialogHelperService.openCustomSendDialog(this.book);
+                // TODO: migrate to ModalService — openCustomSendDialog
               }
             }
           ]
@@ -512,7 +570,7 @@ export class BookCardComponent implements OnInit, OnChanges {
             label: this.t.translate('book.card.menu.customFetch'),
             icon: 'pi pi-sync',
             command: () => {
-              this.bookDialogHelperService.openMetadataRefreshDialog(new Set([this.book!.id]))
+              // TODO: migrate to ModalService — openMetadataRefreshDialog
             },
           },
           {
@@ -567,39 +625,12 @@ export class BookCardComponent implements OnInit, OnChanges {
         label: this.t.translate('book.card.menu.organizeFile'),
         icon: 'pi pi-arrows-h',
         command: () => {
-          this.bookDialogHelperService.openFileMoverDialog(new Set([this.book.id]));
+          // TODO: migrate to ModalService — openFileMoverDialog
         }
       });
     }
 
     moreActions.push(
-      {
-        label: this.t.translate('book.card.menu.readStatus'),
-        icon: 'pi pi-book',
-        items: Object.entries(readStatusLabels).map(([status, label]) => ({
-          label,
-          command: () => {
-            this.bookService.updateBookReadStatus(this.book.id, status as ReadStatus).subscribe({
-              next: () => {
-                this.messageService.add({
-                  severity: 'success',
-                  summary: this.t.translate('book.card.toast.readStatusUpdatedSummary'),
-                  detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label}),
-                  life: 2000
-                });
-              },
-              error: () => {
-                this.messageService.add({
-                  severity: 'error',
-                  summary: this.t.translate('book.card.toast.readStatusFailedSummary'),
-                  detail: this.t.translate('book.card.toast.readStatusFailedDetail'),
-                  life: 3000
-                });
-              }
-            });
-          }
-        }))
-      },
       {
         label: this.t.translate('book.card.menu.resetGrimmoryProgress'),
         icon: 'pi pi-undo',
@@ -660,7 +691,11 @@ export class BookCardComponent implements OnInit, OnChanges {
   }
 
   private openShelfDialog(): void {
-    this.bookDialogHelperService.openShelfAssignerDialog(this.book, null);
+    this.modalService.open(ShelfAssignerComponent, {
+      title: 'Assign to Shelf',
+      size: 'sm',
+      data: {book: this.book, isMultiBooks: false},
+    });
   }
 
   openSeriesInfo(): void {
@@ -679,13 +714,14 @@ export class BookCardComponent implements OnInit, OnChanges {
       this.bookNavigationService.setNavigationContext(allBookIds, book.id);
     }
 
-    if (this.metadataCenterViewMode === 'route') {
-      this.router.navigate(['/book', book.id], {
-        queryParams: {tab: 'view'}
-      });
-    } else {
-      this.bookDialogHelperService.openBookDetailsDialog(book.id);
+    if (this.metadataCenterViewMode !== 'route') {
+      // TODO: migrate to ModalService — openBookDetailsDialog
+      return;
     }
+
+    this.router.navigate(['/book', book.id], {
+      queryParams: {tab: 'view'}
+    });
   }
 
   private getDownloadMenuItems(): MenuItem[] {
@@ -740,19 +776,14 @@ export class BookCardComponent implements OnInit, OnChanges {
       label: this.t.translate('book.card.menu.book'),
       icon: 'pi pi-book',
       command: () => {
-        this.confirmationService.confirm({
+        this.confirmService.open({
+          title: this.t.translate('book.card.confirm.deleteBookHeader'),
           message: this.t.translate('book.card.confirm.deleteBookMessage', {title: this.book.metadata?.title}),
-          header: this.t.translate('book.card.confirm.deleteBookHeader'),
-          icon: 'pi pi-exclamation-triangle',
-          acceptIcon: 'pi pi-trash',
-          rejectIcon: 'pi pi-times',
-          acceptLabel: this.t.translate('common.delete'),
-          rejectLabel: this.t.translate('common.cancel'),
-          acceptButtonStyleClass: 'p-button-danger',
-          rejectButtonStyleClass: 'p-button-outlined',
-          accept: () => {
-            this.bookService.deleteBooks(new Set([this.book.id])).subscribe();
-          }
+          confirmLabel: this.t.translate('common.delete'),
+          confirmVariant: 'danger',
+        }).subscribe(confirmed => {
+          if (!confirmed) return;
+          this.bookService.deleteBooks(new Set([this.book.id])).subscribe();
         });
       }
     });
@@ -801,31 +832,29 @@ export class BookCardComponent implements OnInit, OnChanges {
   }
 
   private deleteAdditionalFile(bookId: number, fileId: number, fileName: string): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('book.card.confirm.deleteFileHeader'),
       message: this.t.translate('book.card.confirm.deleteFileMessage', {fileName}),
-      header: this.t.translate('book.card.confirm.deleteFileHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.bookFileService.deleteAdditionalFile(bookId, fileId).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('common.success'),
-              detail: this.t.translate('book.card.toast.deleteFileSuccessDetail', {fileName})
-            });
-          },
-          error: (error) => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('common.error'),
-              detail: this.t.translate('book.card.toast.deleteFileErrorDetail', {error: error.message || 'Unknown error'})
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('common.delete'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookFileService.deleteAdditionalFile(bookId, fileId).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('common.success'),
+            detail: this.t.translate('book.card.toast.deleteFileSuccessDetail', {fileName})
+          });
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('common.error'),
+            detail: this.t.translate('book.card.toast.deleteFileErrorDetail', {error: error.message || 'Unknown error'})
+          });
+        }
+      });
     });
   }
 
@@ -894,11 +923,14 @@ export class BookCardComponent implements OnInit, OnChanges {
   }
 
   onCardClick(event: MouseEvent): void {
-    if (!event.ctrlKey) {
+    if (event.ctrlKey) {
+      this.toggleCardSelection(!this.isSelected);
       return;
     }
 
-    this.toggleCardSelection(!this.isSelected)
+    if (!this.menuVisible) {
+      this.openBookInfo(this.book);
+    }
   }
 
   toggleCardSelection(selected: boolean): void {
@@ -923,7 +955,7 @@ export class BookCardComponent implements OnInit, OnChanges {
     this.lastMouseEvent = null;
   }
 
-  toggleSelection(event: CheckboxChangeEvent): void {
+  toggleSelection(event: { checked: boolean }): void {
     this.toggleCardSelection(event.checked);
   }
 }

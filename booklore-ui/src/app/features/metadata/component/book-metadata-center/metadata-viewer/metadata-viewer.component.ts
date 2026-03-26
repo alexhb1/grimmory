@@ -10,7 +10,7 @@ import {UrlHelperService} from '../../../../../shared/service/url-helper.service
 import {UserService} from '../../../../settings/user-management/user.service';
 import {SplitButton} from 'primeng/splitbutton';
 import {ConfirmationService, MenuItem, MessageService} from 'primeng/api';
-import {DynamicDialogRef} from 'primeng/dynamicdialog';
+import {ConfirmService} from '../../../../../shared/components/ui/confirm-modal/confirm.service';
 import {EmailService} from '../../../../settings/email-v2/email.service';
 import {Tooltip} from 'primeng/tooltip';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -24,7 +24,6 @@ import {DatePicker} from 'primeng/datepicker';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {TieredMenu} from 'primeng/tieredmenu';
 import {Image} from 'primeng/image';
-import {BookDialogHelperService} from '../../../../book/components/book-browser/book-dialog-helper.service';
 import {LibraryService} from '../../../../book/service/library.service';
 import {TagColor, TagComponent} from '../../../../../shared/components/tag/tag.component';
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
@@ -72,7 +71,6 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
 
   private readonly t = inject(TranslocoService);
   private libraryService = inject(LibraryService);
-  private bookDialogHelperService = inject(BookDialogHelperService)
   private emailService = inject(EmailService);
   private messageService = inject(MessageService);
   private bookService = inject(BookService);
@@ -83,10 +81,11 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
   protected userService = inject(UserService);
   private appSettingsService = inject(AppSettingsService);
   private confirmationService = inject(ConfirmationService);
+  private confirmService = inject(ConfirmService);
 
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
-  private dialogRef?: DynamicDialogRef;
+  private dialogRef?: any;
   private userState = this.userService.currentUser;
   private appSettings = this.appSettingsService.appSettings;
 
@@ -216,7 +215,7 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
         label: this.t.translate('metadata.viewer.menuUploadFile'),
         icon: 'pi pi-upload',
         command: () => {
-          this.bookDialogHelperService.openAdditionalFileUploaderDialog(book);
+          // TODO: migrate to ModalService — openAdditionalFileUploaderDialog
         },
       });
     }
@@ -247,7 +246,7 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
             label: this.t.translate('metadata.viewer.menuCustomSend'),
             icon: 'pi pi-cog',
             command: () => {
-              this.bookDialogHelperService.openCustomSendDialog(book);
+              // TODO: migrate to ModalService — openCustomSendDialog
             }
           }
         ]
@@ -262,7 +261,7 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
         label: this.t.translate('metadata.viewer.menuAttachToAnotherBook'),
         icon: 'pi pi-link',
         command: () => {
-          this.bookDialogHelperService.openBookFileAttacherDialog(book);
+          // TODO: migrate to ModalService — openBookFileAttacherDialog
         },
       });
     }
@@ -350,29 +349,24 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
         label: deleteLabel,
         icon: 'pi pi-trash',
         command: () => {
-          this.confirmationService.confirm({
+          this.confirmService.open({
+            title: deleteLabel,
             message: deleteMessage,
-            header: deleteLabel,
-            icon: 'pi pi-exclamation-triangle',
-            acceptIcon: 'pi pi-trash',
-            rejectIcon: 'pi pi-times',
-            acceptLabel: deleteAcceptLabel,
-            rejectLabel: this.t.translate('common.cancel'),
-            acceptButtonStyleClass: 'p-button-danger',
-            rejectButtonStyleClass: 'p-button-outlined',
-            accept: () => {
-              this.bookService.deleteBooks(new Set([book.id])).subscribe({
-                next: () => {
-                  if (this.metadataCenterViewMode === 'route') {
-                    this.router.navigate(['/dashboard']);
-                  } else {
-                    this.dialogRef?.close();
-                  }
-                },
-                error: () => {
+            confirmLabel: deleteAcceptLabel,
+            confirmVariant: 'danger',
+          }).subscribe(confirmed => {
+            if (!confirmed) return;
+            this.bookService.deleteBooks(new Set([book.id])).subscribe({
+              next: () => {
+                if (this.metadataCenterViewMode === 'route') {
+                  this.router.navigate(['/dashboard']);
+                } else {
+                  this.dialogRef?.close();
                 }
-              });
-            }
+              },
+              error: () => {
+              }
+            });
           });
         },
       });
@@ -550,32 +544,28 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
   }
 
   deleteAdditionalFile(bookId: number, fileId: number, fileName: string) {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('metadata.viewer.confirm.deleteSupplementaryHeader'),
       message: this.t.translate('metadata.viewer.confirm.deleteSupplementaryMessage', { fileName }),
-      header: this.t.translate('metadata.viewer.confirm.deleteSupplementaryHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      rejectButtonStyleClass: 'p-button-secondary',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.bookFileService.deleteAdditionalFile(bookId, fileId).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('metadata.viewer.toast.deleteSupplementarySuccessSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteSupplementarySuccessDetail', { fileName })
-            });
-          },
-          error: (error) => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorDetail', { error: error.message || 'Unknown error' })
-            });
-          }
-        });
-      }
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookFileService.deleteAdditionalFile(bookId, fileId).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('metadata.viewer.toast.deleteSupplementarySuccessSummary'),
+            detail: this.t.translate('metadata.viewer.toast.deleteSupplementarySuccessDetail', { fileName })
+          });
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorSummary'),
+            detail: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorDetail', { error: error.message || 'Unknown error' })
+          });
+        }
+      });
     });
   }
 
@@ -594,34 +584,29 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
       header = this.t.translate('metadata.viewer.confirm.deleteAltFormatHeader');
     }
 
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: header,
       message,
-      header,
-      icon: 'pi pi-exclamation-triangle',
-      acceptIcon: 'pi pi-trash',
-      rejectIcon: 'pi pi-times',
-      acceptLabel: this.t.translate('metadata.viewer.confirm.deleteFileBtn'),
-      rejectLabel: this.t.translate('common.cancel'),
-      rejectButtonStyleClass: 'p-button-secondary',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.bookFileService.deleteBookFile(book.id, fileId, isPrimary).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('metadata.viewer.toast.deleteFormatSuccessSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteFormatSuccessDetail', { fileName })
-            });
-          },
-          error: (error) => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('metadata.viewer.toast.deleteFormatErrorSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteFormatErrorDetail', { error: error.message || 'Unknown error' })
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('metadata.viewer.confirm.deleteFileBtn'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookFileService.deleteBookFile(book.id, fileId, isPrimary).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('metadata.viewer.toast.deleteFormatSuccessSummary'),
+            detail: this.t.translate('metadata.viewer.toast.deleteFormatSuccessDetail', { fileName })
+          });
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('metadata.viewer.toast.deleteFormatErrorSummary'),
+            detail: this.t.translate('metadata.viewer.toast.deleteFormatErrorDetail', { error: error.message || 'Unknown error' })
+          });
+        }
+      });
     });
   }
 
@@ -655,15 +640,13 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
     };
 
     if (book.primaryFile?.fileSizeKb && book.primaryFile.fileSizeKb > 25 * 1024) {
-      this.confirmationService.confirm({
+      this.confirmService.open({
+        title: this.t.translate('metadata.viewer.confirm.largeFileHeader'),
         message: this.t.translate('metadata.viewer.confirm.largeFileMessage'),
-        header: this.t.translate('metadata.viewer.confirm.largeFileHeader'),
-        icon: 'pi pi-exclamation-triangle',
-        acceptLabel: this.t.translate('metadata.viewer.confirm.sendAnyway'),
-        rejectLabel: this.t.translate('common.cancel'),
-        acceptButtonProps: { severity: 'warn' },
-        rejectButtonProps: { severity: 'secondary' },
-        accept: doSend,
+        confirmLabel: this.t.translate('metadata.viewer.confirm.sendAnyway'),
+      }).subscribe(confirmed => {
+        if (!confirmed) return;
+        doSend();
       });
     } else {
       doSend();
@@ -671,7 +654,7 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
   }
 
   assignShelf(bookId: number) {
-    this.bookDialogHelperService.openShelfAssignerDialog((this.bookService.findBookById(bookId) as Book), null);
+    // TODO: migrate to ModalService
   }
 
   updateReadStatus(status: ReadStatus): void {
@@ -707,33 +690,31 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
   }
 
   resetProgress(book: Book, type: ResetProgressType): void {
-    this.confirmationService.confirm({
+    this.confirmService.open({
+      title: this.t.translate('metadata.viewer.confirm.resetProgressHeader'),
       message: this.t.translate('metadata.viewer.confirm.resetProgressMessage', { title: book.metadata?.title }),
-      header: this.t.translate('metadata.viewer.confirm.resetProgressHeader'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.t.translate('common.yes'),
-      rejectLabel: this.t.translate('common.cancel'),
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.bookService.resetProgress(book.id, type).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: this.t.translate('metadata.viewer.toast.progressResetSummary'),
-              detail: this.t.translate('metadata.viewer.toast.progressResetDetail'),
-              life: 1500
-            });
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: this.t.translate('metadata.viewer.toast.progressResetFailedSummary'),
-              detail: this.t.translate('metadata.viewer.toast.progressResetFailedDetail'),
-              life: 1500
-            });
-          }
-        });
-      }
+      confirmLabel: this.t.translate('common.yes'),
+      confirmVariant: 'danger',
+    }).subscribe(confirmed => {
+      if (!confirmed) return;
+      this.bookService.resetProgress(book.id, type).subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.t.translate('metadata.viewer.toast.progressResetSummary'),
+            detail: this.t.translate('metadata.viewer.toast.progressResetDetail'),
+            life: 1500
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('metadata.viewer.toast.progressResetFailedSummary'),
+            detail: this.t.translate('metadata.viewer.toast.progressResetFailedDetail'),
+            life: 1500
+          });
+        }
+      });
     });
   }
 
@@ -1241,7 +1222,7 @@ export class MetadataViewerComponent implements OnInit, OnChanges, AfterViewChec
   }
 
   openFileMoverDialog(bookId: number): void {
-    this.bookDialogHelperService.openFileMoverDialog(new Set([bookId]));
+    // TODO: migrate to ModalService
   }
 
   protected readonly ResetProgressTypes = ResetProgressTypes;
