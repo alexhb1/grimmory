@@ -193,6 +193,11 @@ export class BookBrowserComponent implements OnInit, AfterViewInit, OnDestroy {
       this.sortCriteria()
     );
   });
+  readonly bookIndexMap = computed(() => {
+    const indexes = new Map<number, number>();
+    this.books().forEach((book, index) => indexes.set(book.id, index));
+    return indexes;
+  });
   readonly isBooksLoading = this.bookService.isBooksLoading;
   readonly booksError = this.bookService.booksError;
   protected resetFilterSubject = new Subject<void>();
@@ -222,6 +227,9 @@ export class BookBrowserComponent implements OnInit, AfterViewInit, OnDestroy {
   private destroy$ = new Subject<void>();
   protected metadataMenuItems: MenuItem[] | undefined;
   protected moreActionsMenuItems: MenuItem[] | undefined;
+  protected readonly onBookCardSelect = (book: Book, selected: boolean): void => {
+    this.handleBookSelect(book, selected);
+  };
 
   protected bookSorter = new BookSorter(
     sortCriteria => this.onMultiSortChange(sortCriteria),
