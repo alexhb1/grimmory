@@ -380,7 +380,7 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private getScrollHeight(): string {
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = window.innerWidth <= 991;
     return isMobile
       ? 'calc(var(--page-available-height) - 63px)'
       : 'calc(var(--page-available-height) - 65px)';
