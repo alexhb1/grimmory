@@ -1,5 +1,6 @@
 .dashboard-container {
-  height: calc(var(--page-available-height) - 0.6rem);
+  box-sizing: border-box;
+  height: 100%;
   overflow-y: auto;
   position: relative;
 
@@ -18,8 +19,6 @@
 
 @media (width <= 768px) {
   .dashboard-container {
-    height: calc(var(--page-available-height) - 0.5rem);
-
     &::-webkit-scrollbar {
       width: 8px;
     }
@@ -27,12 +26,21 @@
 }
 
 .dashboard {
+  box-sizing: border-box;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100%;
+  padding: 1.1rem 1.1rem 0;
   text-align: center;
   position: relative;
   z-index: 1;
+}
+
+@media (width <= 768px) {
+  .dashboard {
+    padding: 0.5rem 0.5rem 0;
+  }
 }
 
 .loading-state {

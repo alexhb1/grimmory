@@ -1,4 +1,4 @@
-import {Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, OnInit, Output} from '@angular/core';
+import {Component, ElementRef, EventEmitter, inject, Input, OnChanges, OnInit, Output} from '@angular/core';
 import {TableModule} from 'primeng/table';
 import {DatePipe, NgClass} from '@angular/common';
 import {Rating} from 'primeng/rating';
@@ -35,7 +35,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
   styleUrls: ['./book-table.component.scss'],
   providers: [DatePipe]
 })
-export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
+export class BookTableComponent implements OnInit, OnChanges {
   selectedBooks: Book[] = [];
   selectedBookIds = new Set<number>();
 
@@ -57,8 +57,6 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
   private elementRef = inject(ElementRef);
 
   private metadataCenterViewMode: 'route' | 'dialog' = 'route';
-  private resizeListener = this.setScrollHeight.bind(this);
-
   readonly allColumns: { field: string; header: string }[] = [
     {field: 'readStatus', header: this.t.translate('book.columnPref.columns.readStatus')},
     {field: 'title', header: this.t.translate('book.columnPref.columns.title')},
@@ -84,7 +82,7 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
     {field: 'ranobedbRating', header: this.t.translate('book.columnPref.columns.ranobedbRating')},
   ];
 
-  scrollHeight = this.getScrollHeight();
+  scrollHeight = '100%';
 
   ngOnInit(): void {
     const user = this.userService.currentUser();
@@ -95,7 +93,6 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
     this.selectedBookIds = new Set(this.preselectedBookIds);
     this.syncSelectedBooks();
     this.setScrollHeight();
-    window.addEventListener('resize', this.resizeListener);
   }
 
   setScrollHeight() {
@@ -363,26 +360,12 @@ export class BookTableComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  ngOnDestroy(): void {
-    window.removeEventListener('resize', this.resizeListener);
-  }
-
   private applyScrollHeight(): void {
-    const scrollHeight = this.getScrollHeight();
-    this.scrollHeight = scrollHeight;
-
     const wrapperElements = this.elementRef.nativeElement.querySelectorAll('.p-virtualscroller');
     wrapperElements.forEach((wrapperElement: Element) => {
       if (wrapperElement instanceof HTMLElement) {
-        wrapperElement.style.height = scrollHeight;
+        wrapperElement.style.height = this.scrollHeight;
       }
     });
-  }
-
-  private getScrollHeight(): string {
-    const isMobile = window.innerWidth <= 991;
-    return isMobile
-      ? 'calc(var(--page-available-height) - 63px)'
-      : 'calc(var(--page-available-height) - 65px)';
   }
 }

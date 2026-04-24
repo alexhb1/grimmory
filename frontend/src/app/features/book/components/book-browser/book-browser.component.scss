@@ -74,12 +74,15 @@
   position: relative;
   display: flex;
   flex-direction: row;
+  height: 100%;
+  min-height: 0;
 }
 
 .book-browser-main {
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-height: 0;
 }
 
 // Header bar
@@ -89,11 +92,10 @@
   justify-content: space-between;
   gap: 0.25rem;
   padding: 0.35rem;
-  border-radius: 0.75rem 0.75rem 0 0;
   margin-bottom: 0.5rem;
   margin-right: 2px;
   background-color: var(--card-background);
-  border: 1px solid var(--p-content-border-color);
+  border-bottom: 1px solid var(--p-content-border-color);
 
   @media (width >= 768px) {
     gap: 1rem;
@@ -436,14 +438,10 @@
 // Virtual scroller and grid
 .virtual-scroller {
   width: 100%;
-  height: calc(var(--page-available-height) - 4.8rem);
+  height: 100%;
   padding: 1rem;
   box-sizing: border-box;
   overflow-y: auto;
-
-  @media (width <= 768px) {
-    height: calc(var(--page-available-height) - 4.6rem);
-  }
 }
 
 .book-grid {
@@ -611,7 +609,14 @@
 
 // Book state container
 .book-state-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
   position: relative;
+}
+
+.book-state-content {
+  height: 100%;
+  min-height: 0;
 }
 
 .book-state-content-refreshing {
