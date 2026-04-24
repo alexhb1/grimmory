@@ -57,6 +57,7 @@ export class SeriesBrowserComponent implements OnInit {
   private static readonly MOBILE_BASE_WIDTH = 180;
   private static readonly MOBILE_BASE_HEIGHT = 250;
   private static readonly GRID_GAP = 20;
+  private static readonly GRID_HORIZONTAL_PADDING_PX = 67; // matches 2 × 2.1rem horizontal padding on .series-grid
 
   private seriesDataService = inject(SeriesDataService);
   private bookService = inject(BookService);
@@ -136,7 +137,8 @@ export class SeriesBrowserComponent implements OnInit {
   }
 
   readonly gridColumns = computed(() => {
-    return computeGridColumns(this.viewportWidth(), this.cardWidth || 230, SeriesBrowserComponent.GRID_GAP);
+    const effectiveWidth = Math.max(0, this.viewportWidth() - SeriesBrowserComponent.GRID_HORIZONTAL_PADDING_PX);
+    return computeGridColumns(effectiveWidth, this.cardWidth || 230, SeriesBrowserComponent.GRID_GAP);
   });
 
   readonly seriesRows = computed(() => {
