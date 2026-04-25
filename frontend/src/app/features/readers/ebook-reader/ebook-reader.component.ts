@@ -36,6 +36,14 @@ import {RelocateProgressData} from './state/progress.service';
 import {WakeLockService} from '../../../shared/service/wake-lock.service';
 import {ViewEvent} from './core/view-manager.service';
 
+interface PendingInitialChapterRestore {
+  href: string;
+  contentSourceProgressPercent: number;
+  attempts: number;
+  hrefNavigationResolved: boolean;
+  targetFraction?: number;
+}
+
 @Component({
   selector: 'app-ebook-reader',
   standalone: true,
@@ -104,7 +112,7 @@ export class EbookReaderComponent implements OnInit {
   private visibilityManager!: ReaderHeaderFooterVisibilityManager;
   private relocateTimeout?: ReturnType<typeof setTimeout>;
   private sectionFractionsTimeout?: ReturnType<typeof setTimeout>;
-  private pendingInitialChapterRestore: { href: string; contentSourceProgressPercent: number; attempts: number } | null = null;
+  private pendingInitialChapterRestore: PendingInitialChapterRestore | null = null;
   private pendingInitialChapterRestoreTimeout?: ReturnType<typeof setTimeout>;
 
   isLoading = signal(true);
@@ -400,10 +408,19 @@ export class EbookReaderComponent implements OnInit {
         this.pendingInitialChapterRestore = {
           href: this.normalizeHref(progress.href),
           contentSourceProgressPercent: chapterProgress,
-          attempts: 0
+          attempts: 0,
+          hrefNavigationResolved: false
         };
       }
-      return this.viewManager.goTo(progress.href);
+      return this.viewManager.goTo(progress.href).pipe(
+        tap(() => {
+          const pendingRestore = this.pendingInitialChapterRestore;
+          if (pendingRestore) {
+            pendingRestore.hrefNavigationResolved = true;
+          }
+        }),
+        switchMap(() => this.applyPendingInitialChapterRestore())
+      );
     }
 
     if (progress?.percentage && progress.percentage > 0) {
@@ -444,12 +461,24 @@ export class EbookReaderComponent implements OnInit {
       return false;
     }
 
-    this.pendingInitialChapterRestore = null;
-    this.viewManager.goToFraction(targetFraction)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
-
+    pendingRestore.targetFraction = targetFraction;
     return true;
+  }
+
+  private applyPendingInitialChapterRestore(): Observable<void> {
+    const pendingRestore = this.pendingInitialChapterRestore;
+    const targetFraction = pendingRestore?.targetFraction;
+    if (!pendingRestore || targetFraction === undefined || !pendingRestore.hrefNavigationResolved) {
+      return of(undefined);
+    }
+
+    this.pendingInitialChapterRestore = null;
+    if (this.pendingInitialChapterRestoreTimeout) {
+      clearTimeout(this.pendingInitialChapterRestoreTimeout);
+      this.pendingInitialChapterRestoreTimeout = undefined;
+    }
+
+    return this.viewManager.goToFraction(targetFraction);
   }
 
   private retryInitialRestore(detail: RelocateProgressData): void {
@@ -468,6 +497,9 @@ export class EbookReaderComponent implements OnInit {
     this.pendingInitialChapterRestoreTimeout = setTimeout(() => {
       this.updateSectionFractions();
       this.handlePendingInitialChapterRestore(detail);
+      this.applyPendingInitialChapterRestore()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe();
     }, EbookReaderComponent.INITIAL_CHAPTER_RESTORE_RETRY_MS);
   }
 
