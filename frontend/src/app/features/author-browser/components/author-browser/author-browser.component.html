@@ -200,7 +200,9 @@
           class="virtual-scroller">
           <div class="author-grid"
             *cdkVirtualFor="let row of authorRows(); let rowIndex = index"
-            [ngStyle]="{'grid-template-columns': 'repeat(' + gridColumns() + ', 1fr)'}">
+            [ngStyle]="{'grid-template-columns': 'repeat(' + gridColumns() + ', ' + cardWidth() + 'px)'}"
+            [style.column-gap.px]="gridColumnGap"
+            [style.row-gap.px]="gridRowGap">
             @for (author of row; track author.id; let colIdx = $index) {
               <div class="virtual-scroller-item"
                 [ngStyle]="{width: cardWidth() + 'px', height: cardHeight() + 'px'}"

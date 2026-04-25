@@ -80,7 +80,9 @@
       } @else {
         <cdk-virtual-scroll-viewport autosize [minBufferPx]="600" [maxBufferPx]="1200" class="virtual-scroller">
           <div *cdkVirtualFor="let row of seriesRows(); let rowIdx = index" class="series-grid"
-            [ngStyle]="{'grid-template-columns': 'repeat(' + gridColumns() + ', 1fr)'}">
+            [ngStyle]="{'grid-template-columns': 'repeat(' + gridColumns() + ', ' + cardWidth + 'px)'}"
+            [style.column-gap.px]="gridColumnGap"
+            [style.row-gap.px]="gridRowGap">
             @for (series of row; track series.seriesName) {
               <div class="virtual-scroller-item"
                 [ngStyle]="{width: cardWidth + 'px', height: cardHeight + 'px'}"

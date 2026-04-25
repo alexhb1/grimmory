@@ -141,12 +141,10 @@
 
 .series-grid {
   display: grid;
-  gap: 1.25rem;
+  justify-content: center;
   place-items: start center;
   width: 100%;
   padding-top: 1rem;
-  padding-right: 2.1rem;
-  padding-left: 2.1rem;
   box-sizing: border-box;
 }
 
