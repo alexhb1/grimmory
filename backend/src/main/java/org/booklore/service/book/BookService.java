@@ -176,12 +176,9 @@ public class BookService {
         UserBookProgressEntity userProgress = userBookProgressRepository.findByUserIdAndBookId(user.getId(), bookId)
                 .orElse(new UserBookProgressEntity());
 
-        BookFileEntity primaryFile = bookEntity.getPrimaryBookFile();
-        UserBookFileProgressEntity fileProgress = primaryFile == null
-                ? null
-                : readingProgressService
-                        .fetchUserFileProgressForFile(user.getId(), primaryFile.getId())
-                        .orElse(null);
+        UserBookFileProgressEntity fileProgress = readingProgressService
+                .fetchUserFileProgress(user.getId(), Set.of(bookId))
+                .get(bookId);
 
         Book book = bookMapper.toBook(bookEntity);
         book.setShelves(filterShelvesByUserId(book.getShelves(), user.getId()));

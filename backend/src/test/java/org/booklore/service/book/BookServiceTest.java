@@ -144,7 +144,6 @@ class BookServiceTest {
         BookEntity entity = new BookEntity();
         entity.setId(3L);
         BookFileEntity primaryFile = new BookFileEntity();
-        primaryFile.setId(30L);
         primaryFile.setBook(entity);
         primaryFile.setBookType(BookFileType.PDF);
         entity.setBookFiles(List.of(primaryFile));
@@ -158,8 +157,8 @@ class BookServiceTest {
         when(userBookProgressRepository.findByUserIdAndBookId(anyLong(), eq(3L))).thenReturn(Optional.of(progress));
         UserBookFileProgressEntity fileProgress = new UserBookFileProgressEntity();
         fileProgress.setBookFile(primaryFile);
-        when(readingProgressService.fetchUserFileProgressForFile(testUser.getId(), 30L))
-                .thenReturn(Optional.of(fileProgress));
+        when(readingProgressService.fetchUserFileProgress(testUser.getId(), Set.of(3L)))
+                .thenReturn(Map.of(3L, fileProgress));
         Book mappedBook = Book.builder().id(3L).primaryFile(BookFile.builder().bookType(BookFileType.PDF).build()).metadata(BookMetadata.builder().build()).shelves(Set.of()).build();
         when(bookMapper.toBook(entity)).thenReturn(mappedBook);
         when(authenticationService.getAuthenticatedUser()).thenReturn(testUser);
@@ -169,7 +168,7 @@ class BookServiceTest {
             Book result = bookService.getBook(3L, true);
             assertEquals(3L, result.getId());
             verify(bookRepository).findByIdWithBookFiles(3L);
-            verify(readingProgressService).fetchUserFileProgressForFile(testUser.getId(), 30L);
+            verify(readingProgressService).fetchUserFileProgress(testUser.getId(), Set.of(3L));
             verify(readingProgressService).enrichBookWithProgress(mappedBook, progress, fileProgress);
         }
     }

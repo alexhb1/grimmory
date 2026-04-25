@@ -114,6 +114,7 @@ export class EbookReaderComponent implements OnInit {
   private sectionFractionsTimeout?: ReturnType<typeof setTimeout>;
   private pendingInitialChapterRestore: PendingInitialChapterRestore | null = null;
   private pendingInitialChapterRestoreTimeout?: ReturnType<typeof setTimeout>;
+  private latestRelocateProgressData: RelocateProgressData | null = null;
 
   isLoading = signal(true);
   showQuickSettings = signal(false);
@@ -316,6 +317,7 @@ export class EbookReaderComponent implements OnInit {
             this.updateSectionFractions();
             break;
           case 'relocate':
+            this.latestRelocateProgressData = event.detail;
             if (this.handlePendingInitialChapterRestore(event.detail)) {
               break;
             }
@@ -503,7 +505,7 @@ export class EbookReaderComponent implements OnInit {
     if (this.pendingInitialChapterRestoreTimeout) clearTimeout(this.pendingInitialChapterRestoreTimeout);
     this.pendingInitialChapterRestoreTimeout = setTimeout(() => {
       this.updateSectionFractions();
-      this.handlePendingInitialChapterRestore(detail);
+      this.handlePendingInitialChapterRestore(this.latestRelocateProgressData ?? detail);
     }, EbookReaderComponent.INITIAL_CHAPTER_RESTORE_RETRY_MS);
   }
 
