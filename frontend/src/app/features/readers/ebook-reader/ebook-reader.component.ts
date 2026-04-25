@@ -324,9 +324,7 @@ export class EbookReaderComponent implements OnInit {
 
             if (this.relocateTimeout) clearTimeout(this.relocateTimeout);
             this.relocateTimeout = setTimeout(() => {
-              this.progressService.handleRelocateEvent(event.detail);
-              this.progressData.set(this.progressService.currentProgressData);
-              this.updateBookmarkIndicator();
+              this.handleRelocateProgress(event.detail);
             }, 100);
 
             if (this.sectionFractionsTimeout) clearTimeout(this.sectionFractionsTimeout);
@@ -440,10 +438,12 @@ export class EbookReaderComponent implements OnInit {
 
     const currentHref = this.normalizeHref(detail.pageItem?.href ?? detail.tocItem?.href ?? null);
     if (!currentHref) {
-      this.retryInitialRestore(detail);
-      return true;
+      return this.retryInitialRestore(detail);
     }
     if (!this.hrefsMatch(currentHref, pendingRestore.href)) {
+      if (!pendingRestore.hrefNavigationResolved) {
+        return this.retryInitialRestore(detail);
+      }
       this.pendingInitialChapterRestore = null;
       return false;
     }
@@ -454,8 +454,7 @@ export class EbookReaderComponent implements OnInit {
     );
 
     if (targetFraction === null) {
-      this.retryInitialRestore(detail);
-      return true;
+      return this.retryInitialRestore(detail);
     }
 
     if (typeof detail.fraction === 'number' && Math.abs(detail.fraction - targetFraction) < 0.0001) {
@@ -490,15 +489,16 @@ export class EbookReaderComponent implements OnInit {
     }
   }
 
-  private retryInitialRestore(detail: RelocateProgressData): void {
+  private retryInitialRestore(detail: RelocateProgressData): boolean {
     const pendingRestore = this.pendingInitialChapterRestore;
     if (!pendingRestore) {
-      return;
+      return false;
     }
 
     if (pendingRestore.attempts >= EbookReaderComponent.INITIAL_CHAPTER_RESTORE_MAX_ATTEMPTS) {
       this.pendingInitialChapterRestore = null;
-      return;
+      this.handleRelocateProgress(this.latestRelocateProgressData ?? detail);
+      return true;
     }
 
     pendingRestore.attempts += 1;
@@ -507,6 +507,13 @@ export class EbookReaderComponent implements OnInit {
       this.updateSectionFractions();
       this.handlePendingInitialChapterRestore(this.latestRelocateProgressData ?? detail);
     }, EbookReaderComponent.INITIAL_CHAPTER_RESTORE_RETRY_MS);
+    return true;
+  }
+
+  private handleRelocateProgress(detail: RelocateProgressData): void {
+    this.progressService.handleRelocateEvent(detail);
+    this.progressData.set(this.progressService.currentProgressData);
+    this.updateBookmarkIndicator();
   }
 
   private resolveChapterFraction(sectionIndex: number | undefined, chapterProgressPercent: number): number | null {
