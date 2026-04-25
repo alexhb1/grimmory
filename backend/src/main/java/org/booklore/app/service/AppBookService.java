@@ -3,6 +3,7 @@ package org.booklore.app.service;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
+import lombok.extern.slf4j.Slf4j;
 import org.booklore.config.security.service.AuthenticationService;
 import org.booklore.exception.ApiError;
 import org.booklore.app.dto.AppBookDetail;
@@ -48,6 +49,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 @Service
+@Slf4j
 @Transactional(readOnly = true)
 public class AppBookService {
 
@@ -179,6 +181,8 @@ public class AppBookService {
                 .findMostRecentAudiobookProgressByUserIdAndBookId(userId, bookId)
                 .orElse(null);
 
+        logEpubRestoreState(userId, bookId, progress, primaryFileProgress);
+
         return mobileBookMapper.toDetail(book, progress, primaryFileProgress, audiobookFileProgress);
     }
 
@@ -215,6 +219,34 @@ public class AppBookService {
         }
         return userBookFileProgressRepository.findByUserIdAndBookFileId(userId, primaryFile.getId())
                 .orElse(null);
+    }
+
+    private void logEpubRestoreState(Long userId,
+                                     Long bookId,
+                                     UserBookProgressEntity progress,
+                                     UserBookFileProgressEntity primaryFileProgress) {
+        if (!log.isDebugEnabled() || progress == null) {
+            return;
+        }
+
+        String href = progress.getEpubProgressHref();
+        String cfi = progress.getEpubProgress();
+        Float percentage = progress.getEpubProgressPercent();
+        Float contentSourceProgressPercent = primaryFileProgress != null
+                ? primaryFileProgress.getContentSourceProgressPercent()
+                : null;
+
+        if (href == null && cfi == null && percentage == null && contentSourceProgressPercent == null) {
+            return;
+        }
+
+        log.debug("App book detail EPUB restore state: userId={}, bookId={}, cfiPresent={}, href={}, percentage={}, contentSourceProgressPercent={}",
+                userId,
+                bookId,
+                cfi != null,
+                href,
+                percentage,
+                contentSourceProgressPercent);
     }
 
     @Transactional
