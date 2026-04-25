@@ -2,12 +2,12 @@ package org.booklore.util.koreader;
 
 import org.booklore.exception.ApiError;
 import org.booklore.util.epub.EpubContentReader;
-import org.grimmory.epub4j.cfi.CfiExpression;
-import org.grimmory.epub4j.cfi.CfiParser;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.grimmory.epub4j.cfi.CfiExpression;
 import org.grimmory.epub4j.cfi.CfiConverter;
+import org.grimmory.epub4j.cfi.CfiParser;
 import org.grimmory.epub4j.cfi.XPointerResult;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -232,12 +232,10 @@ public class EpubCfiService {
         for (int i = 0; i < steps.size(); i++) {
             CfiExpression.PathStep step = steps.get(i);
             if (!step.targetsElement()) {
-                // Odd-numbered terminal steps address a text node within the current element.
                 break;
             }
 
             if (i == 0 && step.position() == 4) {
-                // The first content step is the body element itself.
                 continue;
             }
 
