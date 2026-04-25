@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, CUSTOM_ELEMENTS_SCHEMA, DestroyRef, effect, HostListener, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {forkJoin, from, Observable, of, throwError} from 'rxjs';
+import {firstValueFrom, forkJoin, from, Observable, of, throwError} from 'rxjs';
 import {catchError, map, switchMap, tap} from 'rxjs/operators';
 import {MessageService} from 'primeng/api';
 import {ReaderLoaderService} from './core/loader.service';
@@ -462,14 +462,17 @@ export class EbookReaderComponent implements OnInit {
     }
 
     pendingRestore.targetFraction = targetFraction;
+    if (pendingRestore.hrefNavigationResolved) {
+      void this.applyPendingInitialChapterRestore();
+    }
     return true;
   }
 
-  private applyPendingInitialChapterRestore(): Observable<void> {
+  private async applyPendingInitialChapterRestore(): Promise<void> {
     const pendingRestore = this.pendingInitialChapterRestore;
     const targetFraction = pendingRestore?.targetFraction;
     if (!pendingRestore || targetFraction === undefined || !pendingRestore.hrefNavigationResolved) {
-      return of(undefined);
+      return;
     }
 
     this.pendingInitialChapterRestore = null;
@@ -478,7 +481,11 @@ export class EbookReaderComponent implements OnInit {
       this.pendingInitialChapterRestoreTimeout = undefined;
     }
 
-    return this.viewManager.goToFraction(targetFraction);
+    try {
+      await firstValueFrom(this.viewManager.goToFraction(targetFraction));
+    } catch (error) {
+      console.error('Failed to restore initial chapter progress', error);
+    }
   }
 
   private retryInitialRestore(detail: RelocateProgressData): void {
@@ -497,9 +504,6 @@ export class EbookReaderComponent implements OnInit {
     this.pendingInitialChapterRestoreTimeout = setTimeout(() => {
       this.updateSectionFractions();
       this.handlePendingInitialChapterRestore(detail);
-      this.applyPendingInitialChapterRestore()
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe();
     }, EbookReaderComponent.INITIAL_CHAPTER_RESTORE_RETRY_MS);
   }
 
