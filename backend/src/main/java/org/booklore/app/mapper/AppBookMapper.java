@@ -73,28 +73,23 @@ public interface AppBookMapper {
     @Mapping(target = "isPhysical", source = "book.isPhysical")
     @Mapping(target = "fileTypes", source = "book", qualifiedByName = "mapFileTypes")
     @Mapping(target = "files", source = "book", qualifiedByName = "mapFiles")
-    @Mapping(target = "epubProgress", expression = "java(mapEpubProgress(progress, primaryFileProgress))")
+    @Mapping(target = "epubProgress", source = "progress", qualifiedByName = "mapEpubProgress")
     @Mapping(target = "pdfProgress", source = "progress", qualifiedByName = "mapPdfProgress")
     @Mapping(target = "cbxProgress", source = "progress", qualifiedByName = "mapCbxProgress")
-    @Mapping(target = "audiobookProgress", expression = "java(mapAudiobookProgress(audiobookFileProgress))")
+    @Mapping(target = "audiobookProgress", source = "fileProgress", qualifiedByName = "mapAudiobookProgress")
     @Mapping(target = "koreaderProgress", source = "progress", qualifiedByName = "mapKoreaderProgress")
-    AppBookDetail toDetail(BookEntity book,
-                           UserBookProgressEntity progress,
-                           UserBookFileProgressEntity primaryFileProgress,
-                           UserBookFileProgressEntity audiobookFileProgress);
+    AppBookDetail toDetail(BookEntity book, UserBookProgressEntity progress, UserBookFileProgressEntity fileProgress);
 
-    default AppBookProgressResponse toProgressResponse(UserBookProgressEntity progress,
-                                                       UserBookFileProgressEntity primaryFileProgress,
-                                                       UserBookFileProgressEntity audiobookFileProgress) {
+    default AppBookProgressResponse toProgressResponse(UserBookProgressEntity progress, UserBookFileProgressEntity fileProgress) {
         return AppBookProgressResponse.builder()
                 .readProgress(mapReadProgress(progress))
                 .readStatus(progress != null && progress.getReadStatus() != null
                         ? progress.getReadStatus().name() : null)
                 .lastReadTime(progress != null ? progress.getLastReadTime() : null)
-                .epubProgress(mapEpubProgress(progress, primaryFileProgress))
+                .epubProgress(mapEpubProgress(progress))
                 .pdfProgress(mapPdfProgress(progress))
                 .cbxProgress(mapCbxProgress(progress))
-                .audiobookProgress(mapAudiobookProgress(audiobookFileProgress))
+                .audiobookProgress(mapAudiobookProgress(fileProgress))
                 .koreaderProgress(mapKoreaderProgress(progress))
                 .build();
     }
@@ -180,17 +175,14 @@ public interface AppBookMapper {
         return null;
     }
 
-    default AppBookDetail.EpubProgress mapEpubProgress(UserBookProgressEntity progress,
-                                                       UserBookFileProgressEntity primaryFileProgress) {
-        if (progress == null || (progress.getEpubProgress() == null && progress.getEpubProgressHref() == null)) {
+    @Named("mapEpubProgress")
+    default AppBookDetail.EpubProgress mapEpubProgress(UserBookProgressEntity progress) {
+        if (progress == null || progress.getEpubProgress() == null) {
             return null;
         }
         return AppBookDetail.EpubProgress.builder()
                 .cfi(progress.getEpubProgress())
                 .href(progress.getEpubProgressHref())
-                .contentSourceProgressPercent(primaryFileProgress != null
-                        ? primaryFileProgress.getContentSourceProgressPercent()
-                        : null)
                 .percentage(progress.getEpubProgressPercent())
                 .updatedAt(progress.getLastReadTime())
                 .build();

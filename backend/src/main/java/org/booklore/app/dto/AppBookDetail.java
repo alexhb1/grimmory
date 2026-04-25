@@ -62,7 +62,6 @@ public class AppBookDetail {
     public static class EpubProgress {
         private String cfi;
         private String href;
-        private Float contentSourceProgressPercent;
         private Float percentage;
         private Instant updatedAt;
     }
