@@ -176,10 +176,12 @@ public class BookService {
         UserBookProgressEntity userProgress = userBookProgressRepository.findByUserIdAndBookId(user.getId(), bookId)
                 .orElse(new UserBookProgressEntity());
 
-        // Fetch file-level progress for the book (most recent across all files)
-        UserBookFileProgressEntity fileProgress = readingProgressService
-                .fetchUserFileProgress(user.getId(), Set.of(bookId))
-                .get(bookId);
+        BookFileEntity primaryFile = bookEntity.getPrimaryBookFile();
+        UserBookFileProgressEntity fileProgress = primaryFile == null
+                ? null
+                : readingProgressService
+                        .fetchUserFileProgressForFile(user.getId(), primaryFile.getId())
+                        .orElse(null);
 
         Book book = bookMapper.toBook(bookEntity);
         book.setShelves(filterShelvesByUserId(book.getShelves(), user.getId()));
