@@ -173,11 +173,13 @@ public class AppBookService {
                 .findByUserIdAndBookId(userId, bookId)
                 .orElse(null);
 
-        UserBookFileProgressEntity fileProgress = userBookFileProgressRepository
+        UserBookFileProgressEntity primaryFileProgress = resolvePrimaryFileProgress(userId, book);
+
+        UserBookFileProgressEntity audiobookFileProgress = userBookFileProgressRepository
                 .findMostRecentAudiobookProgressByUserIdAndBookId(userId, bookId)
                 .orElse(null);
 
-        return mobileBookMapper.toDetail(book, progress, fileProgress);
+        return mobileBookMapper.toDetail(book, progress, primaryFileProgress, audiobookFileProgress);
     }
 
     @Transactional(readOnly = true)
@@ -197,11 +199,22 @@ public class AppBookService {
                 .findByUserIdAndBookId(userId, bookId)
                 .orElse(null);
 
-        UserBookFileProgressEntity fileProgress = userBookFileProgressRepository
+        UserBookFileProgressEntity primaryFileProgress = resolvePrimaryFileProgress(userId, book);
+
+        UserBookFileProgressEntity audiobookFileProgress = userBookFileProgressRepository
                 .findMostRecentAudiobookProgressByUserIdAndBookId(userId, bookId)
                 .orElse(null);
 
-        return mobileBookMapper.toProgressResponse(progress, fileProgress);
+        return mobileBookMapper.toProgressResponse(progress, primaryFileProgress, audiobookFileProgress);
+    }
+
+    private UserBookFileProgressEntity resolvePrimaryFileProgress(Long userId, BookEntity book) {
+        BookFileEntity primaryFile = book.getPrimaryBookFile();
+        if (primaryFile == null) {
+            return null;
+        }
+        return userBookFileProgressRepository.findByUserIdAndBookFileId(userId, primaryFile.getId())
+                .orElse(null);
     }
 
     @Transactional
