@@ -28,7 +28,7 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
 
     @EntityGraph(attributePaths = {"book", "book.bookFiles", "book.library", "book.libraryPath"})
     @Query("""
-        SELECT ubp FROM UserBookProgressEntity ubp
+        SELECT DISTINCT ubp FROM UserBookProgressEntity ubp
         WHERE ubp.user.id = :userId
           AND ubp.book.id = :bookId
     """)
@@ -41,7 +41,7 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
 
     @EntityGraph(attributePaths = {"book", "book.bookFiles", "book.library", "book.libraryPath"})
     @Query("""
-        SELECT ubp FROM UserBookProgressEntity ubp
+        SELECT DISTINCT ubp FROM UserBookProgressEntity ubp
         WHERE ubp.user.id = :userId
           AND ubp.book.id IN (
               SELECT ksb.bookId FROM KoboSnapshotBookEntity ksb
