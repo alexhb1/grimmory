@@ -1,0 +1,29 @@
+/*
+ * Small global utilities.
+ *
+ * Keep this file limited to generic helpers that are safe anywhere in the app.
+ * Prefer component styles for feature-specific layout or presentation.
+ */
+
+.hidden {
+  display: none;
+}
+
+.gradient-divider {
+  flex-shrink: 0;
+  height: 1px;
+  min-height: 1px;
+  margin: 0.25rem 0;
+  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+}
+
+.chart-info-icon {
+  color: rgb(255 255 255 / 35%);
+  font-size: 0.9rem;
+  cursor: help;
+  transition: color var(--transition-base);
+
+  &:hover {
+    color: rgb(255 255 255 / 80%);
+  }
+}
