@@ -4,6 +4,8 @@
   <nav
     class="layout-sidebar"
     [attr.aria-label]="t('menu.primaryNav')"
+    [attr.aria-hidden]="sidebarHidden() ? 'true' : null"
+    [attr.inert]="sidebarHidden() ? '' : null"
     [cdkTrapFocus]="layoutService.mobileDrawerOpen()"
   >
     <app-menu></app-menu>
@@ -21,11 +23,9 @@
       (keyup)="onResizeKeyup($event)"
     ></div>
   </nav>
-  <div class="layout-main-container">
-    <div class="layout-main">
-      <router-outlet></router-outlet>
-    </div>
-  </div>
+  <main class="layout-main">
+    <router-outlet></router-outlet>
+  </main>
   <button type="button" class="layout-mask" [attr.aria-label]="t('closeNavigation')" (click)="closeMobileSidebar()"></button>
 </div>
 </ng-container>

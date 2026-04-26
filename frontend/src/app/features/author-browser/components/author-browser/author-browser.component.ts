@@ -112,7 +112,10 @@ export class AuthorBrowserComponent implements OnInit {
     }
   }
 
-  private static readonly GRID_GAP = 20;
+  private static readonly GRID_COLUMN_GAP = 16;
+  private static readonly GRID_ROW_GAP = 20;
+  readonly gridColumnGap = AuthorBrowserComponent.GRID_COLUMN_GAP;
+  readonly gridRowGap = AuthorBrowserComponent.GRID_ROW_GAP;
   private readonly viewportWidth = signal(0);
   private viewportResizeObserver: ResizeObserver | undefined;
 
@@ -219,10 +222,12 @@ export class AuthorBrowserComponent implements OnInit {
     return Math.round(base * this.authorScaleService.scaleFactor());
   });
 
-  readonly gridColumnMinWidth = computed(() => `${this.cardWidth()}px`);
-
   readonly gridColumns = computed(() => {
-    return computeGridColumns(this.viewportWidth(), this.cardWidth() || 165, AuthorBrowserComponent.GRID_GAP);
+    return computeGridColumns(
+      this.viewportWidth(),
+      this.cardWidth() || 165,
+      AuthorBrowserComponent.GRID_COLUMN_GAP
+    );
   });
 
   readonly authorRows = computed(() => {

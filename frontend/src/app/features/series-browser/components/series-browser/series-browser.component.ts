@@ -56,7 +56,10 @@ export class SeriesBrowserComponent implements OnInit {
   private static readonly BASE_HEIGHT = 285;
   private static readonly MOBILE_BASE_WIDTH = 180;
   private static readonly MOBILE_BASE_HEIGHT = 250;
-  private static readonly GRID_GAP = 20;
+  private static readonly GRID_COLUMN_GAP = 16;
+  private static readonly GRID_ROW_GAP = 20;
+  readonly gridColumnGap = SeriesBrowserComponent.GRID_COLUMN_GAP;
+  readonly gridRowGap = SeriesBrowserComponent.GRID_ROW_GAP;
 
   private seriesDataService = inject(SeriesDataService);
   private bookService = inject(BookService);
@@ -131,12 +134,12 @@ export class SeriesBrowserComponent implements OnInit {
     return Math.round(base * this.seriesScaleService.scaleFactor());
   }
 
-  get gridColumnMinWidth(): string {
-    return `${this.cardWidth}px`;
-  }
-
   readonly gridColumns = computed(() => {
-    return computeGridColumns(this.viewportWidth(), this.cardWidth || 230, SeriesBrowserComponent.GRID_GAP);
+    return computeGridColumns(
+      this.viewportWidth(),
+      this.cardWidth || 230,
+      SeriesBrowserComponent.GRID_COLUMN_GAP
+    );
   });
 
   readonly seriesRows = computed(() => {
