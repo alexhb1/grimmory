@@ -99,8 +99,7 @@ describe('AuthorDetailComponent', () => {
         {
           provide: CoverScalePreferenceService,
           useValue: {
-            currentCardSize: vi.fn(() => 'medium'),
-            gridColumnMinWidth: vi.fn(() => '12rem'),
+            currentCardSize: vi.fn(() => ({width: 135, height: 220})),
           },
         },
         {

@@ -11,7 +11,6 @@ describe('SeriesScalePreferenceService', () => {
   };
 
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.restoreAllMocks();
     localStorageService.get.mockReset();
     localStorageService.set.mockReset();
@@ -26,7 +25,6 @@ describe('SeriesScalePreferenceService', () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     TestBed.resetTestingModule();
   });
 
@@ -36,21 +34,17 @@ describe('SeriesScalePreferenceService', () => {
     expect(service.scaleFactor()).toBe(0.75);
 
     service.setScale(0.75);
-    vi.runAllTimers();
 
     expect(localStorageService.set).not.toHaveBeenCalled();
   });
 
-  it('debounces and persists the most recent scale value', () => {
+  it('persists updated scale immediately', () => {
     const service = TestBed.inject(SeriesScalePreferenceService);
 
     service.setScale(0.9);
-    service.setScale(1.1);
-
-    vi.advanceTimersByTime(1000);
 
     expect(localStorageService.set).toHaveBeenCalledOnce();
-    expect(localStorageService.set).toHaveBeenCalledWith('seriesScalePreference', 1.1);
+    expect(localStorageService.set).toHaveBeenCalledWith('seriesScalePreference', 0.9);
   });
 
   it('falls back to the default scale when storage contains an invalid value', () => {

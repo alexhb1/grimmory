@@ -6,7 +6,6 @@ import {LocalStorageService} from '../../../shared/service/local-storage.service
 })
 export class SeriesScalePreferenceService {
 
-  private readonly DEBOUNCE_MS = 1000;
   private readonly STORAGE_KEY = 'seriesScalePreference';
 
   private readonly localStorageService = inject(LocalStorageService);
@@ -14,7 +13,6 @@ export class SeriesScalePreferenceService {
   private readonly _scaleFactor = signal(1.0);
   readonly scaleFactor = this._scaleFactor.asReadonly();
 
-  private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private lastPersistedScale = 1.0;
 
   constructor() {
@@ -28,17 +26,7 @@ export class SeriesScalePreferenceService {
     if (scale === this.lastPersistedScale) {
       return;
     }
-    this.scheduleSave(scale);
-  }
-
-  private scheduleSave(scale: number): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    this.saveTimeout = setTimeout(() => {
-      this.saveScalePreference(scale);
-    }, this.DEBOUNCE_MS);
+    this.saveScalePreference(scale);
   }
 
   private saveScalePreference(scale: number): void {

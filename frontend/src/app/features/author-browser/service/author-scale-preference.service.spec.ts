@@ -11,7 +11,6 @@ describe('AuthorScalePreferenceService', () => {
   };
 
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.restoreAllMocks();
     localStorageService.get.mockReset();
     localStorageService.set.mockReset();
@@ -26,7 +25,6 @@ describe('AuthorScalePreferenceService', () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     TestBed.resetTestingModule();
   });
 
@@ -36,24 +34,17 @@ describe('AuthorScalePreferenceService', () => {
     expect(service.scaleFactor()).toBe(1.5);
 
     service.setScale(1.5);
-    vi.runAllTimers();
 
     expect(localStorageService.set).not.toHaveBeenCalled();
   });
 
-  it('debounces and persists the most recent scale value', () => {
+  it('persists updated scale immediately', () => {
     const service = TestBed.inject(AuthorScalePreferenceService);
 
     service.setScale(1.2);
-    service.setScale(1.4);
-
-    vi.advanceTimersByTime(999);
-    expect(localStorageService.set).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1);
 
     expect(localStorageService.set).toHaveBeenCalledOnce();
-    expect(localStorageService.set).toHaveBeenCalledWith('authorScalePreference', 1.4);
+    expect(localStorageService.set).toHaveBeenCalledWith('authorScalePreference', 1.2);
   });
 
   it('falls back to the default scale when storage contains an invalid value', () => {
