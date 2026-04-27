@@ -24,5 +24,6 @@
   "review": "Überprüfen",
   "libraryPathInaccessible": "Der Pfad zur Bibliothek ist nicht zugreifbar",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

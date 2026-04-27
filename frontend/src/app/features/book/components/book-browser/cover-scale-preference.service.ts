@@ -1,5 +1,6 @@
-import {computed, inject, Injectable, signal} from '@angular/core';
+import {computed, inject, Injectable} from '@angular/core';
 import {LocalStorageService} from '../../../../shared/service/local-storage.service';
+import {ScalePreference} from '../../../../shared/util/scale-preference.util';
 
 @Injectable({
   providedIn: 'root'
@@ -13,50 +14,19 @@ export class CoverScalePreferenceService {
   private readonly MAX_SCALE = 1.5;
 
   private readonly localStorageService = inject(LocalStorageService);
-
-  private readonly _scaleFactor = signal(1.0);
-  readonly scaleFactor = this._scaleFactor.asReadonly();
+  private readonly scalePreference = new ScalePreference(this.localStorageService, {
+    storageKey: this.STORAGE_KEY,
+    minScale: this.MIN_SCALE,
+    maxScale: this.MAX_SCALE,
+  });
+  readonly scaleFactor = this.scalePreference.scaleFactor;
 
   readonly currentCardSize = computed(() => ({
     width: Math.round(this.BASE_WIDTH * this.scaleFactor()),
     height: Math.round(this.BASE_HEIGHT * this.scaleFactor()),
   }));
 
-  private lastPersistedScale = 1.0;
-
-  constructor() {
-    const initialScale = this.loadScaleFromStorage();
-    this._scaleFactor.set(initialScale);
-    this.lastPersistedScale = initialScale;
-  }
-
   setScale(scale: number): void {
-    const normalizedScale = this.clampScale(scale);
-    this._scaleFactor.set(normalizedScale);
-    if (normalizedScale === this.lastPersistedScale) {
-      return;
-    }
-    this.saveScalePreference(normalizedScale);
-  }
-
-  private saveScalePreference(scale: number): void {
-    this.localStorageService.set(this.STORAGE_KEY, scale);
-    this.lastPersistedScale = scale;
-  }
-
-  private loadScaleFromStorage(): number {
-    const saved = this.localStorageService.get<number>(this.STORAGE_KEY);
-    if (typeof saved === 'number' && !Number.isNaN(saved)) {
-      const clamped = this.clampScale(saved);
-      if (clamped !== saved) {
-        this.saveScalePreference(clamped);
-      }
-      return clamped;
-    }
-    return 1.0;
-  }
-
-  private clampScale(scale: number): number {
-    return Math.min(this.MAX_SCALE, Math.max(this.MIN_SCALE, scale));
+    this.scalePreference.setScale(scale);
   }
 }

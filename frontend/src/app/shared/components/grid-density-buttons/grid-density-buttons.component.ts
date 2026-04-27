@@ -8,7 +8,10 @@ export type GridDensityDirection = 'smaller' | 'larger';
   standalone: true,
   imports: [TranslocoPipe],
   template: `
-    <div class="browser-grid-options">
+    <div
+      class="browser-grid-options"
+      role="group"
+      [attr.aria-label]="'common.cardSizeControls' | transloco">
       <button
         type="button"
         class="browser-grid-option-btn"

@@ -24,5 +24,6 @@
   "review": "Granska",
   "libraryPathInaccessible": "Bibliotekssökvägen är otillgänglig",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

@@ -24,5 +24,6 @@
   "review": "確認",
   "libraryPathInaccessible": "",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

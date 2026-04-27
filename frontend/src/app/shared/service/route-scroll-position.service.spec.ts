@@ -30,6 +30,7 @@ describe('RouteScrollPositionService', () => {
     service.savePosition('route-100', 100);
 
     expect(service.getPosition('route-0')).toBe(0);
+    expect(service.getPosition('route-99')).toBe(99);
     expect(service.getPosition('route-1')).toBeUndefined();
     expect(service.getPosition('route-100')).toBe(100);
   });

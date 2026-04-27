@@ -24,5 +24,6 @@
   "review": "Pregledaj",
   "libraryPathInaccessible": "Put do zbirke nije dostupan",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

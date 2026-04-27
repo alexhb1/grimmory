@@ -16,6 +16,7 @@ import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/vi
 import {RouteScrollPositionService} from '../../../../shared/service/route-scroll-position.service';
 import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 import {LocalStorageService} from '../../../../shared/service/local-storage.service';
+import {ScalePreference} from '../../../../shared/util/scale-preference.util';
 
 interface FilterOption {
   label: string;
@@ -85,8 +86,12 @@ export class SeriesBrowserComponent implements OnInit {
 
   private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
   private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
-  private lastPersistedScale = 1.0;
-  private readonly scaleFactor = signal(this.loadScalePreference());
+  private readonly scalePreference = new ScalePreference(this.localStorageService, {
+    storageKey: SeriesBrowserComponent.SCALE_STORAGE_KEY,
+    minScale: SeriesBrowserComponent.MIN_SCALE,
+    maxScale: SeriesBrowserComponent.MAX_SCALE,
+  });
+  private readonly scaleFactor = this.scalePreference.scaleFactor;
   readonly screenWidth = signal(typeof window !== 'undefined' ? window.innerWidth : 1024);
   filterOptions: FilterOption[] = [];
   sortOptions: SortOption[] = [];
@@ -189,33 +194,7 @@ export class SeriesBrowserComponent implements OnInit {
   }
 
   private setScale(scale: number): void {
-    const normalizedScale = this.clampScale(scale);
-    this.scaleFactor.set(normalizedScale);
-    if (normalizedScale === this.lastPersistedScale) {
-      return;
-    }
-    this.saveScalePreference(normalizedScale);
-  }
-
-  private loadScalePreference(): number {
-    const saved = this.localStorageService.get<number>(SeriesBrowserComponent.SCALE_STORAGE_KEY);
-    if (typeof saved === 'number' && !Number.isNaN(saved)) {
-      const clamped = this.clampScale(saved);
-      if (clamped !== saved) {
-        this.saveScalePreference(clamped);
-      }
-      return clamped;
-    }
-    return 1.0;
-  }
-
-  private saveScalePreference(scale: number): void {
-    this.localStorageService.set(SeriesBrowserComponent.SCALE_STORAGE_KEY, scale);
-    this.lastPersistedScale = scale;
-  }
-
-  private clampScale(scale: number): number {
-    return Math.min(SeriesBrowserComponent.MAX_SCALE, Math.max(SeriesBrowserComponent.MIN_SCALE, scale));
+    this.scalePreference.setScale(scale);
   }
 
   navigateToSeries(series: SeriesSummary): void {

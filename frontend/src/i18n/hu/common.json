@@ -24,5 +24,6 @@
   "review": "Felülvizsgálat",
   "libraryPathInaccessible": "Könyvtár elérési útvonal elérhetetlen",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

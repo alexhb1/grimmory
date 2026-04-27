@@ -7,6 +7,7 @@ interface TrackRouteOptions {
   scrollElement: Signal<ElementRef<HTMLElement> | undefined>;
   route: ActivatedRoute;
   destroyRef: DestroyRef;
+  dismissOverlaysBeforeSave?: boolean;
   beforeSave?: () => void;
 }
 
@@ -55,11 +56,18 @@ export class RouteScrollPositionService {
     return this.createKey(path, route.snapshot.params);
   }
 
+  dismissBodyOverlays(): void {
+    document.querySelectorAll('.p-tieredmenu-overlay').forEach(el => el.remove());
+  }
+
   trackRoute(options: TrackRouteOptions): void {
     this.router.events.pipe(
       filter((event): event is NavigationStart => event instanceof NavigationStart),
       takeUntilDestroyed(options.destroyRef),
     ).subscribe(() => {
+      if (options.dismissOverlaysBeforeSave) {
+        this.dismissBodyOverlays();
+      }
       options.beforeSave?.();
       const element = options.scrollElement()?.nativeElement;
       if (element) {

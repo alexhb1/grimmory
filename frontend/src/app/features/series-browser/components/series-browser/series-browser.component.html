@@ -70,7 +70,7 @@
         <div #scrollElement class="virtual-scroller">
           <div class="virtual-content" [style.height.px]="virtualGrid.virtualizer.getTotalSize()">
             @for (virtualItem of virtualGrid.virtualizer.getVirtualItems(); track virtualItem.key) {
-              @if (filteredSeries()[virtualItem.index]; as series) {
+              @if (seriesList[virtualItem.index]; as series) {
                 <div
                   class="virtual-cell"
                   [style.width.px]="virtualGrid.itemWidth()"

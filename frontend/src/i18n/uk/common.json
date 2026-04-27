@@ -24,5 +24,6 @@
   "review": "Перевірити",
   "libraryPathInaccessible": "Шлях до бібліотеки недоступний",
   "decreaseCardSize": "",
-  "increaseCardSize": ""
+  "increaseCardSize": "",
+  "cardSizeControls": ""
 }

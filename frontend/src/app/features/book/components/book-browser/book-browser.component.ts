@@ -1,4 +1,4 @@
-import {AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, viewChild, ViewChild} from '@angular/core';
+import {AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, viewChild} from '@angular/core';
 import {takeUntilDestroyed, toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from '@angular/router';
 import {ConfirmationService, MenuItem, MessageService} from 'primeng/api';
@@ -118,7 +118,7 @@ export class BookBrowserComponent implements AfterViewInit {
       scrollElement: this.scrollElement,
       route: this.activatedRoute,
       destroyRef: this.destroyRef,
-      beforeSave: () => this.dismissBodyMenus(),
+      dismissOverlaysBeforeSave: true,
     });
     this.destroyRef.onDestroy(() => this.bookSelectionService.deselectAll());
   }
@@ -460,10 +460,8 @@ export class BookBrowserComponent implements AfterViewInit {
     }
   });
 
-  @ViewChild(BookTableComponent)
-  bookTableComponent!: BookTableComponent;
-  @ViewChild(BookFilterComponent, {static: true})
-  bookFilterComponent!: BookFilterComponent;
+  private readonly bookTableComponent = viewChild(BookTableComponent);
+  private readonly bookFilterComponent = viewChild(BookFilterComponent);
 
   @HostListener('window:resize')
   onResize(): void {
@@ -563,9 +561,10 @@ export class BookBrowserComponent implements AfterViewInit {
   readonly sortCriteriaCount = computed(() => this.bookSorter.selectedSortCriteria.length);
 
   ngAfterViewInit(): void {
-    if (this.bookFilterComponent) {
-      this.bookFilterComponent.setFilters(this.parsedFilters);
-      this.bookFilterComponent.onFilterModeChange(this.selectedFilterMode());
+    const bookFilterComponent = this.bookFilterComponent();
+    if (bookFilterComponent) {
+      bookFilterComponent.setFilters(this.parsedFilters);
+      bookFilterComponent.onFilterModeChange(this.selectedFilterMode());
     }
   }
 
@@ -587,9 +586,7 @@ export class BookBrowserComponent implements AfterViewInit {
     if (scrollElement) {
       scrollElement.scrollTop = 0;
     }
-    if (this.bookTableComponent) {
-      this.bookTableComponent.scrollToTop();
-    }
+    this.bookTableComponent()?.scrollToTop();
   }
 
   private readonly syncMetadataMenuEffect = effect(() => {
@@ -626,9 +623,7 @@ export class BookBrowserComponent implements AfterViewInit {
 
       if (parseResult.filterMode !== this.selectedFilterMode()) {
         this.selectedFilterMode.set(parseResult.filterMode);
-        if (this.bookFilterComponent) {
-          this.bookFilterComponent.onFilterModeChange(parseResult.filterMode);
-        }
+        this.bookFilterComponent()?.onFilterModeChange(parseResult.filterMode);
       }
 
       const filterParams = queryParamMap.get('filter');
@@ -637,9 +632,7 @@ export class BookBrowserComponent implements AfterViewInit {
         this.settingFiltersFromUrl = true;
         this.selectedFilter.set(parseResult.filters);
 
-        if (this.bookFilterComponent) {
-          this.bookFilterComponent.setFilters?.(parseResult.filters);
-        }
+        this.bookFilterComponent()?.setFilters?.(parseResult.filters);
 
         if (Object.keys(parseResult.filters).length > 0) {
           this.currentFilterLabel.set(this.computedFilterLabel());
@@ -709,7 +702,10 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   onVisibleColumnsChange(selected: { field: string; header: string }[]): void {
-    const allFields = this.bookTableComponent.allColumns.map(col => col.field);
+    const bookTableComponent = this.bookTableComponent();
+    if (!bookTableComponent) return;
+
+    const allFields = bookTableComponent.allColumns.map(col => col.field);
     this.visibleColumns.set(selected.sort(
       (a, b) => allFields.indexOf(a.field) - allFields.indexOf(b.field)
     ));
@@ -740,9 +736,7 @@ export class BookBrowserComponent implements AfterViewInit {
 
   deselectAllBooks(): void {
     this.bookSelectionService.deselectAll();
-    if (this.bookTableComponent) {
-      this.bookTableComponent.clearSelectedBooks();
-    }
+    this.bookTableComponent()?.clearSelectedBooks();
   }
 
   confirmDeleteBooks(): void {
@@ -890,7 +884,7 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   resetFilters(): void {
-    this.bookFilterComponent?.clearActiveFilter();
+    this.bookFilterComponent()?.clearActiveFilter();
   }
 
   clearFilter(): void {
@@ -1141,10 +1135,6 @@ export class BookBrowserComponent implements AfterViewInit {
         this.DESKTOP_MAX_SCALE
       ));
     });
-  }
-
-  private dismissBodyMenus(): void {
-    document.querySelectorAll('.p-tieredmenu-overlay').forEach(el => el.remove());
   }
 
   private loadMobileColumnsPreference(): void {
