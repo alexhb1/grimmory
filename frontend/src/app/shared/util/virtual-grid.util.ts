@@ -43,11 +43,19 @@ export function scaleForGridColumns(
   maxScale: number
 ): number {
   const targetColumns = Math.max(1, Math.round(columns));
+  // scaleForGridColumns uses +0.5 so computeGridColumns' floor settles on targetColumns.
   const targetWidth = ((viewportWidth + gap) / (targetColumns + 0.5)) - gap;
   const scale = targetWidth / baseWidth;
   return Math.min(maxScale, Math.max(minScale, scale));
 }
 
+/**
+ * Creates a TanStack virtual grid inside Angular's injection context.
+ *
+ * Because this calls injectVirtualizer() and effect(), call it from a field
+ * initializer, constructor, or runInInjectionContext(); lifecycle hooks such as
+ * ngOnInit will throw NG0203 unless wrapped in runInInjectionContext().
+ */
 export function createVirtualGrid(options: VirtualGridOptions) {
   const viewportWidth = signal(0);
   const gap = computed(() => typeof options.gap === 'number' ? options.gap : options.gap());

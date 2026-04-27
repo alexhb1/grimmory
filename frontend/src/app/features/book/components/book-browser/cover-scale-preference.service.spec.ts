@@ -35,6 +35,22 @@ describe('CoverScalePreferenceService', () => {
     expect(service.currentCardSize()).toEqual({width: 203, height: 330});
   });
 
+  it('normalizes out-of-range saved scale values', () => {
+    localStorageService.get.mockReturnValue(3);
+
+    TestBed.configureTestingModule({
+      providers: [
+        CoverScalePreferenceService,
+        {provide: LocalStorageService, useValue: localStorageService},
+      ]
+    });
+
+    service = TestBed.inject(CoverScalePreferenceService);
+
+    expect(service.scaleFactor()).toBe(1.5);
+    expect(localStorageService.set).toHaveBeenCalledWith('coverScalePreference', 1.5);
+  });
+
   it('falls back to the default scale and skips persistence when unchanged', () => {
     localStorageService.get.mockReturnValue(null);
 

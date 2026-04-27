@@ -12,7 +12,7 @@ describe('RouteScrollPositionService', () => {
     service = TestBed.inject(RouteScrollPositionService);
   });
 
-  it('stores, retrieves, and creates stable keys', () => {
+  it('stores and retrieves scroll positions by key', () => {
     expect(service.getPosition('books')).toBeUndefined();
 
     service.savePosition('books', 144);
@@ -20,8 +20,15 @@ describe('RouteScrollPositionService', () => {
 
     expect(service.getPosition('books')).toBe(144);
     expect(service.getPosition('books:library')).toBe(288);
-    expect(service.createKey('/books', {libraryId: '1', shelfId: '2'})).toBe('/books:1-2');
-    expect(service.createKey('/books', {shelfId: '2', libraryId: '1'})).toBe('/books:1-2');
+  });
+
+  it('creates stable route keys regardless of parameter order', () => {
+    expect(service.createKey('/books', {libraryId: '1', shelfId: '2'})).toBe('/books:libraryId=1;shelfId=2');
+    expect(service.createKey('/books', {shelfId: '2', libraryId: '1'})).toBe('/books:libraryId=1;shelfId=2');
+  });
+
+  it('encodes route key values and falls back to the path when params are empty', () => {
+    expect(service.createKey('/books', {slug: 'one-two', type: 'magic&shelf'})).toBe('/books:slug=one-two;type=magic%26shelf');
     expect(service.createKey('/books', {})).toBe('/books');
   });
 });

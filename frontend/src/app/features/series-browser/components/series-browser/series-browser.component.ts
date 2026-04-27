@@ -165,9 +165,9 @@ export class SeriesBrowserComponent implements OnInit {
 
   adjustDesktopGridDensity(direction: 'smaller' | 'larger'): void {
     const currentColumns = this.virtualGrid.gridColumns();
-    const columns = direction === 'smaller'
+    const columns = Math.max(1, direction === 'smaller'
       ? currentColumns + 1
-      : currentColumns - 1;
+      : currentColumns - 1);
     const viewportWidth = this.virtualGrid.viewportWidth() || this.screenWidth();
     this.virtualGrid.updatePreservingScrollPosition(() => {
       this.seriesScaleService.setScale(scaleForGridColumns(
@@ -175,8 +175,8 @@ export class SeriesBrowserComponent implements OnInit {
         SeriesBrowserComponent.GRID_GAP,
         columns,
         this.baseCardWidth(),
-        0.7,
-        1.3
+        this.seriesScaleService.MIN_SCALE,
+        this.seriesScaleService.MAX_SCALE
       ));
     });
   }

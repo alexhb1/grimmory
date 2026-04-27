@@ -26,11 +26,11 @@ export class RouteScrollPositionService {
   }
 
   createKey(path: string, params: Record<string, string>): string {
-    const paramValues = Object.keys(params)
+    const paramPairs = Object.keys(params)
       .sort((a, b) => a.localeCompare(b))
-      .map(key => params[key])
-      .join('-');
-    return paramValues ? `${path}:${paramValues}` : path;
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .join(';');
+    return paramPairs ? `${path}:${paramPairs}` : path;
   }
 
   keyFor(route: ActivatedRoute): string {

@@ -6,6 +6,9 @@ import {LocalStorageService} from '../../../shared/service/local-storage.service
 })
 export class AuthorScalePreferenceService {
 
+  readonly MIN_SCALE = 0.7;
+  readonly MAX_SCALE = 1.3;
+
   private readonly STORAGE_KEY = 'authorScalePreference';
 
   private readonly localStorageService = inject(LocalStorageService);

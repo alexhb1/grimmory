@@ -117,6 +117,7 @@ export class BookBrowserComponent implements AfterViewInit {
       scrollElement: this.scrollElement,
       route: this.activatedRoute,
       destroyRef: this.destroyRef,
+      beforeSave: () => this.dismissBodyMenus(),
     });
     this.destroyRef.onDestroy(() => this.bookSelectionService.deselectAll());
   }
@@ -1125,9 +1126,9 @@ export class BookBrowserComponent implements AfterViewInit {
 
   adjustDesktopGridDensity(direction: 'smaller' | 'larger'): void {
     const currentColumns = this.virtualGrid.gridColumns();
-    const columns = direction === 'smaller'
+    const columns = Math.max(1, direction === 'smaller'
       ? currentColumns + 1
-      : currentColumns - 1;
+      : currentColumns - 1);
     const viewportWidth = this.virtualGrid.viewportWidth() || this.screenWidth();
     this.virtualGrid.updatePreservingScrollPosition(() => {
       this.coverScalePreferenceService.setScale(scaleForGridColumns(
@@ -1139,6 +1140,10 @@ export class BookBrowserComponent implements AfterViewInit {
         this.DESKTOP_MAX_SCALE
       ));
     });
+  }
+
+  private dismissBodyMenus(): void {
+    document.querySelectorAll('.p-tieredmenu-overlay').forEach(el => el.remove());
   }
 
   private loadMobileColumnsPreference(): void {

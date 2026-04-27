@@ -178,7 +178,6 @@ function createHarness(options?: {
       SortService,
       BookSelectionService,
       BookNavigationService,
-      RouteScrollPositionService,
       {
         provide: UserService,
         useValue: {

@@ -49,6 +49,16 @@ describe('AuthorDetailComponent', () => {
 
   const createComponent = () => TestBed.runInInjectionContext(() => new AuthorDetailComponent());
 
+  const setDescriptionContentRef = (
+    component: AuthorDetailComponent,
+    element: Pick<HTMLElement, 'scrollHeight' | 'clientHeight'>
+  ) => {
+    Object.defineProperty(component, 'descriptionContentRef', {
+      configurable: true,
+      value: signal({nativeElement: element} as ElementRef<HTMLElement>),
+    });
+  };
+
   beforeEach(() => {
     getAuthorDetails = vi.fn();
     getAuthorPhotoUrl = vi.fn((authorId: number) => `/api/authors/${authorId}/photo`);
@@ -184,24 +194,20 @@ describe('AuthorDetailComponent', () => {
   it('detects description overflow from the assigned element ref only while collapsed', () => {
     const component = createComponent();
 
-    component.descriptionContentRef = {
-      nativeElement: {
-        scrollHeight: 120,
-        clientHeight: 60,
-      },
-    } as unknown as ElementRef<HTMLElement>;
+    setDescriptionContentRef(component, {
+      scrollHeight: 120,
+      clientHeight: 60,
+    });
 
     component.ngAfterViewChecked();
 
     expect(component.isOverflowing).toBe(true);
 
     component.isExpanded = true;
-    component.descriptionContentRef = {
-      nativeElement: {
-        scrollHeight: 20,
-        clientHeight: 80,
-      },
-    } as unknown as ElementRef<HTMLElement>;
+    setDescriptionContentRef(component, {
+      scrollHeight: 20,
+      clientHeight: 80,
+    });
 
     component.ngAfterViewChecked();
 
