@@ -3,6 +3,7 @@ import {injectVirtualizer} from '@tanstack/angular-virtual';
 import {observeElementRect, type VirtualItem} from '@tanstack/virtual-core';
 
 const DEFAULT_OVERSCAN_ROWS = 2;
+const DEFAULT_ITEM_SIZE = 1;
 
 export interface VirtualGridOptions {
   items: Signal<readonly unknown[]>;
@@ -32,7 +33,15 @@ function computeGridColumns(containerWidth: number, minColumnWidth: number, gap:
   if (containerWidth <= 0 || minColumnWidth <= 0) {
     return 1;
   }
-  return Math.max(1, Math.floor((containerWidth + gap) / (minColumnWidth + gap)));
+  return toSafeInteger((containerWidth + gap) / (minColumnWidth + gap), 1);
+}
+
+function toSafeInteger(value: number | undefined, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+}
+
+function toSafeSize(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 export function scaleForGridColumns(
@@ -63,8 +72,9 @@ export function createVirtualGrid(options: VirtualGridOptions) {
 
   const gridColumns = computed(() => {
     const columns = options.columns?.();
-    if (columns && columns > 0) {
-      return Math.floor(columns);
+    const safeColumns = toSafeInteger(columns);
+    if (safeColumns > 0) {
+      return safeColumns;
     }
 
     return computeGridColumns(viewportWidth(), options.minItemWidth(), gap());
@@ -101,11 +111,11 @@ export function createVirtualGrid(options: VirtualGridOptions) {
 
   const virtualizer = injectVirtualizer<HTMLElement, HTMLElement>(() => ({
     scrollElement: options.scrollElement(),
-    count: options.count?.() ?? options.items().length,
-    estimateSize: () => itemHeight(),
-    overscan: options.overscan ?? gridColumns() * DEFAULT_OVERSCAN_ROWS,
-    gap: columnGap(),
-    lanes: gridColumns(),
+    count: toSafeInteger(options.count?.() ?? options.items().length),
+    estimateSize: () => toSafeSize(itemHeight(), DEFAULT_ITEM_SIZE),
+    overscan: toSafeInteger(options.overscan ?? gridColumns() * DEFAULT_OVERSCAN_ROWS, DEFAULT_OVERSCAN_ROWS),
+    gap: toSafeSize(columnGap(), DEFAULT_ITEM_SIZE),
+    lanes: toSafeInteger(gridColumns(), 1),
     enabled: enabled(),
     initialOffset: () => options.initialOffset?.() ?? 0,
     observeElementRect: (instance, callback) => observeElementRect(instance, rect => {
