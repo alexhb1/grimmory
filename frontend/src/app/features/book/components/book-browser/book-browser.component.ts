@@ -55,6 +55,7 @@ import {SortService} from '../../service/sort.service';
 import {AppBooksApiService} from '../../service/app-books-api.service';
 import {AppBookFilters} from '../../model/app-book.model';
 import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/virtual-grid.util';
+import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 
 export enum EntityType {
   LIBRARY = 'Library',
@@ -73,7 +74,7 @@ export enum EntityType {
   imports: [
     Button, BookCardComponent, Menu, InputText, FormsModule,
     BookTableComponent, BookFilterComponent, Tooltip, NgClass, Popover,
-    Checkbox, Divider, MultiSelect, TieredMenu, Badge, MultiSortPopoverComponent, TranslocoDirective,
+    Checkbox, Divider, MultiSelect, TieredMenu, Badge, MultiSortPopoverComponent, TranslocoDirective, GridDensityButtonsComponent,
   ],
   providers: [SeriesCollapseFilter],
 })

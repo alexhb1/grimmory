@@ -54,20 +54,7 @@
             <p-popover #displaySettingsPopover>
               <div class="display-settings-content">
                 <span class="display-settings-label">{{ t('cardSize') }}</span>
-                <div class="browser-grid-options">
-                  <button
-                    type="button"
-                    class="browser-grid-option-btn"
-                    [attr.aria-label]="'common.decreaseCardSize' | transloco"
-                    [title]="'common.decreaseCardSize' | transloco"
-                    (click)="adjustDesktopGridDensity('smaller')">−</button>
-                  <button
-                    type="button"
-                    class="browser-grid-option-btn"
-                    [attr.aria-label]="'common.increaseCardSize' | transloco"
-                    [title]="'common.increaseCardSize' | transloco"
-                    (click)="adjustDesktopGridDensity('larger')">+</button>
-                </div>
+                <app-grid-density-buttons (densityChange)="adjustDesktopGridDensity($event)"/>
               </div>
             </p-popover>
           }
@@ -205,25 +192,21 @@
                   [style.width.px]="virtualGrid.itemWidth()"
                   [style.height.px]="virtualItem.size"
                   [style.transform]="virtualGrid.itemTransform(virtualItem)">
-                  <div class="virtual-scroller-item"
-                    [style.width.px]="virtualGrid.itemWidth()"
-                    [style.height.px]="virtualGrid.itemHeight()">
-                    <app-author-card
-                      [author]="author"
-                      [index]="virtualItem.index"
-                      [cacheBuster]="thumbnailCacheBusters.get(author.id) || 0"
-                      [canQuickMatch]="canEditMetadata"
-                      [canDelete]="canDeleteBook"
-                      [isCheckboxEnabled]="canEditMetadata || canDeleteBook"
-                      [isSelected]="isAuthorSelected(author.id)"
-                      (cardClick)="navigateToAuthor($event)"
-                      (viewAuthor)="navigateToAuthor($event)"
-                      (editAuthor)="navigateToAuthorEdit($event)"
-                      (deleteAuthor)="deleteAuthor($event)"
-                      (quickMatched)="onAuthorQuickMatched($event)"
-                      (checkboxClick)="onCheckboxClicked($event)">
-                    </app-author-card>
-                  </div>
+                  <app-author-card
+                    [author]="author"
+                    [index]="virtualItem.index"
+                    [cacheBuster]="thumbnailCacheBusters.get(author.id) || 0"
+                    [canQuickMatch]="canEditMetadata"
+                    [canDelete]="canDeleteBook"
+                    [isCheckboxEnabled]="canEditMetadata || canDeleteBook"
+                    [isSelected]="isAuthorSelected(author.id)"
+                    (cardClick)="navigateToAuthor($event)"
+                    (viewAuthor)="navigateToAuthor($event)"
+                    (editAuthor)="navigateToAuthorEdit($event)"
+                    (deleteAuthor)="deleteAuthor($event)"
+                    (quickMatched)="onAuthorQuickMatched($event)"
+                    (checkboxClick)="onCheckboxClicked($event)">
+                  </app-author-card>
                 </div>
               }
             }

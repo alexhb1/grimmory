@@ -13,7 +13,6 @@ import {MessageService} from 'primeng/api';
 import {AuthorService} from '../../service/author.service';
 import {AuthorSummary, EnrichedAuthor, AuthorFilters, DEFAULT_AUTHOR_FILTERS} from '../../model/author.model';
 import {AuthorCardComponent} from '../author-card/author-card.component';
-import {AuthorScalePreferenceService} from '../../service/author-scale-preference.service';
 import {AuthorSelectionService, AuthorCheckboxClickEvent} from '../../service/author-selection.service';
 import {PageTitleService} from '../../../../shared/service/page-title.service';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -21,6 +20,8 @@ import {UserService} from '../../../settings/user-management/user.service';
 import {BookService} from '../../../book/service/book.service';
 import {Book, ReadStatus} from '../../../book/model/book.model';
 import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/virtual-grid.util';
+import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
+import {LocalStorageService} from '../../../../shared/service/local-storage.service';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -61,6 +62,7 @@ const DEFAULT_SORT_DIRECTIONS: Record<string, SortDirection> = {
     Divider,
     Tooltip,
     TranslocoDirective,
+    GridDensityButtonsComponent,
     AuthorCardComponent,
   ]
 })
@@ -70,6 +72,9 @@ export class AuthorBrowserComponent implements OnInit {
   private static readonly BASE_HEIGHT = 290;
   private static readonly MOBILE_BASE_WIDTH = 140;
   private static readonly MOBILE_BASE_HEIGHT = 250;
+  private static readonly SCALE_STORAGE_KEY = 'authorScalePreference';
+  private static readonly MIN_SCALE = 0.7;
+  private static readonly MAX_SCALE = 1.3;
 
   private authorService = inject(AuthorService);
   private bookService = inject(BookService);
@@ -80,13 +85,15 @@ export class AuthorBrowserComponent implements OnInit {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private localStorageService = inject(LocalStorageService);
   protected userService = inject(UserService);
-  protected authorScaleService = inject(AuthorScalePreferenceService);
   protected selectionService = inject(AuthorSelectionService);
 
   private static readonly GRID_GAP = 20;
   private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
   private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
+  private lastPersistedScale = 1.0;
+  private readonly scaleFactor = signal(this.loadScalePreference());
 
   readonly screenWidth = signal(typeof window !== 'undefined' ? window.innerWidth : 1024);
   thumbnailCacheBusters = new Map<number, number>();
@@ -186,7 +193,7 @@ export class AuthorBrowserComponent implements OnInit {
       : AuthorBrowserComponent.BASE_HEIGHT;
     return baseHeight / this.baseCardWidth();
   });
-  private readonly minCardWidth = computed(() => Math.round(this.baseCardWidth() * this.authorScaleService.scaleFactor()));
+  private readonly minCardWidth = computed(() => Math.round(this.baseCardWidth() * this.scaleFactor()));
   readonly virtualGrid = createVirtualGrid({
     items: this.filteredAuthors,
     scrollElement: this.scrollElement,
@@ -242,15 +249,45 @@ export class AuthorBrowserComponent implements OnInit {
       : currentColumns - 1);
     const viewportWidth = this.virtualGrid.viewportWidth() || this.screenWidth();
     this.virtualGrid.updatePreservingScrollPosition(() => {
-      this.authorScaleService.setScale(scaleForGridColumns(
+      this.setScale(scaleForGridColumns(
         viewportWidth,
         AuthorBrowserComponent.GRID_GAP,
         columns,
         this.baseCardWidth(),
-        this.authorScaleService.MIN_SCALE,
-        this.authorScaleService.MAX_SCALE
+        AuthorBrowserComponent.MIN_SCALE,
+        AuthorBrowserComponent.MAX_SCALE
       ));
     });
+  }
+
+  private setScale(scale: number): void {
+    const normalizedScale = this.clampScale(scale);
+    this.scaleFactor.set(normalizedScale);
+    if (normalizedScale === this.lastPersistedScale) {
+      return;
+    }
+    this.saveScalePreference(normalizedScale);
+  }
+
+  private loadScalePreference(): number {
+    const saved = this.localStorageService.get<number>(AuthorBrowserComponent.SCALE_STORAGE_KEY);
+    if (typeof saved === 'number' && !Number.isNaN(saved)) {
+      const clamped = this.clampScale(saved);
+      if (clamped !== saved) {
+        this.saveScalePreference(clamped);
+      }
+      return clamped;
+    }
+    return 1.0;
+  }
+
+  private saveScalePreference(scale: number): void {
+    this.localStorageService.set(AuthorBrowserComponent.SCALE_STORAGE_KEY, scale);
+    this.lastPersistedScale = scale;
+  }
+
+  private clampScale(scale: number): number {
+    return Math.min(AuthorBrowserComponent.MAX_SCALE, Math.max(AuthorBrowserComponent.MIN_SCALE, scale));
   }
 
   onSearchChange(value: string): void {

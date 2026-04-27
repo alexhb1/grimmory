@@ -22,5 +22,7 @@
   "dismiss": "Stäng",
   "discard": "Förkasta",
   "review": "Granska",
-  "libraryPathInaccessible": "Bibliotekssökvägen är otillgänglig"
+  "libraryPathInaccessible": "Bibliotekssökvägen är otillgänglig",
+  "decreaseCardSize": "",
+  "increaseCardSize": ""
 }

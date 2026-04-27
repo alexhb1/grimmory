@@ -11,10 +11,11 @@ import {SeriesCardComponent} from '../series-card/series-card.component';
 import {BookService} from '../../../book/service/book.service';
 import {ReadStatus} from '../../../book/model/book.model';
 import {PageTitleService} from '../../../../shared/service/page-title.service';
-import {SeriesScalePreferenceService} from '../../service/series-scale-preference.service';
 import {ActivatedRoute, Router} from '@angular/router';
 import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/virtual-grid.util';
 import {RouteScrollPositionService} from '../../../../shared/service/route-scroll-position.service';
+import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
+import {LocalStorageService} from '../../../../shared/service/local-storage.service';
 
 interface FilterOption {
   label: string;
@@ -38,6 +39,7 @@ interface SortOption {
     Select,
     Popover,
     TranslocoDirective,
+    GridDensityButtonsComponent,
     SeriesCardComponent,
   ]
 })
@@ -48,6 +50,9 @@ export class SeriesBrowserComponent implements OnInit {
   private static readonly MOBILE_BASE_WIDTH = 180;
   private static readonly MOBILE_BASE_HEIGHT = 250;
   private static readonly GRID_GAP = 20;
+  private static readonly SCALE_STORAGE_KEY = 'seriesScalePreference';
+  private static readonly MIN_SCALE = 0.7;
+  private static readonly MAX_SCALE = 1.3;
 
   private seriesDataService = inject(SeriesDataService);
   private bookService = inject(BookService);
@@ -57,7 +62,7 @@ export class SeriesBrowserComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
   private scrollService = inject(RouteScrollPositionService);
-  protected seriesScaleService = inject(SeriesScalePreferenceService);
+  private localStorageService = inject(LocalStorageService);
 
   readonly isBooksLoading = this.bookService.isBooksLoading;
   private readonly searchTerm = signal('');
@@ -80,6 +85,8 @@ export class SeriesBrowserComponent implements OnInit {
 
   private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
   private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
+  private lastPersistedScale = 1.0;
+  private readonly scaleFactor = signal(this.loadScalePreference());
   readonly screenWidth = signal(typeof window !== 'undefined' ? window.innerWidth : 1024);
   filterOptions: FilterOption[] = [];
   sortOptions: SortOption[] = [];
@@ -101,7 +108,7 @@ export class SeriesBrowserComponent implements OnInit {
       : SeriesBrowserComponent.BASE_HEIGHT;
     return baseHeight / this.baseCardWidth();
   });
-  private readonly minCardWidth = computed(() => Math.round(this.baseCardWidth() * this.seriesScaleService.scaleFactor()));
+  private readonly minCardWidth = computed(() => Math.round(this.baseCardWidth() * this.scaleFactor()));
   readonly virtualGrid = createVirtualGrid({
     items: this.filteredSeries,
     scrollElement: this.scrollElement,
@@ -170,15 +177,45 @@ export class SeriesBrowserComponent implements OnInit {
       : currentColumns - 1);
     const viewportWidth = this.virtualGrid.viewportWidth() || this.screenWidth();
     this.virtualGrid.updatePreservingScrollPosition(() => {
-      this.seriesScaleService.setScale(scaleForGridColumns(
+      this.setScale(scaleForGridColumns(
         viewportWidth,
         SeriesBrowserComponent.GRID_GAP,
         columns,
         this.baseCardWidth(),
-        this.seriesScaleService.MIN_SCALE,
-        this.seriesScaleService.MAX_SCALE
+        SeriesBrowserComponent.MIN_SCALE,
+        SeriesBrowserComponent.MAX_SCALE
       ));
     });
+  }
+
+  private setScale(scale: number): void {
+    const normalizedScale = this.clampScale(scale);
+    this.scaleFactor.set(normalizedScale);
+    if (normalizedScale === this.lastPersistedScale) {
+      return;
+    }
+    this.saveScalePreference(normalizedScale);
+  }
+
+  private loadScalePreference(): number {
+    const saved = this.localStorageService.get<number>(SeriesBrowserComponent.SCALE_STORAGE_KEY);
+    if (typeof saved === 'number' && !Number.isNaN(saved)) {
+      const clamped = this.clampScale(saved);
+      if (clamped !== saved) {
+        this.saveScalePreference(clamped);
+      }
+      return clamped;
+    }
+    return 1.0;
+  }
+
+  private saveScalePreference(scale: number): void {
+    this.localStorageService.set(SeriesBrowserComponent.SCALE_STORAGE_KEY, scale);
+    this.lastPersistedScale = scale;
+  }
+
+  private clampScale(scale: number): number {
+    return Math.min(SeriesBrowserComponent.MAX_SCALE, Math.max(SeriesBrowserComponent.MIN_SCALE, scale));
   }
 
   navigateToSeries(series: SeriesSummary): void {

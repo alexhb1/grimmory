@@ -145,20 +145,7 @@
                 } @else {
                   <div class="display-settings-section">
                     <span class="display-settings-label">{{ t('labels.gridItemSize') }}</span>
-                    <div class="browser-grid-options">
-                      <button
-                        type="button"
-                        class="browser-grid-option-btn"
-                        [attr.aria-label]="'common.decreaseCardSize' | transloco"
-                        [title]="'common.decreaseCardSize' | transloco"
-                        (click)="adjustDesktopGridDensity('smaller')">−</button>
-                      <button
-                        type="button"
-                        class="browser-grid-option-btn"
-                        [attr.aria-label]="'common.increaseCardSize' | transloco"
-                        [title]="'common.increaseCardSize' | transloco"
-                        (click)="adjustDesktopGridDensity('larger')">+</button>
-                    </div>
+                    <app-grid-density-buttons (densityChange)="adjustDesktopGridDensity($event)"/>
                   </div>
                 }
                 <div class="display-settings-section">
@@ -329,23 +316,18 @@
                   [style.width.px]="virtualGrid.itemWidth()"
                   [style.height.px]="virtualItem.size"
                   [style.transform]="virtualGrid.itemTransform(virtualItem)">
-                  <div
-                    class="virtual-scroller-item"
-                    [style.width.px]="currentCardSize().width"
-                    [style.height.px]="currentCardSize().height">
-                    <app-book-card
-                      [index]="virtualItem.index"
-                      [book]="book"
-                      [isCheckboxEnabled]="true"
-                      [seriesViewEnabled]="seriesViewEnabled()"
-                      [onBookSelect]="onBookCardSelect"
-                      [isSeriesCollapsed]="seriesCollapseFilter.seriesCollapsed()"
-                      (checkboxClick)="onCheckboxClicked($event)"
-                      [isSelected]="bookSelectionService.isBookSelected(book)"
-                      [useSquareCovers]="isAudiobookOnlyLibrary()"
-                      [overlayPreferenceService]="bookCardOverlayPreferenceService">
-                    </app-book-card>
-                  </div>
+                  <app-book-card
+                    [index]="virtualItem.index"
+                    [book]="book"
+                    [isCheckboxEnabled]="true"
+                    [seriesViewEnabled]="seriesViewEnabled()"
+                    [onBookSelect]="onBookCardSelect"
+                    [isSeriesCollapsed]="seriesCollapseFilter.seriesCollapsed()"
+                    (checkboxClick)="onCheckboxClicked($event)"
+                    [isSelected]="bookSelectionService.isBookSelected(book)"
+                    [useSquareCovers]="isAudiobookOnlyLibrary()"
+                    [overlayPreferenceService]="bookCardOverlayPreferenceService">
+                  </app-book-card>
                 </div>
               } @else {
                 <div

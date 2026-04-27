@@ -46,7 +46,7 @@ export class CoverScalePreferenceService {
 
   private loadScaleFromStorage(): number {
     const saved = this.localStorageService.get<number>(this.STORAGE_KEY);
-    if (saved !== null && !isNaN(saved)) {
+    if (typeof saved === 'number' && !Number.isNaN(saved)) {
       const clamped = this.clampScale(saved);
       if (clamped !== saved) {
         this.saveScalePreference(clamped);

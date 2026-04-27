@@ -14,15 +14,28 @@ interface TrackRouteOptions {
   providedIn: 'root'
 })
 export class RouteScrollPositionService {
+  private readonly MAX_SCROLL_POSITIONS = 100;
   private readonly router = inject(Router);
   private scrollPositions = new Map<string, number>();
 
   savePosition(key: string, position: number): void {
+    this.scrollPositions.delete(key);
     this.scrollPositions.set(key, position);
+    if (this.scrollPositions.size > this.MAX_SCROLL_POSITIONS) {
+      const oldestKey = this.scrollPositions.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.scrollPositions.delete(oldestKey);
+      }
+    }
   }
 
   getPosition(key: string): number | undefined {
-    return this.scrollPositions.get(key);
+    const position = this.scrollPositions.get(key);
+    if (position !== undefined) {
+      this.scrollPositions.delete(key);
+      this.scrollPositions.set(key, position);
+    }
+    return position;
   }
 
   createKey(path: string, params: Record<string, string>): string {
@@ -34,13 +47,17 @@ export class RouteScrollPositionService {
   }
 
   keyFor(route: ActivatedRoute): string {
-    const path = route.snapshot.routeConfig?.path ?? '';
+    const path = route.snapshot.pathFromRoot
+      .flatMap(snapshot => snapshot.url)
+      .map(segment => segment.path)
+      .filter(Boolean)
+      .join('/');
     return this.createKey(path, route.snapshot.params);
   }
 
   trackRoute(options: TrackRouteOptions): void {
     this.router.events.pipe(
-      filter(event => event instanceof NavigationStart),
+      filter((event): event is NavigationStart => event instanceof NavigationStart),
       takeUntilDestroyed(options.destroyRef),
     ).subscribe(() => {
       options.beforeSave?.();

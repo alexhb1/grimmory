@@ -52,20 +52,7 @@
             <p-popover #displaySettingsPopover>
               <div class="display-settings-content">
                 <span class="display-settings-label">{{ t('cardSize') }}</span>
-                <div class="browser-grid-options">
-                  <button
-                    type="button"
-                    class="browser-grid-option-btn"
-                    [attr.aria-label]="'common.decreaseCardSize' | transloco"
-                    [title]="'common.decreaseCardSize' | transloco"
-                    (click)="adjustDesktopGridDensity('smaller')">−</button>
-                  <button
-                    type="button"
-                    class="browser-grid-option-btn"
-                    [attr.aria-label]="'common.increaseCardSize' | transloco"
-                    [title]="'common.increaseCardSize' | transloco"
-                    (click)="adjustDesktopGridDensity('larger')">+</button>
-                </div>
+                <app-grid-density-buttons (densityChange)="adjustDesktopGridDensity($event)"/>
               </div>
             </p-popover>
           }

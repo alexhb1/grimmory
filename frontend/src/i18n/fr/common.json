@@ -22,5 +22,7 @@
   "dismiss": "Ignorer",
   "discard": "Abandonner",
   "review": "Vérifier",
-  "libraryPathInaccessible": ""
+  "libraryPathInaccessible": "",
+  "decreaseCardSize": "",
+  "increaseCardSize": ""
 }
