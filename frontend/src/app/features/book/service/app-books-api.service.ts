@@ -63,15 +63,7 @@ export class AppBooksApiService {
     if (!data) return [];
     return data.pages.flatMap(page => page.content.map(summaryToBook));
   }, {
-    equal: (a, b) => {
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i].id !== b[i].id) return false;
-        if (a[i].metadata?.coverUpdatedOn !== b[i].metadata?.coverUpdatedOn) return false;
-        if (a[i].metadata?.audiobookCoverUpdatedOn !== b[i].metadata?.audiobookCoverUpdatedOn) return false;
-      }
-      return true;
-    }
+    equal: (a, b) => a.length === b.length && a.every((book, index) => haveSameBookSummary(book, b[index]))
   });
 
   readonly totalElements = computed(() => {
@@ -249,17 +241,36 @@ function summaryToBook(summary: AppBookSummary): Book {
       bookId: summary.id,
       title: summary.title,
       authors: summary.authors ?? [],
+      publisher: summary.publisher ?? undefined,
       seriesName: summary.seriesName,
       seriesNumber: summary.seriesNumber,
+      categories: summary.categories ?? [],
+      language: summary.language ?? undefined,
+      isbn13: summary.isbn13 ?? undefined,
+      isbn10: summary.isbn10 ?? undefined,
       coverUpdatedOn: summary.coverUpdatedOn,
       audiobookCoverUpdatedOn: summary.audiobookCoverUpdatedOn,
       publishedDate: summary.publishedDate ?? undefined,
       pageCount: summary.pageCount,
       ageRating: summary.ageRating,
       contentRating: summary.contentRating,
+      amazonRating: summary.amazonRating,
+      amazonReviewCount: summary.amazonReviewCount,
+      goodreadsRating: summary.goodreadsRating,
+      goodreadsReviewCount: summary.goodreadsReviewCount,
+      hardcoverRating: summary.hardcoverRating,
+      hardcoverReviewCount: summary.hardcoverReviewCount,
+      ranobedbRating: summary.ranobedbRating,
+      allMetadataLocked: summary.allMetadataLocked ?? false,
     },
     primaryFile: summary.primaryFileType
-      ? {bookType: summary.primaryFileType as BookType, extension: summary.primaryFileType.toLowerCase()}
+      ? {
+        ...(summary.primaryFileId == null ? {} : {id: summary.primaryFileId}),
+        bookId: summary.id,
+        bookType: summary.primaryFileType as BookType,
+        extension: summary.primaryFileType.toLowerCase(),
+        fileName: summary.primaryFileName ?? undefined,
+      }
       : null,
     pdfProgress: summary.readProgress != null
       ? {page: 0, percentage: summary.readProgress}
@@ -268,4 +279,52 @@ function summaryToBook(summary: AppBookSummary): Book {
     cbxProgress: null,
     shelves: [],
   } as unknown as Book;
+}
+
+function haveSameBookSummary(a: Book, b: Book): boolean {
+  const aMetadata = a.metadata;
+  const bMetadata = b.metadata;
+
+  return a.id === b.id &&
+    a.libraryId === b.libraryId &&
+    a.readStatus === b.readStatus &&
+    a.personalRating === b.personalRating &&
+    a.addedOn === b.addedOn &&
+    a.lastReadTime === b.lastReadTime &&
+    a.isPhysical === b.isPhysical &&
+    a.fileSizeKb === b.fileSizeKb &&
+    a.metadataMatchScore === b.metadataMatchScore &&
+    a.pdfProgress?.percentage === b.pdfProgress?.percentage &&
+    a.primaryFile?.id === b.primaryFile?.id &&
+    a.primaryFile?.bookType === b.primaryFile?.bookType &&
+    a.primaryFile?.fileName === b.primaryFile?.fileName &&
+    aMetadata?.title === bMetadata?.title &&
+    haveSameStringArray(aMetadata?.authors, bMetadata?.authors) &&
+    aMetadata?.publisher === bMetadata?.publisher &&
+    aMetadata?.seriesName === bMetadata?.seriesName &&
+    aMetadata?.seriesNumber === bMetadata?.seriesNumber &&
+    haveSameStringArray(aMetadata?.categories, bMetadata?.categories) &&
+    aMetadata?.language === bMetadata?.language &&
+    aMetadata?.isbn13 === bMetadata?.isbn13 &&
+    aMetadata?.isbn10 === bMetadata?.isbn10 &&
+    aMetadata?.coverUpdatedOn === bMetadata?.coverUpdatedOn &&
+    aMetadata?.audiobookCoverUpdatedOn === bMetadata?.audiobookCoverUpdatedOn &&
+    aMetadata?.publishedDate === bMetadata?.publishedDate &&
+    aMetadata?.pageCount === bMetadata?.pageCount &&
+    aMetadata?.ageRating === bMetadata?.ageRating &&
+    aMetadata?.contentRating === bMetadata?.contentRating &&
+    aMetadata?.amazonRating === bMetadata?.amazonRating &&
+    aMetadata?.amazonReviewCount === bMetadata?.amazonReviewCount &&
+    aMetadata?.goodreadsRating === bMetadata?.goodreadsRating &&
+    aMetadata?.goodreadsReviewCount === bMetadata?.goodreadsReviewCount &&
+    aMetadata?.hardcoverRating === bMetadata?.hardcoverRating &&
+    aMetadata?.hardcoverReviewCount === bMetadata?.hardcoverReviewCount &&
+    aMetadata?.ranobedbRating === bMetadata?.ranobedbRating &&
+    aMetadata?.allMetadataLocked === bMetadata?.allMetadataLocked;
+}
+
+function haveSameStringArray(a: string[] | undefined, b: string[] | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
 }
