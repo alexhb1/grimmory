@@ -624,7 +624,7 @@
     "selectBookFallback": "",
     "noRating": "",
     "ratingOutOf": "",
-    "statusPrefix": "Статус: ",
+    "statusWithPrefix": "Статус: {{ status }}",
     "locked": "Заблоковано",
     "unlocked": "Розблоковано",
     "toast": {

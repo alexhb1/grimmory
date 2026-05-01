@@ -1,6 +1,14 @@
 import {BookMetadata} from '../../../model/book.model';
 
-export const RATING_FIELDS = new Set(['amazonRating', 'goodreadsRating', 'hardcoverRating', 'ranobedbRating']);
+export const RATING_FIELDS = new Set([
+  'rating',
+  'amazonRating',
+  'goodreadsRating',
+  'hardcoverRating',
+  'ranobedbRating',
+  'lubimyczytacRating',
+  'audibleRating',
+]);
 
 export function isMetadataFullyLocked(metadata: BookMetadata): boolean {
   if (typeof metadata.allMetadataLocked === 'boolean') {

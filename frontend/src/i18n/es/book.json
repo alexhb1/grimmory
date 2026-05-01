@@ -668,7 +668,7 @@
     "selectBookFallback": "",
     "noRating": "",
     "ratingOutOf": "",
-    "statusPrefix": "Estado: ",
+    "statusWithPrefix": "Estado: {{ status }}",
     "locked": "Bloqueado",
     "unlocked": "Desbloqueado",
     "toast": {

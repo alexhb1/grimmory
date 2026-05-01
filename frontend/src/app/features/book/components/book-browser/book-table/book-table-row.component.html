@@ -5,6 +5,7 @@
   @let lockPending = isLockPending();
   @let squareCover = useSquareCover();
   @let imageUrl = coverUrl();
+  @let coverLabel = currentMetadata.title || currentBook.fileName || t('book.table.bookCoverAlt');
 
   @for (cell of cells(); track cell.id; let columnIndex = $index) {
     <div
@@ -29,6 +30,9 @@
             [class.metadata-lock-button-locked]="metadataLocked"
             [disabled]="lockPending"
             [title]="metadataLocked ? t('book.table.locked') : t('book.table.unlocked')"
+            [attr.aria-label]="metadataLocked ? t('book.table.locked') : t('book.table.unlocked')"
+            [attr.aria-pressed]="metadataLocked"
+            [attr.aria-busy]="lockPending"
             (click)="metadataLockToggleRequested.emit(currentMetadata)">
             <i [class]="lockPending ? 'pi pi-spin pi-spinner' : (metadataLocked ? 'pi pi-lock' : 'pi pi-lock-open')"></i>
           </button>
@@ -39,6 +43,7 @@
             #coverOrigin="cdkOverlayOrigin"
             [routerLink]="urlHelper.getBookUrl(currentBook)"
             class="cover-link"
+            [attr.aria-label]="coverLabel"
             (mouseenter)="showCoverPreview(coverOrigin)"
             (mouseleave)="coverPreviewHide.emit(currentBook.id)"
             (focusin)="showCoverPreview(coverOrigin)"
@@ -46,12 +51,13 @@
             @if (imageUrl) {
               <img
                 [attr.src]="imageUrl"
-                [alt]="t('book.table.bookCoverAlt')"
+                alt=""
                 class="cover-thumbnail"
                 [class.square-cover]="squareCover" />
             } @else {
               <app-cover-placeholder
                 class="cover-thumbnail"
+                aria-hidden="true"
                 [class.square-cover]="squareCover"
                 [title]="currentMetadata.title ?? ''"
                 [author]="(currentMetadata.authors ?? []).join(', ')"
@@ -64,7 +70,7 @@
             <div
               class="read-status-indicator"
               [ngClass]="readStatusClass()"
-              [pTooltip]="t('book.table.statusPrefix') + readStatusTooltip()"
+              [pTooltip]="t('book.table.statusWithPrefix', {status: readStatusTooltip()})"
               tooltipPosition="top">
               <i [class]="readStatusIcon()"></i>
             </div>

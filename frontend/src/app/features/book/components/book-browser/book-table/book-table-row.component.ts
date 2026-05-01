@@ -299,8 +299,13 @@ export class BookTableRowComponent {
 
   private formatFileSize(kb?: number): string {
     if (kb == null || Number.isNaN(kb)) return '-';
-    const mb = kb / 1024;
-    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${mb.toFixed(2)} MB`;
+    if (kb < 1024) {
+      return `${Number.isInteger(kb) ? kb.toFixed(0) : kb.toFixed(1)} KB`;
+    }
+    if (kb < 1024 * 1024) {
+      return `${(kb / 1024).toFixed(1)} MB`;
+    }
+    return `${(kb / (1024 * 1024)).toFixed(1)} GB`;
   }
 
   private getRatingValue(metadata: BookMetadata, field: string): number | null {

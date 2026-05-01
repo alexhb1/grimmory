@@ -89,6 +89,34 @@ describe('BookTableRowComponent', () => {
     expect(cells[3]?.textContent?.trim()).toBe('1.5 MB');
   });
 
+  it('labels icon actions and cover links for assistive tech', () => {
+    fixture.componentRef.setInput('book', makeBook(1, 'Alpha'));
+    fixture.componentRef.setInput('cellIds', ['lock', 'cover', 'readStatus']);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    const lockButton = host.querySelector<HTMLButtonElement>('.metadata-lock-button');
+    const coverLink = host.querySelector<HTMLAnchorElement>('.cover-link');
+    const placeholder = host.querySelector<HTMLElement>('app-cover-placeholder');
+
+    expect(lockButton?.getAttribute('aria-label')).toBe('Unlocked');
+    expect(lockButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(coverLink?.getAttribute('aria-label')).toBe('Alpha');
+    expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('formats file sizes with the matching unit', () => {
+    fixture.componentRef.setInput('cellIds', ['fileSizeKb']);
+
+    fixture.componentRef.setInput('book', {...makeBook(1, 'Alpha'), fileSizeKb: 512});
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('512 KB');
+
+    fixture.componentRef.setInput('book', {...makeBook(1, 'Alpha'), fileSizeKb: 2 * 1024 * 1024});
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('2.0 GB');
+  });
+
   it('uses empty metadata for books without metadata instead of treating them as loading', () => {
     fixture.componentRef.setInput('book', {...makeBook(1, 'Alpha'), metadata: undefined});
     fixture.componentRef.setInput('cellIds', ['title']);

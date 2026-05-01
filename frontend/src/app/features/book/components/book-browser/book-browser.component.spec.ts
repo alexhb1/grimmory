@@ -501,7 +501,7 @@ describe('BookBrowserComponent', () => {
     expect(fetchNextPageSpy).toHaveBeenCalled();
   });
 
-  it('uses the known total book count for virtual grid size while more pages are available', () => {
+  it('uses one unloaded slot for virtual grid size while more pages are available', () => {
     const {component, setHasNextPage} = createHarness({totalElements: 100});
 
     setHasNextPage(true);
@@ -509,7 +509,7 @@ describe('BookBrowserComponent', () => {
     vi.runOnlyPendingTimers();
     TestBed.flushEffects();
 
-    expect(component.virtualGrid.virtualizer.options().count).toBe(100);
+    expect(component.virtualGrid.virtualizer.options().count).toBe(component.books().length + 1);
   });
 
   it('uses the rendered book count once pagination is exhausted', () => {

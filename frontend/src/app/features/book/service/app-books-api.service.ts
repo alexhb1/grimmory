@@ -228,7 +228,7 @@ function summaryToBook(summary: AppBookSummary): Book {
     libraryId: summary.libraryId,
     libraryName: summary.libraryName,
     readStatus: summaryToReadStatus(summary.readStatus),
-    personalRating: summary.personalRating ?? 0,
+    personalRating: summary.personalRating,
     addedOn: summary.addedOn ?? undefined,
     lastReadTime: summary.lastReadTime ?? undefined,
     isPhysical: summary.isPhysical ?? false,
@@ -298,7 +298,7 @@ function summaryToBookType(value: string | null): BookType | undefined {
 }
 
 function summaryToReadStatus(value: string | null): ReadStatus {
-  return value != null && READ_STATUSES.has(value) ? value as ReadStatus : ReadStatus.UNSET;
+  return value != null && READ_STATUSES.has(value) ? value as ReadStatus : ReadStatus.UNREAD;
 }
 
 function summaryToPrimaryFileExtension(summary: AppBookSummary): string | undefined {

@@ -617,7 +617,7 @@
     "selectBookFallback": "",
     "noRating": "",
     "ratingOutOf": "",
-    "statusPrefix": "状态：",
+    "statusWithPrefix": "状态：{{ status }}",
     "locked": "已锁定",
     "unlocked": "已解锁",
     "toast": {

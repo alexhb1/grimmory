@@ -512,9 +512,7 @@ export class BookBrowserComponent implements AfterViewInit {
   );
 
   private bookCountIncludingUnloadedPages(renderedBookCount: number): number {
-    return this.appBooksApi.hasNextPage()
-      ? Math.max(this.appBooksApi.totalElements(), renderedBookCount)
-      : renderedBookCount;
+    return this.appBooksApi.hasNextPage() ? renderedBookCount + 1 : renderedBookCount;
   }
 
   readonly viewIcon = computed(() =>

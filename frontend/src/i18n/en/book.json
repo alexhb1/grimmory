@@ -671,7 +671,7 @@
     "selectBookFallback": "Select book",
     "noRating": "No rating",
     "ratingOutOf": "{{ rating }} out of {{ max }}",
-    "statusPrefix": "Status: ",
+    "statusWithPrefix": "Status: {{ status }}",
     "locked": "Locked",
     "unlocked": "Unlocked",
     "toast": {

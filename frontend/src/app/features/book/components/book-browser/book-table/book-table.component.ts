@@ -102,7 +102,8 @@ export class BookTableComponent {
   protected readonly coverPreview = signal<BookTableRowCoverPreview | null>(null);
   private readonly pendingLockBookIds = signal<ReadonlySet<number>>(new Set());
   private lastLoadRequestBookCount = 0;
-  private previousBooks: Book[] | undefined;
+  private previousBooksLength: number | undefined;
+  private wasFetchingNextPage = false;
 
   protected readonly coverOverlayPositions = COVER_OVERLAY_POSITIONS;
 
@@ -199,11 +200,16 @@ export class BookTableComponent {
   });
 
   private readonly resetLoadRequestOnBooksChange = effect(() => {
-    const books = this.books();
-    if (books !== this.previousBooks) {
+    const booksLength = this.books().length;
+    const isFetchingNextPage = this.isFetchingNextPage();
+    if (this.previousBooksLength !== undefined && booksLength !== this.previousBooksLength) {
       this.lastLoadRequestBookCount = 0;
-      this.previousBooks = books;
     }
+    if (this.wasFetchingNextPage && !isFetchingNextPage) {
+      this.lastLoadRequestBookCount = 0;
+    }
+    this.previousBooksLength = booksLength;
+    this.wasFetchingNextPage = isFetchingNextPage;
   });
 
   private readonly fetchNextPageEffect = effect(() => {
