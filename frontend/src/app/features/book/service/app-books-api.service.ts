@@ -11,7 +11,7 @@ import {
   AppFilterOptions,
   AppPageResponse,
 } from '../model/app-book.model';
-import {Book, BookType, ReadStatus} from '../model/book.model';
+import {Book, BookFile, BookType, ReadStatus} from '../model/book.model';
 
 const PAGE_SIZE = 50;
 
@@ -263,15 +263,7 @@ function summaryToBook(summary: AppBookSummary): Book {
       ranobedbRating: summary.ranobedbRating,
       allMetadataLocked: summary.allMetadataLocked ?? false,
     },
-    primaryFile: summary.primaryFileType
-      ? {
-        ...(summary.primaryFileId == null ? {} : {id: summary.primaryFileId}),
-        bookId: summary.id,
-        bookType: summary.primaryFileType as BookType,
-        extension: summary.primaryFileType.toLowerCase(),
-        fileName: summary.primaryFileName ?? undefined,
-      }
-      : null,
+    primaryFile: summaryToPrimaryFile(summary),
     pdfProgress: summary.readProgress != null
       ? {page: 0, percentage: summary.readProgress}
       : null,
@@ -279,6 +271,23 @@ function summaryToBook(summary: AppBookSummary): Book {
     cbxProgress: null,
     shelves: [],
   } as unknown as Book;
+}
+
+function summaryToPrimaryFile(summary: AppBookSummary): Partial<BookFile> | null {
+  if (!summary.primaryFileType) return null;
+
+  const primaryFile: Partial<BookFile> = {
+    bookId: summary.id,
+    bookType: summary.primaryFileType as BookType,
+    extension: summary.primaryFileType.toLowerCase(),
+    fileName: summary.primaryFileName ?? undefined,
+  };
+
+  if (summary.primaryFileId != null) {
+    primaryFile.id = summary.primaryFileId;
+  }
+
+  return primaryFile;
 }
 
 function haveSameBookSummary(a: Book, b: Book): boolean {

@@ -131,12 +131,7 @@ public interface AppBookMapper {
 
     @Named("mapCategoryNames")
     default List<String> mapCategoryNames(Set<CategoryEntity> categories) {
-        if (categories == null || categories.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return categories.stream()
-                .map(CategoryEntity::getName)
-                .toList();
+        return List.copyOf(mapCategories(categories));
     }
 
     @Named("mapThumbnailUrl")
