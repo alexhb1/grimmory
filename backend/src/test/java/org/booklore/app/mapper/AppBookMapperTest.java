@@ -78,4 +78,55 @@ class AppBookMapperTest {
         assertThat(summary.getAudibleRating()).isEqualTo(4.6);
         assertThat(summary.getAudibleReviewCount()).isEqualTo(128);
     }
+
+    @Test
+    void mapsSummarySafelyWhenMetadataIsNull() {
+        BookEntity book = BookEntity.builder()
+                .id(1L)
+                .library(LibraryEntity.builder().id(2L).build())
+                .bookFiles(List.of())
+                .build();
+
+        var summary = mapper.toSummary(book, null);
+
+        assertThat(summary.getCategories()).isEmpty();
+        assertThat(summary.getTags()).isEmpty();
+        assertThat(summary.getMoods()).isEmpty();
+        assertThat(summary.getNarrator()).isNull();
+        assertThat(summary.getLubimyczytacRating()).isNull();
+        assertThat(summary.getAudibleRating()).isNull();
+        assertThat(summary.getAudibleReviewCount()).isNull();
+        assertThat(mapper.mapCategoryNames(null)).isEmpty();
+        assertThat(mapper.mapTagNames(null)).isEmpty();
+        assertThat(mapper.mapMoodNames(null)).isEmpty();
+    }
+
+    @Test
+    void mapsEmptyMetadataCollectionsToEmptyLists() {
+        BookMetadataEntity metadata = BookMetadataEntity.builder()
+                .title("Test Book")
+                .categories(Set.of())
+                .tags(Set.of())
+                .moods(Set.of())
+                .build();
+        BookEntity book = BookEntity.builder()
+                .id(1L)
+                .metadata(metadata)
+                .library(LibraryEntity.builder().id(2L).build())
+                .bookFiles(List.of())
+                .build();
+
+        var summary = mapper.toSummary(book, null);
+
+        assertThat(summary.getCategories()).isEmpty();
+        assertThat(summary.getTags()).isEmpty();
+        assertThat(summary.getMoods()).isEmpty();
+        assertThat(summary.getNarrator()).isNull();
+        assertThat(summary.getLubimyczytacRating()).isNull();
+        assertThat(summary.getAudibleRating()).isNull();
+        assertThat(summary.getAudibleReviewCount()).isNull();
+        assertThat(mapper.mapCategoryNames(Set.of())).isEmpty();
+        assertThat(mapper.mapTagNames(Set.of())).isEmpty();
+        assertThat(mapper.mapMoodNames(Set.of())).isEmpty();
+    }
 }
