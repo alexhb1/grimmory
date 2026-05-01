@@ -239,7 +239,7 @@ export class BookTableRowComponent {
         }];
       }
       default: {
-        const value = metadata[field];
+        const value = this.getMetadataValue(metadata, field);
         values = typeof value === 'string' && value ? [value] : [];
       }
     }
@@ -309,8 +309,12 @@ export class BookTableRowComponent {
   }
 
   private getRatingValue(metadata: BookMetadata, field: string): number | null {
-    const rating = metadata[field];
+    const rating = this.getMetadataValue(metadata, field);
     return typeof rating === 'number' ? rating : null;
+  }
+
+  private getMetadataValue(metadata: BookMetadata, field: string): unknown {
+    return (metadata as Record<string, unknown>)[field];
   }
 
   private isAudiobook(): boolean {

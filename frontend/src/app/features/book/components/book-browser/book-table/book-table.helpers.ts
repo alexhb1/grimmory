@@ -16,5 +16,6 @@ export function isMetadataFullyLocked(metadata: BookMetadata): boolean {
   }
   const lockedKeys = Object.keys(metadata).filter(key => key.endsWith('Locked'));
   if (lockedKeys.length === 0) return false;
-  return lockedKeys.every(key => metadata[key] === true);
+  const metadataRecord = metadata as Record<string, unknown>;
+  return lockedKeys.every(key => metadataRecord[key] === true);
 }
