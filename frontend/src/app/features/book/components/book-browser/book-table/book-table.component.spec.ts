@@ -130,7 +130,8 @@ describe('BookTableComponent', () => {
     const initialRowDebugElement = fixture.debugElement.query(By.directive(BookTableRowComponent));
     const initialRowInstance = initialRowDebugElement.componentInstance as BookTableRowComponent;
     const selectionSpy = vi.spyOn(bookSelectionService, 'handleBookSelection');
-    const checkboxInput = initialRowDebugElement.nativeElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const initialRowElement = initialRowDebugElement.nativeElement as HTMLElement;
+    const checkboxInput = initialRowElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
 
     expect(checkboxInput).toBeTruthy();
     checkboxInput!.click();
@@ -246,7 +247,8 @@ describe('BookTableComponent', () => {
     component.toggleMetadataLock(book.metadata);
     fixture.detectChanges();
 
-    const button = fixture.nativeElement.querySelector<HTMLButtonElement>('.metadata-lock-button');
+    const host = fixture.nativeElement as HTMLElement;
+    const button = host.querySelector<HTMLButtonElement>('.metadata-lock-button');
     expect(button?.disabled).toBe(true);
 
     component.toggleMetadataLock(book.metadata);

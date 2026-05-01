@@ -102,7 +102,6 @@ export class BookTableComponent {
   protected readonly coverPreview = signal<BookTableRowCoverPreview | null>(null);
   private readonly pendingLockBookIds = signal<ReadonlySet<number>>(new Set());
   private lastLoadRequestBookCount = 0;
-  private previousBooksLength: number | undefined;
   private previousBookIdsToken: string | undefined;
 
   protected readonly coverOverlayPositions = COVER_OVERLAY_POSITIONS;
@@ -201,14 +200,10 @@ export class BookTableComponent {
 
   private readonly resetLoadRequestOnBooksChange = effect(() => {
     const books = this.books();
-    const booksLength = books.length;
     const bookIdsToken = books.map(book => book.id).join('|');
-    const hasPreviousBooksSnapshot = this.previousBooksLength !== undefined;
-    const booksChanged = booksLength !== this.previousBooksLength || bookIdsToken !== this.previousBookIdsToken;
-    if (hasPreviousBooksSnapshot && booksChanged) {
+    if (this.previousBookIdsToken !== undefined && bookIdsToken !== this.previousBookIdsToken) {
       this.lastLoadRequestBookCount = 0;
     }
-    this.previousBooksLength = booksLength;
     this.previousBookIdsToken = bookIdsToken;
   });
 
