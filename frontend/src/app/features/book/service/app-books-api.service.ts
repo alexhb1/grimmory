@@ -286,6 +286,7 @@ function summaryToPrimaryFile(summary: AppBookSummary): Partial<BookFile> | null
     bookId: summary.id,
     bookType: summary.primaryFileType as BookType,
     extension: summary.primaryFileType.toLowerCase(),
+    fileSizeKb: summary.fileSizeKb ?? undefined,
     fileName: summary.primaryFileName ?? undefined,
   };
 
