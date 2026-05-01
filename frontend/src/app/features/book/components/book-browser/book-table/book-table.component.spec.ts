@@ -129,14 +129,18 @@ describe('BookTableComponent', () => {
 
     const initialRowDebugElement = fixture.debugElement.query(By.directive(BookTableRowComponent));
     const initialRowInstance = initialRowDebugElement.componentInstance as BookTableRowComponent;
+    const selectionSpy = vi.spyOn(bookSelectionService, 'handleBookSelection');
+    const checkboxInput = initialRowDebugElement.nativeElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
 
-    component.onBookSelectionChange({book, checked: true});
+    expect(checkboxInput).toBeTruthy();
+    checkboxInput!.click();
     fixture.detectChanges();
 
     const updatedRowDebugElement = fixture.debugElement.query(By.directive(BookTableRowComponent));
     const updatedRowInstance = updatedRowDebugElement.componentInstance as BookTableRowComponent;
     expect(updatedRowDebugElement.nativeElement).toBe(initialRowDebugElement.nativeElement);
     expect(updatedRowInstance).toBe(initialRowInstance);
+    expect(selectionSpy).toHaveBeenCalledWith(book, true);
     expect(updatedRowInstance.isSelected()).toBe(true);
     expect(bookSelectionService.isBookSelected(book)).toBe(true);
     expect(component.isRowSelected(book)).toBe(true);
