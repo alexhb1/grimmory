@@ -166,6 +166,28 @@ describe('BookTableComponent', () => {
     expect(loadNextPageSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('can request the next page again after a same-size book swap', () => {
+    const loadNextPageSpy = vi.fn();
+    const books = Array.from({length: 50}, (_, index) => makeBook(index + 1, `Book ${index + 1}`));
+    const nextBooks = Array.from({length: 50}, (_, index) => makeBook(index + 101, `Next Book ${index + 1}`));
+    vi.spyOn(component.rowVirtualizer, 'getVirtualItems').mockReturnValue([
+      {index: 49, key: 50, start: 2254, size: 46, end: 2300, lane: 0}
+    ]);
+    component.loadNextPage.subscribe(loadNextPageSpy);
+
+    fixture.componentRef.setInput('books', books);
+    fixture.componentRef.setInput('virtualRowCount', 51);
+    fixture.componentRef.setInput('isFetchingNextPage', false);
+    fixture.detectChanges();
+
+    expect(loadNextPageSpy).toHaveBeenCalledTimes(1);
+
+    fixture.componentRef.setInput('books', nextBooks);
+    fixture.detectChanges();
+
+    expect(loadNextPageSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('can request the next page again after the in-flight request completes', () => {
     const loadNextPageSpy = vi.fn();
     const books = Array.from({length: 50}, (_, index) => makeBook(index + 1, `Book ${index + 1}`));
