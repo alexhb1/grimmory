@@ -188,7 +188,7 @@ describe('BookTableComponent', () => {
     expect(loadNextPageSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('can request the next page again after the in-flight request completes', () => {
+  it('does not retry immediately when a next-page request completes without new rows', () => {
     const loadNextPageSpy = vi.fn();
     const books = Array.from({length: 50}, (_, index) => makeBook(index + 1, `Book ${index + 1}`));
     vi.spyOn(component.rowVirtualizer, 'getVirtualItems').mockReturnValue([
@@ -208,7 +208,7 @@ describe('BookTableComponent', () => {
     fixture.componentRef.setInput('isFetchingNextPage', false);
     fixture.detectChanges();
 
-    expect(loadNextPageSpy).toHaveBeenCalledTimes(2);
+    expect(loadNextPageSpy).toHaveBeenCalledTimes(1);
   });
 
   it('requests metadata lock without mutating the input book', () => {

@@ -205,13 +205,9 @@ export class BookTableComponent {
     const booksLength = books.length;
     const bookIdsToken = books.map(book => book.id).join('|');
     const isFetchingNextPage = this.isFetchingNextPage();
-    if (
-      this.previousBooksLength !== undefined &&
-      (booksLength !== this.previousBooksLength || bookIdsToken !== this.previousBookIdsToken)
-    ) {
-      this.lastLoadRequestBookCount = 0;
-    }
-    if (this.wasFetchingNextPage && !isFetchingNextPage) {
+    const hasPreviousBooksSnapshot = this.previousBooksLength !== undefined;
+    const booksChanged = booksLength !== this.previousBooksLength || bookIdsToken !== this.previousBookIdsToken;
+    if (hasPreviousBooksSnapshot && booksChanged) {
       this.lastLoadRequestBookCount = 0;
     }
     this.previousBooksLength = booksLength;
