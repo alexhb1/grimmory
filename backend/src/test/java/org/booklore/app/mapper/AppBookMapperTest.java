@@ -3,6 +3,7 @@ package org.booklore.app.mapper;
 import org.booklore.model.entity.BookEntity;
 import org.booklore.model.entity.BookFileEntity;
 import org.booklore.model.entity.BookMetadataEntity;
+import org.booklore.model.entity.CategoryEntity;
 import org.booklore.model.entity.LibraryEntity;
 import org.booklore.model.entity.MoodEntity;
 import org.booklore.model.entity.TagEntity;
@@ -46,8 +47,15 @@ class AppBookMapperTest {
     void mapsBrowserMetadataFieldsToSummary() {
         BookMetadataEntity metadata = BookMetadataEntity.builder()
                 .title("Test Book")
-                .tags(Set.of(TagEntity.builder().name("space").build()))
-                .moods(Set.of(MoodEntity.builder().name("tense").build()))
+                .categories(Set.of(
+                        CategoryEntity.builder().name("Space").build(),
+                        CategoryEntity.builder().name("Adventure").build()))
+                .tags(Set.of(
+                        TagEntity.builder().name("space").build(),
+                        TagEntity.builder().name("classic").build()))
+                .moods(Set.of(
+                        MoodEntity.builder().name("tense").build(),
+                        MoodEntity.builder().name("bright").build()))
                 .narrator("A Narrator")
                 .lubimyczytacRating(4.1)
                 .audibleRating(4.6)
@@ -62,8 +70,9 @@ class AppBookMapperTest {
 
         var summary = mapper.toSummary(book, null);
 
-        assertThat(summary.getTags()).containsExactly("space");
-        assertThat(summary.getMoods()).containsExactly("tense");
+        assertThat(summary.getCategories()).containsExactly("Adventure", "Space");
+        assertThat(summary.getTags()).containsExactly("classic", "space");
+        assertThat(summary.getMoods()).containsExactly("bright", "tense");
         assertThat(summary.getNarrator()).isEqualTo("A Narrator");
         assertThat(summary.getLubimyczytacRating()).isEqualTo(4.1);
         assertThat(summary.getAudibleRating()).isEqualTo(4.6);

@@ -285,7 +285,7 @@ function summaryToPrimaryFile(summary: AppBookSummary): Partial<BookFile> | null
   const primaryFile: Partial<BookFile> = {
     bookId: summary.id,
     bookType: summary.primaryFileType as BookType,
-    extension: summary.primaryFileType.toLowerCase(),
+    extension: summaryToPrimaryFileExtension(summary),
     fileSizeKb: summary.fileSizeKb ?? undefined,
     fileName: summary.primaryFileName ?? undefined,
   };
@@ -295,6 +295,14 @@ function summaryToPrimaryFile(summary: AppBookSummary): Partial<BookFile> | null
   }
 
   return primaryFile;
+}
+
+function summaryToPrimaryFileExtension(summary: AppBookSummary): string | undefined {
+  const fileName = summary.primaryFileName;
+  const dotIndex = fileName?.lastIndexOf('.') ?? -1;
+  const fileNameExtension = dotIndex >= 0 ? fileName?.slice(dotIndex + 1).replace(/^\.+/, '').toLowerCase() : '';
+
+  return fileNameExtension || summary.primaryFileType?.toLowerCase() || undefined;
 }
 
 function haveSameBookSummary(a: Book, b: Book): boolean {

@@ -137,7 +137,9 @@ public interface AppBookMapper {
 
     @Named("mapCategoryNames")
     default List<String> mapCategoryNames(Set<CategoryEntity> categories) {
-        return List.copyOf(mapCategories(categories));
+        return mapCategories(categories).stream()
+                .sorted()
+                .toList();
     }
 
     @Named("mapTagNames")
@@ -147,6 +149,7 @@ public interface AppBookMapper {
         }
         return tags.stream()
                 .map(TagEntity::getName)
+                .sorted()
                 .toList();
     }
 
@@ -157,6 +160,7 @@ public interface AppBookMapper {
         }
         return moods.stream()
                 .map(MoodEntity::getName)
+                .sorted()
                 .toList();
     }
 
