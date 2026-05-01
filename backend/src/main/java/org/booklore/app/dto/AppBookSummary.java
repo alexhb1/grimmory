@@ -38,7 +38,10 @@ public class AppBookSummary {
     // Metadata for filtering
     private String publisher;
     private List<String> categories;
+    private List<String> tags;
+    private List<String> moods;
     private String language;
+    private String narrator;
     private String isbn13;
     private String isbn10;
     private LocalDate publishedDate;
@@ -54,5 +57,8 @@ public class AppBookSummary {
     private Double hardcoverRating;
     private Integer hardcoverReviewCount;
     private Double ranobedbRating;
+    private Double lubimyczytacRating;
+    private Double audibleRating;
+    private Integer audibleReviewCount;
     private Boolean allMetadataLocked;
 }

@@ -29,7 +29,10 @@ export interface AppBookSummary {
   isPhysical: boolean | null;
   publisher: string | null;
   categories: string[] | null;
+  tags: string[] | null;
+  moods: string[] | null;
   language: string | null;
+  narrator: string | null;
   isbn13: string | null;
   isbn10: string | null;
   publishedDate: string | null;
@@ -45,6 +48,9 @@ export interface AppBookSummary {
   hardcoverRating: number | null;
   hardcoverReviewCount: number | null;
   ranobedbRating: number | null;
+  lubimyczytacRating: number | null;
+  audibleRating: number | null;
+  audibleReviewCount: number | null;
   allMetadataLocked: boolean | null;
 }
 

@@ -39,7 +39,10 @@ public interface AppBookMapper {
     @Mapping(target = "isPhysical", source = "book.isPhysical")
     @Mapping(target = "publisher", source = "book.metadata.publisher")
     @Mapping(target = "categories", source = "book.metadata.categories", qualifiedByName = "mapCategoryNames")
+    @Mapping(target = "tags", source = "book.metadata.tags", qualifiedByName = "mapTagNames")
+    @Mapping(target = "moods", source = "book.metadata.moods", qualifiedByName = "mapMoodNames")
     @Mapping(target = "language", source = "book.metadata.language")
+    @Mapping(target = "narrator", source = "book.metadata.narrator")
     @Mapping(target = "isbn13", source = "book.metadata.isbn13")
     @Mapping(target = "isbn10", source = "book.metadata.isbn10")
     @Mapping(target = "publishedDate", source = "book.metadata.publishedDate")
@@ -55,6 +58,9 @@ public interface AppBookMapper {
     @Mapping(target = "hardcoverRating", source = "book.metadata.hardcoverRating")
     @Mapping(target = "hardcoverReviewCount", source = "book.metadata.hardcoverReviewCount")
     @Mapping(target = "ranobedbRating", source = "book.metadata.ranobedbRating")
+    @Mapping(target = "lubimyczytacRating", source = "book.metadata.lubimyczytacRating")
+    @Mapping(target = "audibleRating", source = "book.metadata.audibleRating")
+    @Mapping(target = "audibleReviewCount", source = "book.metadata.audibleReviewCount")
     @Mapping(target = "allMetadataLocked", source = "book.metadata", qualifiedByName = "mapAllMetadataLocked")
     AppBookSummary toSummary(BookEntity book, UserBookProgressEntity progress);
 
@@ -132,6 +138,26 @@ public interface AppBookMapper {
     @Named("mapCategoryNames")
     default List<String> mapCategoryNames(Set<CategoryEntity> categories) {
         return List.copyOf(mapCategories(categories));
+    }
+
+    @Named("mapTagNames")
+    default List<String> mapTagNames(Set<TagEntity> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return tags.stream()
+                .map(TagEntity::getName)
+                .toList();
+    }
+
+    @Named("mapMoodNames")
+    default List<String> mapMoodNames(Set<MoodEntity> moods) {
+        if (moods == null || moods.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return moods.stream()
+                .map(MoodEntity::getName)
+                .toList();
     }
 
     @Named("mapThumbnailUrl")

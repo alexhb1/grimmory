@@ -245,7 +245,10 @@ function summaryToBook(summary: AppBookSummary): Book {
       seriesName: summary.seriesName,
       seriesNumber: summary.seriesNumber,
       categories: summary.categories ?? [],
+      tags: summary.tags ?? [],
+      moods: summary.moods ?? [],
       language: summary.language ?? undefined,
+      narrator: summary.narrator ?? undefined,
       isbn13: summary.isbn13 ?? undefined,
       isbn10: summary.isbn10 ?? undefined,
       coverUpdatedOn: summary.coverUpdatedOn,
@@ -261,6 +264,9 @@ function summaryToBook(summary: AppBookSummary): Book {
       hardcoverRating: summary.hardcoverRating,
       hardcoverReviewCount: summary.hardcoverReviewCount,
       ranobedbRating: summary.ranobedbRating,
+      lubimyczytacRating: summary.lubimyczytacRating,
+      audibleRating: summary.audibleRating,
+      audibleReviewCount: summary.audibleReviewCount,
       allMetadataLocked: summary.allMetadataLocked ?? false,
     },
     primaryFile: summaryToPrimaryFile(summary),
@@ -313,7 +319,10 @@ function haveSameBookSummary(a: Book, b: Book): boolean {
     aMetadata?.seriesName === bMetadata?.seriesName &&
     aMetadata?.seriesNumber === bMetadata?.seriesNumber &&
     haveSameStringArray(aMetadata?.categories, bMetadata?.categories) &&
+    haveSameStringArray(aMetadata?.tags, bMetadata?.tags) &&
+    haveSameStringArray(aMetadata?.moods, bMetadata?.moods) &&
     aMetadata?.language === bMetadata?.language &&
+    aMetadata?.narrator === bMetadata?.narrator &&
     aMetadata?.isbn13 === bMetadata?.isbn13 &&
     aMetadata?.isbn10 === bMetadata?.isbn10 &&
     aMetadata?.coverUpdatedOn === bMetadata?.coverUpdatedOn &&
@@ -329,6 +338,9 @@ function haveSameBookSummary(a: Book, b: Book): boolean {
     aMetadata?.hardcoverRating === bMetadata?.hardcoverRating &&
     aMetadata?.hardcoverReviewCount === bMetadata?.hardcoverReviewCount &&
     aMetadata?.ranobedbRating === bMetadata?.ranobedbRating &&
+    aMetadata?.lubimyczytacRating === bMetadata?.lubimyczytacRating &&
+    aMetadata?.audibleRating === bMetadata?.audibleRating &&
+    aMetadata?.audibleReviewCount === bMetadata?.audibleReviewCount &&
     aMetadata?.allMetadataLocked === bMetadata?.allMetadataLocked;
 }
 
