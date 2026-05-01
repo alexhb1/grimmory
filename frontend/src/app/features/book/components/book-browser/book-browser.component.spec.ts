@@ -501,9 +501,21 @@ describe('BookBrowserComponent', () => {
     expect(fetchNextPageSpy).toHaveBeenCalled();
   });
 
-  it('uses one unloaded slot for virtual grid size while more pages are available', () => {
+  it('uses the known total book count for virtual grid size while more pages are available', () => {
     const {component, setHasNextPage} = createHarness({totalElements: 100});
 
+    setHasNextPage(true);
+
+    vi.runOnlyPendingTimers();
+    TestBed.flushEffects();
+
+    expect(component.virtualGrid.virtualizer.options().count).toBe(100);
+  });
+
+  it('uses one unloaded slot for collapsed series while more pages are available', () => {
+    const {component, setHasNextPage} = createHarness({totalElements: 100});
+    const filter = TestBed.inject(SeriesCollapseFilter);
+    filter.setCollapsed(true);
     setHasNextPage(true);
 
     vi.runOnlyPendingTimers();
