@@ -307,12 +307,7 @@ export class BookBrowserComponent implements AfterViewInit {
   );
   private readonly virtualGridGap = computed(() => this.isMobile() ? this.MOBILE_GAP : this.GRID_GAP);
   private readonly virtualGridColumns = computed(() => this.isMobile() ? this.mobileColumnCount() : undefined);
-  private readonly virtualBookCount = computed(() => {
-    const renderedBookCount = this.gridBooks().length;
-    return this.appBooksApi.hasNextPage()
-      ? Math.max(this.appBooksApi.totalElements(), renderedBookCount)
-      : renderedBookCount;
-  });
+  private readonly virtualBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.gridBooks().length));
   readonly virtualGrid = createVirtualGrid({
     items: this.gridBooks,
     scrollElement: this.scrollElement,
@@ -326,10 +321,10 @@ export class BookBrowserComponent implements AfterViewInit {
       ? this.mobileCardSizeForWidth(itemWidth).height
       : this.cardSizeForWidth(itemWidth).height,
   });
+  readonly tableBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.books().length));
+  readonly isFetchingNextBooksPage = this.appBooksApi.isFetchingNextPage;
 
   skeletonSlots = Array.from({length: 24}, (_, index) => index);
-  readonly tableSkeletonRows = Array.from({length: 8}, (_, index) => index);
-  readonly tableSkeletonColumns = Array.from({length: 5}, (_, index) => index);
   parsedFilters: Record<string, string[]> = {};
   dynamicDialogRef: DynamicDialogRef | undefined | null;
   EntityType = EntityType;
@@ -516,6 +511,12 @@ export class BookBrowserComponent implements AfterViewInit {
     this.showBooksLoadingPlaceholder() && this.currentViewMode() === VIEW_MODES.GRID
   );
 
+  private bookCountIncludingUnloadedPages(renderedBookCount: number): number {
+    return this.appBooksApi.hasNextPage()
+      ? Math.max(this.appBooksApi.totalElements(), renderedBookCount)
+      : renderedBookCount;
+  }
+
   readonly viewIcon = computed(() =>
     this.currentViewMode() === VIEW_MODES.TABLE ? 'pi pi-table' : 'pi pi-objects-column'
   );
@@ -693,10 +694,7 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   onVisibleColumnsChange(selected: { field: string; header: string }[]): void {
-    const bookTableComponent = this.bookTableComponent();
-    if (!bookTableComponent) return;
-
-    const allFields = bookTableComponent.allColumns.map(col => col.field);
+    const allFields = this.columnPreferenceService.allColumns.map(column => column.field);
     this.visibleColumns.set(selected.sort(
       (a, b) => allFields.indexOf(a.field) - allFields.indexOf(b.field)
     ));
@@ -710,10 +708,6 @@ export class BookBrowserComponent implements AfterViewInit {
     this.bookSelectionService.handleBookSelection(book, selected);
   }
 
-  onSelectedBooksChange(selectedBookIds: Set<number>): void {
-    this.bookSelectionService.setSelectedBooks(selectedBookIds);
-  }
-
   selectAllBooks(): void {
     this.appBooksApi.fetchAllBookIds().pipe(take(1)).subscribe({
       next: (allIds) => {
@@ -725,9 +719,14 @@ export class BookBrowserComponent implements AfterViewInit {
     });
   }
 
+  loadNextBooksPage(): void {
+    if (this.appBooksApi.hasNextPage() && !this.appBooksApi.isFetchingNextPage()) {
+      this.appBooksApi.fetchNextPage();
+    }
+  }
+
   deselectAllBooks(): void {
     this.bookSelectionService.deselectAll();
-    this.bookTableComponent()?.clearSelectedBooks();
   }
 
   confirmDeleteBooks(): void {

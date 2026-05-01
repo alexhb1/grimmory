@@ -662,6 +662,11 @@
   },
   "table": {
     "bookCoverAlt": "",
+    "label": "",
+    "selectBook": "",
+    "selectBookFallback": "",
+    "noRating": "",
+    "ratingOutOf": "",
     "statusPrefix": "",
     "locked": "",
     "unlocked": "",

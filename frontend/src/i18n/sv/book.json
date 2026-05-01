@@ -619,6 +619,11 @@
   },
   "table": {
     "bookCoverAlt": "Bokomslag",
+    "label": "",
+    "selectBook": "",
+    "selectBookFallback": "",
+    "noRating": "",
+    "ratingOutOf": "",
     "statusPrefix": "Status: ",
     "locked": "Låst",
     "unlocked": "Upplåst",

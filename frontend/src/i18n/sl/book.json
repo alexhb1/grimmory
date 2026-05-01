@@ -619,6 +619,11 @@
   },
   "table": {
     "bookCoverAlt": "Naslovnica knjige",
+    "label": "",
+    "selectBook": "",
+    "selectBookFallback": "",
+    "noRating": "",
+    "ratingOutOf": "",
     "statusPrefix": "Status: ",
     "locked": "Zaklenjeno",
     "unlocked": "Odklenjeno",

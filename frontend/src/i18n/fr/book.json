@@ -614,6 +614,11 @@
   },
   "table": {
     "bookCoverAlt": "Couverture du livre",
+    "label": "",
+    "selectBook": "",
+    "selectBookFallback": "",
+    "noRating": "",
+    "ratingOutOf": "",
     "statusPrefix": "Statut : ",
     "locked": "Verrouillé",
     "unlocked": "Déverrouillé",

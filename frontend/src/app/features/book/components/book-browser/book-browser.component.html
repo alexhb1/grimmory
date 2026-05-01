@@ -253,23 +253,7 @@
       </div>
     </div>
 
-    @if (showTableLoadingPlaceholder()) {
-      <div class="table-skeleton" aria-hidden="true">
-        <div class="table-skeleton-header">
-          @for (column of tableSkeletonColumns; track column) {
-            <div class="table-skeleton-cell table-skeleton-cell-header"></div>
-          }
-        </div>
-
-        @for (row of tableSkeletonRows; track row) {
-          <div class="table-skeleton-row">
-            @for (column of tableSkeletonColumns; track column) {
-              <div class="table-skeleton-cell" [class.table-skeleton-cell-short]="column !== 0"></div>
-            }
-          </div>
-        }
-      </div>
-    } @else if (showGridLoadingPlaceholder()) {
+    @if (showGridLoadingPlaceholder()) {
       <div #scrollElement class="virtual-scroller">
         <div class="skeleton-grid"
           [style.grid-template-columns]="'repeat(auto-fill, minmax(' + skeletonMinCardWidth() + ', 1fr))'">
@@ -296,14 +280,16 @@
           </p>
         </div>
       }
-      @if (currentViewMode() === 'table' && visibleBooks.length > 0) {
+      @if (currentViewMode() === 'table' && (visibleBooks.length > 0 || showTableLoadingPlaceholder())) {
         <app-book-table
           [books]="visibleBooks"
-          [preselectedBookIds]="selectedBooks()"
-          (selectedBooksChange)="onSelectedBooksChange($event)"
+          [virtualRowCount]="tableBookCount()"
+          [isLoading]="showTableLoadingPlaceholder()"
+          [isFetchingNextPage]="isFetchingNextBooksPage()"
           (selectAllRequested)="selectAllBooks()"
-          [sortOption]="this.bookSorter.selectedSort!"
+          (loadNextPage)="loadNextBooksPage()"
           [visibleColumns]="visibleColumns()"
+          [useSquareCovers]="isAudiobookOnlyLibrary()"
         ></app-book-table>
       }
       @if (currentViewMode() === 'grid') {

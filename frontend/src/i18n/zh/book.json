@@ -612,6 +612,11 @@
   },
   "table": {
     "bookCoverAlt": "图书封面",
+    "label": "",
+    "selectBook": "",
+    "selectBookFallback": "",
+    "noRating": "",
+    "ratingOutOf": "",
     "statusPrefix": "状态：",
     "locked": "已锁定",
     "unlocked": "已解锁",
