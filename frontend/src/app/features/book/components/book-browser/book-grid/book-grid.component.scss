@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.virtual-scroller {
+  width: 100%;
+  height: calc(100dvh - 10.9rem);
+  padding: 1rem 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+
+  @media (width <= 768px) {
+    height: calc(100dvh - 9rem);
+    padding: 0.75rem;
+  }
+}
+
+.virtual-loader-cell {
+  border-radius: 8px;
+  background: var(--p-content-border-color);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .virtual-loader-cell {
+    animation: none;
+    will-change: auto;
+  }
+}

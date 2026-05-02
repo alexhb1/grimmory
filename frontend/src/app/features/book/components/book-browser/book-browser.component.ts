@@ -1,4 +1,4 @@
-import {AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal, viewChild} from '@angular/core';
+import {AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, signal, viewChild} from '@angular/core';
 import {takeUntilDestroyed, toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute} from '@angular/router';
 import {ConfirmationService, MenuItem, MessageService} from 'primeng/api';
@@ -13,9 +13,9 @@ import {SortDirection, SortOption} from '../../model/sort.model';
 import {Book} from '../../model/book.model';
 import {LibraryShelfMenuService} from '../../service/library-shelf-menu.service';
 import {BookTableComponent} from './book-table/book-table.component';
+import {BookGridComponent} from './book-grid/book-grid.component';
 import {Button} from 'primeng/button';
 import {NgClass} from '@angular/common';
-import {BookCardComponent} from './book-card/book-card.component';
 
 import {Menu} from 'primeng/menu';
 import {InputText} from 'primeng/inputtext';
@@ -24,7 +24,6 @@ import {BookFilterComponent} from './book-filter/book-filter.component';
 import {Tooltip} from 'primeng/tooltip';
 import {BookFilterMode, DEFAULT_VISIBLE_SORT_FIELDS, EntityViewPreferences, SortCriterion, UserService} from '../../../settings/user-management/user.service';
 import {SeriesCollapseFilter} from './filters/SeriesCollapseFilter';
-import {CoverScalePreferenceService} from './cover-scale-preference.service';
 import {BookSorter} from './sorting/BookSorter';
 import {BookDialogHelperService} from './book-dialog-helper.service';
 import {Checkbox} from 'primeng/checkbox';
@@ -46,7 +45,6 @@ import {BookCardOverlayPreferenceService} from './book-card-overlay-preference.s
 import {BookSelectionService, CheckboxClickEvent} from './book-selection.service';
 import {BookBrowserQueryParamsService, VIEW_MODES} from './book-browser-query-params.service';
 import {BookBrowserEntityService, EntityInfo} from './book-browser-entity.service';
-import {RouteScrollPositionService} from '../../../../shared/service/route-scroll-position.service';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
 import {MultiSortPopoverComponent} from './sorting/multi-sort-popover/multi-sort-popover.component';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -54,8 +52,6 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {SortService} from '../../service/sort.service';
 import {AppBooksApiService} from '../../service/app-books-api.service';
 import {AppBookFilters} from '../../model/app-book.model';
-import {createInfinitePaginator} from '../../../../shared/util/infinite-paginator.util';
-import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/virtual-grid.util';
 import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 
 export enum EntityType {
@@ -67,6 +63,8 @@ export enum EntityType {
 }
 
 const INITIAL_LOADING_ITEM_COUNT = 24;
+const DEFAULT_MOBILE_GRID_COLUMNS = 3;
+const MOBILE_COLUMNS_STORAGE_KEY = 'mobileColumnsPreference';
 
 @Component({
   selector: 'app-book-browser',
@@ -75,7 +73,7 @@ const INITIAL_LOADING_ITEM_COUNT = 24;
   styleUrls: ['./book-browser.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    Button, BookCardComponent, Menu, InputText, FormsModule,
+    Button, BookGridComponent, Menu, InputText, FormsModule,
     BookTableComponent, BookFilterComponent, Tooltip, NgClass, Popover,
     Checkbox, Divider, MultiSelect, TieredMenu, Badge, MultiSortPopoverComponent, TranslocoDirective, GridDensityButtonsComponent,
   ],
@@ -84,7 +82,6 @@ const INITIAL_LOADING_ITEM_COUNT = 24;
 export class BookBrowserComponent implements AfterViewInit {
 
   protected userService = inject(UserService);
-  protected coverScalePreferenceService = inject(CoverScalePreferenceService);
   protected columnPreferenceService = inject(TableColumnPreferenceService);
   protected sidebarFilterTogglePrefService = inject(SidebarFilterTogglePrefService);
   protected seriesCollapseFilter = inject(SeriesCollapseFilter);
@@ -109,7 +106,6 @@ export class BookBrowserComponent implements AfterViewInit {
   private sortService = inject(SortService);
   private appBooksApi = inject(AppBooksApiService);
   private localStorageService = inject(LocalStorageService);
-  private scrollService = inject(RouteScrollPositionService);
   private readonly t = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -117,12 +113,6 @@ export class BookBrowserComponent implements AfterViewInit {
     this.loadMobileColumnsPreference();
     this.setupRouteChangeHandlers();
     this.setupQueryParamSubscription();
-    this.scrollService.trackRoute({
-      scrollElement: this.scrollElement,
-      route: this.activatedRoute,
-      destroyRef: this.destroyRef,
-      dismissOverlaysBeforeSave: true,
-    });
     this.destroyRef.onDestroy(() => this.bookSelectionService.deselectAll());
   }
 
@@ -162,7 +152,7 @@ export class BookBrowserComponent implements AfterViewInit {
   readonly visibleSortOptions = signal<SortOption[]>([]);
   readonly currentFilterLabel = signal<string | null>(null);
   readonly rawFilterParamFromUrl = signal<string | null>(null);
-  readonly mobileColumnCount = signal(3);
+  readonly gridMobileColumnCount = signal(DEFAULT_MOBILE_GRID_COLUMNS);
   private readonly seriesCollapsed = this.seriesCollapseFilter.seriesCollapsed;
   readonly selectedBooks = this.bookSelectionService.selectedBooks;
   readonly selectedCount = this.bookSelectionService.selectedCount;
@@ -283,55 +273,8 @@ export class BookBrowserComponent implements AfterViewInit {
   readonly isBooksLoading = computed(() => this.appBooksApi.isLoading());
   readonly booksError = this.appBooksApi.error;
 
-  private readonly GRID_GAP = 21;
   private readonly MOBILE_BREAKPOINT = 768;
-  private readonly CARD_ASPECT_RATIO = 7 / 5;
-  private readonly MOBILE_GAP = 8;
-  private readonly MOBILE_PADDING = 48;
-  private readonly MOBILE_TITLE_BAR_HEIGHT = 32;
-  private readonly MOBILE_COLUMNS_STORAGE_KEY = 'mobileColumnsPreference';
-  private readonly DESKTOP_CARD_BASE_WIDTH = 135;
-  private readonly DESKTOP_CARD_BASE_HEIGHT = 220;
-  private readonly DESKTOP_MIN_SCALE = 0.5;
-  private readonly DESKTOP_MAX_SCALE = 1.5;
-  private readonly AUDIOBOOK_TITLE_BAR_HEIGHT = 31;
-  private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
-  private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
-  private readonly desktopBaseCardWidth = computed(() =>
-    this.isAudiobookOnlyLibrary()
-      ? this.DESKTOP_CARD_BASE_WIDTH * 1.1
-      : this.DESKTOP_CARD_BASE_WIDTH
-  );
-  private readonly minCardWidth = computed(() =>
-    this.isMobile()
-      ? 1
-      : Math.round(this.desktopBaseCardWidth() * this.coverScalePreferenceService.scaleFactor())
-  );
-  private readonly virtualGridGap = computed(() => this.isMobile() ? this.MOBILE_GAP : this.GRID_GAP);
-  private readonly virtualGridColumns = computed(() => this.isMobile() ? this.mobileColumnCount() : undefined);
   readonly tableBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.books().length));
-  private readonly hasUnloadedBooks = computed(() => this.books().length < this.tableBookCount());
-  readonly virtualGrid = createVirtualGrid({
-    items: this.books,
-    scrollElement: this.scrollElement,
-    minItemWidth: this.minCardWidth,
-    gap: this.virtualGridGap,
-    columns: this.virtualGridColumns,
-    count: this.tableBookCount,
-    initialOffset: this.initialScrollOffset,
-    fillItemWidth: true,
-    estimateItemHeight: itemWidth => this.isMobile()
-      ? this.mobileCardSizeForWidth(itemWidth).height
-      : this.cardSizeForWidth(itemWidth).height,
-  });
-  private readonly gridInfinitePaginator = createInfinitePaginator({
-    items: this.books,
-    hasNextPage: this.hasUnloadedBooks,
-    isFetchingNextPage: this.appBooksApi.isFetchingNextPage,
-    virtualizer: this.virtualGrid.virtualizer,
-    enabled: () => this.currentViewMode() === VIEW_MODES.GRID,
-    loadNextPage: () => this.appBooksApi.fetchNextPage(),
-  });
   readonly isFetchingNextBooksPage = this.appBooksApi.isFetchingNextPage;
 
   parsedFilters: Record<string, string[]> = {};
@@ -377,10 +320,6 @@ export class BookBrowserComponent implements AfterViewInit {
   private settingFiltersFromUrl = false;
   protected metadataMenuItems: MenuItem[] | undefined;
   protected moreActionsMenuItems: MenuItem[] | undefined;
-  protected readonly onBookCardSelect = (book: Book, selected: boolean): void => {
-    this.handleBookSelect(book, selected);
-  };
-
   protected bookSorter = new BookSorter(
     sortCriteria => this.onMultiSortChange(sortCriteria),
     this.t
@@ -438,6 +377,7 @@ export class BookBrowserComponent implements AfterViewInit {
   });
 
   private readonly bookTableComponent = viewChild(BookTableComponent);
+  private readonly bookGridComponent = viewChild(BookGridComponent);
   private readonly bookFilterComponent = viewChild(BookFilterComponent);
 
   @HostListener('window:resize')
@@ -446,25 +386,6 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   readonly isMobile = computed(() => this.screenWidth() < this.MOBILE_BREAKPOINT);
-
-  private cardSizeForWidth(width: number): { width: number; height: number } {
-    const cardWidth = Math.round(width);
-    if (this.isAudiobookOnlyLibrary()) {
-      return {width: cardWidth, height: cardWidth + this.AUDIOBOOK_TITLE_BAR_HEIGHT};
-    }
-    return {
-      width: cardWidth,
-      height: Math.round(cardWidth * (this.DESKTOP_CARD_BASE_HEIGHT / this.DESKTOP_CARD_BASE_WIDTH)),
-    };
-  }
-
-  private mobileCardSizeForWidth(width: number): { width: number; height: number } {
-    const cardWidth = Math.round(width);
-    const coverHeight = this.isAudiobookOnlyLibrary()
-      ? cardWidth
-      : Math.floor(cardWidth * this.CARD_ASPECT_RATIO);
-    return {width: cardWidth, height: coverHeight + this.MOBILE_TITLE_BAR_HEIGHT};
-  }
 
   readonly showBooksLoadingPlaceholder = computed(() =>
     !this.booksError() && this.isBooksLoading() && this.books().length === 0
@@ -544,11 +465,8 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   private scrollToTop(): void {
-    const scrollElement = this.scrollElement()?.nativeElement;
-    if (scrollElement) {
-      scrollElement.scrollTop = 0;
-    }
     this.bookTableComponent()?.scrollToTop();
+    this.bookGridComponent()?.scrollToTop();
   }
 
   private readonly syncMetadataMenuEffect = effect(() => {
@@ -1075,32 +993,18 @@ export class BookBrowserComponent implements AfterViewInit {
   }
 
   setMobileColumns(columns: number): void {
-    this.mobileColumnCount.set(columns);
-    this.localStorageService.set(this.MOBILE_COLUMNS_STORAGE_KEY, columns);
+    this.gridMobileColumnCount.set(columns);
+    this.localStorageService.set(MOBILE_COLUMNS_STORAGE_KEY, columns);
   }
 
   adjustDesktopGridDensity(direction: 'smaller' | 'larger'): void {
-    const currentColumns = this.virtualGrid.gridColumns();
-    const columns = Math.max(1, direction === 'smaller'
-      ? currentColumns + 1
-      : currentColumns - 1);
-    const viewportWidth = this.virtualGrid.viewportWidth() || this.screenWidth();
-    this.virtualGrid.updatePreservingScrollPosition(() => {
-      this.coverScalePreferenceService.setScale(scaleForGridColumns(
-        viewportWidth,
-        this.GRID_GAP,
-        columns,
-        this.desktopBaseCardWidth(),
-        this.DESKTOP_MIN_SCALE,
-        this.DESKTOP_MAX_SCALE
-      ));
-    });
+    this.bookGridComponent()?.adjustDesktopGridDensity(direction);
   }
 
   private loadMobileColumnsPreference(): void {
-    const saved = this.localStorageService.get<number>(this.MOBILE_COLUMNS_STORAGE_KEY);
+    const saved = this.localStorageService.get<number>(MOBILE_COLUMNS_STORAGE_KEY);
     if (saved !== null && [2, 3, 4].includes(saved)) {
-      this.mobileColumnCount.set(saved);
+      this.gridMobileColumnCount.set(saved);
     }
   }
 }

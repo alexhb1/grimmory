@@ -128,17 +128,17 @@
                       <button
                         type="button"
                         class="browser-grid-option-btn"
-                        [class.active]="mobileColumnCount() === 2"
+                        [class.active]="gridMobileColumnCount() === 2"
                         (click)="setMobileColumns(2)">2</button>
                       <button
                         type="button"
                         class="browser-grid-option-btn"
-                        [class.active]="mobileColumnCount() === 3"
+                        [class.active]="gridMobileColumnCount() === 3"
                         (click)="setMobileColumns(3)">3</button>
                       <button
                         type="button"
                         class="browser-grid-option-btn"
-                        [class.active]="mobileColumnCount() === 4"
+                        [class.active]="gridMobileColumnCount() === 4"
                         (click)="setMobileColumns(4)">4</button>
                     </div>
                   </div>
@@ -281,38 +281,20 @@
         ></app-book-table>
       }
       @if (currentViewMode() === 'grid') {
-        <div #scrollElement class="virtual-scroller">
-          <div class="virtual-content" [style.height.px]="virtualGrid.virtualizer.getTotalSize()">
-            @for (virtualItem of virtualGrid.virtualizer.getVirtualItems(); track virtualItem.key) {
-              @if (visibleBooks[virtualItem.index]; as book) {
-                <div
-                  class="virtual-cell"
-                  [style.width.px]="virtualGrid.itemWidth()"
-                  [style.height.px]="virtualItem.size"
-                  [style.transform]="virtualGrid.itemTransform(virtualItem)">
-                  <app-book-card
-                    [index]="virtualItem.index"
-                    [book]="book"
-                    [isCheckboxEnabled]="true"
-                    [seriesViewEnabled]="seriesViewEnabled()"
-                    [onBookSelect]="onBookCardSelect"
-                    [isSeriesCollapsed]="seriesCollapseFilter.seriesCollapsed()"
-                    (checkboxClick)="onCheckboxClicked($event)"
-                    [isSelected]="bookSelectionService.isBookSelected(book)"
-                    [useSquareCovers]="isAudiobookOnlyLibrary()"
-                    [overlayPreferenceService]="bookCardOverlayPreferenceService">
-                  </app-book-card>
-                </div>
-              } @else {
-                <div
-                  class="virtual-cell virtual-loader-cell"
-                  [style.width.px]="virtualGrid.itemWidth()"
-                  [style.height.px]="virtualItem.size"
-                  [style.transform]="virtualGrid.itemTransform(virtualItem)"></div>
-              }
-            }
-          </div>
-        </div>
+        <app-book-grid
+          [books]="visibleBooks"
+          [virtualRowCount]="tableBookCount()"
+          [isLoading]="showBooksLoadingPlaceholder()"
+          [isFetchingNextPage]="isFetchingNextBooksPage()"
+          [seriesViewEnabled]="seriesViewEnabled()"
+          [isSeriesCollapsed]="seriesCollapseFilter.seriesCollapsed()"
+          [useSquareCovers]="isAudiobookOnlyLibrary()"
+          [mobileColumnCount]="gridMobileColumnCount()"
+          [overlayPreferenceService]="bookCardOverlayPreferenceService"
+          (bookSelect)="handleBookSelect($event.book, $event.selected)"
+          (checkboxClick)="onCheckboxClicked($event)"
+          (loadNextPage)="loadNextBooksPage()"
+        ></app-book-grid>
       }
       @if (userService.currentUser(); as currentUser) {
             <div class="book-browser-footer" [class.footer-hidden]="selectedCount() === 0">

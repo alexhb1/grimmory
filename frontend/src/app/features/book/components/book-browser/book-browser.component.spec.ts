@@ -478,29 +478,7 @@ describe('BookBrowserComponent', () => {
     expect(collapseBooksSpy).toHaveBeenCalled();
   });
 
-  it('triggers next page fetch when the virtual grid reaches the loaded rows', () => {
-    const {component, setHasNextPage} = createHarness({totalElements: 100});
-    const appBooksApi = TestBed.inject(AppBooksApiService);
-
-    vi.runOnlyPendingTimers();
-    TestBed.flushEffects();
-
-    vi.spyOn(component.virtualGrid.virtualizer, 'getVirtualItems').mockReturnValue([
-      {index: 2, key: 2, start: 0, end: 241, size: 241, lane: 0}
-    ]);
-
-    component.currentViewMode.set(VIEW_MODES.TABLE);
-    TestBed.flushEffects();
-
-    setHasNextPage(true);
-    const fetchNextPageSpy = vi.spyOn(appBooksApi, 'fetchNextPage');
-    component.currentViewMode.set(VIEW_MODES.GRID);
-    TestBed.flushEffects();
-
-    expect(fetchNextPageSpy).toHaveBeenCalled();
-  });
-
-  it('uses the known total book count for virtual grid size while more pages are available', () => {
+  it('uses the known total book count while more pages are available', () => {
     const {component, setHasNextPage} = createHarness({totalElements: 100});
 
     setHasNextPage(true);
@@ -508,7 +486,7 @@ describe('BookBrowserComponent', () => {
     vi.runOnlyPendingTimers();
     TestBed.flushEffects();
 
-    expect(component.virtualGrid.virtualizer.options().count).toBe(100);
+    expect(component.tableBookCount()).toBe(100);
   });
 
   it('uses one unloaded slot for collapsed series while more pages are available', () => {
@@ -520,7 +498,7 @@ describe('BookBrowserComponent', () => {
     vi.runOnlyPendingTimers();
     TestBed.flushEffects();
 
-    expect(component.virtualGrid.virtualizer.options().count).toBe(component.books().length + 1);
+    expect(component.tableBookCount()).toBe(component.books().length + 1);
   });
 
   it('uses the rendered book count once pagination is exhausted', () => {
@@ -532,6 +510,6 @@ describe('BookBrowserComponent', () => {
     TestBed.flushEffects();
 
     expect(component.books()).toHaveLength(1);
-    expect(component.virtualGrid.virtualizer.options().count).toBe(1);
+    expect(component.tableBookCount()).toBe(1);
   });
 });
