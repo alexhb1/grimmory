@@ -464,7 +464,6 @@ describe('BookBrowserComponent', () => {
     });
 
     expect(component.showBooksLoadingPlaceholder()).toBe(false);
-    expect(component.showGridLoadingPlaceholder()).toBe(false);
     expect(component.showTableLoadingPlaceholder()).toBe(false);
   });
 
@@ -480,7 +479,7 @@ describe('BookBrowserComponent', () => {
   });
 
   it('triggers next page fetch when the virtual grid reaches the loaded rows', () => {
-    const {component, setHasNextPage} = createHarness();
+    const {component, setHasNextPage} = createHarness({totalElements: 100});
     const appBooksApi = TestBed.inject(AppBooksApiService);
 
     vi.runOnlyPendingTimers();

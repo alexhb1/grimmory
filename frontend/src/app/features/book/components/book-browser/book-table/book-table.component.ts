@@ -29,7 +29,7 @@ const ROW_HEIGHT = 46;
 const RENDER_OVERSCAN_ROWS = 16;
 const RESIZE_OVERSCAN_ROWS = 2;
 const PAGE_LOAD_AHEAD_ROWS = 40;
-const INITIAL_LOADING_ROW_COUNT = 8;
+const INITIAL_LOADING_ROW_COUNT = 24;
 const DEFAULT_COLUMN_SIZES: Record<string, number> = {
   readStatus: 72,
   title: 260,

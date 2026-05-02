@@ -66,6 +66,8 @@ export enum EntityType {
   UNSHELVED = 'Unshelved Books',
 }
 
+const INITIAL_LOADING_ITEM_COUNT = 24;
+
 @Component({
   selector: 'app-book-browser',
   standalone: true,
@@ -295,7 +297,6 @@ export class BookBrowserComponent implements AfterViewInit {
   private readonly AUDIOBOOK_TITLE_BAR_HEIGHT = 31;
   private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
   private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
-  private readonly gridBooks = this.books;
   private readonly desktopBaseCardWidth = computed(() =>
     this.isAudiobookOnlyLibrary()
       ? this.DESKTOP_CARD_BASE_WIDTH * 1.1
@@ -308,14 +309,15 @@ export class BookBrowserComponent implements AfterViewInit {
   );
   private readonly virtualGridGap = computed(() => this.isMobile() ? this.MOBILE_GAP : this.GRID_GAP);
   private readonly virtualGridColumns = computed(() => this.isMobile() ? this.mobileColumnCount() : undefined);
-  private readonly virtualBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.gridBooks().length));
+  readonly tableBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.books().length));
+  private readonly hasUnloadedBooks = computed(() => this.books().length < this.tableBookCount());
   readonly virtualGrid = createVirtualGrid({
-    items: this.gridBooks,
+    items: this.books,
     scrollElement: this.scrollElement,
     minItemWidth: this.minCardWidth,
     gap: this.virtualGridGap,
     columns: this.virtualGridColumns,
-    count: this.virtualBookCount,
+    count: this.tableBookCount,
     initialOffset: this.initialScrollOffset,
     fillItemWidth: true,
     estimateItemHeight: itemWidth => this.isMobile()
@@ -323,17 +325,15 @@ export class BookBrowserComponent implements AfterViewInit {
       : this.cardSizeForWidth(itemWidth).height,
   });
   private readonly gridInfinitePaginator = createInfinitePaginator({
-    items: this.gridBooks,
-    hasNextPage: this.appBooksApi.hasNextPage,
+    items: this.books,
+    hasNextPage: this.hasUnloadedBooks,
     isFetchingNextPage: this.appBooksApi.isFetchingNextPage,
     virtualizer: this.virtualGrid.virtualizer,
     enabled: () => this.currentViewMode() === VIEW_MODES.GRID,
     loadNextPage: () => this.appBooksApi.fetchNextPage(),
   });
-  readonly tableBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.books().length));
   readonly isFetchingNextBooksPage = this.appBooksApi.isFetchingNextPage;
 
-  skeletonSlots = Array.from({length: 24}, (_, index) => index);
   parsedFilters: Record<string, string[]> = {};
   dynamicDialogRef: DynamicDialogRef | undefined | null;
   EntityType = EntityType;
@@ -447,30 +447,6 @@ export class BookBrowserComponent implements AfterViewInit {
 
   readonly isMobile = computed(() => this.screenWidth() < this.MOBILE_BREAKPOINT);
 
-  readonly mobileCardSize = computed(() => {
-    const columns = this.mobileColumnCount();
-    const totalGaps = (columns - 1) * this.MOBILE_GAP;
-    const availableWidth = this.screenWidth() - totalGaps - this.MOBILE_PADDING;
-    const cardWidth = Math.floor(availableWidth / columns);
-    const coverHeight = this.isAudiobookOnlyLibrary() ? cardWidth : Math.floor(cardWidth * this.CARD_ASPECT_RATIO);
-    const cardHeight = coverHeight + this.MOBILE_TITLE_BAR_HEIGHT;
-    return {width: cardWidth, height: cardHeight};
-  });
-
-  readonly currentCardSize = computed<{width: number; height: number}>(() => {
-    if (this.isMobile()) {
-      const width = this.virtualGrid.viewportWidth() > 0
-        ? this.virtualGrid.itemWidth()
-        : this.mobileCardSize().width;
-      return this.mobileCardSizeForWidth(width);
-    }
-    return this.cardSizeForWidth(this.virtualGrid.itemWidth());
-  });
-
-  readonly skeletonMinCardWidth = computed(() =>
-    `${this.isMobile() ? this.mobileCardSize().width : this.minCardWidth()}px`
-  );
-
   private cardSizeForWidth(width: number): { width: number; height: number } {
     const cardWidth = Math.round(width);
     if (this.isAudiobookOnlyLibrary()) {
@@ -498,11 +474,10 @@ export class BookBrowserComponent implements AfterViewInit {
     this.showBooksLoadingPlaceholder() && this.currentViewMode() === VIEW_MODES.TABLE
   );
 
-  readonly showGridLoadingPlaceholder = computed(() =>
-    this.showBooksLoadingPlaceholder() && this.currentViewMode() === VIEW_MODES.GRID
-  );
-
   private bookCountIncludingUnloadedPages(renderedBookCount: number): number {
+    if (this.showBooksLoadingPlaceholder()) {
+      return INITIAL_LOADING_ITEM_COUNT;
+    }
     if (!this.appBooksApi.hasNextPage()) {
       return renderedBookCount;
     }

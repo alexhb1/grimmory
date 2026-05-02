@@ -253,19 +253,7 @@
       </div>
     </div>
 
-    @if (showGridLoadingPlaceholder()) {
-      <div #scrollElement class="virtual-scroller">
-        <div class="skeleton-grid"
-          [style.grid-template-columns]="'repeat(auto-fill, minmax(' + skeletonMinCardWidth() + ', 1fr))'">
-          @for (item of skeletonSlots; track item) {
-            <div class="skeleton-card"
-              [style.width.px]="currentCardSize().width"
-              [style.height.px]="currentCardSize().height">
-            </div>
-          }
-        </div>
-      </div>
-    } @else if (booksError()) {
+    @if (booksError()) {
       <div class="no-books-container">
         <p class="no-books-text">
           {{ entityType() === EntityType.LIBRARY ? t('labels.failedLibrary') : t('labels.failedShelf') }}
