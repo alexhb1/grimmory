@@ -29,7 +29,6 @@ const ROW_HEIGHT = 46;
 const RENDER_OVERSCAN_ROWS = 16;
 const RESIZE_OVERSCAN_ROWS = 2;
 const PAGE_LOAD_AHEAD_ROWS = 40;
-const INITIAL_LOADING_ROW_COUNT = 24;
 const DEFAULT_COLUMN_SIZES: Record<string, number> = {
   readStatus: 72,
   title: 260,
@@ -84,7 +83,6 @@ export class BookTableComponent {
   readonly books = input<Book[]>([]);
   readonly visibleColumns = input<BookTableColumn[]>([]);
   readonly virtualRowCount = input(0);
-  readonly isLoading = input(false);
   readonly isFetchingNextPage = input(false);
   readonly useSquareCovers = input(false);
 
@@ -97,7 +95,7 @@ export class BookTableComponent {
   private readonly t = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly scrollElement = viewChild<ElementRef<HTMLElement>>('scrollElement');
-  private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute)) ?? 0;
+  private readonly initialScrollOffset = () => this.scrollService.getPosition(this.scrollService.keyFor(this.activatedRoute, 'table')) ?? 0;
 
   private readonly columnSizing = signal<ColumnSizingState>({});
   protected readonly coverPreview = signal<BookTableRowCoverPreview | null>(null);
@@ -136,13 +134,7 @@ export class BookTableComponent {
   readonly ariaRowCount = computed(() => this.rowCount() + 1);
   readonly ariaColumnCount = computed(() => this.visibleCellIds().length);
   readonly isColumnResizing = computed(() => Boolean(this.table.getState().columnSizingInfo.isResizingColumn));
-  readonly rowCount = computed(() => {
-    const books = this.books();
-    if (this.isLoading() && books.length === 0) {
-      return INITIAL_LOADING_ROW_COUNT;
-    }
-    return Math.max(this.virtualRowCount(), books.length);
-  });
+  readonly rowCount = computed(() => Math.max(this.virtualRowCount(), this.books().length));
   readonly columnSizeVars = computed<Record<string, number | string>>(() => {
     this.columnSizing();
     this.visibleColumns();
@@ -186,6 +178,7 @@ export class BookTableComponent {
       scrollElement: this.scrollElement,
       route: this.activatedRoute,
       destroyRef: this.destroyRef,
+      keySuffix: 'table',
       dismissOverlaysBeforeSave: true,
       beforeSave: () => this.clearCoverPreview(),
     });
