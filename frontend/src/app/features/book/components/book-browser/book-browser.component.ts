@@ -54,6 +54,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {SortService} from '../../service/sort.service';
 import {AppBooksApiService} from '../../service/app-books-api.service';
 import {AppBookFilters} from '../../model/app-book.model';
+import {createInfinitePaginator} from '../../../../shared/util/infinite-paginator.util';
 import {createVirtualGrid, scaleForGridColumns} from '../../../../shared/util/virtual-grid.util';
 import {GridDensityButtonsComponent} from '../../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 
@@ -321,6 +322,14 @@ export class BookBrowserComponent implements AfterViewInit {
       ? this.mobileCardSizeForWidth(itemWidth).height
       : this.cardSizeForWidth(itemWidth).height,
   });
+  private readonly gridInfinitePaginator = createInfinitePaginator({
+    items: this.gridBooks,
+    hasNextPage: this.appBooksApi.hasNextPage,
+    isFetchingNextPage: this.appBooksApi.isFetchingNextPage,
+    virtualizer: this.virtualGrid.virtualizer,
+    enabled: () => this.currentViewMode() === VIEW_MODES.GRID,
+    loadNextPage: () => this.appBooksApi.fetchNextPage(),
+  });
   readonly tableBookCount = computed(() => this.bookCountIncludingUnloadedPages(this.books().length));
   readonly isFetchingNextBooksPage = this.appBooksApi.isFetchingNextPage;
 
@@ -426,24 +435,6 @@ export class BookBrowserComponent implements AfterViewInit {
       this.selectedBooks(),
       this.userService.currentUser()
     );
-  });
-
-  private readonly fetchNextPageEffect = effect(() => {
-    if (this.currentViewMode() !== VIEW_MODES.GRID) return;
-
-    const virtualItems = this.virtualGrid.virtualizer.getVirtualItems();
-    const loadedBookCount = this.gridBooks().length;
-    const lastItem = virtualItems.at(-1);
-
-    if (
-      lastItem &&
-      loadedBookCount > 0 &&
-      lastItem.index >= loadedBookCount - 1 &&
-      this.appBooksApi.hasNextPage() &&
-      !this.appBooksApi.isFetchingNextPage()
-    ) {
-      this.appBooksApi.fetchNextPage();
-    }
   });
 
   private readonly bookTableComponent = viewChild(BookTableComponent);

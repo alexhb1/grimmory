@@ -18,6 +18,7 @@ import {MessageService} from 'primeng/api';
 import {BookSelectionService} from '../book-selection.service';
 import {BookTableRowComponent, type BookTableRowCoverPreview, type BookTableSelectionChange} from './book-table-row.component';
 import {RATING_FIELDS, isMetadataFullyLocked} from './book-table.helpers';
+import {createInfinitePaginator} from '../../../../../shared/util/infinite-paginator.util';
 
 interface BookTableColumn {
   field: string;
@@ -100,9 +101,7 @@ export class BookTableComponent {
 
   private readonly columnSizing = signal<ColumnSizingState>({});
   protected readonly coverPreview = signal<BookTableRowCoverPreview | null>(null);
-  private readonly pendingLockBookIds = signal<ReadonlySet<number>>(new Set());
-  private lastLoadRequestBookCount = 0;
-  private previousBookIdsToken: string | undefined;
+  private readonly pendingLockBookIds = signal<Set<number>>(new Set());
 
   protected readonly coverOverlayPositions = COVER_OVERLAY_POSITIONS;
 
@@ -198,31 +197,13 @@ export class BookTableComponent {
     queueMicrotask(() => this.rowVirtualizer.measure());
   });
 
-  private readonly resetLoadRequestOnBooksChange = effect(() => {
-    const books = this.books();
-    const bookIdsToken = books.map(book => book.id).join('|');
-    if (this.previousBookIdsToken !== undefined && bookIdsToken !== this.previousBookIdsToken) {
-      this.lastLoadRequestBookCount = 0;
-    }
-    this.previousBookIdsToken = bookIdsToken;
-  });
-
-  private readonly fetchNextPageEffect = effect(() => {
-    const virtualItems = this.rowVirtualizer.getVirtualItems();
-    const lastItem = virtualItems.at(-1);
-    const loadedBookCount = this.books().length;
-
-    if (
-      lastItem &&
-      loadedBookCount > 0 &&
-      lastItem.index >= loadedBookCount - PAGE_LOAD_AHEAD_ROWS &&
-      loadedBookCount < this.virtualRowCount() &&
-      !this.isFetchingNextPage() &&
-      this.lastLoadRequestBookCount !== loadedBookCount
-    ) {
-      this.lastLoadRequestBookCount = loadedBookCount;
-      this.loadNextPage.emit();
-    }
+  private readonly infinitePaginator = createInfinitePaginator({
+    items: this.books,
+    hasNextPage: () => this.books().length < this.virtualRowCount(),
+    isFetchingNextPage: this.isFetchingNextPage,
+    virtualizer: this.rowVirtualizer,
+    loadAheadRows: PAGE_LOAD_AHEAD_ROWS,
+    loadNextPage: () => this.loadNextPage.emit(),
   });
 
   private defaultColumnSize(field: string): number {
