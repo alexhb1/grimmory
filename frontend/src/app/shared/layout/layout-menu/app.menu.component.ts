@@ -199,30 +199,31 @@ export class AppMenuComponent {
     this.layoutService.closeMobileSidebar();
   }
 
-  // Each overlay remembers its own trigger so the position can be re-read when the
-  // panel renders. Scoping the offset to each panel (instead of a shared variable on
-  // <html>) means a closing overlay holds its place while a new one opens elsewhere.
   private readonly anchorByOverlay = new WeakMap<Menu | Popover, { trigger: HTMLElement; placement: 'above' | 'below' }>();
 
-  protected applyOverlayBottom(overlay: Menu | Popover): void {
+  protected applySidebarOverlayPosition(overlay: Menu | Popover): void {
     const anchor = this.anchorByOverlay.get(overlay);
     const panel = overlay.container;
     if (!anchor || !panel) return;
 
     const rect = anchor.trigger.getBoundingClientRect();
     const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
     const left = Math.max(Math.min(rect.left, window.innerWidth - panelWidth - 8), 8);
+    const maxTop = Math.max(window.innerHeight - panelHeight - 8, 8);
 
-    // `above` collapses to `below` when the sidebar is narrow, because the
-    // anchored left offset assumes an expanded footer row.
     const anchorAbove = anchor.placement === 'above' && !this.layoutService.desktopSidebarCollapsed();
+    const requestedTop = anchorAbove
+      ? rect.top - panelHeight - 8
+      : rect.bottom + 8;
+    const top = Math.max(Math.min(requestedTop, maxTop), 8);
+
+    panel.style.setProperty('--sidebar-popover-top', `${top}px`);
+    panel.style.setProperty('--sidebar-popover-max-height', `${Math.max(window.innerHeight - top - 8, 0)}px`);
+
     if (anchorAbove) {
-      const bottom = Math.max(window.innerHeight - rect.top + 8, 8);
-      panel.style.setProperty('--sidebar-popover-bottom', `${bottom}px`);
       panel.style.setProperty('--sidebar-popover-left', `${left}px`);
     } else {
-      const bottom = Math.max(window.innerHeight - rect.bottom, 8);
-      panel.style.setProperty('--sidebar-popover-bottom', `${bottom}px`);
       if (this.layoutService.isDesktop()) {
         panel.style.removeProperty('--sidebar-popover-left');
       } else {

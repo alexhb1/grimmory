@@ -35,6 +35,7 @@ export class AppMenuItemRowComponent {
 
   private readonly userService = inject(UserService);
   readonly layoutService = inject(LayoutService);
+  private contextMenuTrigger: HTMLElement | null = null;
 
   readonly isRouteActive = computed(() => {
     const route = this.item().routerLink?.[0];
@@ -56,13 +57,42 @@ export class AppMenuItemRowComponent {
   }
 
   openContextMenu(event: Event, menu: Menu): void {
+    this.contextMenuTrigger = event.currentTarget instanceof HTMLElement
+      ? event.currentTarget
+      : null;
     menu.toggle(event);
     this.menuOpen.update((open) => !open);
     event.stopPropagation();
   }
 
+  positionContextMenu(menu: Menu): void {
+    if (this.layoutService.isDesktop()) return;
+
+    const trigger = this.contextMenuTrigger;
+    const panel = menu.container;
+    if (!trigger || !panel) return;
+
+    const gutter = 8;
+    const rect = trigger.getBoundingClientRect();
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
+    const spaceAbove = rect.top - gutter;
+    const spaceBelow = window.innerHeight - rect.bottom - gutter;
+    const placeBelow = spaceBelow >= panelHeight || spaceBelow >= spaceAbove;
+    const availableHeight = Math.max(placeBelow ? spaceBelow : spaceAbove, 0);
+    const left = Math.max(Math.min(rect.right + gutter, window.innerWidth - panelWidth - gutter), gutter);
+    const top = placeBelow
+      ? rect.bottom + gutter
+      : rect.top - Math.min(panelHeight, availableHeight) - gutter;
+
+    panel.style.setProperty('--sidebar-popover-left', `${left}px`);
+    panel.style.setProperty('--sidebar-popover-top', `${Math.max(top, gutter)}px`);
+    panel.style.setProperty('--sidebar-popover-max-height', `${availableHeight}px`);
+  }
+
   closeContextMenu(): void {
     this.menuOpen.set(false);
+    this.contextMenuTrigger = null;
   }
 
   getIconSelection(): IconSelection | null {

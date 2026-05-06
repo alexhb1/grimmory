@@ -18,7 +18,7 @@ import {
 export const SIDEBAR_MIN_WIDTH = 175;
 export const SIDEBAR_MAX_WIDTH = 400;
 export const SIDEBAR_DEFAULT_WIDTH = 225;
-const DESKTOP_MIN_WIDTH = 768;
+export const MOBILE_SHELL_MEDIA_QUERY = '(width <= 767px), ((width <= 959px) and (height <= 500px) and (pointer: coarse) and (hover: none))';
 const SIDEBAR_EXPANDED_STATE_KEY = 'sidebarExpandedState';
 const SIDEBAR_TRANSITION_MS = 220;
 
@@ -44,6 +44,7 @@ export class LayoutService {
   private readonly userService = inject(UserService, { optional: true });
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly mobileShellMediaQueryList = this.document.defaultView?.matchMedia?.(MOBILE_SHELL_MEDIA_QUERY);
 
   readonly scale = signal(14);
   readonly currentPath = signal(this.router.url.split('?')[0]);
@@ -78,9 +79,9 @@ export class LayoutService {
       this._magicShelfSort.set(normalizeSortPref(settings?.sidebarMagicShelfSorting, DEFAULT_MAGIC_SHELF_SORT));
     });
 
-    this.document.defaultView?.addEventListener('resize', this.onResize);
+    this.mobileShellMediaQueryList?.addEventListener('change', this.onMobileShellChange);
     this.destroyRef.onDestroy(() => {
-      this.document.defaultView?.removeEventListener('resize', this.onResize);
+      this.mobileShellMediaQueryList?.removeEventListener('change', this.onMobileShellChange);
       if (this.sidebarTransitionTimeoutId) {
         clearTimeout(this.sidebarTransitionTimeoutId);
       }
@@ -149,11 +150,15 @@ export class LayoutService {
   }
 
   private computeIsDesktop(): boolean {
-    return (this.document.defaultView?.innerWidth ?? DESKTOP_MIN_WIDTH) >= DESKTOP_MIN_WIDTH;
+    return !(this.mobileShellMediaQueryList?.matches ?? false);
   }
 
-  private readonly onResize = (): void => {
-    this.isDesktop.set(this.computeIsDesktop());
+  private readonly onMobileShellChange = (event: MediaQueryListEvent): void => {
+    const isDesktop = !event.matches;
+    this.isDesktop.set(isDesktop);
+    if (isDesktop) {
+      this.closeMobileSidebar();
+    }
   };
 
   private setSidebarCollapsed(collapsed: boolean): void {

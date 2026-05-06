@@ -1,3 +1,5 @@
+@use "../layout/styles/layout/variables";
+
 /*
  * Document defaults.
  *
@@ -22,6 +24,13 @@ body {
   font-family: var(--font-family), serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media #{variables.$mobile-shell-media-query} {
+  html,
+  body {
+    background-color: var(--page-background);
+  }
 }
 
 a {

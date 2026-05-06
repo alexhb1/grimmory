@@ -4,7 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LayoutService } from './layout.service';
+import { LayoutService, MOBILE_SHELL_MEDIA_QUERY } from './layout.service';
 import { LocalStorageService } from '../service/local-storage.service';
 import { UserService } from '../../features/settings/user-management/user.service';
 
@@ -20,6 +20,8 @@ describe('LayoutService', () => {
     },
   } as never);
   const updateUserSetting = vi.fn();
+  let mediaQueryList: MediaQueryList;
+  let mediaQueryListener: ((event: MediaQueryListEvent) => void) | undefined;
   const localStorageService = {
     get: vi.fn((key: string) => {
       if (key === 'sidebarCollapsed') {
@@ -35,6 +37,24 @@ describe('LayoutService', () => {
 
   beforeEach(() => {
     routerEvents = new Subject<unknown>();
+    mediaQueryListener = undefined;
+    mediaQueryList = {
+      matches: false,
+      media: MOBILE_SHELL_MEDIA_QUERY,
+      onchange: null,
+      addEventListener: vi.fn((_type, listener) => {
+        mediaQueryListener = listener as (event: MediaQueryListEvent) => void;
+      }),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => mediaQueryList),
+    });
     TestBed.configureTestingModule({
       providers: [
         LayoutService,
@@ -79,6 +99,20 @@ describe('LayoutService', () => {
     service.onMenuToggle();
     expect(service.mobileDrawerOpen()).toBe(true);
     service.onMenuToggle();
+    expect(service.mobileDrawerOpen()).toBe(false);
+  });
+
+  it('derives desktop state from the mobile shell media query', () => {
+    expect(window.matchMedia).toHaveBeenCalledWith(MOBILE_SHELL_MEDIA_QUERY);
+    expect(service.isDesktop()).toBe(true);
+
+    mediaQueryListener?.({ matches: true } as MediaQueryListEvent);
+    expect(service.isDesktop()).toBe(false);
+
+    service.mobileDrawerOpen.set(true);
+    mediaQueryListener?.({ matches: false } as MediaQueryListEvent);
+
+    expect(service.isDesktop()).toBe(true);
     expect(service.mobileDrawerOpen()).toBe(false);
   });
 
@@ -145,12 +179,10 @@ describe('LayoutService', () => {
   });
 
   it('cleans up global listeners and router events when destroyed', () => {
-    const removeEventListener = vi.spyOn(window, 'removeEventListener');
-
     TestBed.resetTestingModule();
     routerEvents.next(new NavigationEnd(1, '/series', '/series'));
 
-    expect(removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
+    expect(mediaQueryList.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
     expect(service.currentPath()).toBe('/dashboard');
   });
 });

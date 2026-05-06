@@ -1,3 +1,5 @@
+@use "../layout/styles/layout/variables";
+
 /*
  * Native CDK overlay hooks.
  *
@@ -9,12 +11,12 @@
   background: rgb(0 0 0 / 50%);
 }
 
-.command-palette-panel {
+.cdk-overlay-pane.command-palette-panel {
   display: flex;
   pointer-events: auto;
 }
 
-@media (width <= 991px) {
+@media #{variables.$mobile-shell-media-query} {
   .cdk-overlay-backdrop.command-palette-backdrop {
     top: 3.5rem;
   }

@@ -5,21 +5,19 @@ import { Component, computed, DestroyRef, effect, ElementRef, inject, signal, Te
 import { NavigationStart, Router } from '@angular/router';
 import { filter, take } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { TranslocoDirective, TranslocoPipe } from '@jsverse/transloco';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CoverPlaceholderComponent } from '../../shared/components/cover-generator/cover-generator.component';
 import { IconDisplayComponent } from '../../shared/components/icon-display/icon-display.component';
+import { MOBILE_SHELL_MEDIA_QUERY } from '../../shared/layout/layout.service';
 import { PaletteItem } from './command-palette.model';
 import { CommandPaletteService } from './command-palette.service';
-
-const MOBILE_MEDIA_QUERY = '(max-width: 767px)';
-const MOBILE_TOPBAR_HEIGHT = '3.5rem';
 
 @Component({
   selector: 'app-command-palette',
   standalone: true,
-  imports: [A11yModule, OverlayModule, FormsModule, TranslocoDirective, IconDisplayComponent, CoverPlaceholderComponent],
+  imports: [A11yModule, OverlayModule, FormsModule, TranslocoDirective, TranslocoPipe, IconDisplayComponent, CoverPlaceholderComponent],
   templateUrl: './command-palette.component.html',
   styleUrl: './command-palette.component.scss',
 })
@@ -190,7 +188,7 @@ export class CommandPaletteComponent {
   private buildPositionStrategy() {
     const position = this.overlay.position().global();
     if (this.isMobileViewport()) {
-      return position.left('0').top(MOBILE_TOPBAR_HEIGHT);
+      return position.left('0').top('0');
     }
     return position.centerHorizontally().top('15vh');
   }
@@ -206,7 +204,7 @@ export class CommandPaletteComponent {
 
   private bindMobileMediaListener(): void {
     if (typeof window === 'undefined' || this.mobileMedia) return;
-    this.mobileMedia = window.matchMedia(MOBILE_MEDIA_QUERY);
+    this.mobileMedia = window.matchMedia(MOBILE_SHELL_MEDIA_QUERY);
     this.mobileMedia.addEventListener('change', this.mobileMediaListener);
   }
 
@@ -240,15 +238,7 @@ export class CommandPaletteComponent {
       this.availableHeightPx.set(null);
       return;
     }
-    const topbarPx = this.readTopbarHeightPx();
-    this.availableHeightPx.set(Math.max(0, Math.round(vv.height - topbarPx)));
-  }
-
-  private readTopbarHeightPx(): number {
-    const fontSize = typeof window !== 'undefined'
-      ? parseFloat(window.getComputedStyle(document.documentElement).fontSize)
-      : 16;
-    return (isNaN(fontSize) ? 16 : fontSize) * 3.5;
+    this.availableHeightPx.set(Math.max(0, Math.round(vv.height)));
   }
 
   private scheduleInputFocus(): void {

@@ -1,3 +1,5 @@
+@use "../../../assets/layout/styles/layout/variables";
+
 :host {
   display: contents;
 }
@@ -58,6 +60,34 @@
   &::-webkit-search-decoration {
     appearance: none;
     display: none;
+  }
+}
+
+.command-palette-close-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-color);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  i {
+    font-size: 1.25rem;
   }
 }
 
@@ -228,17 +258,68 @@
   color: var(--text-color);
 }
 
-@media (width <= 767px) {
+@media #{variables.$mobile-shell-media-query} {
   .command-palette-shell {
     width: 100vw;
   }
 
   .command-palette {
-    max-height: calc(100dvh - 3.5rem);
-    border-top: none;
-    border-left: none;
-    border-right: none;
+    max-height: 100dvh;
+    background: var(--app-background);
+    border: none;
     border-radius: 0;
+    box-shadow: none;
+  }
+
+  .command-palette-form {
+    flex-shrink: 0;
+    background: var(--app-background);
+    border-bottom: 1px solid var(--content-border-color);
+
+    &:has(+ .command-palette-results) .command-palette-input-row {
+      border-bottom: none;
+    }
+  }
+
+  .command-palette-input-row {
+    box-sizing: border-box;
+    height: 3.5rem;
+    gap: 0.5rem;
+    padding:
+      0
+      calc(0.75rem + env(safe-area-inset-right))
+      0
+      calc(0.75rem + env(safe-area-inset-left));
+
+    > .pi-search {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 2.5rem;
+    }
+  }
+
+  .command-palette-input {
+    padding-right: 0.5rem;
+  }
+
+  .command-palette-close-button {
+    display: inline-flex;
+  }
+
+  .command-palette-results,
+  .command-palette-empty {
+    background: var(--page-background);
+  }
+
+  .command-palette-results {
+    padding:
+      var(--space-2)
+      calc(var(--space-3) + env(safe-area-inset-right))
+      var(--space-2)
+      calc(var(--space-3) + env(safe-area-inset-left));
+    border-bottom: 1px solid var(--border-color);
     box-shadow: 0 12px 24px rgb(0 0 0 / 18%);
   }
 

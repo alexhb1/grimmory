@@ -1,34 +1,40 @@
-@media (width >= 768px) {
-  .layout-wrapper {
-    &.layout-sidebar-hidden {
-      grid-template-columns: 0 minmax(0, 1fr);
+@use "variables";
 
-      .layout-sidebar {
-        transform: translateX(-100%);
-        pointer-events: none;
-        visibility: hidden;
-      }
-    }
+.layout-wrapper {
+  &.layout-sidebar-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
 
-    .layout-mask {
-      display: none;
+    .layout-sidebar {
+      transform: translateX(-100%);
+      pointer-events: none;
+      visibility: hidden;
     }
+  }
+
+  .layout-mask {
+    display: none;
   }
 }
 
-@media (width <= 767px) {
+@media #{variables.$mobile-shell-media-query} {
   .blocked-scroll {
     overflow: hidden;
   }
 
   .layout-wrapper {
     display: block;
+    background-color: var(--page-background);
 
     .layout-main {
       --mobile-topbar-height: 3.5rem;
+      --mobile-control-safe-area-bottom: env(safe-area-inset-bottom);
 
       box-sizing: border-box;
-      padding-top: var(--mobile-topbar-height);
+      padding:
+        var(--mobile-topbar-height)
+        env(safe-area-inset-right)
+        0
+        env(safe-area-inset-left);
     }
 
     .layout-sidebar {
@@ -80,6 +86,7 @@
       --mobile-sidebar-fade-duration: 220ms;
 
       position: fixed;
+      display: block;
       top: 0;
       left: 0;
       z-index: 998;
@@ -114,10 +121,20 @@
   }
 }
 
-@media (width <= 768px) {
+@media #{variables.$mobile-shell-media-query} {
   .layout-wrapper {
     .layout-sidebar {
       width: 100vw;
+      border-right: 0;
+    }
+  }
+}
+
+@media #{variables.$mobile-shell-media-query} and (orientation: landscape) {
+  .layout-wrapper {
+    .layout-sidebar {
+      width: 100vw;
+      padding-bottom: var(--space-3);
       border-right: 0;
     }
   }
