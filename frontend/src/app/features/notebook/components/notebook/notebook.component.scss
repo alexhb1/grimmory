@@ -25,11 +25,11 @@
 @media (width <= 768px) {
   .main-container > .settings-header,
   .main-container > .settings-card {
-    margin-inline: 0.5rem;
+    margin-inline: var(--space-4);
   }
 
   .main-container > .settings-header {
-    margin-top: 0.5rem;
+    margin-top: var(--space-4);
   }
 }
 
@@ -44,7 +44,7 @@
   padding: 1.5rem 1.1rem 0;
 
   @media (width <= 768px) {
-    padding: 1.5rem 0.5rem 0;
+    padding: 1.5rem var(--space-4) 0;
   }
 }
 

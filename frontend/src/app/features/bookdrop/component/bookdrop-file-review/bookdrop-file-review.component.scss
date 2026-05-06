@@ -1,9 +1,14 @@
 .main-card {
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   height: 100%;
   overflow: hidden;
   background: var(--page-background);
+
+  @media (width <= 768px) {
+    padding: var(--space-4);
+  }
 }
 
 .header {
