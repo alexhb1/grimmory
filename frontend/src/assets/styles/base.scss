@@ -10,6 +10,8 @@
  */
 
 html {
+  --mobile-shell-active: 0;
+
   height: 100%;
   font-family: var(--font-family), "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
   font-size: var(--font-size-root);
@@ -27,6 +29,10 @@ body {
 }
 
 @media #{variables.$mobile-shell-media-query} {
+  html {
+    --mobile-shell-active: 1;
+  }
+
   html,
   body {
     background-color: var(--page-background);

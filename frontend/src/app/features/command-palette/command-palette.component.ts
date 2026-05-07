@@ -1,7 +1,7 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { Overlay, OverlayModule, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
-import { Component, computed, DestroyRef, effect, ElementRef, inject, signal, TemplateRef, untracked, ViewContainerRef, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, signal, TemplateRef, untracked, ViewContainerRef, viewChild } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { filter, take } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CoverPlaceholderComponent } from '../../shared/components/cover-generator/cover-generator.component';
 import { IconDisplayComponent } from '../../shared/components/icon-display/icon-display.component';
-import { MOBILE_SHELL_MEDIA_QUERY } from '../../shared/layout/layout.service';
+import { MOBILE_SHELL_ACTIVE_PROPERTY } from '../../shared/layout/layout.service';
 import { PaletteItem } from './command-palette.model';
 import { CommandPaletteService } from './command-palette.service';
 
@@ -20,6 +20,7 @@ import { CommandPaletteService } from './command-palette.service';
   imports: [A11yModule, OverlayModule, FormsModule, TranslocoDirective, TranslocoPipe, IconDisplayComponent, CoverPlaceholderComponent],
   templateUrl: './command-palette.component.html',
   styleUrl: './command-palette.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommandPaletteComponent {
   protected readonly svc = inject(CommandPaletteService);
@@ -43,8 +44,7 @@ export class CommandPaletteComponent {
   private overlayRef: OverlayRef | undefined;
   private focusAnimationFrameId: number | undefined;
   private focusTimeoutId: number | undefined;
-  private mobileMedia: MediaQueryList | undefined;
-  private readonly mobileMediaListener = () => {
+  private readonly mobileStateListener = () => {
     this.applyPositionStrategy();
     this.refreshAvailableHeight();
   };
@@ -160,7 +160,7 @@ export class CommandPaletteComponent {
       return;
     }
 
-    this.bindMobileMediaListener();
+    this.bindMobileStateListener();
     this.bindVisualViewportListener();
     this.refreshAvailableHeight();
     this.overlayRef = this.overlay.create({
@@ -178,7 +178,7 @@ export class CommandPaletteComponent {
 
   private closeOverlay(): void {
     this.clearPendingFocus();
-    this.unbindMobileMediaListener();
+    this.unbindMobileStateListener();
     this.unbindVisualViewportListener();
     this.availableHeightPx.set(null);
     this.overlayRef?.dispose();
@@ -199,18 +199,21 @@ export class CommandPaletteComponent {
   }
 
   private isMobileViewport(): boolean {
-    return this.mobileMedia?.matches ?? false;
+    if (typeof window === 'undefined') return false;
+    return window
+      .getComputedStyle(document.documentElement)
+      .getPropertyValue(MOBILE_SHELL_ACTIVE_PROPERTY)
+      .trim() === '1';
   }
 
-  private bindMobileMediaListener(): void {
-    if (typeof window === 'undefined' || this.mobileMedia) return;
-    this.mobileMedia = window.matchMedia(MOBILE_SHELL_MEDIA_QUERY);
-    this.mobileMedia.addEventListener('change', this.mobileMediaListener);
+  private bindMobileStateListener(): void {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('resize', this.mobileStateListener);
   }
 
-  private unbindMobileMediaListener(): void {
-    this.mobileMedia?.removeEventListener('change', this.mobileMediaListener);
-    this.mobileMedia = undefined;
+  private unbindMobileStateListener(): void {
+    if (typeof window === 'undefined') return;
+    window.removeEventListener('resize', this.mobileStateListener);
   }
 
   private bindVisualViewportListener(): void {

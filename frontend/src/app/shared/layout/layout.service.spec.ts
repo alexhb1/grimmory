@@ -4,7 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LayoutService, MOBILE_SHELL_MEDIA_QUERY } from './layout.service';
+import { LayoutService } from './layout.service';
 import { LocalStorageService } from '../service/local-storage.service';
 import { UserService } from '../../features/settings/user-management/user.service';
 
@@ -20,8 +20,8 @@ describe('LayoutService', () => {
     },
   } as never);
   const updateUserSetting = vi.fn();
-  let mediaQueryList: MediaQueryList;
-  let mediaQueryListener: ((event: MediaQueryListEvent) => void) | undefined;
+  let resizeListener: (() => void) | undefined;
+  let mobileShellActive = false;
   const localStorageService = {
     get: vi.fn((key: string) => {
       if (key === 'sidebarCollapsed') {
@@ -37,24 +37,18 @@ describe('LayoutService', () => {
 
   beforeEach(() => {
     routerEvents = new Subject<unknown>();
-    mediaQueryListener = undefined;
-    mediaQueryList = {
-      matches: false,
-      media: MOBILE_SHELL_MEDIA_QUERY,
-      onchange: null,
-      addEventListener: vi.fn((_type, listener) => {
-        mediaQueryListener = listener as (event: MediaQueryListEvent) => void;
-      }),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    };
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      writable: true,
-      value: vi.fn(() => mediaQueryList),
+    resizeListener = undefined;
+    mobileShellActive = false;
+    vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
+      if (type === 'resize') {
+        resizeListener = listener as () => void;
+      }
     });
+    vi.spyOn(window, 'removeEventListener').mockImplementation(vi.fn());
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(() => ({
+      getPropertyValue: (property: string) =>
+        property === '--mobile-shell-active' && mobileShellActive ? '1' : '',
+    }) as CSSStyleDeclaration);
     TestBed.configureTestingModule({
       providers: [
         LayoutService,
@@ -102,15 +96,16 @@ describe('LayoutService', () => {
     expect(service.mobileDrawerOpen()).toBe(false);
   });
 
-  it('derives desktop state from the mobile shell media query', () => {
-    expect(window.matchMedia).toHaveBeenCalledWith(MOBILE_SHELL_MEDIA_QUERY);
+  it('derives desktop state from the mobile shell CSS state', () => {
     expect(service.isDesktop()).toBe(true);
 
-    mediaQueryListener?.({ matches: true } as MediaQueryListEvent);
+    mobileShellActive = true;
+    resizeListener?.();
     expect(service.isDesktop()).toBe(false);
 
     service.mobileDrawerOpen.set(true);
-    mediaQueryListener?.({ matches: false } as MediaQueryListEvent);
+    mobileShellActive = false;
+    resizeListener?.();
 
     expect(service.isDesktop()).toBe(true);
     expect(service.mobileDrawerOpen()).toBe(false);
@@ -182,7 +177,7 @@ describe('LayoutService', () => {
     TestBed.resetTestingModule();
     routerEvents.next(new NavigationEnd(1, '/series', '/series'));
 
-    expect(mediaQueryList.removeEventListener).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(window.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
     expect(service.currentPath()).toBe('/dashboard');
   });
 });
