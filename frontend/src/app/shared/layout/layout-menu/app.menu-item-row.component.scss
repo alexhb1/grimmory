@@ -224,11 +224,16 @@ a.menu-item-link.active-route {
 }
 
 @media #{variables.$mobile-shell-media-query} {
+  .menu-item-container:hover,
   .menu-item-container:focus-within,
   .menu-item-container:has(.menu-item-link:focus-visible),
   .menu-item-container:has(:focus-visible) {
     background-color: transparent;
     box-shadow: none;
+  }
+
+  .menu-item-container.active-route-container {
+    background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
   }
 
   .menu-item-container:has(:focus-visible) {
