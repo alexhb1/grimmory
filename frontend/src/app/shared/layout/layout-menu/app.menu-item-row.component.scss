@@ -224,7 +224,6 @@ a.menu-item-link.active-route {
 }
 
 @media #{variables.$mobile-shell-media-query} {
-  .menu-item-container:hover,
   .menu-item-container:focus-within,
   .menu-item-container:has(.menu-item-link:focus-visible),
   .menu-item-container:has(:focus-visible) {
