@@ -62,7 +62,7 @@
       top: 0;
       left: 0;
       box-sizing: border-box;
-      width: 100vw;
+      width: 100dvw;
       height: 100dvh;
       border-right: 0;
       padding:
@@ -85,6 +85,7 @@
       --mobile-sidebar-fade-duration: 220ms;
 
       position: fixed;
+      display: block;
       top: 0;
       left: 0;
       z-index: 998;
@@ -119,12 +120,12 @@
   }
 }
 
-@media (orientation: landscape) {
-  @media #{variables.$mobile-shell-media-query} {
+@media #{variables.$mobile-shell-media-query} {
+  @media (orientation: landscape) {
     .layout-wrapper {
       .layout-sidebar {
         width: fit-content;
-        max-width: calc(100vw - 1rem);
+        max-width: calc(100dvw - 1rem);
         border-right: 1px solid var(--border-color);
         padding:
           calc(var(--space-3) + env(safe-area-inset-top))

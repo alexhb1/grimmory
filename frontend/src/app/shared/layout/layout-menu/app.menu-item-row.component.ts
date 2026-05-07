@@ -16,6 +16,7 @@ import { SidebarLeaf } from '../navigation/nav-item.model';
   selector: '[app-menu-item-row]',
   templateUrl: './app.menu-item-row.component.html',
   styleUrls: ['./app.menu-item-row.component.scss'],
+  standalone: true,
   imports: [
     RouterLink,
     Menu,
@@ -70,7 +71,7 @@ export class AppMenuItemRowComponent {
 
     const trigger = this.contextMenuTrigger;
     const panel = menu.container;
-    if (!trigger || !panel) return;
+    if (!trigger || !(panel instanceof HTMLElement)) return;
 
     const gutter = 8;
     const rect = trigger.getBoundingClientRect();
