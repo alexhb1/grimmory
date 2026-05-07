@@ -16,7 +16,6 @@ import { SidebarLeaf } from '../navigation/nav-item.model';
   selector: '[app-menu-item-row]',
   templateUrl: './app.menu-item-row.component.html',
   styleUrls: ['./app.menu-item-row.component.scss'],
-  standalone: true,
   imports: [
     RouterLink,
     Menu,
