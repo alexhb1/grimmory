@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, Renderer2, RendererStyleFlags2, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppMenuSectionComponent } from './app.menu-section.component';
 import { Popover } from 'primeng/popover';
@@ -76,6 +76,7 @@ export class AppMenuComponent {
   private readonly authorService = inject(AuthorService);
   private readonly versionService = inject(VersionService);
   private readonly t = inject(TranslocoService);
+  private readonly renderer = inject(Renderer2);
 
   readonly currentUser = this.userService.currentUser;
   readonly version = toSignal<AppVersion | null>(
@@ -218,13 +219,14 @@ export class AppMenuComponent {
       : rect.bottom + 8;
     const top = Math.max(Math.min(requestedTop, maxTop), 8);
 
-    panel.style.setProperty('--sidebar-popover-top', `${top}px`);
-    panel.style.setProperty('--sidebar-popover-max-height', `${Math.max(window.innerHeight - top - 8, 0)}px`);
+    const flags = RendererStyleFlags2.DashCase;
+    this.renderer.setStyle(panel, '--sidebar-popover-top', `${top}px`, flags);
+    this.renderer.setStyle(panel, '--sidebar-popover-max-height', `${Math.max(window.innerHeight - top - 8, 0)}px`, flags);
 
     if (anchorAbove || !this.layoutService.isDesktop()) {
-      panel.style.setProperty('--sidebar-popover-left', `${left}px`);
+      this.renderer.setStyle(panel, '--sidebar-popover-left', `${left}px`, flags);
     } else {
-      panel.style.removeProperty('--sidebar-popover-left');
+      this.renderer.removeStyle(panel, '--sidebar-popover-left', flags);
     }
   }
 

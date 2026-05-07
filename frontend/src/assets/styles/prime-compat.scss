@@ -279,7 +279,7 @@
     .p-menu-item-link,
     .p-tieredmenu-item-content > .p-tieredmenu-item-link,
     .p-tieredmenu-item-link {
-      min-height: 3rem;
+      min-height: 3rem !important;
       padding: var(--space-3) var(--space-4) !important;
       gap: var(--space-3) !important;
     }
