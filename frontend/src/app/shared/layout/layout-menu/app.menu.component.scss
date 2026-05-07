@@ -385,18 +385,13 @@
       calc(0px - var(--sidebar-shell-padding-inline-end) - env(safe-area-inset-right))
       var(--space-3)
       calc(0px - var(--sidebar-shell-padding-inline-start) - env(safe-area-inset-left));
-    margin-bottom: var(--space-3);
   }
 
   .sidebar-brand {
     width: auto;
     flex: 1 1 auto;
     min-height: 3.5rem;
-    padding:
-      0
-      var(--space-3)
-      0
-      var(--space-3);
+    padding: 0 var(--space-3);
     align-self: stretch;
   }
 
@@ -490,16 +485,52 @@
       gap: 0.5rem;
       min-height: 4rem;
       height: 4rem;
-      padding-top: var(--space-2);
+      padding:
+        var(--space-2)
+        var(--sidebar-shell-padding-inline-end)
+        0
+        calc(var(--sidebar-shell-padding-inline-start) + env(safe-area-inset-left));
+      margin:
+        calc(0px - var(--space-3) - env(safe-area-inset-top))
+        calc(0px - var(--sidebar-shell-padding-inline-end))
+        var(--space-3)
+        calc(0px - var(--sidebar-shell-padding-inline-start) - env(safe-area-inset-left));
     }
 
     .sidebar-brand {
+      flex: 0 0 auto;
+      grid-template-columns: var(--sidebar-row-icon-size);
       min-height: 4rem;
+    }
+
+    .sidebar-brand-mark {
+      display: inline-flex;
+    }
+
+    .sidebar-brand-wordmark {
+      display: none;
+    }
+
+    .sidebar-nav {
+      margin-inline:
+        calc(0px - var(--sidebar-shell-padding-inline-start) - env(safe-area-inset-left))
+        calc(0px - var(--sidebar-shell-padding-inline-end));
+    }
+
+    .sidebar-nav > .layout-menu {
+      padding-inline:
+        calc(var(--sidebar-shell-padding-inline-start) + env(safe-area-inset-left))
+        var(--sidebar-shell-padding-inline-end);
     }
 
     .sidebar-icon-button.sidebar-mobile-close-button {
       width: 3rem;
       height: 3rem;
+      background: none;
+
+      &:hover {
+        background-color: var(--surface-hover);
+      }
     }
 
     .sidebar-icon-button.sidebar-mobile-user-button {

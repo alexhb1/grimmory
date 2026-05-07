@@ -14,11 +14,13 @@
   flex-direction: column;
   width: 100%;
   max-height: min(70vh, calc(100dvh - 4rem));
-  background: var(--surface-overlay);
+  background: color-mix(in srgb, var(--surface-overlay) 64%, var(--surface-card));
   color: var(--text-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-overlay);
+  box-shadow:
+    0 20px 64px rgb(0 0 0 / 32%),
+    var(--shadow-overlay);
   overflow: hidden;
 }
 
@@ -272,7 +274,9 @@
   }
 
   .command-palette-form {
+    box-sizing: border-box;
     flex-shrink: 0;
+    height: 3.5rem;
     background: var(--app-background);
     border-bottom: 1px solid var(--content-border-color);
 
@@ -283,7 +287,7 @@
 
   .command-palette-input-row {
     box-sizing: border-box;
-    height: 3.5rem;
+    height: 100%;
     gap: 0.5rem;
     padding:
       0

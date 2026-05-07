@@ -62,6 +62,13 @@
   }
 }
 
+@media #{variables.$mobile-shell-media-query} {
+  .root-item-with-dropdown:focus-visible {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
 .root-item {
   display: flex;
   align-items: center;

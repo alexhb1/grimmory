@@ -221,14 +221,10 @@ export class AppMenuComponent {
     panel.style.setProperty('--sidebar-popover-top', `${top}px`);
     panel.style.setProperty('--sidebar-popover-max-height', `${Math.max(window.innerHeight - top - 8, 0)}px`);
 
-    if (anchorAbove) {
+    if (anchorAbove || !this.layoutService.isDesktop()) {
       panel.style.setProperty('--sidebar-popover-left', `${left}px`);
     } else {
-      if (this.layoutService.isDesktop()) {
-        panel.style.removeProperty('--sidebar-popover-left');
-      } else {
-        panel.style.setProperty('--sidebar-popover-left', `${left}px`);
-      }
+      panel.style.removeProperty('--sidebar-popover-left');
     }
   }
 
