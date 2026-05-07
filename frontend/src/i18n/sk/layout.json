@@ -29,6 +29,7 @@
     "authors": "Autori",
     "notebook": "",
     "update": "",
+    "versionLabel": "Grimmory v{{ version }}",
     "tools": "",
     "collapseSidebar": "",
     "expandSidebar": "",

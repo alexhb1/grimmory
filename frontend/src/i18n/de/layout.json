@@ -28,6 +28,7 @@
     "series": "Serien",
     "notebook": "Notizbuch",
     "update": "(Aktualisierung)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Autoren",
     "tools": "",
     "collapseSidebar": "",

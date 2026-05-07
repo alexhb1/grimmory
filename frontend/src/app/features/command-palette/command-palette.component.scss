@@ -278,7 +278,7 @@
     flex-shrink: 0;
     height: 3.5rem;
     background: var(--app-background);
-    border-bottom: 1px solid var(--content-border-color);
+    border-bottom: 1px solid var(--border-color);
 
     &:has(+ .command-palette-results) .command-palette-input-row {
       border-bottom: none;

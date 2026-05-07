@@ -44,11 +44,9 @@ export class CommandPaletteComponent {
   private overlayRef: OverlayRef | undefined;
   private focusAnimationFrameId: number | undefined;
   private focusTimeoutId: number | undefined;
-  private readonly mobileStateListener = () => {
-    this.applyPositionStrategy();
-    this.refreshAvailableHeight();
-  };
-  private readonly visualViewportListener = () => this.refreshAvailableHeight();
+  private viewportAnimationFrameId: number | undefined;
+  private readonly mobileStateListener = () => this.scheduleViewportRefresh();
+  private readonly visualViewportListener = () => this.scheduleViewportRefresh();
 
   constructor() {
     const unregisterOverlayController = this.svc.registerOverlayController({
@@ -178,6 +176,7 @@ export class CommandPaletteComponent {
 
   private closeOverlay(): void {
     this.clearPendingFocus();
+    this.clearPendingViewportRefresh();
     this.unbindMobileStateListener();
     this.unbindVisualViewportListener();
     this.availableHeightPx.set(null);
@@ -242,6 +241,23 @@ export class CommandPaletteComponent {
       return;
     }
     this.availableHeightPx.set(Math.max(0, Math.round(vv.height)));
+  }
+
+  private scheduleViewportRefresh(): void {
+    if (typeof window === 'undefined' || this.viewportAnimationFrameId !== undefined) return;
+
+    this.viewportAnimationFrameId = window.requestAnimationFrame(() => {
+      this.viewportAnimationFrameId = undefined;
+      this.applyPositionStrategy();
+      this.refreshAvailableHeight();
+    });
+  }
+
+  private clearPendingViewportRefresh(): void {
+    if (typeof window !== 'undefined' && this.viewportAnimationFrameId !== undefined) {
+      window.cancelAnimationFrame(this.viewportAnimationFrameId);
+    }
+    this.viewportAnimationFrameId = undefined;
   }
 
   private scheduleInputFocus(): void {

@@ -28,6 +28,7 @@
     "series": "Серии",
     "notebook": "Блокнот",
     "update": "(Обновление)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Авторы",
     "tools": "",
     "collapseSidebar": "",

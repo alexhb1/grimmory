@@ -226,13 +226,21 @@ a.menu-item-link.active-route {
 @media #{variables.$mobile-shell-media-query} {
   .menu-item-container:hover,
   .menu-item-container:focus-within,
-  .menu-item-container:has(.menu-item-link:focus-visible) {
+  .menu-item-container:has(.menu-item-link:focus-visible),
+  .menu-item-container:has(:focus-visible) {
     background-color: transparent;
     box-shadow: none;
   }
 
-  .menu-item-container {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .menu-item-container:has(:focus-visible) {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+
+  .entity-menu-button:focus-visible {
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
   }
 
   .book-count-inline {

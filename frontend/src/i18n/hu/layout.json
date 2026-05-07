@@ -29,6 +29,7 @@
     "authors": "Szerzők",
     "notebook": "Jegyzetfüzet",
     "update": "(Frissítés)",
+    "versionLabel": "Grimmory v{{ version }}",
     "tools": "",
     "collapseSidebar": "",
     "expandSidebar": "",

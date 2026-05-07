@@ -29,6 +29,7 @@
     "authors": "Autores",
     "notebook": "Cuaderno",
     "update": "(Actualizar)",
+    "versionLabel": "Grimmory v{{ version }}",
     "tools": "",
     "collapseSidebar": "",
     "expandSidebar": "",

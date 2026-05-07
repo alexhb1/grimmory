@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, Renderer2, RendererStyleFlags2, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppMenuSectionComponent } from './app.menu-section.component';
@@ -55,7 +56,7 @@ function detectSearchShortcut(userAgent: string): string {
 
 @Component({
   selector: 'app-menu',
-  imports: [AppMenuSectionComponent, Popover, Menu, UnifiedNotificationBoxComponent, RouterLink, TranslocoDirective, TranslocoPipe, Tooltip],
+  imports: [AppMenuSectionComponent, Popover, Menu, UnifiedNotificationBoxComponent, RouterLink, TranslocoDirective, TranslocoPipe, Tooltip, NgTemplateOutlet],
   templateUrl: './app.menu.component.html',
   styleUrl: './app.menu.component.scss',
 })

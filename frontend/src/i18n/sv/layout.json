@@ -28,6 +28,7 @@
     "series": "Serier",
     "notebook": "Anteckningsbok",
     "update": "(Uppdatering)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Författare",
     "tools": "",
     "collapseSidebar": "",

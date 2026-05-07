@@ -28,6 +28,7 @@
     "series": "Zbirke",
     "notebook": "Beležnica",
     "update": "(Posodobitev)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Avtorji",
     "tools": "",
     "collapseSidebar": "",

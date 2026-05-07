@@ -28,6 +28,7 @@
     "series": "Serijali",
     "notebook": "Bilježnica",
     "update": "(Ažuriraj)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Autori",
     "tools": "",
     "collapseSidebar": "",

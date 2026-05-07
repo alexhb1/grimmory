@@ -29,6 +29,7 @@
     "authors": "Authors",
     "notebook": "Notebook",
     "update": "(Update)",
+    "versionLabel": "Grimmory v{{ version }}",
     "versionCopied": "Version {{ version }} copied to clipboard.",
     "versionCopyFailed": "Unable to copy version {{ version }}.",
     "tools": "Tools",

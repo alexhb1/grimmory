@@ -29,6 +29,7 @@
     "authors": "Автори",
     "notebook": "Нотатник",
     "update": "(Оновлення)",
+    "versionLabel": "Grimmory v{{ version }}",
     "tools": "",
     "collapseSidebar": "",
     "expandSidebar": "",

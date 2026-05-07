@@ -1,5 +1,30 @@
 <ng-container *transloco="let t; prefix: 'layout.menu'">
 <div class="menu-container">
+  <ng-template #sidebarUserMenuStart>
+    @if (currentUser(); as menuUser) {
+      <div class="sidebar-user-menu-header">
+        <span class="sidebar-user-avatar" aria-hidden="true">{{ userInitials() }}</span>
+        <span class="sidebar-user-meta">
+          <span class="sidebar-user-name">{{ menuUser.name || menuUser.username }}</span>
+          @if (menuUser.name) {
+            <span class="sidebar-user-handle">&#64;{{ menuUser.username }}</span>
+          }
+        </span>
+      </div>
+    }
+  </ng-template>
+
+  <ng-template #sidebarUserMenuEnd>
+    @if (version(); as v) {
+      <div class="sidebar-user-menu-footer">
+        <span>{{ t('versionLabel', { version: v.current }) }}</span>
+        @if (hasUpdate()) {
+          <span class="sidebar-user-update">{{ t('update') }}</span>
+        }
+      </div>
+    }
+  </ng-template>
+
   <div class="sidebar-header">
     <a class="sidebar-brand" [routerLink]="['/dashboard']" [attr.aria-label]="t('goToDashboard')">
       <span class="sidebar-brand-mark" aria-hidden="true">
@@ -103,25 +128,10 @@
 
       <p-menu #mobileUserMenu [model]="userMenuItems()" [popup]="true" appendTo="body" styleClass="sidebar-user-menu" (onShow)="applySidebarOverlayPosition(mobileUserMenu)">
         <ng-template pTemplate="start">
-          <div class="sidebar-user-menu-header">
-            <span class="sidebar-user-avatar" aria-hidden="true">{{ userInitials() }}</span>
-            <span class="sidebar-user-meta">
-              <span class="sidebar-user-name">{{ user.name || user.username }}</span>
-              @if (user.name) {
-                <span class="sidebar-user-handle">&#64;{{ user.username }}</span>
-              }
-            </span>
-          </div>
+          <ng-container [ngTemplateOutlet]="sidebarUserMenuStart"></ng-container>
         </ng-template>
         <ng-template pTemplate="end">
-          @if (version(); as v) {
-            <div class="sidebar-user-menu-footer">
-              <span>Grimmory v{{ v.current }}</span>
-              @if (hasUpdate()) {
-                <span class="sidebar-user-update">{{ t('update') }}</span>
-              }
-            </div>
-          }
+          <ng-container [ngTemplateOutlet]="sidebarUserMenuEnd"></ng-container>
         </ng-template>
       </p-menu>
     }
@@ -241,25 +251,10 @@
       </div>
       <p-menu #userMenu [model]="userMenuItems()" [popup]="true" appendTo="body" styleClass="sidebar-user-menu" (onShow)="applySidebarOverlayPosition(userMenu)">
         <ng-template pTemplate="start">
-          <div class="sidebar-user-menu-header">
-            <span class="sidebar-user-avatar" aria-hidden="true">{{ userInitials() }}</span>
-            <span class="sidebar-user-meta">
-              <span class="sidebar-user-name">{{ user.name || user.username }}</span>
-              @if (user.name) {
-                <span class="sidebar-user-handle">&#64;{{ user.username }}</span>
-              }
-            </span>
-          </div>
+          <ng-container [ngTemplateOutlet]="sidebarUserMenuStart"></ng-container>
         </ng-template>
         <ng-template pTemplate="end">
-          @if (version(); as v) {
-            <div class="sidebar-user-menu-footer">
-              <span>Grimmory v{{ v.current }}</span>
-              @if (hasUpdate()) {
-                <span class="sidebar-user-update">{{ t('update') }}</span>
-              }
-            </div>
-          }
+          <ng-container [ngTemplateOutlet]="sidebarUserMenuEnd"></ng-container>
         </ng-template>
       </p-menu>
     } @else {

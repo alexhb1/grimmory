@@ -28,6 +28,7 @@
     "series": "Séries",
     "notebook": "Caderno",
     "update": "(Atualizar)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Autores",
     "tools": "",
     "collapseSidebar": "",

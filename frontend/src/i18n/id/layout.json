@@ -29,6 +29,7 @@
     "authors": "Penulis",
     "notebook": "",
     "update": "",
+    "versionLabel": "Grimmory v{{ version }}",
     "tools": "",
     "collapseSidebar": "",
     "expandSidebar": "",

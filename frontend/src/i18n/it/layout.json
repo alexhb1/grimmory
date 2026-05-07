@@ -28,6 +28,7 @@
     "series": "Serie",
     "notebook": "Taccuino",
     "update": "(Aggiornamento)",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "Autori",
     "tools": "",
     "collapseSidebar": "",

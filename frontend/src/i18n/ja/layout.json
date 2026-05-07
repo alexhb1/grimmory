@@ -28,6 +28,7 @@
     "series": "シリーズ",
     "notebook": "ノートブック",
     "update": "（アップデート）",
+    "versionLabel": "Grimmory v{{ version }}",
     "authors": "著者",
     "tools": "",
     "collapseSidebar": "",
