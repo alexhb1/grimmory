@@ -262,8 +262,11 @@
     @include sidebar-fixed-overlay;
   }
 
-  .p-menu.p-component,
-  .p-tieredmenu.p-component {
+  .sidebar-entity-menu.p-menu,
+  .sidebar-more-menu.p-menu,
+  .sidebar-user-menu.p-menu,
+  .sidebar-flyout-popover.p-popover .p-menu,
+  .sidebar-flyout-popover.p-popover .p-tieredmenu {
     > .p-menu-list,
     .p-menu-list,
     > .p-tieredmenu-root-list,

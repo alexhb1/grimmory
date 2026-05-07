@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Renderer2, RendererStyleFlags2, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Menu } from 'primeng/menu';
 import { Tooltip } from 'primeng/tooltip';
@@ -36,6 +36,7 @@ export class AppMenuItemRowComponent {
 
   private readonly userService = inject(UserService);
   readonly layoutService = inject(LayoutService);
+  private readonly renderer = inject(Renderer2);
   private contextMenuTrigger: HTMLElement | null = null;
 
   readonly isRouteActive = computed(() => {
@@ -86,9 +87,10 @@ export class AppMenuItemRowComponent {
       ? rect.bottom + gutter
       : rect.top - Math.min(panelHeight, availableHeight) - gutter;
 
-    panel.style.setProperty('--sidebar-popover-left', `${left}px`);
-    panel.style.setProperty('--sidebar-popover-top', `${Math.max(top, gutter)}px`);
-    panel.style.setProperty('--sidebar-popover-max-height', `${availableHeight}px`);
+    const flags = RendererStyleFlags2.DashCase;
+    this.renderer.setStyle(panel, '--sidebar-popover-left', `${left}px`, flags);
+    this.renderer.setStyle(panel, '--sidebar-popover-top', `${Math.max(top, gutter)}px`, flags);
+    this.renderer.setStyle(panel, '--sidebar-popover-max-height', `${availableHeight}px`, flags);
   }
 
   closeContextMenu(): void {
