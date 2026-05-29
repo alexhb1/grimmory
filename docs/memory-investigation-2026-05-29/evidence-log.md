@@ -1,6 +1,6 @@
 # Grimmory Memory Verification Progress - 2026-05-29
 
-This document tracks execution of `docs/memory-verification-plan-2026-05-29.md`.
+This document tracks execution of `verification-plan.md`.
 
 Raw artifacts live under `.memory-runs/` and are intentionally gitignored. Each completed artifact directory contains command text, stdout/stderr, exit status, raw samples, logs, Docker state, hashes, and notes unless called out below.
 
@@ -20,10 +20,8 @@ Raw artifacts live under `.memory-runs/` and are intentionally gitignored. Each 
 - Debug JDK/JFR recommendation-task attribution exists for V23 at 2K.
 - The exact nightly 50K stack and debug 50K stack have been stopped; only the normal dev stack remains running.
 - No leftover sampler/probe processes were found after the final cleanup audit.
-- The main combined diagnosis has been updated with final evidence:
-  - `docs/memory-use-combined-diagnosis-2026-05-29.md`
-- The blank verification copy has been reset as a reusable template:
-  - `docs/memory-use-combined-diagnosis-blank-verification-2026-05-29.md`
+- The canonical diagnosis has been updated with final evidence:
+  - `report.md`
 
 ## Harness Created
 

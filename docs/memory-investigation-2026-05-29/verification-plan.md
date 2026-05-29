@@ -2,9 +2,7 @@
 
 ## Purpose
 
-This plan turns the combined memory diagnosis into repeatable verification work. It is designed so an agent can run one finding at a time, collect direct evidence, and fill the blank-verification diagnosis document:
-
-- `docs/memory-use-combined-diagnosis-blank-verification-2026-05-29.md`
+This plan turns the combined memory diagnosis into repeatable verification work. It is designed so an agent can run one finding at a time, collect direct evidence, and update `report.md` or `evidence-log.md` with concise, artifact-backed results.
 
 The plan is intentionally script-friendly. Each verification item has an ID, a hypothesis, a workload, metrics, expected artifacts, and a decision rule.
 
@@ -1456,9 +1454,9 @@ Confirmed if heavy work causes cross-workload queue retention or latency spikes.
 
 L.
 
-## Fill-Out Template for the Blank Diagnosis
+## Verification Summary Template
 
-When a verification item is complete, paste a concise summary into the matching diagnosis section:
+When a verification item is complete, paste a concise summary into the matching diagnosis section of `report.md` and add the run to `evidence-log.md`:
 
 ```markdown
 **Verification**

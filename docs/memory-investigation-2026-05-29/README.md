@@ -4,11 +4,9 @@ This folder collects the markdown docs and runnable verification scripts from th
 
 ## Start Here
 
-- `docs/memory-use-combined-diagnosis-2026-05-29.md`: main diagnosis, now including the high level summary.
-- `docs/memory-verification-plan-2026-05-29.md`: scriptable verification plan and evidence standard.
-- `docs/memory-verification-progress-2026-05-29.md`: run-by-run evidence log.
-- `docs/memory-investigation-2026-05-29.md`: chronological investigation log and prioritized findings.
-- `docs/memory-use-combined-diagnosis-blank-verification-2026-05-29.md`: reusable copy with verification sections blank.
+- `report.md`: the canonical diagnosis, including the high level summary, evidence, overlap with the GPT-5.5 audit, and fix order.
+- `verification-plan.md`: the scriptable verification plan and evidence standard.
+- `evidence-log.md`: the run-by-run evidence log.
 
 ## Scripts
 
@@ -16,7 +14,7 @@ The `scripts/` directory contains the runnable memory harness scripts for this i
 
 These scripts write durable command files, stdout/stderr logs, exit statuses, Docker state, RSS samples, browser traces, JFR/NMT outputs, and notes into `.memory-runs/`.
 
-The original GPT-5.5 code audit is folded into `docs/memory-use-combined-diagnosis-2026-05-29.md` as the `5.5 Pro details`, overlap map, and unverified pressure-point backlog. The latest bundle is the canonical set.
+The original GPT-5.5 code audit is folded into `report.md` as the `5.5 Pro details`, overlap map, and unverified pressure-point backlog. This folder is the canonical set; older scratch/blank docs were removed to avoid duplicate competing versions.
 
 ## Raw Artifacts
 
