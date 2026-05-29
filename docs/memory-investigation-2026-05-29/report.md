@@ -5,7 +5,7 @@
 This document combines:
 
 - the live container/JVM investigation captured under `.memory-runs/`;
-- the GPT-5.5 Pro code-analysis pressure-point list supplied by the user;
+- source-level pressure points identified earlier in the investigation;
 - direct source checks in the Grimmory repository.
 
 The goal is a practical diagnosis: what is proven, what is source-confirmed but not runtime-isolated, and what remains only a plausible pressure point.
@@ -14,7 +14,7 @@ The goal is a practical diagnosis: what is proven, what is source-confirmed but 
 
 - **Confirmed**: live container, endpoint, browser, JFR, NMT, heap, log, or source evidence exists.
 - **Source-confirmed**: the code path exists and the memory shape is real, but runtime impact was not isolated.
-- **Unverified**: carried over from the 5.5 Pro audit, with evidence intentionally blank until measured.
+- **Unverified**: plausible pressure point that still needs runtime measurement.
 
 ## High Level Summary
 
@@ -57,9 +57,9 @@ Pure synthetic ingest is still expensive, but it behaved differently from the fu
 
 Memory reporting must separate app RSS, DB RSS, Java live heap, Java committed heap, and browser heap. After the 50K debug endpoint workload, explicit GC left the Java heap at only `120 MiB committed / 119 MiB used`, while NMT showed heap peak committed at `3,874,816 KB`. Docker RSS spikes are real operational pressure, but not automatically proof of retained Java heap.
 
-## Overlap Map
+## Diagnosis Map
 
-| Area from 5.5 Pro audit | Live/source mapping | Status |
+| Area | Live/source mapping | Status |
 |---|---|---|
 | Frontend globally loads `/api/v1/books?stripForListView=false` | Browser startup saw exactly this request at 10K and 50K | Confirmed |
 | Backend `/api/v1/books` is unbounded | Endpoint returns `ResponseEntity<List<Book>>`; measured 1.5K, 10K, 50K | Confirmed |
@@ -79,7 +79,7 @@ Memory reporting must separate app RSS, DB RSS, Java live heap, Java committed h
 
 ### 1. Legacy full-books request is the main reproduced backend memory spike
 
-**5.5 Pro details**
+**Source shape**
 
 The frontend has a global book query that calls `/api/v1/books` with `stripForListView=false`, exposes a full `Book[]`, and is made app-wide by root `BookService` injection. The backend endpoint returns an unbounded list.
 
@@ -122,7 +122,7 @@ Verified on 2026-05-29 with exact nightly image and debug JDK/JFR runs.
 
 ### 2. `stripForListView` does not fix backend memory
 
-**5.5 Pro details**
+**Source shape**
 
 The backend maps entities to full DTOs first, then strips fields afterward.
 
@@ -158,7 +158,7 @@ Verified on 2026-05-29 with stripped/unstripped/page controls at 10K and 50K.
 
 ### 3. The Book DTO is too wide for list traffic
 
-**5.5 Pro details**
+**Source shape**
 
 The list path returns a broad `Book` DTO with file, metadata, progress, shelves, library path, and format/detail data.
 
@@ -189,7 +189,7 @@ Verified as baseline shape on 2026-05-29; not yet verified against a new custom 
 
 ### 4. Frontend startup triggers the legacy full-library fetch
 
-**5.5 Pro details**
+**Source shape**
 
 The full-books query is global enough that normal UI flows can load the whole library.
 
@@ -226,7 +226,7 @@ Verified on 2026-05-29 with Playwright Chromium against the exact nightly image.
 
 ### 5. Frontend metadata/filter state is derived from all books
 
-**5.5 Pro details**
+**Source shape**
 
 `BookService.uniqueMetadata` iterates over every loaded book and builds sets of authors, categories, moods, tags, publishers, series, etc.
 
@@ -258,7 +258,7 @@ Partially verified on 2026-05-29.
 
 ### 6. Frontend websocket/cache code still maintains the legacy full-book cache
 
-**5.5 Pro details**
+**Source shape**
 
 Book add/update/remove events patch a cached full `Book[]`. Array patching can copy the whole array during bulk import or bulk updates.
 
@@ -297,7 +297,7 @@ Partially verified on 2026-05-29.
 
 ### 7. Initial scan and rescan materialize full-library state
 
-**5.5 Pro details**
+**Source shape**
 
 Library processing builds discovered files, existing books, additional files, new-file lists, and grouped maps. Rescan can hold multiple full-library views at once.
 
@@ -336,9 +336,9 @@ Verified for synthetic import and no-change rescan on 2026-05-29.
 
 ### 8. Long outer scan transaction can fail at 50K
 
-**5.5 Pro details**
+**Source shape**
 
-The audit focused on scan/rescan memory, but the same source shape exposes long-running transactional work.
+The same scan/rescan source shape also exposes long-running transactional work.
 
 **Diagnosis**
 
@@ -368,9 +368,9 @@ Verified on 2026-05-29 with exact nightly 50K import.
 
 ### 9. Per-book ingest log noise creates avoidable hot-path work
 
-**5.5 Pro details**
+**Source shape**
 
-The audit called out ingest and event fanout as high-volume paths. Earlier notes also suspected repeated exception/log noise and named entity graph exception-control-flow.
+Ingest and event fanout are high-volume paths. Repeated exception/log noise and named entity graph exception-control-flow were also suspected and then measured.
 
 **Diagnosis**
 
@@ -414,7 +414,7 @@ Verified on 2026-05-29 with exact-image ingest logs and a debug JDK/JFR ingest r
 
 ### 10. Per-book websocket events create a real import-time burst, but dashboard-route memory amplification was not confirmed
 
-**5.5 Pro details**
+**Source shape**
 
 Import publishes one `BookAddedEvent(book)` per new book. Async listeners can broadcast full book DTOs and queued payloads if consumers lag.
 
@@ -456,7 +456,7 @@ Partially verified on 2026-05-29 with one real browser connected on both dashboa
 
 ### 11. JVM/container/database accounting can make memory look different from live heap
 
-**5.5 Pro details**
+**Source shape**
 
 The JVM can grow committed heap based on visible memory, Docker RSS can include committed but idle heap/native memory, and compose totals can include MariaDB.
 
@@ -488,9 +488,9 @@ Verified on 2026-05-29 with exact image plus debug JDK/NMT/JFR.
 
 ### 12. App filter-options and current paged app-books path were not implicated by these tests
 
-**5.5 Pro details**
+**Source shape**
 
-The audit listed app filter-options and reader/media caches as smaller items to watch.
+App filter-options and reader/media caches were smaller items to check separately.
 
 **Diagnosis**
 
@@ -518,7 +518,7 @@ Partially verified on 2026-05-29.
 
 ### 13. Bulk-by-ID endpoint can recreate full-list pressure up to request-line limits
 
-**5.5 Pro details**
+**Source shape**
 
 `/api/v1/books/batch` accepts IDs and returns full `Book` DTOs. A paginated UI could still recreate full-list memory pressure by sending a huge ID list.
 
@@ -553,7 +553,7 @@ Verified on 2026-05-29 with exact nightly image and copied 50K database.
 
 ### 14. Folder ZIP downloads buffer the full ZIP in heap
 
-**5.5 Pro details**
+**Source shape**
 
 Folder-based audiobook/additional-folder downloads can write ZIP output to `ByteArrayOutputStream`, convert to `byte[]`, and return a `ByteArrayResource`.
 
@@ -602,7 +602,7 @@ Verified on 2026-05-29 with exact nightly image and synthetic incompressible fol
 
 ### 15. Recommendation updater creates a sharp all-library processing and RSS spike
 
-**5.5 Pro details**
+**Source shape**
 
 Recommendation tasks can build maps of embeddings, series names, candidates, and outputs before saving.
 
@@ -672,304 +672,9 @@ Verified on 2026-05-29 with an exact nightly image and 1K/2K/5K/10K subsets of t
 - Persist recommendations per batch/target rather than retaining all outputs until the end.
 - Add a hard library-size guard or chunked/offline job mode before exposing this to very large libraries.
 
-## Unverified 5.5 Pro Pressure Points
+## Remaining Verification Backlog
 
-These items remain plausible but do not yet have concrete runtime evidence in this campaign. Evidence and verification are intentionally blank.
-
-### File discovery full lists and maps can retain all paths
-
-**5.5 Pro details**
-
-Discovery can build full file lists and maps before processing.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Stream traversal into bounded batches.
-- Track scan collection sizes as metrics.
-
-### Fileless matching may repeatedly load library-wide data
-
-**5.5 Pro details**
-
-Grouping/matching can repeatedly load fileless books for a library.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Load match candidates once per batch or use indexed DB-side matching.
-
-### Duplicate hashing can extend import lifetime
-
-**5.5 Pro details**
-
-The same file content may be read/hashed more than once, increasing CPU/I/O and keeping import transactions/events alive longer.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Calculate file identity once per import step and pass it forward.
-
-### Pending comic metadata map can retain entries on failure paths
-
-**5.5 Pro details**
-
-`pendingComicMetadata` is temporary cross-method state. Exceptions between insertion and cleanup may retain entries.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Guarantee cleanup with `try/finally` and expose map-size metrics.
-
-### Async executor queue can retain heavy payloads
-
-**5.5 Pro details**
-
-If producers outpace consumers, queued async tasks may retain book/event payloads.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Split heavy background jobs from lightweight event delivery and expose queue depth.
-
-### Websocket message limits do not prevent server-side allocation
-
-**5.5 Pro details**
-
-Server-side DTO/JSON allocation can happen before websocket delivery limits fail or cap a payload.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Keep websocket payloads small by design; use IDs and page invalidation.
-
-### Metadata refresh can load broad graphs
-
-**5.5 Pro details**
-
-Metadata refresh paths can load/map many books and metadata proposals.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Fetch IDs first and process metadata refresh in chunks.
-
-### Metadata refresh review mode may retain all proposals
-
-**5.5 Pro details**
-
-Review mode can accumulate generated proposals, and task/status endpoints can load/map proposal DTOs.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Page proposals and make status endpoints bounded.
-
-### Metadata match score recalculation may full-load books
-
-**5.5 Pro details**
-
-Score recalculation may load all books to compute and save scores.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Recalculate in ID/keyset batches and save/clear per batch.
-
-### Duplicate detection whole-library grouping
-
-**5.5 Pro details**
-
-Duplicate detection can group the whole library by identifiers, title/author, directory, or filename.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Use DB grouping or paged jobs and return duplicate groups in pages.
-
-### Sidecar bulk import/export loads all books with files
-
-**5.5 Pro details**
-
-Sidecar bulk operations can load every book with files before iterating.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Convert to batched/keyset migration and clear persistence context per batch.
-
-### Missing file-size migration may full-load affected books
-
-**5.5 Pro details**
-
-Startup migration/backfill paths can load all books with missing file size.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Backfill with DB-side updates or bounded batches.
-
-### Archive entry APIs can read full entries into memory
-
-**5.5 Pro details**
-
-Archive entry helpers can allocate whole uncompressed entries.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Stream entries or enforce entry-size caps.
-
-### EPUB content reading can load spine content into memory
-
-**5.5 Pro details**
-
-EPUB content paths can copy a resource into `ByteArrayOutputStream` and convert it to a `String`.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Stream or size-limit large spine resources.
-
-### EPUB CFI DOM cache can retain large parsed documents
-
-**5.5 Pro details**
-
-CFI operations may cache parsed DOM documents until eviction.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Consider weight-based eviction if reader workloads show large DOM retention.
-
-### Image, PDF, cover, and comic processing can create large transient objects
-
-**5.5 Pro details**
-
-Image/PDF/comic paths use `readAllBytes`, `ByteArrayOutputStream`, `byte[]`, and `BufferedImage` objects.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Add size guards, streaming where possible, and controlled concurrency.
-
-### Bulk cover regeneration may retain all candidates
-
-**5.5 Pro details**
-
-Bulk cover regeneration can load all candidate books before processing.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Page candidate IDs and process through bounded transactions.
-
-### Bookdrop queue is unbounded
-
-**5.5 Pro details**
-
-The bookdrop handler uses an unbounded queue, and duplicate detection can scan the queue.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Use bounded/coalescing queues and queue-depth metrics.
-
-### Library watcher queues and pending maps can grow during event storms
-
-**5.5 Pro details**
-
-Mass moves/deletes/restores can create large watcher queues and pending create/delete maps.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Bound/coalesce watcher events and expose queue/pending-map metrics.
-
-### Pending deletion pool can retain large snapshots
-
-**5.5 Pro details**
-
-Folder deletion/move handling can retain snapshots of affected books/files until grace-period expiry or recovery.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Store lightweight IDs and reload details only when needed.
-
-### Shared executor contention can retain unrelated payloads
-
-**5.5 Pro details**
-
-Unrelated heavy jobs and lightweight async events can share executor capacity, delaying consumers and retaining queued payloads.
-
-**Evidence**
-
-**Verification**
-
-**Fix direction**
-
-- Split executors by workload type and bound queues according to payload weight.
+Several plausible pressure areas were not measured in this campaign. They are kept in `verification-plan.md` as targeted workloads rather than mixed into the confirmed diagnosis: metadata refresh and review jobs, archive entry reads, EPUB reader content/CFI paths, image/PDF/comic processing, bookdrop and watcher queues, duplicate detection, sidecar bulk import/export, startup backfills, and shared executor contention.
 
 ## Combined Fix Order
 
@@ -980,5 +685,5 @@ Unrelated heavy jobs and lightweight async events can share executor capacity, d
 5. Reduce bulk ingest log noise and then run a debug ingest JFR for exception-control-flow evidence.
 6. Coalesce bulk import events and remove legacy full-array cache patching.
 7. Replace buffered folder ZIP downloads with streaming responses and add size/concurrency guards.
-8. Verify the remaining independent backlog with targeted fixtures: websocket route variants, metadata jobs, recommendation scaling/JFR, archive entry reads, media processing, watcher queues, and bookdrop.
+8. Verify the remaining independent backlog with targeted fixtures: websocket route variants, metadata jobs, archive entry reads, media processing, watcher queues, and bookdrop.
 9. Document memory accounting as app RSS, DB RSS, Java live heap, Java committed heap, native memory, and browser heap.
