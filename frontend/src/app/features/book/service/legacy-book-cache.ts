@@ -15,7 +15,8 @@ import {
 
 export interface BookCoverPatch {
   readonly id: number;
-  readonly coverUpdatedOn: string | null;
+  readonly coverUpdatedOn?: string | null;
+  readonly audiobookCoverUpdatedOn?: string | null;
 }
 
 interface BookCacheChangeSet {
@@ -143,13 +144,19 @@ export function patchBookCoversInCache(
   queryClient: QueryClient,
   patches: readonly BookCoverPatch[],
 ): void {
-  const patchMap = new Map(patches.map(patch => [patch.id, patch.coverUpdatedOn]));
+  const patchMap = new Map(patches.map(patch => [patch.id, patch]));
   queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, current =>
     current?.map(book => {
-      const coverUpdatedOn = patchMap.get(book.id);
-      return coverUpdatedOn && book.metadata
-        ? {...book, metadata: {...book.metadata, coverUpdatedOn}}
-        : book;
+      const patch = patchMap.get(book.id);
+      if (!patch || !book.metadata) return book;
+      return {
+        ...book,
+        metadata: {
+          ...book.metadata,
+          ...('coverUpdatedOn' in patch ? {coverUpdatedOn: patch.coverUpdatedOn ?? undefined} : {}),
+          ...('audiobookCoverUpdatedOn' in patch ? {audiobookCoverUpdatedOn: patch.audiobookCoverUpdatedOn ?? undefined} : {}),
+        },
+      };
     })
   );
   void reconcileBookCacheChangeSet(

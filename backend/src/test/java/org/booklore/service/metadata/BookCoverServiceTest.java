@@ -3,7 +3,6 @@ package org.booklore.service.metadata;
 import org.booklore.config.AppProperties;
 import org.booklore.exception.APIException;
 import org.booklore.model.dto.settings.AppSettings;
-import org.booklore.model.dto.settings.MetadataPersistenceSettings;
 import org.booklore.model.entity.*;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.repository.BookRepository;
@@ -779,7 +778,7 @@ class BookCoverServiceTest {
             });
             when(bookRepository.findByIdWithBookFiles(1L)).thenReturn(Optional.of(book));
             when(processorRegistry.getProcessorOrThrow(BookFileType.EPUB)).thenReturn(processor);
-            when(processor.generateCover(book)).thenReturn(true);
+            when(processor.generateCover(book, ebookFile)).thenReturn(true);
             when(bookRepository.findCoverUpdateInfoByIds(any())).thenReturn(List.of());
 
             doAnswer(inv -> {
@@ -838,7 +837,7 @@ class BookCoverServiceTest {
             });
             when(bookRepository.findByIdWithBookFiles(2L)).thenReturn(Optional.of(withoutCover));
             when(processorRegistry.getProcessorOrThrow(BookFileType.EPUB)).thenReturn(processor);
-            when(processor.generateCover(withoutCover)).thenReturn(true);
+            when(processor.generateCover(withoutCover, ebookFile2)).thenReturn(true);
             when(bookRepository.findCoverUpdateInfoByIds(any())).thenReturn(List.of());
 
             doAnswer(inv -> {
@@ -1028,17 +1027,13 @@ class BookCoverServiceTest {
         void writesAndUpdatesHashWhenWriterExists() {
             BookEntity book = buildBook(1L, false);
             BookFileEntity primaryFile = BookFileEntity.builder()
+                    .book(book)
                     .bookType(BookFileType.EPUB).isBookFormat(true)
                     .fileName("test.epub").fileSubPath("sub")
                     .build();
             book.setBookFiles(Set.of(primaryFile));
             book.setLibrary(LibraryEntity.builder().build());
             book.setLibraryPath(LibraryPathEntity.builder().path("/lib").build());
-
-            MetadataPersistenceSettings persistSettings = mock(MetadataPersistenceSettings.class);
-            when(appSettingService.getAppSettings()).thenReturn(appSettings);
-            when(appSettings.getMetadataPersistenceSettings()).thenReturn(persistSettings);
-            when(persistSettings.isConvertCbrCb7ToCbz()).thenReturn(false);
 
             MetadataWriter writer = mock(MetadataWriter.class);
             when(metadataWriterFactory.getWriter(BookFileType.EPUB)).thenReturn(Optional.of(writer));

@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.booklore.model.MetadataClearFlags;
 import org.booklore.model.dto.settings.MetadataPersistenceSettings;
-import org.booklore.model.entity.BookEntity;
+import org.booklore.model.entity.BookFileEntity;
 import org.booklore.model.entity.BookMetadataEntity;
 import org.booklore.model.enums.BookFileType;
 import org.booklore.service.ArchiveService;
@@ -311,8 +311,8 @@ public class EpubMetadataWriter implements MetadataWriter {
     }
 
 
-    public void replaceCoverImageFromBytes(BookEntity bookEntity, byte[] file) {
-        if (!shouldSaveMetadataToFile(bookEntity.getFullFilePath().toFile())) {
+    public void replaceCoverImageFromBytes(BookFileEntity bookFile, byte[] file) {
+        if (!shouldSaveMetadataToFile(bookFile.getFullFilePath().toFile())) {
             return;
         }
         if (file == null || file.length == 0) {
@@ -320,11 +320,11 @@ public class EpubMetadataWriter implements MetadataWriter {
             return;
         }
 
-        replaceCoverImageInternal(bookEntity, file, "byte array");
+        replaceCoverImageInternal(bookFile, file, "byte array");
     }
 
-    public void replaceCoverImageFromUpload(BookEntity bookEntity, MultipartFile multipartFile) {
-        if (!shouldSaveMetadataToFile(bookEntity.getFullFilePath().toFile())) {
+    public void replaceCoverImageFromUpload(BookFileEntity bookFile, MultipartFile multipartFile) {
+        if (!shouldSaveMetadataToFile(bookFile.getFullFilePath().toFile())) {
             return;
         }
         if (multipartFile == null || multipartFile.isEmpty()) {
@@ -334,15 +334,15 @@ public class EpubMetadataWriter implements MetadataWriter {
 
         try {
             byte[] coverData = multipartFile.getBytes();
-            replaceCoverImageInternal(bookEntity, coverData, "upload");
+            replaceCoverImageInternal(bookFile, coverData, "upload");
         } catch (IOException e) {
             log.warn("Failed to read uploaded cover image: {}", e.getMessage(), e);
         }
     }
 
     @Override
-    public void replaceCoverImageFromUrl(BookEntity bookEntity, String url) {
-        if (!shouldSaveMetadataToFile(bookEntity.getFullFilePath().toFile())) {
+    public void replaceCoverImageFromUrl(BookFileEntity bookFile, String url) {
+        if (!shouldSaveMetadataToFile(bookFile.getFullFilePath().toFile())) {
             return;
         }
         if (url == null || url.isBlank()) {
@@ -356,13 +356,13 @@ public class EpubMetadataWriter implements MetadataWriter {
             return;
         }
 
-        replaceCoverImageInternal(bookEntity, coverData, "URL");
+        replaceCoverImageInternal(bookFile, coverData, "URL");
     }
 
-    private void replaceCoverImageInternal(BookEntity bookEntity, byte[] coverData, String source) {
+    private void replaceCoverImageInternal(BookFileEntity bookFile, byte[] coverData, String source) {
         Path tempDir = null;
         try {
-            File epubFile = new File(bookEntity.getFullFilePath().toUri());
+            File epubFile = new File(bookFile.getFullFilePath().toUri());
             tempDir = Files.createTempDirectory("epub_cover_" + UUID.randomUUID());
 
             extractZipToDirectory(epubFile, tempDir);
