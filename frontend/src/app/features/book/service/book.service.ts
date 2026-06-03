@@ -9,6 +9,7 @@ import {ResetProgressType} from '../../../shared/constants/reset-progress-type';
 import {AuthService} from '../../../shared/service/auth.service';
 import {Router} from '@angular/router';
 import {BookSocketService} from './book-socket.service';
+import type {BookCoverPatch} from './book-query-cache';
 import {BookPatchService} from './book-patch.service';
 import {TranslocoService} from '@jsverse/transloco';
 import {injectQuery, queryOptions, QueryClient} from '@tanstack/angular-query-experimental';
@@ -389,7 +390,7 @@ export class BookService {
     this.bookSocketService.handleBookMetadataUpdate(bookId);
   }
 
-  handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
+  handleMultipleBookCoverPatches(patches: BookCoverPatch[]): void {
     this.bookSocketService.handleMultipleBookCoverPatches(patches);
   }
 }

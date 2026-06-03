@@ -7,6 +7,12 @@ import {BOOKS_QUERY_KEY, bookDetailQueryPrefix, bookRecommendationsQueryPrefix} 
 const APP_BOOKS_QUERY_PREFIX = ['app-books'] as const;
 const APP_FILTER_OPTIONS_QUERY_PREFIX = ['app-filter-options'] as const;
 
+export interface BookCoverPatch {
+  id: number;
+  coverUpdatedOn?: string | null;
+  audiobookCoverUpdatedOn?: string | null;
+}
+
 export function invalidateAppBooksQueries(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({queryKey: APP_BOOKS_QUERY_PREFIX});
   void queryClient.invalidateQueries({queryKey: APP_FILTER_OPTIONS_QUERY_PREFIX});
@@ -102,7 +108,7 @@ export function patchBookFieldsInCache(queryClient: QueryClient, updates: {bookI
 
 export function patchAppBooksCoverInCache(
   queryClient: QueryClient,
-  patches: {id: number; coverUpdatedOn?: string | null; audiobookCoverUpdatedOn?: string | null}[]
+  patches: BookCoverPatch[]
 ): void {
   if (patches.length === 0) return;
   const patchMap = new Map(patches.map(p => [p.id, p]));
