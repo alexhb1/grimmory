@@ -113,7 +113,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Workload: Playwright Chromium against exact nightly image with 10K books.
 - Result:
   - Browser-observed requests: `95`.
-  - Legacy `/api/v1/books?stripForListView=false` count: `1`.
+  - Full `/api/v1/books?stripForListView=false` count: `1`.
   - `/api/v1/app/books` count: `0`.
   - `/api/v1/app/filter-options` count: `0`.
   - Browser JS heap: `35,100,000` used / `53,500,000` total.
@@ -183,7 +183,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Workload: Playwright Chromium against exact nightly image with 50K books, 45-second authenticated startup capture.
 - Result:
   - Browser-observed requests: `95`.
-  - Legacy `/api/v1/books?stripForListView=false` count: `1`.
+  - Full `/api/v1/books?stripForListView=false` count: `1`.
   - `/api/v1/app/books` count: `0`.
   - `/api/v1/app/filter-options` count: `0`.
   - Browser JS heap: `64,000,000` used / `68,000,000` total.
@@ -200,7 +200,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
   - Import driver exit: `0`; final counts `book=10000`, `book_file=10000`, `book_metadata=10000`.
   - Browser driver exit: `0`.
   - Browser-observed requests: `95`.
-  - Legacy `/api/v1/books?stripForListView=false` count: `1`.
+  - Full `/api/v1/books?stripForListView=false` count: `1`.
   - `/api/v1/app/books` count: `0`.
   - `/api/v1/app/filter-options` count: `0`.
   - Browser memory samples after startup: `16,100,000` used / `24,500,000` total JS heap.
@@ -212,7 +212,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms normal startup still retains browser heap from the full-list response at 10K.
   - Confirms the heap includes repeated DTO strings and large object/array groups, not only transient network bytes.
-  - Remaining gaps: before/after heap snapshot after removing the legacy full-list startup path, and deeper retainer-path analysis if ownership of specific Angular signals/sets must be proven.
+  - Follow-up after fixes: before/after heap snapshot after removing the current full-list startup path, and deeper retainer-path analysis if ownership of specific Angular signals/sets must be proven.
 
 ### DEBUG-50K-READY - Debug JDK/NMT Startup on Copied 50K DB
 
@@ -281,7 +281,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Workload: exact nightly image, clean 10K import, one Chromium browser connected before library creation, 10-minute browser probe with websocket frame logging and browser memory samples.
 - Result:
   - Imported `10,000` books.
-  - Browser startup still requested the legacy `/api/v1/books?stripForListView=false` once.
+  - Browser startup still requested the current primary `/api/v1/books?stripForListView=false` path once.
   - Browser-observed websocket events: `20,048` total.
   - Websocket frames received: `20,004`.
   - Websocket frames sent: `43`.
@@ -294,7 +294,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V10 event volume: import with a browser connected creates a large websocket burst.
   - Does not confirm a retained dashboard-route browser heap issue or a material backend RSS increase over the no-browser exact 10K baseline.
-  - Remaining gaps: multiple browsers, slow clients, actual browser allocation/CPU profiling, and async queue-depth instrumentation.
+  - Follow-up after fixes: slow clients, actual browser allocation/CPU profiling, and async queue-depth instrumentation.
 
 ### V10-EXACT-10K-INGEST-WITH-BROWSER-ALL-BOOKS - Book-Browser Route Event Burst
 
@@ -309,7 +309,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
   - Final DB counts: `book=10000`, `book_file=10000`, `book_metadata=10000`, `library=1`, `users=1`.
   - Browser final URL: `http://127.0.0.1:6182/all-books?view=grid&fmode=and`.
   - Browser-observed requests: `106`.
-  - Legacy `/api/v1/books?stripForListView=false` count: `1`.
+  - Full `/api/v1/books?stripForListView=false` count: `1`.
   - `/api/v1/app/books` count: `0`.
   - `/api/v1/app/filter-options` count: `0`.
   - Browser-observed websocket events: `20,033` total.
@@ -327,7 +327,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
   - Confirms that the actual `/all-books` route also receives the large websocket burst during import.
   - Does not confirm a retained browser heap problem: final browser heap matched the dashboard-route run.
   - Does not show a material backend RSS increase over the dashboard-route browser import baseline; the `/all-books` peak was about `37.7 MB` higher than the dashboard-route run.
-  - Remaining gaps: multiple browsers, deliberately slow websocket consumers, browser allocation timeline/CPU profiling, and server async queue-depth instrumentation.
+  - Follow-up after fixes: deliberately slow websocket consumers, browser allocation timeline/CPU profiling, and server async queue-depth instrumentation.
 
 ### V09-DEBUG-JDK-10K-INGEST - Exception and Log Overhead Attribution
 
@@ -351,7 +351,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V09 repeated per-book log noise.
   - Confirms the named entity graph exception-control-flow suspicion: the hot import path throws one handled `No EntityGraph with given name 'BookEntity.findByIdWithBookFiles'` exception per imported benchmark book.
-  - Remaining gap: before/after rerun after changing the entity graph/logging behavior.
+  - Follow-up after fixes: before/after rerun after changing the entity graph/logging behavior.
 - Harness note:
   - Inner commands all wrote `.cmd`, `.stdout.log`, `.stderr.log`, and `.exit` files. The outer detached `nohup` driver did not write a top-level `driver.exit`; future detached launches should wrap the driver so that exit status is recorded directly.
 
@@ -371,14 +371,14 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V07 as transient scan/rescan pressure on exact image.
   - Does not confirm retained idle heap after no-change rescan.
-  - Remaining gaps: debug JDK/NMT/JFR rescan with phase markers and moved/deleted/restored file variants.
+  - Follow-up after fixes: debug JDK/NMT/JFR rescan with phase markers and moved/deleted/restored file variants.
 
 ### FAILED-V27-FOLDER-ZIP-FIXTURE - Regular File Negative Control
 
 - Artifact: `.memory-runs/run-20260529T123800Z-V27-exact-nightly-folder-zip-download-128mb`
 - Evidence grade: failed harness/fixture run; useful as a regular-file negative control only.
 - Result:
-  - Fixture generation accidentally wrote one literal `track-${i}.mp3`, so Grimmory imported a regular audiobook file, not a folder-based audiobook.
+  - Fixture generation wrote one literal `track-${i}.mp3`, so Grimmory imported a regular audiobook file, not a folder-based audiobook.
   - DB row showed `is_folder_based=0`, `file_size_kb=65536`, `book_type=AUDIOBOOK`.
   - `/download` and `/download-all` each returned one `67,108,864` byte file.
 - Harness fix:
@@ -398,7 +398,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V27 for folder-audiobook `/download`: the in-memory ZIP response causes a large transient RSS increase.
   - Confirms `/download-all` is a useful streaming control for a comparable ZIP payload.
-  - Remaining gap: concurrent folder downloads.
+  - Follow-up after fixes: concurrent folder downloads.
 
 ### FAILED-V27-ADDITIONAL-FOLDER-ZIP-DEFAULT-FIXTURE - Pipefail Selection Bug
 
@@ -425,7 +425,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
   - Containers: no OOM or restart.
 - Verification:
   - Confirms V27 for the additional-file folder path: `AdditionalFileService.downloadFolderAsZip` also buffers the generated ZIP in memory before response.
-  - Remaining gap: concurrent primary/additional folder downloads and larger fixtures.
+  - Follow-up after fixes: concurrent primary/additional folder downloads and larger fixtures.
 
 ### V27-CONCURRENT-FOLDER-ZIP-DOWNLOAD-3X128MB - Concurrent Buffered ZIP Spike
 
@@ -446,7 +446,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms concurrent buffered primary-folder downloads stack transient RSS.
   - Confirms `/download-all` remains the streaming control under the same fixture.
-  - Remaining gaps: larger fixtures and mixed primary/additional concurrent downloads.
+  - Follow-up after fixes: larger fixtures and mixed primary/additional concurrent downloads.
 
 ### FAILED-V23-RECOMMENDATION-2K-PAYLOAD - Task Start Payload Bug
 
@@ -479,7 +479,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V23 as a real recommendation-task processing/RSS spike at a small 1K baseline.
   - Source shape explains why larger libraries need scaling tests: all embeddings and series names are kept in maps, each target compares against all other books, candidate lists are sorted, and all recommendation outputs are retained before batch save.
-  - Remaining gaps: before/after validation after changing the algorithm.
+  - Follow-up after fixes: before/after validation after changing the algorithm.
 
 ### V23-RECOMMENDATION-TASK-2K-CLEAN - Exact Image Recommendation Scaling Baseline
 
@@ -500,7 +500,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V23 across a second exact-image data point.
   - The task duration grew from `4,638 ms` at 1K to `11,182 ms` at 2K, which is consistent with the source-level all-pairs risk, though not enough alone to quantify the larger-library curve.
-  - Remaining gaps: before/after validation after changing the algorithm.
+  - Follow-up after fixes: before/after validation after changing the algorithm.
 
 ### V23-RECOMMENDATION-TASK-5K-CLEAN - Exact Image Recommendation Scaling Baseline
 
@@ -522,7 +522,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V23 across a third exact-image data point.
   - The task duration grew from `4,638 ms` at 1K to `11,182 ms` at 2K to `51,923 ms` at 5K, which is strong enough to prioritize algorithmic changes before testing very large libraries.
-  - Remaining gaps: before/after validation after changing the algorithm.
+  - Follow-up after fixes: before/after validation after changing the algorithm.
 
 ### FAILED-V23-RECOMMENDATION-10K-RELATIVE-ARTIFACT-DIR - Compose Bind Path Bug
 
@@ -560,7 +560,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms the recommendation updater remains a sharp all-library task spike at 10K books on the exact nightly image.
   - The peak was only slightly above the 2K/5K RSS peaks, but runtime grew from `51,923 ms` at 5K to `190,462 ms` at 10K, consistent with the source-level all-pairs/top-K scaling concern.
-  - Remaining gap: before/after validation after changing the algorithm.
+  - Follow-up after fixes: before/after validation after changing the algorithm.
 
 ### V23-DEBUG-JDK-RECOMMENDATION-TASK-2K - Recommendation JVM Attribution
 
@@ -587,7 +587,7 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Verification:
   - Confirms V23 is a large transient heap/allocation and CPU spike, not a retained Java heap leak after explicit GC.
   - JFR supports the source-level diagnosis: whole-library maps/candidate lists and similarity loops create heavy object-array/hash/list churn, while persistence/progress/save phases add Hibernate/Spring transaction allocation.
-  - Remaining gaps: before/after validation after algorithm changes.
+  - Follow-up after fixes: before/after validation after algorithm changes.
 
 ## Final Campaign Validation
 
@@ -620,15 +620,303 @@ Harness behavior now records command text, stdout, stderr, exit status, samples,
 - Debug recommendation probes isolate JFR to the task window after import, then export allocation, exception, hot-method, GC, and native-memory views.
 - Sampler cleanup now terminates child sample loops as a process tree.
 
-## Remaining Verification Backlog
+## Night Pause - 2026-05-29
 
-- Browser before/after heap snapshot after removing the legacy full-list startup path.
-- Browser-connected import with multiple browsers or slow clients.
-- Debug rescan with phase markers, plus moved/deleted/restored file variants.
-- V09 before/after debug ingest JFR after entity graph/logging changes.
-- Batch-by-ID endpoint stress.
-- Metadata refresh/review/proposal workloads.
-- Recommendation updater before/after validation after algorithm changes.
-- Larger/mixed folder downloads, archive entry reads, and large media/readers workloads.
-- Bookdrop/watcher event storm with queue-depth or map-size instrumentation.
-- Fixed heap runs at `-Xmx512m`, `-Xmx1g`, and `-Xmx2g` after the main full-list fix lands.
+- Pause artifact: `.memory-runs/pause-20260529T205123Z`
+- State: all running Docker containers visible from this workspace were stopped, including the investigation stacks and the normal Grimmory dev containers. Surviving investigation sampler/test processes were killed. Final audits are in `docker-ps-final.tsv` and `processes-final.txt`.
+
+### V30/V31 Additional Probe Progress
+
+- Partial metadata artifact: `.memory-runs/run-20260529T195710Z-V30-outstanding-memory-probes-10k-long-timeout`
+- Evidence grade: A for completed endpoint/import/metadata-apply sections; partial for metadata-review.
+- Workload: exact nightly image, 10,000 benchmark EPUBs plus synthetic PDF and 128 MiB CBZ fixture.
+- Result:
+  - Imported `10,002` books.
+  - Import peak app RSS: `2,191,339,520`; post-import idle app RSS: `629,477,376`.
+  - Metadata apply completed and peaked at `2,332,049,408` app RSS in task polling, with `2,334,597,120` peak sampled app RSS overall.
+  - Metadata review was manually stopped after `3,379` proposal rows. While incomplete, it repeatedly cycled app RSS up to about `1,836,978,176` during task polling and was still `IN_PROGRESS` when stopped.
+  - Reader/media endpoints did not show a material backend memory problem in this run: the 128 MiB CBZ page-image response moved app RSS only `973,246,464 -> 978,898,944` in the clean V31 repeat.
+  - Duplicate detection at 10K returned `277,513` bytes and moved app RSS `976,437,248 -> 1,079,644,160` in V31.
+  - Sidecar export/import at 10K moved app RSS `1,079,730,176 -> 1,245,380,608` and then `1,246,375,936 -> 1,384,136,704` in V31.
+
+- Additional-probes artifact: `.memory-runs/run-20260529T202941Z-V31-remaining-memory-probes-10k`
+- Evidence grade: A for completed Bookdrop and contention-recommendation sections; partial for contention library rescan because the run was paused.
+- Workload: same exact nightly 10K fixture with metadata apply/review skipped.
+- Result:
+  - Bookdrop reached `500/500` queued files. After the initial task-start sample at about `1,399,480,320` app RSS, the ongoing queue pass stayed around `0.72-0.75 GiB` app RSS.
+  - Recommendation plus library metadata rescan contention peaked at `2,720,591,872` sampled app RSS.
+  - The recommendation task completed. The library metadata rescan task was still `IN_PROGRESS` at pause, with the last task sample at `2,440,867,840` app RSS.
+  - Startup backfills were not reached before the night pause.
+
+## Resume Completion - 2026-05-30
+
+### Harness Corrections After Resume
+
+- Docker Desktop was running as the active daemon after resume. The WSL bind mount for `/home/alex/Projects/book-apps-benchmark/books/books_10K` appeared empty inside the app container, so two startup-backfill attempts imported zero books and were marked invalid:
+  - `.memory-runs/run-20260530T064652Z-V32-startup-backfills-fresh-10k`
+  - `.memory-runs/run-20260530T065014Z-V32-startup-backfills-fresh-10k`
+- The scripts now support `COPY_FIXTURES_TO_CONTAINER=1`; this copies the fixture into `/books` with `docker cp` and verifies the container file count before creating the library.
+- The multi-browser harness originally raced three simultaneous admin logins and produced HTTP 400 conflicts. The invalid artifact is `.memory-runs/run-20260530T065821Z-V33-multi-browser-ingest-10k-copy`. The browser probe now supports token-file auth so multiple browser clients can reuse the already-authenticated token.
+- Docker CLI credential-helper failures were avoided with per-run `DOCKER_CONFIG` directories containing a minimal public-image config.
+
+### V32 Startup Backfills - Fresh 10K Copy-Mode Run
+
+- Artifact: `.memory-runs/run-20260530T065329Z-V32-startup-backfills-fresh-10k-copy`
+- Image: `ghcr.io/grimmory-tools/grimmory@sha256:bfe24ef9f052d97f87a5421a3fe23ffb7e94e26aea7a26d13fd56fe0d370b7bf`
+- Evidence grade: A.
+- Workload: current nightly image, 10,000 benchmark EPUBs copied into the app container, fresh import, delete selected app-migration markers, restart app, observe startup backfills.
+- Container fixture verification: `10,000` files visible under `/books` before library creation.
+- Import result:
+  - Imported `10,000` books and `10,000` book files.
+  - Import-window sampled app RSS peak: `2,165,182,464` bytes.
+  - `poll-import` app RSS peak: `2,145,820,672` bytes.
+  - Post-import idle app RSS: `1,330,561,024` bytes.
+- Restart/backfill result:
+  - Deleted markers for `populateFileSizes`, `populateMetadataScores_v2`, `populateFileHashesV2`, `populateSearchText`, and `generateCoverHash`.
+  - `populateFileSizes` processed `0` books because import had already populated file size data.
+  - App log confirms `populateMetadataScores_v2`, `populateFileHashesV2`, `populateSearchText`, and `generateCoverHash` each processed `10,000` books after restart.
+  - Startup-backfill window sampled app RSS peak: `2,157,395,968` bytes.
+  - Post-startup-backfill idle app RSS: `971,259,904` bytes.
+  - Container state: no app OOM, no app restart, app exit code `0` before compose-down.
+- Conclusion: startup backfills are a confirmed transient memory spike at 10K. They do not prove an idle leak, but they can make a restart look like a fresh ingest-sized memory event.
+
+### V33 Multi-Browser Import - 3 Authenticated Clients
+
+- Artifact: `.memory-runs/run-20260530T070142Z-V33-multi-browser-ingest-10k-copy`
+- Image: `ghcr.io/grimmory-tools/grimmory@sha256:bfe24ef9f052d97f87a5421a3fe23ffb7e94e26aea7a26d13fd56fe0d370b7bf`
+- Evidence grade: A for backend RSS and websocket event volume; B for browser heap because Chromium `performance.memory` is coarse and no heap snapshot was taken.
+- Workload: current nightly image, 10,000 benchmark EPUBs copied into the app container, 3 authenticated Chromium clients on `/all-books?view=grid&fmode=and` before import, 10-minute browser probes.
+- Backend result:
+  - Import completed at `10,000` books.
+  - Sampled app RSS peak during import with browsers connected: `2,218,295,296` bytes.
+  - `poll-import` app RSS peak: `2,183,708,672` bytes.
+  - Post-import/browser-idle app RSS: `486,883,328` bytes.
+  - Container state: no app OOM and no app restart.
+- Browser/websocket result:
+  - Each browser made one `/api/v1/books` request while the library was still empty.
+  - Each browser received `20,004` websocket frames during import.
+  - Each browser received about `24,976,733-24,976,736` websocket bytes.
+  - Final reported used JS heap was about `11.9-12.7 MB` per browser.
+- Conclusion: three connected all-books clients create a large websocket event burst during import, but this run did not show retained backend RSS after import.
+
+### V34-V39 Docker Memory-Limit Boundary Runs
+
+- Image for all runs: `ghcr.io/grimmory-tools/grimmory@sha256:bfe24ef9f052d97f87a5421a3fe23ffb7e94e26aea7a26d13fd56fe0d370b7bf`
+- Evidence grade: A for container limit/import outcome.
+- Workload: current nightly image, fresh 10,000 benchmark EPUB import with fixture copied into the app container, varying Docker `mem_limit` on the app container.
+
+| Artifact | App limit | Result | Peak app RSS | Post-import idle app RSS |
+|---|---:|---|---:|---:|
+| `.memory-runs/run-20260530T071429Z-V34-memory-limit-2g-ingest-10k-copy` | 2 GiB | Completed 10K import | `705,957,888` | `459,350,016` |
+| `.memory-runs/run-20260530T071751Z-V35-memory-limit-1g-ingest-10k-copy` | 1 GiB | Completed 10K import | `597,622,784` | `458,084,352` |
+| `.memory-runs/run-20260530T072054Z-V36-memory-limit-512m-ingest-10k-copy` | 512 MiB | Completed 10K import | `536,846,336` | `452,177,920` |
+| `.memory-runs/run-20260530T072428Z-V37-memory-limit-384m-ingest-10k-copy` | 384 MiB | Completed 10K import | `402,640,896` | `383,303,680` |
+| `.memory-runs/run-20260530T072819Z-V38-memory-limit-320m-ingest-10k-copy` | 320 MiB | Completed 10K import slowly | `335,540,224` | `325,148,672` |
+| `.memory-runs/run-20260530T073606Z-V39-memory-limit-256m-ingest-10k-copy` | 256 MiB | Failed before import; healthcheck did not become ready | no sampler started | n/a |
+
+- Container state for the successful runs: no app OOM and no app restart.
+- The 256 MiB run was not OOM-killed, but it did not become healthy within the harness's 240-second startup window. Logs show it was still starting under severe memory pressure.
+- Conclusion: uncapped ingest RSS is partly JVM/container sizing behavior. A Docker memory cap dramatically lowers RSS for this 10K ingest path. The current nightly can still import 10K at 320 MiB, but startup and import become slower and tightly pinned; 256 MiB is below the practical startup floor in this harness.
+
+## Huge-Library Idle RAM - 2026-05-30
+
+### V40 Harness And Docker Endpoint Correction
+
+- Added harness: `docs/memory-investigation-2026-05-29/scripts/run-huge-idle-baseline.sh`.
+- The harness boots an already-imported huge-library DB, verifies book count before sampling, records app and DB memory separately, saves Docker/log/count evidence, and supports exact-image and debug-JDK modes.
+- Invalid starter artifact: `.memory-runs/run-20260530T080139Z-V40-idle-50k-exact-10min`.
+  - Result: invalid; Docker pull failed before containers started because the WSL Docker config referenced `docker-credential-desktop.exe`.
+- Invalid starter artifact: `.memory-runs/run-20260530T080225Z-V40-idle-50k-exact-10min`.
+  - Result: invalid; run used the Docker Desktop proxy socket and the copied 50K DB presented as `0` books.
+  - Direct counts: `book=0`, `book_file=0`, `book_metadata=0`, `library=0`, `users=0`.
+- DB-only diagnostic artifact: `.memory-runs/run-20260530T094650Z-V40-db-artifact-diagnose`.
+  - Same copied DB artifact mounted through the normal `/var/run/docker.sock` Docker endpoint presented correctly as `50,000` books, `50,000` book files, `50,000` metadata rows, `1` library, and `1` user.
+  - Conclusion: use the normal Docker socket for these WSL-path MariaDB artifact runs. The proxy-socket empty-DB run is harness/environment evidence, not application memory evidence.
+
+### V40 Exact Nightly 50K No-Browser Idle
+
+- Artifact: `.memory-runs/run-20260530T094732Z-V40-idle-50k-exact-30min`
+- Evidence grade: A for exact-image no-browser idle RSS.
+- Workload: published nightly image, copied 50K MariaDB artifact, no browser connected, no deliberate API workload after healthcheck/book-count verification, 120-second stabilization, 30-minute idle window, 10-second app/DB sampling.
+- Verification:
+  - DB count: `50,000` books, `50,000` book files, `50,000` metadata rows, `1` library, `1` user.
+  - App container state at collection: no OOM, no restart.
+- Result:
+  - Ready app cgroup memory: `1,563,164,672` bytes.
+  - Peak app cgroup memory: `1,673,330,688` bytes.
+  - Final app cgroup memory: `402,255,872` bytes.
+  - Final DB cgroup memory: `162,951,168` bytes.
+  - Docker CLI working-set-style app memory around the settled window was about `0.42-0.43 GiB`.
+- Conclusion: a verified 50K library does not keep the exact backend at multi-GB memory while truly idle. The uncapped exact image has a large startup/early-idle transient, then settles under about `0.4 GiB` app cgroup memory in this run.
+
+### V40 Debug JDK 50K Idle Attribution
+
+- Long debug artifact: `.memory-runs/run-20260530T102059Z-V40-idle-50k-debug-jdk-15min`
+- Clean JCMD artifact: `.memory-runs/run-20260530T104117Z-V40-idle-50k-debug-jdk-jcmd-5min`
+- Evidence grade: B for JVM internals because the app jar runs in a JDK container, not the production runtime image.
+- Workload: extracted nightly app jar in `eclipse-temurin:25-jdk-alpine`, same copied 50K DB, NMT enabled, no browser connected.
+- Result from the clean JCMD run:
+  - Ready sample app cgroup memory: `1,298,653,184` bytes.
+  - Ready heap: `1,016 MiB` committed / `1,015 MiB` used.
+  - Ready NMT total committed: `1,323,823 KB`; Java heap committed: `1,040,384 KB`.
+  - Post-stabilize heap: `180 MiB` committed / `111 MiB` used.
+  - Post-stabilize NMT total committed: `421,627 KB`.
+  - Post-idle heap: `164 MiB` committed / `101 MiB` used.
+  - Post-idle NMT total committed: `404,065 KB`.
+  - Post-idle forced-GC heap: `136 MiB` committed / `133 MiB` used.
+  - Post-idle forced-GC NMT total committed: `374,253 KB`.
+  - Post-forced-GC class histogram was not dominated by retained `BookEntity`, `BookMetadata`, or full-book DTO instances; the largest groups were runtime/framework structures such as byte arrays, ANTLR parser structures, object arrays, strings, reflection/class metadata, maps, and Spring/Hibernate metadata.
+- Conclusion: the high ready/early-idle memory is directly tied to Java heap commitment/usage during startup, and the JVM later uncommits/drops to a much lower steady state. This run does not support a retained 50K-book heap leak while idle.
+
+### V40 Exact Nightly 50K Idle With 512 MiB App Limit
+
+- Artifact: `.memory-runs/run-20260530T105211Z-V40-idle-50k-exact-512m-5min`
+- Evidence grade: A for exact-image bounded-container idle behavior.
+- Workload: same copied 50K DB, exact nightly image, app `mem_limit: 512m`, no browser connected, 120-second stabilization, 5-minute idle window.
+- Verification:
+  - DB count: `50,000` books.
+  - App container state at collection: no OOM, no restart.
+- Result:
+  - Ready/peak app cgroup memory: `531,574,784` bytes.
+  - Final app cgroup memory: `411,176,960` bytes.
+  - Final DB cgroup memory: `143,024,128` bytes.
+- Conclusion: the same 50K idle workload can boot and settle under a 512 MiB app limit. This reinforces that uncapped high startup RSS is largely JVM/container sizing behavior, not a hard memory requirement of a huge library at rest.
+
+### V41 DB-Only 50K Idle
+
+- Artifact: `.memory-runs/run-20260530T110548Z-V41-db-only-idle-50k-10min`
+- Evidence grade: A for MariaDB sidecar idle attribution.
+- Workload: copied 50K MariaDB artifact, MariaDB container only, no Grimmory app, 10-minute idle window, 10-second sampling.
+- Verification:
+  - DB count: `50,000` books, `50,000` book files, `50,000` metadata rows, `1` library, `1` user.
+  - DB container state at collection: no OOM, no restart.
+- Result:
+  - First DB cgroup memory: `141,168,640` bytes.
+  - Peak DB cgroup memory: `143,884,288` bytes.
+  - Final DB cgroup memory: `141,406,208` bytes.
+- Conclusion: MariaDB is not the multi-GB idle culprit for this 50K fixture. It is a small but real part of total compose memory, around `0.13 GiB` by itself.
+
+### V42 Browser-Connected 50K Startup/Idle
+
+- Artifact: `.memory-runs/run-20260530T111833Z-V42-browser-idle-50k-all-books-heap`
+- Evidence grade: A for exact-image backend RSS, network evidence, and retained browser heap snapshot.
+- Workload: exact nightly image, copied 50K DB, one authenticated Chromium session opened `/all-books?view=grid&fmode=and`, 5-minute browser window, retained Chromium heap snapshot after browser GC, 2-minute post-browser idle, app/DB sampling every 5 seconds.
+- Verification:
+  - DB count: `50,000` books, `50,000` book files, `50,000` metadata rows, `1` library, `1` user.
+  - Browser summary exit: `0`.
+  - App and DB container state at collection: no OOM, no restart.
+- Backend result:
+  - Pre-browser app cgroup memory: `1,448,345,600` bytes.
+  - Peak app cgroup memory during browser/full-list startup: `2,314,866,688` bytes.
+  - Final app cgroup memory after browser closed and 2-minute idle: `442,793,984` bytes.
+  - Final DB cgroup memory: `156,585,984` bytes.
+- Browser/network result:
+  - Browser made exactly one current full-books request: `/api/v1/books?stripForListView=false`.
+  - Browser did not request `/api/v1/app/books` or `/api/v1/app/filter-options`.
+  - Full-books request started at `2026-05-30T11:18:58.485Z` and completed at `2026-05-30T11:19:24.053Z`, about `25.6 s`.
+  - Retained Chromium heap snapshot after browser GC: `204,901,905` bytes on disk, SHA-256 `111e1fa82c54ab6e643ac470f708ba4777c507c3daba3322607bdcb92086b07c`.
+  - Parsed heap summary: `2,930,427` nodes, `70,602,215` bytes total self size.
+  - Top retained types by self size: `object` `27,342,132` bytes / `679,950` nodes; `string` `22,158,312` / `1,201,027`; `code` `5,776,096`; `array` `5,217,560`.
+  - Repeated DTO strings: `Verification Library` `50,002` string nodes; `LoadTest Press` `50,000` string nodes.
+- Conclusion: a browser opening the huge library is not retained backend idle memory, but it is a real average-RAM/user-experience culprit because it triggers the full-books backend spike and leaves a large browser object/string graph from the full-list response.
+
+### V43 Three-Browser 50K Startup/Idle
+
+- Artifact: `.memory-runs/run-20260530T113513Z-V43-browser-idle-50k-3clients`
+- Evidence grade: A for exact-image backend RSS and browser network evidence. Browser heap snapshots were intentionally disabled for this multi-client run to avoid making the verifier itself allocate hundreds of extra megabytes per client.
+- Workload: exact nightly image, copied 50K DB, three authenticated Chromium sessions opened `/all-books?view=grid&fmode=and` two seconds apart, 3-minute browser window, 2-minute post-browser idle, app/DB sampling every 5 seconds.
+- Verification:
+  - DB count: `50,000` books.
+  - Browser client exits: `0`, `0`, `0`.
+  - App and DB container state at collection: no OOM, no restart.
+  - Compose teardown exit: `0`.
+- Backend result:
+  - Pre-browser app cgroup memory: `1,516,564,480` bytes (`1.41 GiB`).
+  - Peak app cgroup memory during the overlapping browser/full-list requests: `3,632,312,320` bytes (`3.38 GiB`).
+  - Final app cgroup memory after browser clients closed and 2-minute idle: `595,443,712` bytes (`0.55 GiB`).
+  - Peak DB cgroup memory: `176,787,456` bytes (`0.16 GiB`).
+  - Final DB cgroup memory: `173,469,696` bytes (`0.16 GiB`).
+- Browser/network result:
+  - Each client made exactly one current full-books request: `/api/v1/books?stripForListView=false`.
+  - No client requested `/api/v1/app/books` or `/api/v1/app/filter-options`.
+  - Client request durations: `28.264 s`, `26.674 s`, and `26.041 s`.
+  - Each client recorded `106` requests and `106` responses overall.
+- Conclusion: concurrent browser startup on a huge library multiplies the full-books backend spike. This is still not retained backend idle memory, because the app settled to about `0.55 GiB` afterward, but it is a confirmed average/peak RAM problem for households or shared servers where multiple users open the app around the same time.
+
+### V44-V52 Idle JVM Tuning Matrix
+
+- Focus report: `docs/memory-investigation-2026-05-29/idle-ram-tuning-report.md`
+- Purpose: verify whether Grimmory can keep idle RAM small without hard-limiting maximum heap for large-library work, using three product-default requirements: start small while idle, grow during real work, and hand memory back quickly after the work.
+- Common setup:
+  - Exact nightly image unless noted.
+  - Copied 50K DB artifact.
+  - Hard max left elastic with `-XX:MaxRAMPercentage=60.0`.
+  - App and DB container state checked at final collection.
+- Results:
+
+| ID | Artifact | JVM profile | Workload | App peak | App final | Outcome |
+| --- | --- | --- | --- | ---: | ---: | --- |
+| V44 | `.memory-runs/run-20260530T120143Z-V44-idle-50k-softmax256-exact-10min` | `-Xms64m`, `SoftMaxHeapSize=256m` | no-browser 50K idle, 10 min | `841,326,592` | `451,522,560` | booted, no OOM/restart |
+| V45 | `.memory-runs/run-20260530T121535Z-V45-browser-50k-softmax256-all-books` | `-Xms64m`, `SoftMaxHeapSize=256m` | one browser `/all-books`, 2 min post idle | `1,480,327,168` | `1,361,756,160` | request completed, no OOM/restart |
+| V46 | `.memory-runs/run-20260530T122236Z-V46-debug-idle-50k-softmax256-jcmd-5min` | debug JDK, `SoftMaxHeapSize=256m` | no-browser 50K idle, 5 min | `928,645,120` | `520,224,768` | `jcmd` showed `256M soft max`, `160M` committed post-idle |
+| V47 | `.memory-runs/run-20260530T123008Z-V47-idle-50k-xms64-no-softmax-exact-10min` | `-Xms64m`, no soft max | no-browser 50K idle, 10 min | `1,389,056,000` | `429,760,512` | booted, no OOM/restart |
+| V48 | `.memory-runs/run-20260530T124249Z-V48-browser-50k-xms64-no-softmax-all-books` | `-Xms64m`, no soft max | one browser `/all-books`, 2 min post idle | `2,263,175,168` | `458,473,472` | request completed, no OOM/restart |
+| V49 | `.memory-runs/run-20260530T125013Z-V49-browser-50k-softmax384-all-books` | `-Xms64m`, `SoftMaxHeapSize=384m` | one browser `/all-books`, 2 min post idle | `1,484,492,800` | `1,040,224,256` | request completed, no OOM/restart |
+| V50 | `.memory-runs/run-20260530T125740Z-V50-browser-50k-softmax384-long-post-idle` | `-Xms64m`, `SoftMaxHeapSize=384m` | one browser `/all-books`, 10 min post idle | `1,455,157,248` | `940,154,880` | request completed, no OOM/restart |
+| V51 | `.memory-runs/run-20260530T140543Z-V51-browser-softmax384-debug-jcmd-postgc` | debug JDK, `-Xms64m`, `SoftMaxHeapSize=384m`, NMT | one browser `/all-books`, 10 min post idle, explicit `jcmd GC.run`, 60s settle | `1,504,567,296` | `1,185,640,448` | request completed, no OOM/restart; heap attribution captured |
+| V52 | `.memory-runs/run-20260530T142020Z-V52-browser-softmax384-heapshrink-exact` | exact image, `-Xms64m`, `SoftMaxHeapSize=384m`, `MaxHeapFreeRatio=10`, `MinHeapFreeRatio=5`, `-XX:-ShrinkHeapInSteps` | one browser `/all-books`, 10 min post idle | `1,487,740,928` | `1,165,565,952` | request completed, no OOM/restart |
+| V53 | `.memory-runs/run-20260530T144318Z-V53-browser-zgc-softmax384-exact-return-idle` | exact image, `-XX:+UseZGC`, `-Xms64m`, `SoftMaxHeapSize=384m`, `ZUncommitDelay=5` | one browser `/all-books`; stopped after idle-baseline failure | `3,315,879,936` | `2,808,397,824` | failed minimum-idle requirement; pre-browser RSS was `2,537,443,328` |
+| V54 | `.memory-runs/run-20260530T144738Z-V54-browser-shenandoah-fullgc-postwork-debug` | debug JDK, Shenandoah SoftMax, `-XX:-ExplicitGCInvokesConcurrent`, NMT | one browser `/all-books`, 2 min post idle, explicit `jcmd GC.run`, 60s settle | `1,475,952,640` | `1,411,768,320` | request completed, no OOM/restart; forced full-GC candidate failed return-to-idle |
+| V55 | `.memory-runs/run-20260530T151225Z-V55-browser-g1-periodic-fullgc-exact-return-idle` | exact image, G1 periodic full-GC shrinking | one browser `/all-books`, 5 min post idle | `970,399,744` | `488,390,656` | request completed, no OOM/restart; first same-JVM candidate to meet all three requirements in this path |
+| V56 | `.memory-runs/run-20260530T153027Z-V56-browser-g1-softmax384-periodic-fullgc-exact-return-idle` | exact image, G1 periodic full-GC shrinking plus `SoftMaxHeapSize=384m` | one browser `/all-books`, 5 min post idle | `933,801,984` | `484,089,856` | request completed, no OOM/restart; no clear extra win versus V55 |
+| V57 | `.memory-runs/run-20260530T154836Z-V57-browser-g1-concurrent-5s-exact-return-idle` | exact image, G1 periodic concurrent cleanup, `MaxHeapFreeRatio=20` | one browser `/all-books`, 5 min post idle | `964,898,816` | `519,647,232` | request completed, no OOM/restart; zero full GCs |
+| V58 | `.memory-runs/run-20260530T155702Z-V58-browser-g1-full-30s-exact-return-idle` | exact image, G1 periodic full-GC cleanup every 30s | one browser `/all-books`, 5 min post idle | `1,192,378,368` | `490,831,872` | request completed, no OOM/restart; 11 full GCs |
+| V59 | `.memory-runs/run-20260530T160539Z-V59-browser-g1-concurrent-5s-free10-exact-return-idle` | exact image, G1 periodic concurrent cleanup, `MaxHeapFreeRatio=10` | one browser `/all-books`, 5 min post idle | `1,172,070,400` | `481,746,944` | request completed, no OOM/restart; zero full GCs |
+| V60 | `.memory-runs/run-20260530T161408Z-V60-browser-g1-full-15s-exact-return-idle` | exact image, G1 periodic full-GC cleanup every 15s | one browser `/all-books`, 5 min post idle | `1,061,670,912` | `496,939,008` | request completed, no OOM/restart; 23 full GCs |
+| V61 | `.memory-runs/run-20260530T162241Z-V61-repeat-browser-g1-concurrent-5s-free10-exact-return-idle` | exact image, repeat of V59 G1 periodic concurrent cleanup, `MaxHeapFreeRatio=10` | one browser `/all-books`, 5 min post idle | `891,719,680` | `486,289,408` | request completed, no OOM/restart; zero full GCs |
+
+- Conclusion:
+  - `-Xms64m` is safe in the tested exact-image huge-library idle and browser paths and does not hard-limit large tasks.
+  - `-Xms64m` alone gives roughly the same final no-browser idle floor as current defaults, but it avoids an unnecessarily high initial heap setting.
+  - `SoftMaxHeapSize` reduces startup/full-list peak RSS in these runs, but it fails the return-to-idle requirement. It should not be a Grimmory default based on current evidence.
+  - V51 attribution shows the high post-SoftMax RSS is mostly committed Java heap, not live book data:
+    - Pre-browser: `532 MiB` heap committed / `111 MiB` used; app cgroup memory `816,676,864`.
+    - Post-browser close: `1,084 MiB` heap committed / `116 MiB` used; app cgroup memory `1,439,162,368`.
+    - Post-10-minute idle: `896 MiB` heap committed / `116 MiB` used; app cgroup memory `1,229,373,440`.
+    - Post-explicit-GC plus 60s settle: `856 MiB` heap committed / `116 MiB` used; app cgroup memory `1,185,914,880`.
+  - V52 tested standard heap-shrink controls with SoftMax on the exact image. It still finished around `1.09 GiB` after 10 minutes, so that profile also fails the return-to-idle requirement.
+  - V53 tested ZGC as an alternate elastic-heap setup. It failed the minimum-idle requirement before the request, sitting around `2.36 GiB` pre-browser and about `2.61 GiB` after browser close.
+  - V54 tested a same-JVM forced full-GC strategy by disabling concurrent explicit GC, then running `jcmd GC.run` after the browser workload. It did not return RSS to the low idle floor; final app RSS was about `1.31 GiB`.
+  - V55 tested G1's built-in periodic idle shrinking:
+    - JVM profile: `-XX:+UseG1GC`, `-Xms64m`, `-XX:MaxRAMPercentage=60.0`, `-XX:G1PeriodicGCInterval=5000`, `-XX:G1PeriodicGCSystemLoadThreshold=0`, `-XX:-G1PeriodicGCInvokesConcurrent`, `-XX:MaxHeapFreeRatio=20`, `-XX:MinHeapFreeRatio=5`, `-XX:-ShrinkHeapInSteps`.
+    - Pre-browser app RSS: `706,764,800` bytes (`0.66 GiB`).
+    - Browser/full-books peak app RSS: `970,399,744` bytes (`0.90 GiB`).
+    - Post-browser close app RSS: `489,275,392` bytes (`0.46 GiB`).
+    - Post-5-minute idle app RSS: `488,529,920` bytes (`0.455 GiB`).
+    - Request completed in `24.092 s`; no OOM or restart.
+  - V56 tested the same G1 periodic profile plus `SoftMaxHeapSize=384m`:
+    - Pre-browser app RSS: `815,570,944` bytes (`0.76 GiB`).
+    - Browser/full-books peak app RSS: `933,801,984` bytes (`0.87 GiB`).
+    - Post-browser close app RSS: `484,122,624` bytes (`0.451 GiB`).
+    - Post-5-minute idle app RSS: `483,483,648` bytes (`0.450 GiB`).
+    - Final app RSS: `484,089,856` bytes (`0.451 GiB`).
+    - Request completed in `23.723 s`; no OOM or restart.
+    - Preserved GC log: `runtime/data/grimmory-g1-softmax-gc.log`.
+    - V56 full periodic GC pauses ranged from about `52 ms` to `169 ms`, with median about `125 ms`, under the aggressive 5-second idle interval used in this experiment.
+    - Conclusion: adding `SoftMaxHeapSize=384m` to G1 did not harm the return-to-idle behavior, but the sampled peak improvement versus V55 was small enough to treat as noise until repeated. The confirmed mechanism is still G1 periodic heap shrinking.
+  - V57 tested G1's default-style concurrent periodic cleanup instead of forced full GC:
+    - JVM profile kept `G1PeriodicGCInterval=5000` and `MaxHeapFreeRatio=20`, but used `-XX:+G1PeriodicGCInvokesConcurrent`.
+    - Final app RSS: `519,647,232` bytes (`0.484 GiB`).
+    - GC log showed `0` full GCs. Young-GC pauses had p95 about `10.6 ms` and max about `30.2 ms`.
+    - Conclusion: concurrent cleanup is safer but `MaxHeapFreeRatio=20` left slightly more idle RSS than desired.
+  - V58 and V60 tested less-frequent forced full-GC cleanup:
+    - V58 full GC every 30s: final app RSS `490,831,872` bytes (`0.457 GiB`), `11` full GCs, median full-GC pause about `128.6 ms`, max about `137.7 ms`.
+    - V60 full GC every 15s: final app RSS `496,939,008` bytes (`0.463 GiB`), `23` full GCs, median full-GC pause about `125.8 ms`, max about `162.9 ms`.
+    - Conclusion: less-frequent full GC returns memory, but still introduces repeated full-GC pauses. It is less attractive than concurrent cleanup if concurrent can reach the same idle range.
+  - V59 and V61 tested the tuned concurrent candidate:
+    - JVM profile: `-XX:+UseG1GC`, `-Xms64m`, `-XX:MaxRAMPercentage=60.0`, `-XX:G1PeriodicGCInterval=5000`, `-XX:G1PeriodicGCSystemLoadThreshold=0`, `-XX:+G1PeriodicGCInvokesConcurrent`, `-XX:MaxHeapFreeRatio=10`, `-XX:MinHeapFreeRatio=5`, `-XX:-ShrinkHeapInSteps`.
+    - V59 final app RSS: `481,746,944` bytes (`0.449 GiB`); request completed in `23.680 s`; zero full GCs; young-GC max pause about `33.6 ms`.
+    - V61 repeat final app RSS: `486,289,408` bytes (`0.453 GiB`); request completed in `24.114 s`; zero full GCs; young-GC max pause about `24.4 ms`.
+    - Peak was treated as a guardrail only. Both runs stayed within normal bounds and below the current default browser path.
+    - Conclusion: this is the best current candidate for "minimum idle, grow, return quickly" because it reaches the low idle neighborhood without forced full-GC pauses.
+  - Current recommendation: do not default `SoftMaxHeapSize`, and do not default V55's forced periodic full-GC mode. Treat the V59/V61 G1 periodic concurrent profile as the leading JVM candidate for Grimmory's desired idle behavior, pending broader workload validation.

@@ -57,8 +57,10 @@ run_step() {
   mkdir -p "$ARTIFACT_DIR/commands"
   printf '%q ' "$@" >"$ARTIFACT_DIR/commands/${name}.cmd"
   printf '\n' >>"$ARTIFACT_DIR/commands/${name}.cmd"
+  set +e
   "$@" >"$ARTIFACT_DIR/commands/${name}.stdout.log" 2>"$ARTIFACT_DIR/commands/${name}.stderr.log"
   local status=$?
+  set -e
   printf '%s\n' "$status" >"$ARTIFACT_DIR/commands/${name}.exit"
   return "$status"
 }
@@ -172,6 +174,27 @@ book_count() {
   local username="${MYSQL_USER:-grimmory}"
   local password="${MYSQL_PASSWORD:-grimmory}"
   docker exec "$db_container" mariadb "-u${username}" "-p${password}" -N -B grimmory -e "select count(*) from book;" 2>/dev/null | tr -dc '0-9' || true
+}
+
+prepare_book_fixtures() {
+  require_env ARTIFACT_DIR
+  local app_container="$1"
+  local fixture_dir="$2"
+  local target_count="$3"
+  local copy_mode="${4:-0}"
+  if [[ "$copy_mode" == "1" ]]; then
+    run_step 024-create-books-dir docker exec -u 0 "$app_container" sh -lc 'rm -rf /books && mkdir -p /books'
+    run_step 025-copy-fixtures docker cp "${fixture_dir}/." "${app_container}:/books/"
+    run_step 026-fix-books-permissions docker exec -u 0 "$app_container" sh -lc 'chmod -R a+rX /books'
+  fi
+  run_step 027-verify-books-container docker exec "$app_container" sh -lc 'find /books -type f | wc -l; find /books -type f | head -n 5'
+  local container_fixture_count
+  container_fixture_count="$(awk 'NR == 1 {print $1}' "$ARTIFACT_DIR/commands/027-verify-books-container.stdout.log" | tr -dc '0-9')"
+  printf 'copy_fixtures_to_container=%s\n' "$copy_mode" >>"$ARTIFACT_DIR/manifest.env"
+  printf 'container_fixture_count=%s\n' "${container_fixture_count:-0}" >>"$ARTIFACT_DIR/manifest.env"
+  if [[ -z "$container_fixture_count" || "$container_fixture_count" -lt "$target_count" ]]; then
+    die "Container /books has ${container_fixture_count:-0} files, expected at least $target_count"
+  fi
 }
 
 sample_once() {

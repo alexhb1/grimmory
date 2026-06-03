@@ -17,6 +17,8 @@ const route = process.env.ROUTE ?? '/';
 const durationMs = Number.parseInt(process.env.DURATION_MS ?? '15000', 10);
 const memorySampleIntervalMs = Number.parseInt(process.env.MEMORY_SAMPLE_INTERVAL_MS ?? '5000', 10);
 const takeHeapSnapshot = ['1', 'true', 'yes'].includes((process.env.TAKE_HEAP_SNAPSHOT ?? '').toLowerCase());
+const accessTokenFile = process.env.ACCESS_TOKEN_FILE;
+const refreshTokenFile = process.env.REFRESH_TOKEN_FILE;
 
 const dirs = [
   'commands',
@@ -45,20 +47,26 @@ function sha256File(file) {
 
 const startedAt = new Date().toISOString();
 
-const loginResponse = await fetch(`${appUrl}/api/v1/auth/login`, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ username, password }),
-});
-if (!loginResponse.ok) {
-  console.error(`login failed: ${loginResponse.status}`);
-  console.error(await loginResponse.text());
-  process.exit(1);
+let accessToken = accessTokenFile ? fs.readFileSync(accessTokenFile, 'utf8').trim() : '';
+let refreshToken = refreshTokenFile ? fs.readFileSync(refreshTokenFile, 'utf8').trim() : '';
+let expires = Number.parseInt(process.env.TOKEN_EXPIRY_SECONDS ?? '7200', 10);
+
+if (!accessToken || !refreshToken) {
+  const loginResponse = await fetch(`${appUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!loginResponse.ok) {
+    console.error(`login failed: ${loginResponse.status}`);
+    console.error(await loginResponse.text());
+    process.exit(1);
+  }
+  const tokenPayload = await loginResponse.json();
+  accessToken = tokenPayload.accessToken;
+  refreshToken = tokenPayload.refreshToken;
+  expires = tokenPayload.expires ?? expires;
 }
-const tokenPayload = await loginResponse.json();
-const accessToken = tokenPayload.accessToken;
-const refreshToken = tokenPayload.refreshToken;
-const expires = tokenPayload.expires ?? 7200;
 
 const networkFile = path.join(artifactDir, 'samples/browser/network.jsonl');
 const websocketFile = path.join(artifactDir, 'samples/browser/websocket.jsonl');
@@ -261,14 +269,21 @@ await browser.close();
 
 writeJson(metricsFile, metrics);
 
+const isBooksEndpointUrl = url => url.includes('/api/v1/books?') || url.endsWith('/api/v1/books');
 const booksRequests = requests.filter(entry => entry.url.includes('/api/v1/books'));
-const legacyBooksRequests = requests.filter(entry => entry.url.includes('/api/v1/books?') || entry.url.endsWith('/api/v1/books'));
+const booksEndpointRequests = requests.filter(entry => isBooksEndpointUrl(entry.url));
+const booksEndpointResponses = responses.filter(entry => isBooksEndpointUrl(entry.url));
 const appBooksRequests = requests.filter(entry => entry.url.includes('/api/v1/app/books'));
 const filterOptionRequests = requests.filter(entry => entry.url.includes('/api/v1/app/filter-options'));
 const websocketFramesReceived = websocketEvents.filter(entry => entry.type === 'websocket-frame-received');
 const websocketFramesSent = websocketEvents.filter(entry => entry.type === 'websocket-frame-sent');
 const websocketBytesReceived = websocketFramesReceived.reduce((sum, entry) => sum + (entry.bytes ?? 0), 0);
 const websocketBytesSent = websocketFramesSent.reduce((sum, entry) => sum + (entry.bytes ?? 0), 0);
+const firstBooksEndpointRequestAt = booksEndpointRequests[0]?.timestamp ?? null;
+const firstBooksEndpointResponseAt = booksEndpointResponses[0]?.timestamp ?? null;
+const firstBooksEndpointElapsedMs = firstBooksEndpointRequestAt && firstBooksEndpointResponseAt
+  ? Date.parse(firstBooksEndpointResponseAt) - Date.parse(firstBooksEndpointRequestAt)
+  : null;
 
 const summary = {
   startedAt,
@@ -279,7 +294,11 @@ const summary = {
   requestCount: requests.length,
   responseCount: responses.length,
   booksRequestCount: booksRequests.length,
-  legacyBooksRequestCount: legacyBooksRequests.length,
+  booksEndpointRequestCount: booksEndpointRequests.length,
+  booksEndpointResponseCount: booksEndpointResponses.length,
+  firstBooksEndpointRequestAt,
+  firstBooksEndpointResponseAt,
+  firstBooksEndpointElapsedMs,
   appBooksRequestCount: appBooksRequests.length,
   filterOptionRequestCount: filterOptionRequests.length,
   websocketEventCount: websocketEvents.length,
@@ -287,7 +306,13 @@ const summary = {
   websocketFrameSentCount: websocketFramesSent.length,
   websocketBytesReceived,
   websocketBytesSent,
-  legacyBooksRequests: legacyBooksRequests.map(entry => entry.url),
+  booksEndpointRequests: booksEndpointRequests.map(entry => entry.url),
+  booksEndpointResponses: booksEndpointResponses.map(entry => ({
+    timestamp: entry.timestamp,
+    status: entry.status,
+    url: entry.url,
+    contentLength: entry.contentLength,
+  })),
   appBooksRequests: appBooksRequests.map(entry => entry.url),
   filterOptionRequests: filterOptionRequests.map(entry => entry.url),
   metrics,

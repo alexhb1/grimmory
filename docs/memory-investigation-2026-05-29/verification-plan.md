@@ -53,7 +53,7 @@ A verification run is not complete until these checks pass or the failure is doc
 
 - the top-level driver command, stdout, stderr, and exit status are saved when the run was detached;
 - every evidence-producing step has a saved `.cmd`, `.stdout.log`, `.stderr.log`, and `.exit`;
-- all non-zero exits are explained in `notes.md` and are not accidentally treated as confirmed runtime behavior;
+- all non-zero exits are explained in `notes.md` and are not mistaken for confirmed runtime behavior;
 - raw samples have headers, timestamps, and enough rows to show the workload window, peak, and post-idle/post-GC state where applicable;
 - Docker image digests, final container state, restart counts, and OOM flags are captured before cleanup;
 - app and DB logs are captured before containers are removed;
@@ -73,6 +73,14 @@ The verification plan should avoid proving only an artificial lab case. Each hig
 - Add at least one more realistic fixture for media-heavy findings: large covers, large PDFs/comics, folder audiobooks, many unique metadata values, or filesystem event storms.
 - Do not generalize from the debug JDK container alone. Debug containers can miss native libraries or differ from the production JRE image.
 - Separate "user-image behavior" from "JVM explanation" in the notes.
+
+## Harness Lessons From The Resume Runs
+
+- When using Docker Desktop from WSL, do not assume a WSL host bind mount is visible inside the container. Verify the fixture count from inside the app container before creating the library. If `/books` is empty, use `COPY_FIXTURES_TO_CONTAINER=1` so the harness copies the fixture into the app container with `docker cp`.
+- Use a per-run `DOCKER_CONFIG` when Docker Desktop's credential helper is not available in the WSL shell. Public image pulls should not depend on the global `credsStore`.
+- For multi-browser probes, avoid racing simultaneous admin logins. Reuse a token file or create browser tokens sequentially and record that token-file path in the command artifact.
+- For memory-limit runs, record both the limit and the outcome. A successful import under a lower app limit is evidence that uncapped Docker RSS is partly JVM/cgroup sizing behavior; a failed low-limit startup is not an ingest failure unless the library creation/import step was reached.
+- Always distinguish invalid harness evidence from application evidence. Invalid runs should get an `invalid-run-note.md` and should not be summarized as Grimmory behavior.
 
 ## Time Classes
 
@@ -300,6 +308,9 @@ These harnesses now exist and should be reused before inventing new one-off comm
 - `scripts/analyze-chrome-heapsnapshot.mjs`: parses a Chrome `.heapsnapshot` into durable top-type, top-name, and interesting-name summaries.
 - `scripts/run-debug-jdk-from-db.sh`: boots the extracted nightly jar in a JDK container against a copied MariaDB data directory with NMT enabled.
 - `scripts/jvm-snapshot.sh`: captures heap info, NMT summary, and class histogram from a JDK-backed app container.
+- `scripts/run-huge-idle-baseline.sh`: boots an already-imported huge-library database, verifies book count, then samples app RSS, DB RSS, Docker stats, logs, and optional debug-JDK heap/NMT snapshots through a controlled no-browser idle window. Accepts `JAVA_TOOL_OPTIONS_OVERRIDE` for reproducible JVM profile experiments.
+- `scripts/run-db-only-idle-baseline.sh`: boots only MariaDB from a copied huge-library DB artifact, verifies book count, samples sidecar RSS, and saves DB process/cgroup memory snapshots.
+- `scripts/run-huge-browser-idle.sh`: boots the exact image against a copied huge-library DB, opens a real Chromium route, records browser network/heap/trace evidence, samples backend/DB RSS, and captures post-browser idle. Accepts `JAVA_TOOL_OPTIONS_OVERRIDE` for reproducible JVM profile experiments.
 - `scripts/debug-endpoint-attribution.sh`: runs pre/post GC snapshots, starts/stops JFR, executes endpoint probes, exports JFR summaries, and saves all evidence to files.
 - `scripts/run-debug-jdk-ingest.sh`: imports a fixture library with the exact nightly jar running under a JDK image, records production-equivalent JVM flags plus NMT, captures JFR allocation/exception/native-memory views, counts repeated ingest logs, and tears down its compose project.
 - `scripts/probe-batch-by-ids.sh`: queries book IDs from the DB, probes `/api/v1/books/batch` at configured ID counts, records accepted/rejected request sizes, payload bytes, timings, RSS, logs, and Docker state.
@@ -419,7 +430,7 @@ Uses Playwright to:
 
 ## Verification Matrix
 
-### V01 - Legacy full-books endpoint backend memory
+### V01 - Main full-books endpoint backend memory
 
 **Hypothesis**
 
@@ -505,7 +516,7 @@ S/M.
 
 **Hypothesis**
 
-If root injection/global query triggers the legacy full list, then a normal browser login/startup should request `/api/v1/books?stripForListView=false`.
+If root injection/global query triggers the current full list, then a normal browser login/startup should request `/api/v1/books?stripForListView=false`.
 
 **Workload**
 
@@ -526,8 +537,8 @@ Confirmed if normal startup or common navigation triggers the full-books request
 
 Current baseline:
 
-- Exact 10K browser startup and exact 50K browser startup both request `/api/v1/books?stripForListView=false` once and do not request `/api/v1/app/books` or `/api/v1/app/filter-options`.
-- Exact 10K retained heap-snapshot run: `.memory-runs/run-20260529T135210Z-V04-browser-heap-snapshot-exact-10k`.
+- Production-image 10K browser startup and production-image 50K browser startup both request `/api/v1/books?stripForListView=false` once and do not request `/api/v1/app/books` or `/api/v1/app/filter-options`.
+- Production-image 10K retained heap-snapshot run: `.memory-runs/run-20260529T135210Z-V04-browser-heap-snapshot-exact-10k`.
 - Heap snapshot run captured `95,199,725` bytes after Chromium GC and parsed summaries under `summaries/heap/`.
 
 **Time class**
@@ -558,8 +569,8 @@ Confirmed if metadata sets retain meaningful extra heap proportional to library 
 
 Current baseline:
 
-- Exact 10K browser heap snapshot after startup showed retained `object`, `string`, and `array` groups; repeated DTO strings included `Verification Library` `10,002` times and `LoadTest Press` `10,000` times.
-- This confirms browser retained heap from the full-list response, but a before/after fix run is still needed to quantify the improvement from removing legacy full-list startup.
+- Production-image 10K browser heap snapshot after startup showed retained `object`, `string`, and `array` groups; repeated DTO strings included `Verification Library` `10,002` times and `LoadTest Press` `10,000` times.
+- This confirms browser retained heap from the full-list response, but a before/after fix run is still needed to quantify the improvement from removing the current full-list startup.
 
 **Time class**
 
@@ -780,6 +791,65 @@ If total compose RSS is being mistaken for app memory, DB sidecar RSS should acc
 **Decision rule**
 
 Confirmed if DB RSS is a significant fraction of total memory and varies independently of Java heap.
+
+**Time class**
+
+M/L.
+
+### V40 - Huge-library idle RAM attribution
+
+**Hypothesis**
+
+If very large libraries cause high average RAM while the app is "idle", then a copied huge-library database with no browser or intentional API workload should show either stable retained app memory, startup work that settles over time, a material MariaDB sidecar contribution, or JVM committed/native memory much larger than live heap.
+
+**Workload**
+
+- Start from an already-imported 50K database artifact.
+- Run the exact nightly image with no browser connected and no intentional endpoint workload after healthcheck.
+- Keep a controlled idle window for 30-60 minutes.
+- Repeat against the same database in debug-JDK/NMT mode.
+- Repeat selected exact-image runs with app container limits.
+- Run a browser-connected comparison separately so frontend startup does not contaminate the pure idle baseline.
+
+**Metrics**
+
+- app container RSS
+- DB container RSS
+- total app plus DB RSS
+- DB book count
+- Docker image digests
+- final container state, restart count, and OOM flag
+- app and DB logs
+- debug-JDK heap info, NMT summary, and class histogram at ready, post-stabilization, post-idle, and post-forced-GC
+- browser network/heap data only for the separate browser-contaminated comparison
+
+**Decision rule**
+
+Confirmed idle memory problem if app RSS remains high during a no-browser idle window and is not explained by MariaDB RSS or low live heap after GC. Confirmed JVM sizing/committed-memory behavior if exact-image RSS is high but debug-JDK post-GC live heap is small and class histograms are not book-dominated. Confirmed sidecar contribution if MariaDB is a large share of total compose RSS.
+
+**Current baseline**
+
+- Exact nightly 50K no-browser idle artifact: `.memory-runs/run-20260530T094732Z-V40-idle-50k-exact-30min`.
+- Exact result: verified `50,000` books; app cgroup memory peaked at `1,673,330,688` bytes immediately after startup and ended at `402,255,872` bytes after a 30-minute idle window; DB ended at `162,951,168` bytes.
+- Debug-JDK/Jcmd artifact: `.memory-runs/run-20260530T104117Z-V40-idle-50k-debug-jdk-jcmd-5min`.
+- Debug result: ready heap `1,016 MiB` committed / `1,015 MiB` used; post-idle heap `164 MiB` committed / `101 MiB` used; post-idle forced-GC NMT total committed `374,253 KB`.
+- Exact 512 MiB limit artifact: `.memory-runs/run-20260530T105211Z-V40-idle-50k-exact-512m-5min`.
+- Limit result: verified `50,000` books; app peak `531,574,784` bytes, final `411,176,960` bytes; no restart/OOM.
+- DB-only artifact: `.memory-runs/run-20260530T110548Z-V41-db-only-idle-50k-10min`.
+- DB-only result: verified `50,000` books; MariaDB peak `143,884,288` bytes and final `141,406,208` bytes.
+- Browser-connected artifact: `.memory-runs/run-20260530T111833Z-V42-browser-idle-50k-all-books-heap`.
+- Browser result: verified `50,000` books; one browser requested `/api/v1/books?stripForListView=false`; backend app peak `2,314,866,688` bytes and final `442,793,984` bytes; retained Chromium heap snapshot `204,901,905` bytes on disk with `2,930,427` nodes.
+- Multi-browser artifact: `.memory-runs/run-20260530T113513Z-V43-browser-idle-50k-3clients`.
+- Multi-browser result: verified `50,000` books; three browser clients each requested `/api/v1/books?stripForListView=false`; request durations were about `26-28 s`; backend app peak `3,632,312,320` bytes and final `595,443,712` bytes.
+- Idle JVM tuning report: `docs/memory-investigation-2026-05-29/idle-ram-tuning-report.md`.
+- Idle JVM tuning result: `-Xms64m` with elastic `MaxRAMPercentage=60.0` is safe in the tested 50K idle/browser paths. `SoftMaxHeapSize=256m/384m` reduced some request-window memory but failed return-to-idle. G1 periodic cleanup fixed the committed-heap return problem. The best tuned candidate is now the V59/V61 G1 periodic concurrent profile: `G1PeriodicGCInterval=5000`, `G1PeriodicGCInvokesConcurrent=true`, `MaxHeapFreeRatio=10`, `MinHeapFreeRatio=5`, and `-XX:-ShrinkHeapInSteps`; it returned to about `0.449-0.453 GiB` final idle in two exact-image 50K browser runs with zero full-GC pauses.
+- Interpretation: current evidence does not support a retained 50K-book idle heap leak in the no-browser case. It supports a startup/heap-commit transient plus JVM/container sizing behavior. Browser startup remains a major average-RAM culprit because it triggers the full-books API and retains a large frontend object/string graph; multiple simultaneous clients multiply the backend peak. JVM startup and post-work committed heap can be improved without hard-capping max heap, but the warm Spring/Hibernate runtime floor remains.
+
+**Harness**
+
+- `scripts/run-huge-idle-baseline.sh`
+- `scripts/run-db-only-idle-baseline.sh`
+- `scripts/run-huge-browser-idle.sh`
 
 **Time class**
 
@@ -1505,7 +1575,7 @@ Tested on `<date>` using `<image>@<digest>` with `<dataset>`.
 Run these first because they either already have strong evidence or unlock better prioritization:
 
 1. Build the minimal harness pieces that enforce artifact capture: run directory creation, `run_step`, Docker stats sampling, endpoint probing, log capture, and run acceptance validation.
-2. V01 legacy full-books endpoint backend memory.
+2. V01 current full-books endpoint backend memory.
 3. V02 `stripForListView` backend allocation.
 4. V04 frontend startup full-library fetch.
 5. V08 long outer scan transaction failure with a reduced-timeout repro if possible.

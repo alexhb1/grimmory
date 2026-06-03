@@ -21,6 +21,8 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-grimmory}"
 SAMPLE_INTERVAL="${SAMPLE_INTERVAL:-5}"
 IMPORT_TIMEOUT_SECONDS="${IMPORT_TIMEOUT_SECONDS:-7200}"
+APP_MEMORY_LIMIT="${APP_MEMORY_LIMIT:-}"
+COPY_FIXTURES_TO_CONTAINER="${COPY_FIXTURES_TO_CONTAINER:-0}"
 
 [[ -d "$BOOK_FIXTURE_DIR" ]] || die "BOOK_FIXTURE_DIR must point to an existing directory"
 [[ "$TARGET_COUNT" =~ ^[0-9]+$ ]] || die "TARGET_COUNT must be numeric"
@@ -42,15 +44,26 @@ db_port=$DB_PORT
 admin_user=$ADMIN_USER
 sample_interval=$SAMPLE_INTERVAL
 import_timeout_seconds=$IMPORT_TIMEOUT_SECONDS
+app_memory_limit=${APP_MEMORY_LIMIT:-none}
+copy_fixtures_to_container=$COPY_FIXTURES_TO_CONTAINER
 EOF
 
 COMPOSE_PROJECT="grimmorymem$(date -u +%Y%m%d%H%M%S)"
 export COMPOSE_PROJECT
+APP_MEMORY_LIMIT_YAML=""
+if [[ -n "$APP_MEMORY_LIMIT" ]]; then
+  APP_MEMORY_LIMIT_YAML="    mem_limit: ${APP_MEMORY_LIMIT}"
+fi
+BOOKS_VOLUME_YAML="      - ${BOOK_FIXTURE_DIR}:/books:ro"
+if [[ "$COPY_FIXTURES_TO_CONTAINER" == "1" ]]; then
+  BOOKS_VOLUME_YAML=""
+fi
 
 cat >"$ARTIFACT_DIR/docker/compose.yml" <<EOF
 services:
   app:
     image: ${GRIMMORY_IMAGE}
+${APP_MEMORY_LIMIT_YAML}
     environment:
       USER_ID: "$(id -u)"
       GROUP_ID: "$(id -g)"
@@ -64,7 +77,7 @@ services:
     volumes:
       - ${ARTIFACT_DIR}/runtime/data:/app/data
       - ${ARTIFACT_DIR}/runtime/bookdrop:/bookdrop
-      - ${BOOK_FIXTURE_DIR}:/books:ro
+${BOOKS_VOLUME_YAML}
     depends_on:
       db:
         condition: service_healthy
@@ -111,6 +124,8 @@ if ! wait_http "http://127.0.0.1:${APP_PORT}/api/v1/healthcheck" 240; then
   collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
   die "App healthcheck did not become ready"
 fi
+
+prepare_book_fixtures "$APP_CONTAINER" "$BOOK_FIXTURE_DIR" "$TARGET_COUNT" "$COPY_FIXTURES_TO_CONTAINER"
 
 run_detached_step 020-sample-loop bash -c "source '$SCRIPT_DIR/common.sh'; ARTIFACT_DIR='$ARTIFACT_DIR' MYSQL_ROOT_PASSWORD='$MYSQL_ROOT_PASSWORD' sample_loop '$APP_CONTAINER' '$DB_CONTAINER' '$SAMPLE_INTERVAL' ingest"
 SAMPLE_PID="$(cat "$ARTIFACT_DIR/pids/020-sample-loop.pid")"
@@ -177,7 +192,7 @@ cat >"$ARTIFACT_DIR/notes.md" <<EOF
 - Dataset file count: $(find "$BOOK_FIXTURE_DIR" -type f | wc -l | tr -d ' ')
 - Browser connected: false
 - Java options: production image defaults
-- Container memory limits: none explicit
+- Container memory limits: app ${APP_MEMORY_LIMIT:-none}
 - End time: $(ts_utc)
 - Result: imported ${TARGET_COUNT} target books or more
 - Evidence summary: see samples/docker-stats.tsv, samples/db-counts.tsv, logs/app.log, logs/db.log

@@ -8,61 +8,71 @@ source "$SCRIPT_DIR/common.sh"
 require_cmd docker
 require_cmd curl
 require_cmd jq
-require_cmd node
+require_cmd rg
 
-VERIFY_ID="${VERIFY_ID:-V10-exact-ingest-with-browser}"
-BOOK_FIXTURE_DIR="${BOOK_FIXTURE_DIR:-}"
-TARGET_COUNT="${TARGET_COUNT:-0}"
+VERIFY_ID="${VERIFY_ID:-V32-startup-backfills-fresh}"
+ARTIFACT_DIR="${ARTIFACT_DIR:-$(init_artifact_dir "$VERIFY_ID")}"
+BOOK_FIXTURE_DIR="${BOOK_FIXTURE_DIR:-/home/alex/Projects/book-apps-benchmark/books/books_10K}"
+TARGET_COUNT="${TARGET_COUNT:-10000}"
 GRIMMORY_IMAGE="${GRIMMORY_IMAGE:-ghcr.io/grimmory-tools/grimmory:nightly}"
 DB_IMAGE="${DB_IMAGE:-lscr.io/linuxserver/mariadb:11.4.8}"
-APP_PORT="${APP_PORT:-6170}"
-DB_PORT="${DB_PORT:-3470}"
+APP_PORT="${APP_PORT:-6220}"
+DB_PORT="${DB_PORT:-3520}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-grimmory}"
-SAMPLE_INTERVAL="${SAMPLE_INTERVAL:-5}"
-IMPORT_TIMEOUT_SECONDS="${IMPORT_TIMEOUT_SECONDS:-7200}"
-BROWSER_DURATION_MS="${BROWSER_DURATION_MS:-900000}"
-BROWSER_MEMORY_SAMPLE_INTERVAL_MS="${BROWSER_MEMORY_SAMPLE_INTERVAL_MS:-5000}"
-BROWSER_ROUTE="${BROWSER_ROUTE:-/}"
-BROWSER_CLIENTS="${BROWSER_CLIENTS:-1}"
+SAMPLE_INTERVAL="${SAMPLE_INTERVAL:-1}"
+IMPORT_TIMEOUT_SECONDS="${IMPORT_TIMEOUT_SECONDS:-3600}"
+STARTUP_BACKFILL_TIMEOUT_SECONDS="${STARTUP_BACKFILL_TIMEOUT_SECONDS:-3600}"
 COPY_FIXTURES_TO_CONTAINER="${COPY_FIXTURES_TO_CONTAINER:-0}"
 
 [[ -d "$BOOK_FIXTURE_DIR" ]] || die "BOOK_FIXTURE_DIR must point to an existing directory"
 [[ "$TARGET_COUNT" =~ ^[0-9]+$ ]] || die "TARGET_COUNT must be numeric"
-[[ "$BROWSER_CLIENTS" =~ ^[0-9]+$ ]] || die "BROWSER_CLIENTS must be numeric"
 (( TARGET_COUNT > 0 )) || die "TARGET_COUNT must be > 0"
-(( BROWSER_CLIENTS > 0 )) || die "BROWSER_CLIENTS must be > 0"
 
-ARTIFACT_DIR="${ARTIFACT_DIR:-$(init_artifact_dir "$VERIFY_ID")}"
 export ARTIFACT_DIR MYSQL_ROOT_PASSWORD
+ensure_artifact_dirs "$ARTIFACT_DIR"
 mkdir -p "$ARTIFACT_DIR/runtime/data" "$ARTIFACT_DIR/runtime/bookdrop" "$ARTIFACT_DIR/runtime/mysql"
 append_manifest
 
 cat >>"$ARTIFACT_DIR/manifest.env" <<EOF
 verification_id=$VERIFY_ID
-grimmory_image=$GRIMMORY_IMAGE
-db_image=$DB_IMAGE
 book_fixture_dir=$BOOK_FIXTURE_DIR
 target_count=$TARGET_COUNT
+grimmory_image=$GRIMMORY_IMAGE
+db_image=$DB_IMAGE
 app_port=$APP_PORT
 db_port=$DB_PORT
-admin_user=$ADMIN_USER
 sample_interval=$SAMPLE_INTERVAL
 import_timeout_seconds=$IMPORT_TIMEOUT_SECONDS
-browser_duration_ms=$BROWSER_DURATION_MS
-browser_memory_sample_interval_ms=$BROWSER_MEMORY_SAMPLE_INTERVAL_MS
-browser_route=$BROWSER_ROUTE
-browser_clients=$BROWSER_CLIENTS
+startup_backfill_timeout_seconds=$STARTUP_BACKFILL_TIMEOUT_SECONDS
 copy_fixtures_to_container=$COPY_FIXTURES_TO_CONTAINER
 EOF
 
-COMPOSE_PROJECT="grimmorymemv10$(date -u +%Y%m%d%H%M%S)"
-export COMPOSE_PROJECT
+COMPOSE_PROJECT="grimmorymemv32fresh$(date -u +%Y%m%d%H%M%S)"
 BOOKS_VOLUME_YAML="      - ${BOOK_FIXTURE_DIR}:/books:ro"
 if [[ "$COPY_FIXTURES_TO_CONTAINER" == "1" ]]; then
   BOOKS_VOLUME_YAML=""
 fi
+APP_CONTAINER=""
+DB_CONTAINER=""
+SAMPLE_PID=""
+CLEANED_UP=0
+
+cleanup() {
+  set +e
+  [[ -n "$SAMPLE_PID" ]] && kill_tree "$SAMPLE_PID"
+  if [[ "$CLEANED_UP" != "1" ]]; then
+    if [[ -n "$APP_CONTAINER" && -n "$DB_CONTAINER" ]]; then
+      collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
+    fi
+    if [[ -f "$ARTIFACT_DIR/docker/compose.yml" ]]; then
+      docker compose -p "$COMPOSE_PROJECT" -f "$ARTIFACT_DIR/docker/compose.yml" down >"$ARTIFACT_DIR/commands/999-cleanup-compose-down.stdout.log" 2>"$ARTIFACT_DIR/commands/999-cleanup-compose-down.stderr.log" || true
+      printf '%s\n' "$?" >"$ARTIFACT_DIR/commands/999-cleanup-compose-down.exit"
+    fi
+  fi
+}
+trap cleanup EXIT
 
 cat >"$ARTIFACT_DIR/docker/compose.yml" <<EOF
 services:
@@ -125,55 +135,23 @@ app_url=http://127.0.0.1:${APP_PORT}
 EOF
 
 if ! wait_http "http://127.0.0.1:${APP_PORT}/api/v1/healthcheck" 240; then
-  collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
   die "App healthcheck did not become ready"
 fi
 
 prepare_book_fixtures "$APP_CONTAINER" "$BOOK_FIXTURE_DIR" "$TARGET_COUNT" "$COPY_FIXTURES_TO_CONTAINER"
 
-run_detached_step 020-sample-loop bash -c "source '$SCRIPT_DIR/common.sh'; ARTIFACT_DIR='$ARTIFACT_DIR' MYSQL_ROOT_PASSWORD='$MYSQL_ROOT_PASSWORD' sample_loop '$APP_CONTAINER' '$DB_CONTAINER' '$SAMPLE_INTERVAL' ingest-with-browser"
+run_detached_step 020-sample-loop bash -c "source '$SCRIPT_DIR/common.sh'; ARTIFACT_DIR='$ARTIFACT_DIR' MYSQL_ROOT_PASSWORD='$MYSQL_ROOT_PASSWORD' sample_loop '$APP_CONTAINER' '$DB_CONTAINER' '$SAMPLE_INTERVAL' startup-backfills-fresh"
 SAMPLE_PID="$(cat "$ARTIFACT_DIR/pids/020-sample-loop.pid")"
-trap 'kill_tree "$SAMPLE_PID"' EXIT
 
-sleep 1
 sample_once "$APP_CONTAINER" "$DB_CONTAINER" "pre-setup"
-
 run_step 030-setup-admin bash -c "source '$SCRIPT_DIR/common.sh'; setup_admin_if_needed 'http://127.0.0.1:${APP_PORT}' '$ADMIN_USER' '$ADMIN_PASSWORD'"
 TOKEN="$(auth_token "http://127.0.0.1:${APP_PORT}" "$ADMIN_USER" "$ADMIN_PASSWORD")"
 printf '%s\n' "$TOKEN" >"$ARTIFACT_DIR/runtime/access-token.txt"
 chmod 600 "$ARTIFACT_DIR/runtime/access-token.txt"
 
-declare -a BROWSER_PIDS=()
-for client_index in $(seq 1 "$BROWSER_CLIENTS"); do
-  client_name="$(printf 'client-%02d' "$client_index")"
-  if (( BROWSER_CLIENTS == 1 )); then
-    client_artifact="$ARTIFACT_DIR"
-    step_name="035-browser-probe"
-  else
-    client_artifact="$ARTIFACT_DIR/browser-clients/$client_name"
-    mkdir -p "$client_artifact"
-    step_name="035-browser-probe-$client_name"
-  fi
-  run_detached_step "$step_name" env \
-    ARTIFACT_DIR="$client_artifact" \
-    APP_URL="http://127.0.0.1:${APP_PORT}" \
-    ADMIN_USER="$ADMIN_USER" \
-    ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    ACCESS_TOKEN_FILE="$ARTIFACT_DIR/runtime/access-token.txt" \
-    REFRESH_TOKEN_FILE="$ARTIFACT_DIR/runtime/access-token.txt" \
-    DURATION_MS="$BROWSER_DURATION_MS" \
-    MEMORY_SAMPLE_INTERVAL_MS="$BROWSER_MEMORY_SAMPLE_INTERVAL_MS" \
-    ROUTE="$BROWSER_ROUTE" \
-    node "$SCRIPT_DIR/browser-probe.mjs"
-  BROWSER_PIDS+=("$(cat "$ARTIFACT_DIR/pids/${step_name}.pid")")
-done
-
-sleep 10
-sample_once "$APP_CONTAINER" "$DB_CONTAINER" "pre-import-browser-connected"
-
 cat >"$ARTIFACT_DIR/runtime/create-library.json" <<'EOF'
 {
-  "name": "Browser Connected Verification Library",
+  "name": "Startup Backfill Verification Library",
   "paths": [
     { "path": "/books" }
   ],
@@ -193,46 +171,78 @@ run_step 040-create-library curl -fsS \
 
 start="$(date +%s)"
 while true; do
-  count="$(book_count "$DB_CONTAINER" "$MYSQL_ROOT_PASSWORD")"
+  count="$(book_count "$DB_CONTAINER")"
   sample_once "$APP_CONTAINER" "$DB_CONTAINER" "poll-import"
   if [[ -n "$count" && "$count" -ge "$TARGET_COUNT" ]]; then
-    ledger import complete "$(container_memory_bytes "$APP_CONTAINER")" "$(container_memory_bytes "$DB_CONTAINER")" "$count" "target-count-reached"
     break
   fi
   if (( $(date +%s) - start >= IMPORT_TIMEOUT_SECONDS )); then
-    ledger import timeout "$(container_memory_bytes "$APP_CONTAINER")" "$(container_memory_bytes "$DB_CONTAINER")" "$count" "timeout"
-    collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
-    die "Timed out waiting for $TARGET_COUNT books; current=$count"
+    die "Timed out waiting for $TARGET_COUNT imported books; current=$count"
   fi
-  sleep 10
+  sleep 5
 done
 
+sleep 20
+sample_once "$APP_CONTAINER" "$DB_CONTAINER" "post-import-idle"
+
+run_step 050-query-before-backfill bash -lc "
+docker exec '$DB_CONTAINER' mariadb -ugrimmory -pgrimmory -N -B grimmory -e \"
+select 'books', count(*) from book
+union all select 'book_files', count(*) from book_file
+union all select 'app_migrations', count(*) from app_migration;
+\""
+
+run_step 060-delete-heavy-app-migrations bash -lc "
+docker exec '$DB_CONTAINER' mariadb -ugrimmory -pgrimmory grimmory -e \"
+delete from app_migration
+where migration_key in (
+  'populateFileSizes',
+  'populateMetadataScores_v2',
+  'populateFileHashesV2',
+  'populateSearchText',
+  'generateCoverHash'
+);
+\""
+
+sample_once "$APP_CONTAINER" "$DB_CONTAINER" "pre-startup-backfill-restart"
+run_step 070-restart-app docker restart "$APP_CONTAINER"
+
+startup_start="$(date +%s)"
 while true; do
-  remaining=0
-  for client_index in "${!BROWSER_PIDS[@]}"; do
-    pid="${BROWSER_PIDS[$client_index]}"
-    if kill -0 "$pid" 2>/dev/null; then
-      step_index=$((client_index + 1))
-      if (( BROWSER_CLIENTS == 1 )); then
-        exit_file="$ARTIFACT_DIR/commands/035-browser-probe.exit"
-      else
-        exit_file="$ARTIFACT_DIR/commands/035-browser-probe-$(printf 'client-%02d' "$step_index").exit"
-      fi
-      [[ -f "$exit_file" ]] || remaining=$((remaining + 1))
-    fi
-  done
-  if (( remaining == 0 )); then
+  sample_once "$APP_CONTAINER" "$DB_CONTAINER" "poll-startup-backfills"
+  docker logs "$APP_CONTAINER" --since 30m >"$ARTIFACT_DIR/logs/startup-backfills.log" 2>"$ARTIFACT_DIR/logs/startup-backfills.stderr.log" || true
+  completed=0
+  rg -q "Migration 'populateFileSizes' executed successfully" "$ARTIFACT_DIR/logs/startup-backfills.log" && completed=$((completed + 1))
+  rg -q "Migration 'populateMetadataScores_v2' applied" "$ARTIFACT_DIR/logs/startup-backfills.log" && completed=$((completed + 1))
+  rg -q "Migration 'populateFileHashesV2' applied" "$ARTIFACT_DIR/logs/startup-backfills.log" && completed=$((completed + 1))
+  rg -q "Completed migration 'populateSearchText'" "$ARTIFACT_DIR/logs/startup-backfills.log" && completed=$((completed + 1))
+  rg -q "Completed migration 'generateCoverHash'" "$ARTIFACT_DIR/logs/startup-backfills.log" && completed=$((completed + 1))
+  if (( completed >= 5 )) && curl -fsS "http://127.0.0.1:${APP_PORT}/api/v1/healthcheck" >/dev/null 2>&1; then
     break
   fi
-  sample_once "$APP_CONTAINER" "$DB_CONTAINER" "waiting-browser-probe"
-  sleep 10
+  if (( $(date +%s) - startup_start >= STARTUP_BACKFILL_TIMEOUT_SECONDS )); then
+    die "Timed out waiting for startup backfill migrations; completed markers=$completed"
+  fi
+  sleep 5
 done
 
-sleep 15
-sample_once "$APP_CONTAINER" "$DB_CONTAINER" "post-import-browser-idle"
-collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
+sleep 30
+sample_once "$APP_CONTAINER" "$DB_CONTAINER" "post-startup-backfills-idle"
 
+run_step 080-query-after-backfill bash -lc "
+docker exec '$DB_CONTAINER' mariadb -ugrimmory -pgrimmory -N -B grimmory -e \"
+select 'books', count(*) from book
+union all select 'book_files', count(*) from book_file
+union all select 'app_migrations', count(*) from app_migration;
+\""
+
+collect_container_evidence "$APP_CONTAINER" "$DB_CONTAINER"
+kill_tree "$SAMPLE_PID"
+SAMPLE_PID=""
 run_step 090-compose-down docker compose -p "$COMPOSE_PROJECT" -f "$ARTIFACT_DIR/docker/compose.yml" down
+run_step 095-process-audit bash -lc "pgrep -af '[s]ample_loop|[g]rimmorymemv32fresh' || true"
+run_step 096-docker-ps-final bash -lc "docker ps --format '{{.Names}}\t{{.Image}}\t{{.Status}}' | sort"
+CLEANED_UP=1
 
 cat >"$ARTIFACT_DIR/notes.md" <<EOF
 # Run Notes
@@ -241,23 +251,10 @@ cat >"$ARTIFACT_DIR/notes.md" <<EOF
 - Evidence grade: A
 - Image: ${GRIMMORY_IMAGE}
 - Digest: $(grep '^app=' "$ARTIFACT_DIR/docker/image-digests.txt" | cut -d= -f2-)
-- Database image: ${DB_IMAGE}
-- Database digest: $(grep '^db=' "$ARTIFACT_DIR/docker/image-digests.txt" | cut -d= -f2-)
-- Git commit: $(git rev-parse HEAD)
 - Dataset: ${BOOK_FIXTURE_DIR}
-- Dataset file count: $(find "$BOOK_FIXTURE_DIR" -type f | wc -l | tr -d ' ')
-- Browser connected: true
-- Browser clients: ${BROWSER_CLIENTS}
-- Browser duration: ${BROWSER_DURATION_MS}ms
-- Java options: production image defaults
-- Container memory limits: none explicit
-- End time: $(ts_utc)
-- Result: imported target count with browser probe running
-- Evidence summary: see samples/docker-stats.tsv, samples/db-counts.tsv, samples/browser/websocket.jsonl, samples/browser/memory-samples.jsonl, logs/app.log
+- Imported target count: ${TARGET_COUNT}
+- Result: imported fresh 10K library, deleted startup migration markers, restarted app, and waited for startup backfills.
 - Artifacts: ${ARTIFACT_DIR}
-- Commands: ${ARTIFACT_DIR}/commands
-- Raw samples: ${ARTIFACT_DIR}/samples
-- Logs: ${ARTIFACT_DIR}/logs
 EOF
 
 printf '%s\n' "$ARTIFACT_DIR"
