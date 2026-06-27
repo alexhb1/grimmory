@@ -1,0 +1,47 @@
+@if (showImage() && preview()) {
+  <p-image
+    styleClass="block h-full w-full"
+    [imageClass]="imageClass()"
+    [src]="src() ?? ''"
+    [alt]="altText()"
+    [loading]="loading()"
+    appendTo="body"
+    [preview]="true"
+    (onImageError)="onError()"
+  />
+} @else if (showImage()) {
+  <img
+    [class]="imageClass()"
+    [src]="src() ?? ''"
+    [alt]="altText()"
+    [attr.loading]="loading()"
+    decoding="async"
+    (error)="onError()"
+  />
+} @else {
+  <div
+    class="placeholder flex aspect-[5/7] h-full w-full flex-col items-center justify-center overflow-hidden rounded-[inherit] text-center"
+    [class.gap-1]="size() !== 'lg'"
+    [class.gap-2]="size() === 'lg'"
+    [class.p-1]="size() === 'sm'"
+    [class.p-2]="size() === 'md'"
+    [class.p-4]="size() === 'lg'"
+    [style.background]="color()"
+  >
+    <div
+      class="placeholder-title line-clamp-3 max-w-full overflow-hidden break-words font-semibold leading-snug text-white/90"
+      [class.text-xs]="size() === 'sm'"
+      [class.text-sm]="size() === 'md'"
+      [class.text-base]="size() === 'lg'"
+    >
+      {{ title() }}
+    </div>
+    <div
+      class="placeholder-author line-clamp-1 max-w-full overflow-hidden break-words text-white/55"
+      [class.text-xs]="size() !== 'lg'"
+      [class.text-sm]="size() === 'lg'"
+    >
+      {{ authorsLabel() }}
+    </div>
+  </div>
+}
