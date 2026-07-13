@@ -1,0 +1,359 @@
+<main cdkScrollable class="h-full overflow-y-auto bg-page p-6 text-text sm:p-8">
+  <app-book-card-menu
+    [book]="menuBook()"
+    [capabilities]="menuCaps()"
+    [shelves]="menuShelves()"
+    [readStatus]="menuReadStatus()"
+    (toggleShelf)="onToggleShelf($event.shelf, $event.checked)"
+    (createShelf)="onCreateShelf()"
+    (allShelves)="onAllShelves()"
+    (setReadStatus)="onSetReadStatus($event)"
+    (quickSend)="onQuickSend()"
+    (customSend)="onCustomSend()"
+    (download)="onDownload()"
+    (fetchMetadata)="onFetchMetadata()"
+    (fetchMetadataWithOptions)="onFetchMetadataWithOptions()"
+    (editMetadata)="onEditMetadata()"
+    (deleteRequested)="onDelete()"
+    (closed)="closeMenu()" />
+
+  <div class="mx-auto flex w-full max-w-5xl flex-col gap-10">
+    <header class="flex flex-col gap-3">
+      <app-button
+        variant="ghost"
+        size="sm"
+        label="Back to design system"
+        styleClass="self-start"
+        (clicked)="back()"><svg lucideChevronLeft></svg></app-button>
+      <div class="flex flex-col gap-1">
+        <h1 class="text-2xl font-extrabold text-text-strong">Book card</h1>
+        <p class="max-w-2xl text-sm text-text-muted">
+          The new <code>app-book-card</code> in its states. Covers render as placeholder jackets — hue
+          and title-only vs title+author are seeded from the book, so nothing is bundled and nothing reshuffles.
+        </p>
+        <p class="text-sm text-text-muted">
+          The card emits intents; consumers wire them to the reader, menus, and selection. Open a card's
+          context menu from its kebab or by right-clicking the cover.
+          Last output fired: <span class="font-semibold text-text">{{ lastEvent() }}</span>
+        </p>
+      </div>
+    </header>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Rest, selected, selection mode</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          At rest: cover, series badge, one progress bar, title + author. Hover a card to reveal the action pill,
+          the kebab, and the checkbox live. The middle card toggles its selection ring; the right-hand card is in
+          selection mode, so every checkbox stays visible and a plain click toggles.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-36">
+          <app-book-card
+            [book]="warden"
+            [menuOpen]="openMenuId() === 'rest-warden'"
+            (action)="logEvent('Continue', 'The Warden')"
+            (menuRequested)="openMenu(warden, $event, fullCaps, 'rest-warden')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="warden"
+            selectable
+            [selected]="selectedSolo()"
+            [menuOpen]="openMenuId() === 'rest-warden-selected'"
+            (toggleSelect)="selectedSolo.set(!selectedSolo())"
+            (action)="logEvent('Continue', 'The Warden')"
+            (menuRequested)="openMenu(warden, $event, fullCaps, 'rest-warden-selected')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="barchester"
+            selectable
+            selectionActive
+            [selected]="selectedInMode()"
+            [menuOpen]="openMenuId() === 'rest-barchester'"
+            (toggleSelect)="selectedInMode.set(!selectedInMode())"
+            (action)="logEvent('Continue', 'Barchester Towers')"
+            (menuRequested)="openMenu(barchester, $event, fullCaps, 'rest-barchester')" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Context menu · plain user</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          The kebab and right-click open the same shared context menu. Gated verbs are <em>absent</em>, not
+          disabled: this card is wired for a user with no permissions, so it shows only Add to shelf and Mark as.
+          The cards above carry the full menu (Send, Download, Metadata, Delete).
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-36">
+          <app-book-card
+            [book]="doctorThorne"
+            [menuOpen]="openMenuId() === 'plain-user'"
+            (action)="logEvent('Read', 'Doctor Thorne')"
+            (menuRequested)="openMenu(doctorThorne, $event, noCaps, 'plain-user')" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Placeholder jackets</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          A seeded gradient with the title set in a system serif — title+author and title-only compositions,
+          different hash hues. Hover a card: the text block lifts clear of the overlay verbs.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-40">
+          <app-book-card
+            [book]="missMackenzie"
+            [menuOpen]="openMenuId() === 'ph-miss'"
+            (action)="logEvent('Read', 'Miss Mackenzie')"
+            (menuRequested)="openMenu(missMackenzie, $event, fullCaps, 'ph-miss')" />
+        </div>
+        <div class="w-40">
+          <app-book-card
+            [book]="rachelRay"
+            [menuOpen]="openMenuId() === 'ph-rachel'"
+            (action)="logEvent('Read', 'Rachel Ray')"
+            (menuRequested)="openMenu(rachelRay, $event, fullCaps, 'ph-rachel')" />
+        </div>
+        <div class="w-40">
+          <app-book-card
+            [book]="smallHouse"
+            [menuOpen]="openMenuId() === 'ph-small'"
+            (action)="logEvent('Read', 'The Small House at Allington')"
+            (menuRequested)="openMenu(smallHouse, $event, fullCaps, 'ph-small')" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Audiobooks on the shelf</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          Audiobook artwork keeps its native 1:1 shape and sits at the bottom of the 2/3 cell, so progress bars,
+          overlays, and title lines stay on one shelf line across the row. The pill reads Play on audiobooks.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-6">
+        <div class="w-36">
+          <app-book-card
+            [book]="womanInWhite"
+            [menuOpen]="openMenuId() === 'audio-woman'"
+            (action)="logEvent('Continue', 'The Woman in White')"
+            (menuRequested)="openMenu(womanInWhite, $event, fullCaps, 'audio-woman')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="middlemarch"
+            [menuOpen]="openMenuId() === 'audio-middlemarch'"
+            (action)="logEvent('Play', 'Middlemarch')"
+            (menuRequested)="openMenu(middlemarch, $event, fullCaps, 'audio-middlemarch')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="dracula"
+            [menuOpen]="openMenuId() === 'audio-dracula'"
+            (action)="logEvent('Read', 'Dracula')"
+            (menuRequested)="openMenu(dracula, $event, fullCaps, 'audio-dracula')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="bleakHouse"
+            [menuOpen]="openMenuId() === 'audio-bleak'"
+            (action)="logEvent('Play', 'Bleak House')"
+            (menuRequested)="openMenu(bleakHouse, $event, fullCaps, 'audio-bleak')" />
+        </div>
+        <div class="w-36">
+          <app-book-card
+            [book]="villette"
+            [menuOpen]="openMenuId() === 'audio-villette'"
+            (action)="logEvent('Read', 'Villette')"
+            (menuRequested)="openMenu(villette, $event, fullCaps, 'audio-villette')" />
+        </div>
+      </div>
+      <p class="max-w-3xl text-sm text-text-muted">
+        The square-covers view option switches the whole grid to 1:1 so audio-heavy shelves read uniform:
+      </p>
+      <div class="flex flex-wrap items-start gap-6">
+        <div class="w-32">
+          <app-book-card
+            [book]="womanInWhite"
+            squareCovers
+            [menuOpen]="openMenuId() === 'sq-woman'"
+            (action)="logEvent('Continue', 'The Woman in White')"
+            (menuRequested)="openMenu(womanInWhite, $event, fullCaps, 'sq-woman')" />
+        </div>
+        <div class="w-32">
+          <app-book-card
+            [book]="middlemarch"
+            squareCovers
+            [menuOpen]="openMenuId() === 'sq-middlemarch'"
+            (action)="logEvent('Play', 'Middlemarch')"
+            (menuRequested)="openMenu(middlemarch, $event, fullCaps, 'sq-middlemarch')" />
+        </div>
+        <div class="w-32">
+          <app-book-card
+            [book]="dracula"
+            squareCovers
+            [menuOpen]="openMenuId() === 'sq-dracula'"
+            (action)="logEvent('Read', 'Dracula')"
+            (menuRequested)="openMenu(dracula, $event, fullCaps, 'sq-dracula')" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Dashboard variants</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          The same anatomy with a few extras: an always-visible action, an eyebrow line, a recency line, or
+          everything switched off for the book-page strip. Audiobook heroes carry a headphones glyph top-right.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-40">
+          <app-book-card
+            [book]="womanInWhite"
+            actionMode="always"
+            actionLabel="Resume"
+            whenLine="Last read Tuesday · 34%"
+            (action)="logEvent('Resume', 'The Woman in White')" />
+        </div>
+        <div class="w-40">
+          <app-book-card
+            [book]="middlemarch"
+            actionMode="always"
+            actionLabel="Resume"
+            whenLine="Listened yesterday · 82%"
+            (action)="logEvent('Resume', 'Middlemarch')" />
+        </div>
+        <div class="w-32">
+          <app-book-card
+            [book]="barchester"
+            actionMode="always"
+            actionLabel="Start"
+            eyebrow="Up next · Book 2 of 6"
+            eyebrowTone="primary"
+            [showProgress]="false"
+            (action)="logEvent('Start', 'Barchester Towers')" />
+        </div>
+        <div class="w-32">
+          <app-book-card
+            [book]="moonstone"
+            eyebrow="Added last spring"
+            [menuOpen]="openMenuId() === 'dash-moonstone'"
+            (action)="logEvent('Read', 'The Moonstone')"
+            (menuRequested)="openMenu(moonstone, $event, fullCaps, 'dash-moonstone')" />
+        </div>
+        <div class="w-24">
+          <app-book-card
+            [book]="warden"
+            [showMeta]="false"
+            [overlays]="false" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Series cards</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          The artwork is the deck: the first cover carries the card, the next two step up and behind it,
+          each darkened. The pile silhouette is the whole "this is a series" signal — no badge. Progress on the
+          front cover is the read fraction; a single-book series drops the back layers and reads like a book.
+          Hover for Continue (Start when nothing's read); click opens the series page. Series have no menu of
+          their own yet, so the kebab stays hidden.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-36">
+          <app-series-card
+            [series]="barsetshire"
+            (action)="logEvent('Continue', 'The Chronicles of Barsetshire')" />
+        </div>
+        <div class="w-36">
+          <app-series-card
+            [series]="palliser"
+            (action)="logEvent('Start', 'The Pallisers')" />
+        </div>
+        <div class="w-36">
+          <app-series-card
+            [series]="barsetshireDone"
+            (action)="logEvent('Continue', 'Barsetshire (complete)')" />
+        </div>
+        <div class="w-36">
+          <app-series-card
+            [series]="laVendee"
+            (action)="logEvent('Start', 'La Vendée')" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Author cards</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          A circle forgives the wildly inconsistent provider photos; when a photo is absent or fails to load
+          the card falls back to a quiet two-letter monogram. Authors have no menu of their own yet, so the
+          kebab stays hidden. No match badge at rest — matching is the facet's job. The checkbox and selection
+          ring work exactly like the book card.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-6">
+        <div class="w-[150px]">
+          <app-author-card [author]="trollope" />
+        </div>
+        <div class="w-[150px]">
+          <app-author-card [author]="collins" />
+        </div>
+        <div class="w-[150px]">
+          <app-author-card
+            [author]="gaskell"
+            photoUrl="https://example.invalid/no-such-author-photo.jpg" />
+        </div>
+        <div class="w-[150px]">
+          <app-author-card
+            [author]="eliot"
+            selectable
+            [selected]="authorSelectedSolo()"
+            (toggleSelect)="authorSelectedSolo.set(!authorSelectedSolo())" />
+        </div>
+        <div class="w-[150px]">
+          <app-author-card
+            [author]="bronte"
+            selectable
+            selectionActive
+            [selected]="authorSelectedInMode()"
+            (toggleSelect)="authorSelectedInMode.set(!authorSelectedInMode())" />
+        </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-4 border-t border-border pt-8">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-bold text-text-strong">Skeletons</h2>
+        <p class="max-w-3xl text-sm text-text-muted">
+          The zero-data instance: a cover block plus two meta lines at the real card line heights, with a slow
+          low-contrast shimmer (static under reduced motion). The ~180ms delayed reveal — mount the skeleton only
+          if data hasn't committed yet, and flush it the moment it does — belongs to the consumer, not the card.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-start gap-8">
+        <div class="w-36"><app-book-card-skeleton /></div>
+        <div class="w-36"><app-book-card-skeleton /></div>
+        <div class="w-36"><app-book-card-skeleton /></div>
+        <div class="w-32"><app-book-card-skeleton squareCovers /></div>
+        <div class="w-32"><app-book-card-skeleton [metaLines]="0" /></div>
+        <div class="w-36"><app-series-card-skeleton /></div>
+        <div class="w-[150px]"><app-author-card-skeleton /></div>
+      </div>
+    </section>
+  </div>
+</main>
