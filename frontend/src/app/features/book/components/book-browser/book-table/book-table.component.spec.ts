@@ -263,6 +263,7 @@ describe('BookTableComponent', () => {
 
     expect(book.metadata?.allMetadataLocked).toBe(false);
     expect(bookMetadataManageService.toggleAllLock).toHaveBeenCalledWith(new Set([1]), 'LOCK');
+    expect(queryClient.setQueryData).not.toHaveBeenCalled();
     expect(queryClient.setQueriesData).toHaveBeenCalledWith({queryKey: ['app-books']}, expect.any(Function));
   });
 

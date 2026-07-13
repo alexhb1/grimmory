@@ -4,11 +4,13 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { injectQuery } from '@tanstack/angular-query-experimental';
 
 import { BookDialogHelperService } from '../book/components/book-browser/book-dialog-helper.service';
-import { filterBooksBySearchTerm, normalizeSearchTerm } from '../book/components/book-browser/filters/HeaderFilter';
-import { Book } from '../book/model/book.model';
-import { BookService } from '../book/service/book.service';
+import { normalizeSearchTerm } from '../book/components/book-browser/filters/HeaderFilter';
+import { BookPageParams, EMPTY_FACET_SELECTION } from '../book/data/book-query-params';
+import { BookSummary } from '../book/data/book-response.models';
+import { BookQueryService } from '../book/data/book-query.service';
 import { LibraryService } from '../book/service/library.service';
 import { ShelfService } from '../book/service/shelf.service';
 import { MagicShelfService } from '../magic-shelf/service/magic-shelf.service';
@@ -43,7 +45,7 @@ export class CommandPaletteService {
   private readonly router = inject(Router);
   private readonly t = inject(TranslocoService);
   private readonly userService = inject(UserService);
-  private readonly bookService = inject(BookService);
+  private readonly bookQueryService = inject(BookQueryService);
   private readonly shelfService = inject(ShelfService);
   private readonly magicShelfService = inject(MagicShelfService);
   private readonly libraryService = inject(LibraryService);
@@ -68,16 +70,19 @@ export class CommandPaletteService {
     ),
     { initialValue: this.trimmedQuery() },
   );
-  private readonly localBookItems = computed<PaletteItem[]>(() => {
-    const query = this.debouncedBookQuery();
-    if (query.length < MIN_BOOK_SEARCH_LENGTH) {
-      return [];
-    }
-
-    return filterBooksBySearchTerm(this.bookService.books(), query)
-      .slice(0, BOOK_RESULT_LIMIT)
-      .map((book) => this.toPaletteBookItem(book));
-  });
+  private readonly bookSearchParams = computed<BookPageParams>(() => ({
+    query: this.debouncedBookQuery(),
+    facets: EMPTY_FACET_SELECTION,
+    sort: [{key: 'title', direction: 'asc'}],
+    size: BOOK_RESULT_LIMIT,
+  }));
+  private readonly bookSearchQuery = injectQuery(() => ({
+    ...this.bookQueryService.page(this.bookSearchParams()),
+    enabled: this._isOpen() && this.debouncedBookQuery().length >= MIN_BOOK_SEARCH_LENGTH,
+  }));
+  private readonly remoteBookItems = computed<PaletteItem[]>(() =>
+    (this.bookSearchQuery.data()?.content ?? []).map(book => this.toPaletteBookItem(book))
+  );
 
   registerOverlayController(controller: CommandPaletteOverlayController): () => void {
     this.overlayController = controller;
@@ -187,7 +192,7 @@ export class CommandPaletteService {
       return false;
     }
 
-    return raw !== this.debouncedBookQuery();
+    return raw !== this.debouncedBookQuery() || this.bookSearchQuery.isFetching();
   });
 
   private filterItems(source: PaletteItem[], tokens: string[], cap: number): PaletteItem[] {
@@ -268,12 +273,15 @@ export class CommandPaletteService {
   );
 
   private readonly visibleBookItems = computed<PaletteItem[]>(() =>
-    this.trimmedQuery().length >= MIN_BOOK_SEARCH_LENGTH ? this.localBookItems() : []
+    this.trimmedQuery().length >= MIN_BOOK_SEARCH_LENGTH
+    && this.trimmedQuery() === this.debouncedBookQuery()
+      ? this.remoteBookItems()
+      : []
   );
 
-  private toPaletteBookItem(book: Book): PaletteItem {
+  private toPaletteBookItem(book: BookSummary): PaletteItem {
     const metadata = book.metadata;
-    const title = metadata?.title ?? book.primaryFile?.fileName ?? book.fileName ?? '';
+    const title = metadata?.title ?? book.primaryFile?.fileName ?? '';
     const authors = metadata?.authors ?? [];
     const publishedDate = metadata?.publishedDate ?? '';
     const year = publishedDate && /^\d{4}/.test(publishedDate) ? publishedDate.slice(0, 4) : null;

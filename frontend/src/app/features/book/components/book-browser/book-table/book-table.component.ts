@@ -13,7 +13,7 @@ import {Book, BookMetadata} from '../../../model/book.model';
 import {RouteScrollPositionService} from '../../../../../shared/service/route-scroll-position.service';
 import {CoverComponent} from '../../../../../shared/components/cover/cover.component';
 import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';
-import {patchAppBooksMetadataLockInCache} from '../../../service/book-query-cache';
+import {patchAppBooksMetadataLockInCache} from '../../../service/legacy-book-cache';
 import {MessageService} from 'primeng/api';
 import {BookSelectionService} from '../book-selection.service';
 import {BookTableRowComponent, type BookTableRowCoverPreview, type BookTableSelectionChange} from './book-table-row.component';
