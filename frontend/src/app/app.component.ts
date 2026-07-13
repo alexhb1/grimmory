@@ -20,6 +20,7 @@ import {CommandPaletteComponent} from './features/command-palette/command-palett
 import {CommandPaletteService} from './features/command-palette/command-palette.service';
 import {LibraryImportProgressService} from './shared/service/library-import-progress.service';
 import {AuthorService} from './features/author-browser/service/author.service';
+import {RxStompState} from '@stomp/rx-stomp';
 
 @Component({
   selector: 'app-root',
@@ -34,6 +35,7 @@ export class AppComponent implements OnInit, OnDestroy {
   offline = signal(false);
   private subscriptions: Subscription[] = [];
   private subscriptionsInitialized = false;
+  private hasConnectedWebSocket = false;
 
   private appThemeService = inject(AppThemeService); // DO NOT REMOVE: Used to initialize app theme on startup
   private authInit = inject(AuthInitializationService);
@@ -107,6 +109,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private setupWebSocketSubscriptions(): void {
     this.subscriptions.push(
+      this.rxStompService.connectionState$.subscribe(state => {
+        if (state !== RxStompState.OPEN) {
+          return;
+        }
+        if (this.hasConnectedWebSocket) {
+          this.bookService.handleReconnect();
+        } else {
+          this.hasConnectedWebSocket = true;
+        }
+      })
+    );
+    this.subscriptions.push(
       this.rxStompService.watch('/user/queue/book-add').subscribe(msg => {
         const book = JSON.parse(msg.body);
         this.libraryImportProgressService.recordBookAdded(book.metadata?.title || this.translocoService.translate('book.unknownTitle'));
@@ -160,6 +174,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.rxStompService.watch('/user/queue/task-progress').subscribe(msg => {
         const progress = JSON.parse(msg.body) as TaskProgressPayload;
         this.taskService.handleTaskProgress(progress);
+        this.bookService.handleTaskProgress(progress);
       })
     );
     this.subscriptions.push(

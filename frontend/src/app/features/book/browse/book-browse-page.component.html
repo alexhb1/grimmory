@@ -1,0 +1,377 @@
+<div
+  [class]="mobileTableLayout()
+    ? 'app-page h-[calc(100dvh-var(--mobile-topbar-height))] overflow-hidden pb-0!'
+    : 'app-page pb-0!'">
+  <app-page-header [pageHeader]="pageHeader()" [stuckHairline]="false">
+    <app-book-browse-toolbar
+      [activeSort]="activeSort()"
+      [sortOptions]="sortOptions()"
+      [viewMode]="viewMode()"
+      [columnOptions]="tableColumnOptions()"
+      [densitySmallerDisabled]="densitySmallerDisabled()"
+      [densityLargerDisabled]="densityLargerDisabled()"
+      [seriesCollapsed]="seriesCollapsed()"
+      [filtersOpen]="filtersOpen()"
+      [mobileSelectMode]="mobileSelectMode()"
+      [selectionCount]="selection.count()"
+      [selectionTotal]="total()"
+      (selectAllRequested)="selection.selectAll()"
+      (sortChange)="onSortChange($event)"
+      (viewModeChange)="onViewModeChange($event)"
+      (columnVisibilityChange)="onTableColumnVisibilityChange($event)"
+      (densityChange)="onDensityChange($event)"
+      (seriesCollapsedChange)="onSeriesCollapsedChange($event)"
+      (filtersToggle)="onFiltersToggle()"
+      (mobileSelectToggle)="onMobileSelectToggle()" />
+  </app-page-header>
+
+  <app-book-card-menu
+    [book]="menuBook()"
+    [capabilities]="menuCapabilities()"
+    [shelves]="menuShelves()"
+    [readStatus]="menuReadStatus()"
+    (toggleShelf)="onToggleShelf($event.shelf, $event.checked)"
+    (setReadStatus)="onSetReadStatus($event)"
+    (fetchMetadata)="onFetchMetadata()"
+    (fetchMetadataWithOptions)="onFetchMetadataWithOptions()"
+    (editMetadata)="onEditMetadata()"
+    (metadataLockChange)="onMetadataLockChange($event)"
+    (createShelf)="onCreateShelf()"
+    (download)="onDownload()"
+    (quickSend)="onQuickSend()"
+    (customSend)="onCustomSend()"
+    (deleteRequested)="onDeleteRequested()"
+    (closed)="onMenuClosed()" />
+
+  @if (selection.active()) {
+    <app-bulk-actions-bar
+      [count]="selection.count()"
+      [total]="total()"
+      [selectionError]="selection.idsError()"
+      (clearSelection)="selection.clear()"
+      (selectAll)="selection.selectAll()"
+      (retrySelection)="selection.retryIds()">
+      <app-bulk-actions-divider />
+      @if (bulkBarShowsAddToShelf()) {
+        <app-button
+          variant="ghost"
+          size="md"
+          [label]="'cards.menu.addToShelf' | transloco"
+          [appMenuTriggerFor]="bulkShelfMenuHost.menu()">
+          <svg lucideBookmark aria-hidden="true"></svg>
+        </app-button>
+      }
+      @if (bulkBarShowsMarkAs()) {
+        <app-button
+          variant="ghost"
+          size="md"
+          [label]="'cards.menu.markAs' | transloco"
+          [appMenuTriggerFor]="bulkMarkAsMenu">
+          <svg lucideCheck aria-hidden="true"></svg>
+        </app-button>
+      }
+      @if (bulkBarShowsEdit()) {
+        <app-button
+          variant="ghost"
+          size="md"
+          [label]="'common.edit' | transloco"
+          [appMenuTriggerFor]="bulkEditMenu">
+          <svg lucidePenLine aria-hidden="true"></svg>
+        </app-button>
+      }
+      @if (bulkBarShowsMetadata()) {
+        <app-button
+          variant="ghost"
+          size="md"
+          [label]="'cards.menu.metadata' | transloco"
+          [appMenuTriggerFor]="bulkMetadataMenu">
+          <svg lucideDatabase aria-hidden="true"></svg>
+        </app-button>
+      }
+      @if (bulkMoreMenuHasItems()) {
+        <app-button
+          variant="ghost"
+          size="md"
+          iconOnly
+          [ariaLabel]="'browse.bulk.more' | transloco"
+          [appMenuTriggerFor]="bulkMoreMenu">
+          <svg lucideEllipsis aria-hidden="true"></svg>
+        </app-button>
+      }
+      @if (bulkBarShowsDelete()) {
+        <app-bulk-actions-divider />
+        <app-button
+          variant="ghost"
+          tone="danger"
+          size="md"
+          [label]="'common.delete' | transloco"
+          [loading]="bulkDeleting()"
+          (clicked)="onBulkDelete()" />
+      }
+    </app-bulk-actions-bar>
+
+    <app-shelf-membership-menu
+      #bulkShelfMenuHost
+      [shelves]="bulkShelves()"
+      (toggleShelf)="onBulkToggleShelf($event.shelfId, $event.checked)"
+      (createShelf)="onCreateShelf()" />
+
+    <app-menu #bulkMarkAsMenu #bulkMarkAsAria="ngMenu" [ariaLabel]="'cards.menu.markAs' | transloco">
+      @for (status of readStatusTargets; track status) {
+        <app-menu-item (selected)="onBulkMarkAs(status)">{{ statusLabel(status) }}</app-menu-item>
+      }
+    </app-menu>
+
+    <app-menu #bulkEditMenu #bulkEditAria="ngMenu" [ariaLabel]="'common.edit' | transloco">
+      <app-menu-item (selected)="onBulkEditAll()">{{ 'browse.bulk.editAll' | transloco }}</app-menu-item>
+      <app-menu-item (selected)="onBulkEditOneByOne()">{{ 'browse.bulk.editOneByOne' | transloco }}</app-menu-item>
+    </app-menu>
+
+    <app-menu #bulkMetadataMenu #bulkMetadataAria="ngMenu" [ariaLabel]="'cards.menu.metadata' | transloco">
+      @if (menuCapabilities().canEditMetadata) {
+        <app-menu-item (selected)="onBulkFetchMetadata()">{{ 'cards.menu.fetchMetadata' | transloco }}</app-menu-item>
+        <app-menu-item (selected)="onBulkFetchMetadataWithOptions()">{{ 'cards.menu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
+      }
+      @if (menuCapabilities().canEditMetadata && canBulkLockUnlockMetadata()) {
+        <app-menu-separator />
+      }
+      @if (canBulkLockUnlockMetadata()) {
+        <app-menu-item (selected)="onBulkSetMetadataLocks(true)">{{ 'metadata.editor.lockAllBtn' | transloco }}</app-menu-item>
+        <app-menu-item (selected)="onBulkSetMetadataLocks(false)">{{ 'metadata.editor.unlockAllBtn' | transloco }}</app-menu-item>
+        <app-menu-item (selected)="onBulkLockUnlockMetadata()">{{ 'browse.bulk.lockUnlockMetadata' | transloco }}</app-menu-item>
+      }
+      @if (menuCapabilities().canEditMetadata) {
+        <app-menu-separator />
+        <app-menu-item (selected)="onBulkChangeCovers('regenerate')">{{ 'browse.bulk.regenerateCovers' | transloco }}</app-menu-item>
+        <app-menu-item (selected)="onBulkChangeCovers('generate')">{{ 'browse.bulk.customCovers' | transloco }}</app-menu-item>
+      }
+    </app-menu>
+
+    <app-menu #bulkMoreMenu [ariaLabel]="'browse.bulk.more' | transloco">
+      @if (!bulkBarShowsMarkAs() || (bulkMetadataAvailable() && !bulkBarShowsMetadata())) {
+        @if (!bulkBarShowsAddToShelf()) {
+          <app-menu-item [submenu]="bulkShelfMenuHost.ariaMenu()">{{ 'cards.menu.addToShelf' | transloco }}</app-menu-item>
+        }
+        @if (!bulkBarShowsMarkAs()) {
+          <app-menu-item [submenu]="bulkMarkAsAria">{{ 'cards.menu.markAs' | transloco }}</app-menu-item>
+        }
+        @if (bulkMetadataAvailable() && !bulkBarShowsMetadata()) {
+          @if (menuCapabilities().canEditMetadata && !bulkBarShowsEdit()) {
+            <app-menu-item [submenu]="bulkEditAria">{{ 'common.edit' | transloco }}</app-menu-item>
+          }
+          <app-menu-item [submenu]="bulkMetadataAria">{{ 'cards.menu.metadata' | transloco }}</app-menu-item>
+        }
+        @if (canBulkResetGrimmory()
+          || canBulkResetKoreader()
+          || canBulkOrganizeFiles()
+          || canBulkAttachFiles()
+          || (menuCapabilities().canDeleteBook && !bulkBarShowsDelete())) {
+          <app-menu-separator />
+        }
+      }
+      @if (canBulkResetGrimmory()) {
+        <app-menu-item (selected)="onBulkResetProgress('GRIMMORY')">{{ 'browse.bulk.resetGrimmory' | transloco }}</app-menu-item>
+      }
+      @if (canBulkResetKoreader()) {
+        <app-menu-item (selected)="onBulkResetProgress('KOREADER')">{{ 'browse.bulk.resetKoreader' | transloco }}</app-menu-item>
+      }
+      @if ((canBulkResetGrimmory() || canBulkResetKoreader())
+        && (canBulkOrganizeFiles()
+          || canBulkAttachFiles()
+          || (menuCapabilities().canDeleteBook && !bulkBarShowsDelete()))) {
+        <app-menu-separator />
+      }
+      @if (canBulkOrganizeFiles()) {
+        <app-menu-item (selected)="onBulkOrganizeFiles()">{{ 'browse.bulk.organizeFiles' | transloco }}</app-menu-item>
+      }
+      @if (canBulkAttachFiles()) {
+        <app-menu-item [disabled]="!bulkAttachEligible()" (selected)="onBulkAttachFiles()">
+          {{ 'browse.bulk.attachFiles' | transloco }}
+        </app-menu-item>
+      }
+      @if ((canBulkOrganizeFiles() || canBulkAttachFiles())
+        && menuCapabilities().canDeleteBook
+        && !bulkBarShowsDelete()) {
+        <app-menu-separator />
+      }
+      @if (menuCapabilities().canDeleteBook && !bulkBarShowsDelete()) {
+        <app-menu-item variant="destructive" [loading]="bulkDeleting()" (selected)="onBulkDelete()">
+          {{ 'common.delete' | transloco }}
+        </app-menu-item>
+      }
+    </app-menu>
+  }
+
+  <div [class]="mobileTableLayout() ? 'flex min-h-0 flex-1 items-start gap-7' : 'flex items-start gap-7'">
+    <div
+      [class]="viewMode() === 'table'
+        ? (mobileTableLayout()
+          ? 'flex h-full min-h-0 min-w-0 flex-1 flex-col'
+          : 'flex h-[calc(100dvh-var(--page-stuck-offset,0px))] min-h-0 min-w-0 flex-1 flex-col pb-4')
+        : 'min-w-0 flex-1 pb-8'">
+      @if (activeFilterCount() > 0) {
+        <div [class]="chipsBandClass()">
+          <div class="flex flex-wrap items-center gap-2">
+            @if (queryText(); as query) {
+              <app-tag
+                color="neutral"
+                size="sm"
+                removable
+                [removeLabel]="'browse.chips.removeSearch' | transloco: {query}"
+                (remove)="onClearQuery()">
+                <span class="text-text-muted">{{ 'browse.chips.search' | transloco }}:</span>
+                <span class="max-w-48 truncate">{{ query }}</span>
+              </app-tag>
+            }
+            @for (chip of filterChips(); track chip.key + ':' + chip.value) {
+              <app-tag
+                [color]="chipColor(chip.state)"
+                size="sm"
+                removable
+                [removeLabel]="'shared.ui.tag.removeLabel' | transloco: {label: chip.valueLabel}"
+                (remove)="onToggleFacet({key: chip.key, value: chip.value, selected: false})">
+                <span class="text-text-muted">{{ chip.groupLabel }}:</span>
+                <span [class]="chipValueClass(chip.state)">{{ chip.valueLabel }}</span>
+              </app-tag>
+            }
+            <app-button
+              variant="ghost"
+              size="sm"
+              [label]="'browse.chips.clearAll' | transloco"
+              (clicked)="onClearAllFilters()" />
+          </div>
+        </div>
+      } @else {
+        <div [class]="hairlineStripClass()"></div>
+      }
+      @if (viewMode() === 'table') {
+        @if (status() === 'error') {
+          <div class="flex min-h-64 flex-col items-center justify-center gap-3">
+            <p class="m-0 text-sm text-text-muted">{{ 'browse.book.loadError' | transloco }}</p>
+            <app-button
+              variant="soft"
+              size="sm"
+              [label]="'browse.book.retry' | transloco"
+              (clicked)="onRetryInitial()" />
+          </div>
+        } @else if (status() === 'success' && total() === 0) {
+          @if (activeFilterCount() > 0) {
+            <div class="flex flex-col items-center gap-2 py-16">
+              <p class="m-0 text-sm text-text-muted">{{ 'browse.book.filteredEmpty' | transloco }}</p>
+              <app-button
+                variant="ghost"
+                size="sm"
+                [label]="'browse.book.clearFilters' | transloco"
+                (clicked)="onClearAllFilters()" />
+            </div>
+          } @else {
+            <p class="py-16 text-center text-sm text-text-muted">{{ 'browse.book.empty' | transloco }}</p>
+          }
+        } @else {
+          <app-book-browse-table
+            [books]="books()"
+            [loadedBooks]="loadedBooks()"
+            [pendingDeletionIds]="pendingDeletions()"
+            [totalCount]="total()"
+            [visibleColumns]="visibleTableColumns()"
+            [sorting]="tableSorting()"
+            [sortableFields]="sortableFields()"
+            [mobile]="mobileTableLayout()"
+            [selectionEnabled]="selectionEnabled()"
+            [selectionMode]="mobileSelectMode()"
+            [allSelected]="allBooksSelected()"
+            [someSelected]="someBooksSelected()"
+            [isSelected]="isTableRowSelected"
+            [openMenuBookId]="openMenuBookId()"
+            [failedPages]="failedTablePages()"
+            [pageSize]="browsePageSize"
+            (visibleRange)="onVisibleRange($event)"
+            (sortingChange)="onTableSortingChange($event)"
+            (selectionChange)="onTableSelectionChange($event)"
+            (selectAllRequested)="selection.selectAll()"
+            (clearSelectionRequested)="selection.clear()"
+            (facetRequested)="onTableFacetRequested($event)"
+            (menuRequested)="onMenuRequested($event.book, $event.event)"
+            (retryRequested)="onRetryNextPage()" />
+        }
+      } @else {
+      <app-browse-grid
+        [items]="books()"
+        [totalCount]="total()"
+        [status]="status()"
+        [nextPageError]="nextPageError()"
+        [fixedColumns]="gridColumns()"
+        [minItemWidth]="minCardWidth()"
+        [gap]="gridGap()"
+        [rowGap]="gridRowGap()"
+        [estimateItemHeight]="estimateItemHeight"
+        (visibleRange)="onVisibleRange($event)"
+        (retryInitial)="onRetryInitial()"
+        (retryNextPage)="onRetryNextPage()">
+        <ng-template [appBrowseGridItemOf]="books()" let-book let-index="index">
+          <app-book-card
+            [class.opacity-50]="pendingDeletions().has(book.id)"
+            [book]="book"
+            showMeta
+            showBadge
+            showProgress
+            [whenLine]="sortLineFor(book)"
+            [selectable]="selectionEnabled()"
+            [selected]="selection.isSelected(book.id, index)"
+            [selectionActive]="selection.active() || mobileSelectMode()"
+            [menuOpen]="openMenuBookId() === book.id"
+            (toggleSelect)="onToggleSelect(book, index, $event.shiftKey)"
+            (action)="onCardAction(book)"
+            (menuRequested)="onMenuRequested(book, $event)" />
+        </ng-template>
+        <ng-template appBrowseGridSkeleton>
+          <app-book-card-skeleton />
+        </ng-template>
+        <ng-template appBrowseGridEmpty>
+          @if (activeFilterCount() > 0) {
+            <div class="flex flex-col items-center gap-2 py-16">
+              <p class="m-0 text-sm text-text-muted">{{ 'browse.book.filteredEmpty' | transloco }}</p>
+              <app-button
+                variant="ghost"
+                size="sm"
+                [label]="'browse.book.clearFilters' | transloco"
+                (clicked)="onClearAllFilters()" />
+            </div>
+          } @else {
+            <p class="py-16 text-center text-sm text-text-muted">{{ 'browse.book.empty' | transloco }}</p>
+          }
+        </ng-template>
+      </app-browse-grid>
+      }
+    </div>
+
+    @if (railVisible()) {
+      <aside
+        class="sticky top-[var(--page-stuck-offset)] flex max-h-[calc(100dvh-var(--page-stuck-offset))] w-[236px] shrink-0 flex-col">
+        <div class="mb-4">
+          <app-input
+            size="sm"
+            [placeholder]="searchHint()"
+            [ariaLabel]="searchHint()"
+            [value]="queryDraft()"
+            (valueChange)="onQueryDraftChange($event)">
+            <svg lucideSearch appInputLeading class="size-3.5" aria-hidden="true"></svg>
+            @if (queryDraft()) {
+              <button
+                type="button"
+                appInputTrailing
+                class="-mr-1.5 inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-text-muted touch-manipulation transition-colors hover:text-text-strong focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary pointer-coarse:-mr-3 pointer-coarse:size-10"
+                [attr.aria-label]="'browse.rail.clearSearch' | transloco"
+                (click)="onClearQuery()">
+                <svg lucideX class="size-3.5" aria-hidden="true"></svg>
+              </button>
+            }
+          </app-input>
+        </div>
+        <div class="-mx-1.5 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-6">
+          <app-browse-filter-rail [groups]="railGroups()" (toggleValue)="onToggleFacet($event)" />
+        </div>
+      </aside>
+    }
+  </div>
+</div>

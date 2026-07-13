@@ -27,18 +27,21 @@ describe('app routes', () => {
     const shellRoute = routes.find(route => route.path === '' && Array.isArray(route.children));
     const children = shellRoute?.children ?? [];
 
-    expect(children).toHaveLength(21);
+    expect(children).toHaveLength(24);
+    expect(typeof children.find(route => route.path === 'browse/filter')?.loadComponent).toBe('function');
     expect(shellRoute?.canActivateChild).toEqual([AuthChildGuard]);
     expect(children.find(route => route.path === 'dashboard')?.canActivate).toBeUndefined();
     expect(children.find(route => route.path === 'all-books')?.canActivate).toBeUndefined();
     expect(children.find(route => route.path === 'magic-shelf/:magicShelfId/books')?.canActivate).toBeUndefined();
     expect(children.find(route => route.path === 'notebook')?.canActivate).toBeUndefined();
     expect(typeof children.find(route => route.path === 'all-books')?.loadComponent).toBe('function');
+    expect(typeof children.find(route => route.path === 'browse')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'library/:libraryId/books')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'shelf/:shelfId/books')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'unshelved-books')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'magic-shelf/:magicShelfId/books')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'design-system')?.loadComponent).toBe('function');
+    expect(typeof children.find(route => route.path === 'design-system/cards')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'design-system/form/library')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'design-system/form/device')?.loadComponent).toBe('function');
     expect(typeof children.find(route => route.path === 'design-system/form/everything')?.loadComponent).toBe('function');

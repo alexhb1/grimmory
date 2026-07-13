@@ -1,0 +1,128 @@
+{
+  "grid": {
+    "pageError": "Couldn't load more books."
+  },
+  "book": {
+    "title": "All books",
+    "empty": "No books here yet.",
+    "filteredEmpty": "No books match these filters.",
+    "clearFilters": "Clear filters",
+    "loadError": "We couldn't load these books.",
+    "retry": "Retry"
+  },
+  "toolbar": {
+    "sort": "Sort",
+    "sortAria": "Sort by {{field}}",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
+    "more": "More options",
+    "viewMode": "View",
+    "grid": "Grid",
+    "table": "Table",
+    "select": "Select",
+    "cancel": "Cancel",
+    "density": "Density",
+    "smallerCards": "Smaller cards",
+    "largerCards": "Larger cards",
+    "collapseSeries": "Collapse series",
+    "advancedFiltering": "Advanced filtering",
+    "columns": "Columns",
+    "columnGroups": {
+      "reading": "Reading",
+      "publishing": "Publishing",
+      "file": "File",
+      "categorization": "Categorization",
+      "ratings": "Ratings"
+    },
+    "filter": "Filter"
+  },
+  "table": {
+    "selectAll": "Select all books",
+    "selectBook": "Select {{title}}",
+    "moreValues": "Show {{count}} more {{column}}",
+    "columns": {
+      "readStatus": "Read",
+      "title": "Title",
+      "authors": "Authors",
+      "publisher": "Publisher",
+      "seriesName": "Series",
+      "seriesNumber": "Series #",
+      "categories": "Genres",
+      "publishedDate": "Published",
+      "lastReadTime": "Last read",
+      "addedOn": "Added",
+      "fileName": "File name",
+      "fileSizeKb": "File size",
+      "language": "Language",
+      "isbn": "ISBN",
+      "pageCount": "Pages",
+      "amazonRating": "Amazon",
+      "amazonReviewCount": "AZ #",
+      "goodreadsRating": "Goodreads",
+      "goodreadsReviewCount": "GR #",
+      "hardcoverRating": "Hardcover",
+      "hardcoverReviewCount": "HC #",
+      "ranobedbRating": "RanobeDB"
+    },
+    "readStatuses": {
+      "unread": "Unread",
+      "reading": "Reading",
+      "reReading": "Re-reading",
+      "read": "Read",
+      "partiallyRead": "Partially read",
+      "paused": "Paused",
+      "wontRead": "Won't read",
+      "abandoned": "Abandoned"
+    }
+  },
+  "sort": {
+    "title": "Title",
+    "seriesOrder": "Series order",
+    "dateAdded": "Date added",
+    "lastRead": "Last read",
+    "published": "Published",
+    "rating": "Rating",
+    "progress": "Progress",
+    "publisher": "Publisher",
+    "pageCount": "Page count",
+    "narrator": "Narrator",
+    "language": "Language",
+    "dateFinished": "Date finished",
+    "readStatus": "Read status",
+    "amazonRating": "Amazon rating",
+    "goodreadsRating": "Goodreads rating",
+    "hardcoverRating": "Hardcover rating",
+    "ranobedbRating": "RanobeDB rating"
+  },
+  "filterPage": {
+    "title": "Filter",
+    "show": "Show {{count}} books",
+    "clear": "Clear"
+  },
+  "bulk": {
+    "markAsHeader": "Update read status",
+    "markAsMessage": "Mark {{count}} books as {{status}}?",
+    "editAll": "Edit all",
+    "editOneByOne": "Edit one by one",
+    "lockUnlockMetadata": "Lock/Unlock metadata",
+    "regenerateCovers": "Regenerate covers",
+    "customCovers": "Custom covers",
+    "resetGrimmory": "Reset Grimmory progress",
+    "resetKoreader": "Reset KOReader progress",
+    "organizeFiles": "Organize files",
+    "attachFiles": "Attach files",
+    "more": "More actions"
+  },
+  "chips": {
+    "clearAll": "Clear all",
+    "search": "Search",
+    "removeSearch": "Remove search filter {{query}}"
+  },
+  "rail": {
+    "showAll": "Show all",
+    "showFewer": "Show fewer",
+    "searchValues": "Search…",
+    "search": "Search {{scope}}",
+    "clearSearch": "Clear search"
+  }
+}

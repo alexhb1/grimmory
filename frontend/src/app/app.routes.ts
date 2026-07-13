@@ -38,6 +38,8 @@ export const routes: Routes = [
     children: [
       {path: 'dashboard', component: MainDashboardComponent},
       {path: 'all-books', loadComponent: loadBookBrowserComponent},
+      {path: 'browse', loadComponent: () => import('./features/book/browse/book-browse-page.component').then(m => m.BookBrowsePageComponent)},
+      {path: 'browse/filter', loadComponent: () => import('./features/book/browse/book-browse-filter-page.component').then(m => m.BookBrowseFilterPageComponent)},
       {path: 'settings', loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)},
       {path: 'library/:libraryId/books', loadComponent: loadBookBrowserComponent},
       {path: 'shelf/:shelfId/books', loadComponent: loadBookBrowserComponent},
@@ -54,6 +56,7 @@ export const routes: Routes = [
       {path: 'reading-stats', loadComponent: () => import('./features/stats/component/user-stats/user-stats.component').then(m => m.UserStatsComponent), canActivate: [UserStatsGuard]},
       {path: 'notebook', loadComponent: () => import('./features/notebook/components/notebook/notebook.component').then(m => m.NotebookComponent)},
       {path: 'design-system', loadComponent: () => import('./features/design-system/design-system.component').then(m => m.DesignSystemComponent)},
+      {path: 'design-system/cards', loadComponent: () => import('./features/design-system/cards/cards-page.component').then(m => m.CardsPageComponent)},
       {path: 'design-system/form/library', loadComponent: () => import('./features/design-system/forms/library-form.component').then(m => m.LibraryFormExampleComponent)},
       {path: 'design-system/form/device', loadComponent: () => import('./features/design-system/forms/device-form.component').then(m => m.DeviceFormExampleComponent)},
       {path: 'design-system/form/everything', loadComponent: () => import('./features/design-system/forms/everything-form.component').then(m => m.EverythingFormExampleComponent)},

@@ -1,7 +1,8 @@
 import { signal } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { TranslocoTestingModule } from "@jsverse/transloco";
-import { Subject } from "rxjs";
+import { BehaviorSubject, Subject } from "rxjs";
+import { RxStompState } from "@stomp/rx-stomp";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppComponent } from "./app.component";
@@ -31,13 +32,18 @@ describe("AppComponent", () => {
   let fixture: ComponentFixture<AppComponent>;
   let component: AppComponent;
   let topics: Map<string, Subject<StompMessage>>;
-  let rxStompService: { watch: ReturnType<typeof vi.fn> };
+  let rxStompService: {
+    watch: ReturnType<typeof vi.fn>;
+    connectionState$: BehaviorSubject<RxStompState>;
+  };
   let bookService: {
     handleNewlyCreatedBook: ReturnType<typeof vi.fn>;
     handleBookUpdate: ReturnType<typeof vi.fn>;
     handleMultipleBookCoverPatches: ReturnType<typeof vi.fn>;
     handleRemovedBookIds: ReturnType<typeof vi.fn>;
     handleMultipleBookUpdates: ReturnType<typeof vi.fn>;
+    handleTaskProgress: ReturnType<typeof vi.fn>;
+    handleReconnect: ReturnType<typeof vi.fn>;
   };
   let authorService: { handleNewlyCreatedBook: ReturnType<typeof vi.fn> };
   let notificationEventService: {
@@ -76,6 +82,7 @@ describe("AppComponent", () => {
       watch: vi.fn((topic: string) =>
         (topics.get(topic) ?? createTopicStream(topic)).asObservable(),
       ),
+      connectionState$: new BehaviorSubject<RxStompState>(RxStompState.CLOSED),
     };
     bookService = {
       handleNewlyCreatedBook: vi.fn(),
@@ -83,6 +90,8 @@ describe("AppComponent", () => {
       handleMultipleBookCoverPatches: vi.fn(),
       handleRemovedBookIds: vi.fn(),
       handleMultipleBookUpdates: vi.fn(),
+      handleTaskProgress: vi.fn(),
+      handleReconnect: vi.fn(),
     };
     authorService = { handleNewlyCreatedBook: vi.fn() };
     notificationEventService = { handleNewNotification: vi.fn() };
@@ -205,7 +214,13 @@ describe("AppComponent", () => {
       ?.next({ body: JSON.stringify({ pendingCount: 1, totalCount: 2 }) });
     topics
       .get("/user/queue/task-progress")
-      ?.next({ body: JSON.stringify({ taskId: "task-2" }) });
+      ?.next({ body: JSON.stringify({
+        taskId: "task-2",
+        taskType: "UPDATE_BOOK_RECOMMENDATIONS",
+        message: "Done",
+        progress: 100,
+        taskStatus: "COMPLETED",
+      }) });
 
     expect(bookService.handleBookUpdate).toHaveBeenCalledWith({ id: 1 });
     expect(bookService.handleMultipleBookCoverPatches).toHaveBeenCalledWith([
@@ -226,9 +241,15 @@ describe("AppComponent", () => {
       pendingCount: 1,
       totalCount: 2,
     });
-    expect(taskService.handleTaskProgress).toHaveBeenCalledWith({
+    const taskProgress = {
       taskId: "task-2",
-    });
+      taskType: "UPDATE_BOOK_RECOMMENDATIONS",
+      message: "Done",
+      progress: 100,
+      taskStatus: "COMPLETED",
+    };
+    expect(taskService.handleTaskProgress).toHaveBeenCalledWith(taskProgress);
+    expect(bookService.handleTaskProgress).toHaveBeenCalledWith(taskProgress);
   });
 
   it("forces logout when the session is revoked", () => {
@@ -237,6 +258,17 @@ describe("AppComponent", () => {
     topics.get("/user/queue/session-revoked")?.next({ body: "" });
 
     expect(authService.forceLogout).toHaveBeenCalledWith("session_revoked");
+  });
+
+  it("does not reset caches on first connection but does after reconnect", () => {
+    configureComponent();
+
+    rxStompService.connectionState$.next(RxStompState.OPEN);
+    expect(bookService.handleReconnect).not.toHaveBeenCalled();
+
+    rxStompService.connectionState$.next(RxStompState.CLOSED);
+    rxStompService.connectionState$.next(RxStompState.OPEN);
+    expect(bookService.handleReconnect).toHaveBeenCalledOnce();
   });
 
   it("unsubscribes when destroyed", () => {
