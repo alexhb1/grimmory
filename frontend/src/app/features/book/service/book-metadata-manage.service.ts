@@ -7,7 +7,7 @@ import {API_CONFIG} from '../../../core/config/api-config';
 import {MessageService} from 'primeng/api';
 import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {invalidateBookQueries, invalidateBooksQuery, patchBookInCacheWith, patchBookMetadataInCache} from './book-query-cache';
+import {invalidateBookQueries, invalidateBooksQuery, patchBookMetadataInCache, patchBooksInCacheWith} from './legacy-book-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -48,11 +48,15 @@ export class BookMetadataManageService {
     };
     return this.http.put<BookMetadata[]>(`${this.url}/metadata/toggle-all-lock`, requestBody).pipe(
       tap(updatedMetadataList => {
-        updatedMetadataList.forEach(metadata => {
-          if (metadata.bookId != null) {
-            patchBookMetadataInCache(this.queryClient, metadata.bookId, metadata);
-          }
-        });
+        const updates = updatedMetadataList
+          .filter(metadata => metadata.bookId != null)
+          .map(metadata => ({
+            bookId: metadata.bookId,
+            updater: (book: Book) => ({...book, metadata}),
+          }));
+        if (updates.length > 0) {
+          patchBooksInCacheWith(this.queryClient, updates);
+        }
       }),
       map(() => void 0),
       catchError((error) => {
@@ -69,18 +73,21 @@ export class BookMetadataManageService {
       fieldActions
     }).pipe(
       tap(() => {
-        for (const bookId of bookIdSet) {
-          patchBookInCacheWith(this.queryClient, bookId, book => {
-            if (!book.metadata) return book;
-            const updatedMetadata = {...book.metadata} as Record<string, unknown>;
-            for (const [field, action] of Object.entries(fieldActions)) {
-              const lockField = field.endsWith('Locked') ? field : `${field}Locked`;
-              if (lockField in updatedMetadata) {
-                updatedMetadata[lockField] = action === 'LOCK';
+        if (bookIdSet.size > 0) {
+          patchBooksInCacheWith(this.queryClient, Array.from(bookIdSet, bookId => ({
+            bookId,
+            updater: (book: Book) => {
+              if (!book.metadata) return book;
+              const updatedMetadata = {...book.metadata} as Record<string, unknown>;
+              for (const [field, action] of Object.entries(fieldActions)) {
+                const lockField = field.endsWith('Locked') ? field : `${field}Locked`;
+                if (lockField in updatedMetadata) {
+                  updatedMetadata[lockField] = action === 'LOCK';
+                }
               }
-            }
-            return {...book, metadata: updatedMetadata as BookMetadata};
-          });
+              return {...book, metadata: updatedMetadata as BookMetadata};
+            },
+          })));
         }
       }),
       catchError(error => {

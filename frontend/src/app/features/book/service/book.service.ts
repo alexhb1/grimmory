@@ -20,9 +20,9 @@ import {
 import {
   invalidateAppBooksQueries,
   invalidateBooksQuery,
+  invalidateDeletedBookQueries,
   patchBooksInCache,
-  removeBookQueries,
-} from './book-query-cache';
+} from './legacy-book-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -195,8 +195,7 @@ export class BookService {
     return this.http.delete<BookDeletionResponse>(this.url, {params}).pipe(
       tap(response => {
         const deletedIds = response.deleted.length > 0 ? response.deleted : idList;
-        invalidateBooksQuery(this.queryClient);
-        removeBookQueries(this.queryClient, deletedIds);
+        invalidateDeletedBookQueries(this.queryClient, deletedIds);
 
         if (response.failedFileDeletions?.length > 0) {
           this.messageService.add({
@@ -391,5 +390,13 @@ export class BookService {
 
   handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
     this.bookSocketService.handleMultipleBookCoverPatches(patches);
+  }
+
+  handleTaskProgress(payload: unknown): void {
+    this.bookSocketService.handleTaskProgress(payload);
+  }
+
+  handleReconnect(): void {
+    this.bookSocketService.handleReconnect();
   }
 }

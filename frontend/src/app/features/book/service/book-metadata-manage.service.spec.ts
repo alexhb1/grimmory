@@ -7,6 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {MessageService} from 'primeng/api';
 
 import {Book, BookMetadata, MetadataUpdateWrapper} from '../model/book.model';
+import {bookQueryKeys} from '../data/book-query-keys';
 import {BOOKS_QUERY_KEY} from './book-query-keys';
 import {BookMetadataManageService} from './book-metadata-manage.service';
 import {TranslocoService} from '@jsverse/transloco';
@@ -86,22 +87,43 @@ describe('BookMetadataManageService', () => {
   it('toggles cached metadata lock fields for successful bulk lock updates', () => {
     queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [
       makeBook(1, {titleLocked: false, authorsLocked: false}),
+      makeBook(2, {titleLocked: false, authorsLocked: false}),
     ]);
 
-    service.toggleFieldLocks([1], {title: 'LOCK', authorsLocked: 'LOCK'}).subscribe();
+    service.toggleFieldLocks([1, 2], {title: 'LOCK', authorsLocked: 'LOCK'}).subscribe();
 
     const request = httpTestingController.expectOne(req => req.url.endsWith('/api/v1/books/metadata/toggle-field-locks'));
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({
-      bookIds: [1],
+      bookIds: [1, 2],
       fieldActions: {title: 'LOCK', authorsLocked: 'LOCK'},
     });
     request.flush(null);
 
-    expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)?.[0].metadata).toMatchObject({
-      titleLocked: true,
-      authorsLocked: true,
-    });
+    for (const book of queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY) ?? []) {
+      expect(book.metadata).toMatchObject({titleLocked: true, authorsLocked: true});
+    }
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: bookQueryKeys.collections()});
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(9);
+  });
+
+  it('patches all returned metadata locks through one batch cache update', () => {
+    queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [makeBook(1), makeBook(2)]);
+
+    service.toggleAllLock(new Set([1, 2]), 'LOCK').subscribe();
+
+    const request = httpTestingController.expectOne(req => req.url.endsWith('/api/v1/books/metadata/toggle-all-lock'));
+    expect(request.request.body).toEqual({bookIds: [1, 2], lock: 'LOCK'});
+    request.flush([
+      {bookId: 1, title: 'Book 1', allMetadataLocked: true},
+      {bookId: 2, title: 'Book 2', allMetadataLocked: true},
+    ]);
+
+    for (const book of queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY) ?? []) {
+      expect(book.metadata?.allMetadataLocked).toBe(true);
+    }
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: bookQueryKeys.collections()});
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(9);
   });
 
   it('shows an error toast when toggleFieldLocks fails', () => {

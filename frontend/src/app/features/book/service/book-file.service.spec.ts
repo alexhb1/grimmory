@@ -9,7 +9,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import type {AdditionalFile, Book, BookMetadata, DetachBookFileResponse} from '../model/book.model';
 import {AdditionalFileType} from '../model/book.model';
-import {BOOKS_QUERY_KEY, bookDetailQueryKey} from './book-query-keys';
+import {BOOKS_QUERY_KEY, bookDetailQueryKey, bookRecommendationsQueryKey} from './book-query-keys';
 import {BookFileService} from './book-file.service';
 import {FileDownloadService} from '../../../shared/service/file-download.service';
 import {LocalSettingsService} from '../../../shared/service/local-settings.service';
@@ -335,6 +335,8 @@ describe('BookFileService', () => {
     queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, [targetBook, sourceBook, secondSourceBook]);
     queryClient.setQueryData(bookDetailQueryKey(31, false), sourceBook);
     queryClient.setQueryData(bookDetailQueryKey(32, false), secondSourceBook);
+    queryClient.setQueryData(bookRecommendationsQueryKey(31, 20), [targetBook]);
+    queryClient.setQueryData(bookRecommendationsQueryKey(32, 20), [targetBook]);
 
     service.attachBookFiles(30, [31, 32], false).subscribe(result => {
       expect(result).toEqual({
@@ -357,6 +359,8 @@ describe('BookFileService', () => {
     expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)).toEqual([updatedTargetBook]);
     expect(queryClient.getQueryData(bookDetailQueryKey(31, false))).toBeUndefined();
     expect(queryClient.getQueryData(bookDetailQueryKey(32, false))).toBeUndefined();
+    expect(queryClient.getQueryData(bookRecommendationsQueryKey(31, 20))).toBeUndefined();
+    expect(queryClient.getQueryData(bookRecommendationsQueryKey(32, 20))).toBeUndefined();
     expect(messageService.add).toHaveBeenCalledWith({
       severity: 'success',
       summary: 'book.bookService.toast.filesAttachedSummary',

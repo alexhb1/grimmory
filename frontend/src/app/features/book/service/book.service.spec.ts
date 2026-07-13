@@ -80,6 +80,8 @@ describe('BookService', () => {
             handleMultipleBookUpdates: vi.fn(),
             handleBookMetadataUpdate: vi.fn(),
             handleMultipleBookCoverPatches: vi.fn(),
+            handleTaskProgress: vi.fn(),
+            handleReconnect: vi.fn(),
           },
         },
         {

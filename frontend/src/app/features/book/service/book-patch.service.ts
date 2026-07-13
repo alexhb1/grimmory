@@ -12,7 +12,7 @@ import {
   invalidateAppBooksQueries,
   patchBooksInCache,
   patchBookFieldsInCache,
-} from './book-query-cache';
+} from './legacy-book-cache';
 
 function getResetProgressFields(type: ResetProgressType): Partial<Book> {
   if (type === ResetProgressTypes.KOREADER) {

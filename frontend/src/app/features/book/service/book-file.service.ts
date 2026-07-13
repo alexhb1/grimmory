@@ -10,7 +10,7 @@ import {CacheStorageService} from '../../../shared/service/cache-storage.service
 import {LocalSettingsService} from '../../../shared/service/local-settings.service';
 import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {patchBookInCacheWith, patchBooksInCache, removeBooksFromCache} from './book-query-cache';
+import {patchAttachedBookFilesInCache, patchBookInCacheWith, patchBooksInCache} from './legacy-book-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -196,8 +196,11 @@ export class BookFileService {
       moveFiles
     }).pipe(
       tap(response => {
-        patchBooksInCache(this.queryClient, [response.updatedBook]);
-        removeBooksFromCache(this.queryClient, response.deletedSourceBookIds);
+        patchAttachedBookFilesInCache(
+          this.queryClient,
+          response.updatedBook,
+          response.deletedSourceBookIds,
+        );
         this.messageService.add({
           severity: 'success',
           summary: this.t.translate('book.bookService.toast.filesAttachedSummary'),
