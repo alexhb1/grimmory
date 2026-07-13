@@ -167,7 +167,8 @@ export function normalizeBookQueryParams(params: BookQueryParams): NormalizedBoo
 }
 
 function toCollectionHttpParams(params: NormalizedBookFacetParams): HttpParams {
-  let httpParams = new HttpParams();
+  // The any bucket is always any-of; without this the backend defaults facet_logic to "and".
+  let httpParams = new HttpParams().set('facet_logic', 'or');
 
   if (params.query) {
     httpParams = httpParams.set('query', params.query);

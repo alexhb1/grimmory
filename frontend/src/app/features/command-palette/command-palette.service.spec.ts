@@ -114,7 +114,7 @@ describe('CommandPaletteService', () => {
     TestBed.flushEffects();
 
     const request = http.expectOne(
-      `${API_CONFIG.BASE_URL}/api/v1/books/page?query=${encodeURIComponent(query)}&sort=title&size=50`,
+      `${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=${encodeURIComponent(query)}&sort=title&size=50`,
     );
     const response: BookPage = {
       content: books,

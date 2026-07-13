@@ -3,6 +3,7 @@ package org.booklore.service.browse;
 import lombok.RequiredArgsConstructor;
 import org.booklore.app.specification.AppBookSpecification;
 import org.booklore.browse.FacetLogic;
+import org.booklore.browse.FacetSelection;
 import org.booklore.exception.ApiError;
 import org.booklore.model.dto.BookLoreUser;
 import org.booklore.model.dto.Library;
@@ -13,10 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,8 +25,8 @@ public class BookFilterSpecifications {
     private final BookFacetRegistry facetRegistry;
     private final UserContentRestrictionRepository restrictionRepository;
 
-    public Specification<BookEntity> base(String query, Map<String, List<String>> facets, FacetLogic facetLogic,
-                                          Long userId, boolean isAdmin, Set<Long> libraryIds, String omitFacet) {
+    public Specification<BookEntity> base(String query, FacetSelection facets, FacetLogic facetLogic,
+                                          Long userId, boolean isAdmin, Set<Long> libraryIds, String omitAnyPoolFor) {
         List<Specification<BookEntity>> specs = new ArrayList<>();
         specs.add(AppBookSpecification.notDeleted());
         if (!isAdmin) {
@@ -38,14 +36,21 @@ public class BookFilterSpecifications {
         if (query != null && !query.isBlank()) {
             specs.add(BookSearchSpecification.matching(query));
         }
-        for (Map.Entry<String, List<String>> entry : facets.entrySet()) {
-            if (Objects.equals(entry.getKey(), omitFacet)) {
-                continue;
+        for (String key : facets.keys()) {
+            if (!facetRegistry.has(key)) {
+                throw ApiError.INVALID_FACET.createException("Unknown facet: " + key);
             }
-            if (!facetRegistry.has(entry.getKey())) {
-                throw ApiError.INVALID_FACET.createException("Unknown facet: " + entry.getKey());
+            List<String> anyValues = facets.any().get(key);
+            if (anyValues != null && !key.equals(omitAnyPoolFor)) {
+                specs.add(facetRegistry.toSpecification(key, anyValues, facetLogic, userId));
             }
-            specs.add(facetRegistry.toSpecification(entry.getKey(), entry.getValue(), facetLogic, userId));
+            for (String value : facets.must().getOrDefault(key, List.of())) {
+                specs.add(facetRegistry.toSpecification(key, List.of(value), FacetLogic.AND, userId));
+            }
+            List<String> notValues = facets.not().get(key);
+            if (notValues != null) {
+                specs.add(facetRegistry.toSpecification(key, notValues, FacetLogic.NOT, userId));
+            }
         }
         return AppBookSpecification.combine(specs.toArray(Specification[]::new));
     }
@@ -61,23 +66,5 @@ public class BookFilterSpecifications {
             return Set.of();
         }
         return user.getAssignedLibraries().stream().map(Library::getId).collect(Collectors.toSet());
-    }
-
-    public static Map<String, List<String>> parseFacets(List<String> facet) {
-        Map<String, List<String>> facets = new LinkedHashMap<>();
-        if (facet == null) {
-            return facets;
-        }
-        for (String entry : facet) {
-            if (entry == null || entry.isBlank()) {
-                continue;
-            }
-            int colon = entry.indexOf(':');
-            if (colon <= 0 || colon == entry.length() - 1) {
-                throw ApiError.INVALID_FACET.createException("Facet must be in key:value form: " + entry);
-            }
-            facets.computeIfAbsent(entry.substring(0, colon), k -> new ArrayList<>()).add(entry.substring(colon + 1));
-        }
-        return facets;
     }
 }

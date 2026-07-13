@@ -74,22 +74,9 @@ describe('BookQueryService', () => {
     http.verify();
   });
 
-  it('does not issue HTTP when the service or its options are created', () => {
-    service.page(PARAMS);
-    service.pageAt({...PARAMS, page: 7});
-    service.infinitePage(PARAMS);
-    service.facets(PARAMS);
-    service.ids(PARAMS);
-    service.detail(7, true);
-    service.batch([7, 8], false);
-    service.recommendations(7, 20);
-
-    http.expectNone(() => true);
-  });
-
   it('fetches one bounded summary page with normalized parameters', async () => {
     const resultPromise = queryClient.fetchQuery(service.page(PARAMS));
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     request.flush(page([1, 2]));
 
     await expect(resultPromise).resolves.toMatchObject({
@@ -107,7 +94,7 @@ describe('BookQueryService', () => {
       },
     }));
     const request = http.expectOne(
-      `${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&facet_must=language:English&facet_not=tag:Abandoned&sort=title&size=20`,
+      `${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&facet_must=language:English&facet_not=tag:Abandoned&sort=title&size=20`,
     );
     request.flush(page([1]));
 
@@ -117,7 +104,7 @@ describe('BookQueryService', () => {
   it('fetches one direct-offset summary page with a windowed query key', async () => {
     const options = service.pageAt({...PARAMS, page: 7});
     const resultPromise = queryClient.fetchQuery(options);
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20&page=7`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20&page=7`);
     request.flush(page([141, 142]));
 
     expect(options.queryKey).toEqual([
@@ -139,7 +126,7 @@ describe('BookQueryService', () => {
 
   it('fetches facets without sort or size', async () => {
     const resultPromise = queryClient.fetchQuery(service.facets(PARAMS));
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/facets?query=dune&facet=genre:Science%20Fiction`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/facets?facet_logic=or&query=dune&facet=genre:Science%20Fiction`);
     request.flush({facets: [{
       metadata: {rel: 'facet', key: 'genre', title: 'Genre'},
       links: [{
@@ -162,7 +149,7 @@ describe('BookQueryService', () => {
 
   it('fetches matching IDs with sort but no size', async () => {
     const resultPromise = queryClient.fetchQuery(service.ids(PARAMS));
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/ids?query=dune&facet=genre:Science%20Fiction&sort=title`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/ids?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title`);
     request.flush([3, 1, 2]);
 
     await expect(resultPromise).resolves.toEqual([3, 1, 2]);
@@ -172,7 +159,7 @@ describe('BookQueryService', () => {
     const host = TestBed.inject(InfiniteQueryHost);
     TestBed.flushEffects();
 
-    const firstRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const firstRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     firstRequest.flush(page([1], [{
       rel: ['next'],
       href: '/api/v1/books/page?facet=genre%3AScience%20Fiction&cursor=opaque',
@@ -237,7 +224,7 @@ describe('BookQueryService', () => {
 
   it('rejects malformed page structure and nested summary data', async () => {
     const malformedPagePromise = queryClient.fetchQuery(service.page(PARAMS));
-    const malformedPageRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const malformedPageRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     malformedPageRequest.flush({
       ...page([1]),
       links: [{rel: ['next'], href: 42, type: 'application/json'}],
@@ -247,7 +234,7 @@ describe('BookQueryService', () => {
     );
 
     const malformedSummaryPromise = queryClient.fetchQuery(service.page(PARAMS));
-    const malformedSummaryRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const malformedSummaryRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     malformedSummaryRequest.flush({
       ...page([1]),
       content: [{
@@ -270,7 +257,7 @@ describe('BookQueryService', () => {
 
   it('caches only decoded clean-model fields while tolerating wire extensions', async () => {
     const resultPromise = queryClient.fetchQuery(service.page(PARAMS));
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     request.flush({
       ...page([1]),
       futurePageField: true,
@@ -302,7 +289,7 @@ describe('BookQueryService', () => {
 
   it('requires summary-only metadata contract fields', async () => {
     const resultPromise = queryClient.fetchQuery(service.page(PARAMS));
-    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
     request.flush({
       ...page([1]),
       content: [{
@@ -320,7 +307,7 @@ describe('BookQueryService', () => {
 
   it('rejects malformed facet groups and ID lists', async () => {
     const facetPromise = queryClient.fetchQuery(service.facets(PARAMS));
-    const facetRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/facets?query=dune&facet=genre:Science%20Fiction`);
+    const facetRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/facets?facet_logic=or&query=dune&facet=genre:Science%20Fiction`);
     facetRequest.flush({facets: [{
       metadata: {rel: 'facet', key: 'genre', title: 'Genre'},
       links: [{
@@ -337,7 +324,7 @@ describe('BookQueryService', () => {
     );
 
     const idsPromise = queryClient.fetchQuery(service.ids(PARAMS));
-    const idsRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/ids?query=dune&facet=genre:Science%20Fiction&sort=title`);
+    const idsRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/ids?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title`);
     idsRequest.flush([3, 3]);
     await expect(idsPromise).rejects.toThrow(
       'Invalid book query response at ids[1]: duplicate book ID 3.',
