@@ -53,6 +53,16 @@ class LinksBuilderTest {
     }
 
     @Test
+    void facetAndPagingLinksCarryMustAndNotSelections() {
+        String preserved = "facet_must=genre%3AHistory&facet_not=genre%3ARomance";
+        List<Link> links = builder.build(context(0, 20, 100, preserved));
+
+        assertEquals("/api/v1/books/facets?" + preserved, withRel(links, "facet").href());
+        assertTrue(withRel(links, "next").href().startsWith(
+                "/api/v1/books/page?" + preserved + "&cursor="));
+    }
+
+    @Test
     void firstPageOmitsPreviousButHasNext() {
         List<Link> links = builder.build(context(0, 20, 100, ""));
         assertFalse(hasRel(links, "previous"));

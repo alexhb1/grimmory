@@ -1,5 +1,6 @@
 import {
   BookFacetGroup,
+  BookFacetValueState,
   BookPage,
 } from './book-query.models';
 import {
@@ -234,13 +235,16 @@ export function decodeBookFacetGroups(value: unknown): BookFacetGroup[] {
       const itemTitle = requiredField(item, 'title', linkPath, stringValue);
       const itemValue = requiredField(item, 'value', linkPath, stringValue);
       let count: number | undefined;
+      let selection: 'must' | 'not' | undefined;
       optionalObject(item, 'properties', linkPath, (properties, propertiesPath) => {
         count = optionalField(properties, 'numberOfItems', propertiesPath, nonNegativeInteger);
+        selection = optionalField(properties, 'selection', propertiesPath, facetSelectionValue);
       });
+      const state: BookFacetValueState | null = rel.includes('self') ? selection ?? 'any' : null;
       return {
         value: itemValue,
         title: itemTitle,
-        selected: rel.includes('self'),
+        state,
         ...(count == null ? {} : {count}),
       };
     });
@@ -642,6 +646,14 @@ function booleanValue(value: unknown, path: string): boolean {
     invalid(path, 'expected a boolean');
   }
   return value;
+}
+
+function facetSelectionValue(value: unknown, path: string): 'must' | 'not' {
+  const selection = stringValue(value, path);
+  if (selection !== 'must' && selection !== 'not') {
+    invalid(path, 'expected must or not');
+  }
+  return selection;
 }
 
 function stringArray(value: unknown, path: string): string[] {

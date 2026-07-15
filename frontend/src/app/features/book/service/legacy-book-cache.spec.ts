@@ -250,8 +250,7 @@ describe('legacy book cache adapter', () => {
       queryClient,
       bookQueryKeys.boundedPage(normalizeBookPageParams({
         size: 20,
-        facets: {},
-        facetLogic: 'or',
+        facets: {any: {}, must: {}, not: {}},
         sort: [],
       })),
       {content: [book]},
@@ -310,8 +309,7 @@ describe('legacy book cache adapter', () => {
       queryClient,
       bookQueryKeys.boundedPage(normalizeBookPageParams({
         size: 20,
-        facets: {},
-        facetLogic: 'or',
+        facets: {any: {}, must: {}, not: {}},
         sort: [],
       })),
       {content: [firstBook, secondBook]},
@@ -366,8 +364,7 @@ describe('legacy book cache adapter', () => {
       queryClient,
       bookQueryKeys.boundedPage(normalizeBookPageParams({
         size: 20,
-        facets: {},
-        facetLogic: 'or',
+        facets: {any: {}, must: {}, not: {}},
         sort: [],
       })),
       {content: [targetBook, deletedSource, keptBook]},

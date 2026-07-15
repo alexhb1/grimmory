@@ -12,8 +12,7 @@ import {normalizeBookBatchParams, normalizeBookPageParams} from './book-query-pa
 const firstBook = {id: 1};
 const secondBook = {id: 2};
 const pageKey = bookQueryKeys.boundedPage(normalizeBookPageParams({
-  facets: {},
-  facetLogic: 'or',
+  facets: {any: {}, must: {}, not: {}},
   sort: [],
   size: 20,
 }));

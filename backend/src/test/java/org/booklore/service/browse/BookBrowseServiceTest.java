@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.booklore.BookloreApplication;
 import org.booklore.browse.BrowsePage;
+import org.booklore.browse.FacetSelection;
 import org.booklore.browse.Link;
 import org.booklore.exception.APIException;
 import org.booklore.config.security.service.AuthenticationService;
@@ -120,10 +121,14 @@ class BookBrowseServiceTest {
     }
 
     private BookEntity book(String title, List<String> categoryNames) {
+        return book(title, categoryNames, null);
+    }
+
+    private BookEntity book(String title, List<String> categoryNames, String publisher) {
         BookEntity bookEntity = BookEntity.builder()
                 .library(library).libraryPath(libraryPath).addedOn(Instant.now()).deleted(false).build();
         em.persist(bookEntity);
-        BookMetadataEntity metadata = BookMetadataEntity.builder().book(bookEntity).title(title).build();
+        BookMetadataEntity metadata = BookMetadataEntity.builder().book(bookEntity).title(title).publisher(publisher).build();
         metadata.setCategories(categoryNames.stream().map(this::category).collect(Collectors.toSet()));
         em.persist(metadata);
         bookEntity.setMetadata(metadata);
@@ -139,7 +144,13 @@ class BookBrowseServiceTest {
     }
 
     private BrowsePage<Book> browse(String sort, List<String> facet, String query, String cursor, int page, int size) {
-        return browseService.browse(sort, facet, null, query, cursor, PageRequest.of(page, size));
+        return browse(sort, facet, null, null, query, cursor, page, size);
+    }
+
+    private BrowsePage<Book> browse(String sort, List<String> facet, List<String> facetMust, List<String> facetNot,
+                                    String query, String cursor, int page, int size) {
+        FacetSelection facets = FacetSelection.parse(facet, facetMust, facetNot);
+        return browseService.browse(sort, facets, null, query, cursor, PageRequest.of(page, size));
     }
 
     private String nextCursor(BrowsePage<Book> page) {
@@ -181,6 +192,35 @@ class BookBrowseServiceTest {
     }
 
     @Test
+    void pageAppliesMustAndNotSelectionsSeparatelyAndTogether() {
+        Long historyScience = book("HS", List.of("History", "Science")).getId();
+        Long historyRomance = book("HR", List.of("History", "Romance")).getId();
+        Long science = book("S", List.of("Science")).getId();
+        em.flush();
+
+        assertThat(browse(null, null, List.of("genre:History"), null, null, null, 0, 20)
+                .content().stream().map(Book::getId)).containsExactly(historyScience, historyRomance);
+        assertThat(browse(null, null, null, List.of("genre:Romance"), null, null, 0, 20)
+                .content().stream().map(Book::getId)).containsExactly(historyScience, science);
+        assertThat(browse(
+                null, null, List.of("genre:History"), List.of("genre:Romance"), null, null, 0, 20)
+                .content().stream().map(Book::getId)).containsExactly(historyScience);
+    }
+
+    @Test
+    void multipleScalarMustSelectionsAreStrict() {
+        book("A", List.of(), "Publisher A");
+        book("B", List.of(), "Publisher B");
+        em.flush();
+
+        BrowsePage<Book> result = browse(null, null,
+                List.of("publisher:Publisher A", "publisher:Publisher B"), null, null, null, 0, 20);
+
+        assertThat(result.content()).isEmpty();
+        assertThat(result.page().totalElements()).isZero();
+    }
+
+    @Test
     void queryIsApplied() {
         Long hobbit = book("The Hobbit", List.of()).getId();
         book("Dune", List.of());
@@ -216,6 +256,36 @@ class BookBrowseServiceTest {
     }
 
     @Test
+    void cursorWithAddedMustSelectionIsRejected() {
+        book("Alpha", List.of("History"));
+        em.flush();
+        String cursor = browse(null, null, null, null, 0, 20).page().cursor();
+
+        assertThatThrownBy(() -> browse(
+                null, null, List.of("genre:History"), null, null, cursor, 0, 20))
+                .isInstanceOfSatisfying(APIException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST))
+                .hasMessageContaining("does not match");
+    }
+
+    @Test
+    void unknownKeysInNewSelectionBucketsAreRejected() {
+        book("Alpha", List.of("History"));
+        em.flush();
+
+        assertThatThrownBy(() -> browse(
+                null, null, List.of("unknown:value"), null, null, null, 0, 20))
+                .isInstanceOfSatisfying(APIException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST))
+                .hasMessageContaining("Unknown facet");
+        assertThatThrownBy(() -> browse(
+                null, null, null, List.of("unknown:value"), null, null, 0, 20))
+                .isInstanceOfSatisfying(APIException.class,
+                        error -> assertThat(error.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST))
+                .hasMessageContaining("Unknown facet");
+    }
+
+    @Test
     void deferredSortKeyIsRejected() {
         book("Alpha", List.of());
         em.flush();
@@ -235,7 +305,7 @@ class BookBrowseServiceTest {
         em.flush();
 
         List<Long> pageIds = browse("title", null, null, null, 0, 20).content().stream().map(Book::getId).toList();
-        List<Long> allIds = browseService.findAllIds("title", null, null, null);
+        List<Long> allIds = browseService.findAllIds("title", FacetSelection.empty(), null, null);
 
         assertThat(allIds).isEqualTo(pageIds);
     }
@@ -245,7 +315,21 @@ class BookBrowseServiceTest {
         Long horror = book("H", List.of("Horror")).getId();
         book("R", List.of("Romance"));
         em.flush();
-        assertThat(browseService.findAllIds(null, List.of("genre:Horror"), null, null)).containsExactly(horror);
+        assertThat(browseService.findAllIds(
+                null, FacetSelection.parse(List.of("genre:Horror"), null, null), null, null)).containsExactly(horror);
+    }
+
+    @Test
+    void findAllIdsAppliesMustAndNotSelections() {
+        Long included = book("Included", List.of("History", "Science")).getId();
+        book("Excluded", List.of("History", "Romance"));
+        book("MissingMust", List.of("Science"));
+        em.flush();
+
+        FacetSelection facets = FacetSelection.parse(
+                null, List.of("genre:History"), List.of("genre:Romance"));
+
+        assertThat(browseService.findAllIds(null, facets, null, null)).containsExactly(included);
     }
 
     @Test
@@ -262,7 +346,7 @@ class BookBrowseServiceTest {
         em.persist(BookMetadataEntity.builder().book(outside).title("Outside").build());
         em.flush();
 
-        assertThat(browseService.findAllIds(null, null, null, null)).containsExactly(inLibrary);
+        assertThat(browseService.findAllIds(null, FacetSelection.empty(), null, null)).containsExactly(inLibrary);
     }
 
     @Test

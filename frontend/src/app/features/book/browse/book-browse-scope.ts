@@ -1,6 +1,10 @@
 import {type Data, type ParamMap} from '@angular/router';
 
-import {type BookQueryFacetKey, type FacetValueMap} from '../data/book-query-params';
+import {
+  type BookFacetSelection,
+  type BookQueryFacetKey,
+  type FacetValueMap,
+} from '../data/book-query-params';
 
 export type BookBrowseScope =
   | {kind: 'library'; entityId: number; facetKey: 'library'; facetValue: string}
@@ -37,13 +41,17 @@ export function bookBrowseScope(paramMap: ParamMap, routeData: Data): BookBrowse
 }
 
 export function scopedFacetSelection(
-  selection: FacetValueMap,
+  selection: BookFacetSelection,
   scope: BookBrowseScope | null,
-): FacetValueMap {
+): BookFacetSelection {
   if (!scope) {
     return selection;
   }
-  return {...omitKey(selection, scope.facetKey), [scope.facetKey]: [scope.facetValue]};
+  return {
+    any: {...omitKey(selection.any, scope.facetKey), [scope.facetKey]: [scope.facetValue]},
+    must: omitKey(selection.must, scope.facetKey),
+    not: omitKey(selection.not, scope.facetKey),
+  };
 }
 
 function positiveId(raw: string | null): number | null {

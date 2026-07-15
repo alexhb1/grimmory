@@ -229,13 +229,13 @@
             }
             @for (chip of filterChips(); track chip.key + ':' + chip.value) {
               <app-tag
-                color="neutral"
+                [color]="chipColor(chip.state)"
                 size="sm"
                 removable
                 [removeLabel]="'shared.ui.tag.removeLabel' | transloco: {label: chip.valueLabel}"
                 (remove)="onToggleFacet({key: chip.key, value: chip.value, selected: false})">
                 <span class="text-text-muted">{{ chip.groupLabel }}:</span>
-                <span class="max-w-48 truncate">{{ chip.valueLabel }}</span>
+                <span [class]="chipValueClass(chip.state)">{{ chip.valueLabel }}</span>
               </app-tag>
             }
             <app-button

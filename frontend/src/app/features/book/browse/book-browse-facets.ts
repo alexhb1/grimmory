@@ -1,10 +1,15 @@
 import {
   isBookQueryFacetKey,
+  type BookFacetSelection,
   type BookQueryFacetKey,
   type FacetValueMap,
 } from '../data/book-query-params';
 import {type BookFacetGroup} from '../data/book-query.models';
 import {type FilterRailGroup} from '../../../shared/components/browse/browse-filter-rail/browse-filter-rail.component';
+
+export type BookFacetSelections = Partial<Record<string, string[]>>;
+
+export type FacetValueState = 'any' | 'must' | 'not';
 
 export const RAIL_GROUP_ORDER: readonly BookQueryFacetKey[] = [
   'author', 'genre', 'tag', 'mood', 'series', 'publisher', 'language', 'file_type',
@@ -33,42 +38,132 @@ export function parseFacetParams(tokens: readonly string[]): FacetValueMap {
   return Object.fromEntries(facets);
 }
 
+export function parseBrowseFacetSelection(
+  facetTokens: readonly string[],
+  mustTokens: readonly string[],
+  notTokens: readonly string[],
+): BookFacetSelection {
+  return {
+    any: parseFacetParams(facetTokens),
+    must: parseFacetParams(mustTokens),
+    not: parseFacetParams(notTokens),
+  };
+}
+
 export function facetParamTokens(facets: FacetValueMap): string[] {
   return Object.entries(facets).flatMap(([key, values]) =>
     (values ?? []).map(value => `${key}:${value}`),
   );
 }
 
-export function browseFacetQueryParams(facets: FacetValueMap): Record<'facet', string[] | null> {
-  const tokens = facetParamTokens(facets);
-  return {facet: tokens.length > 0 ? tokens : null};
+export function browseFacetQueryParams(
+  selection: BookFacetSelection,
+): Record<'facet' | 'facet_must' | 'facet_not', string[] | null> {
+  const tokensOrNull = (bucket: FacetValueMap): string[] | null => {
+    const tokens = facetParamTokens(bucket);
+    return tokens.length > 0 ? tokens : null;
+  };
+  return {
+    facet: tokensOrNull(selection.any),
+    facet_must: tokensOrNull(selection.must),
+    facet_not: tokensOrNull(selection.not),
+  };
+}
+
+export function facetValueState(
+  selection: BookFacetSelection,
+  key: string,
+  value: string,
+): FacetValueState | null {
+  if (facetValuesForKey(selection.any, key).includes(value)) {
+    return 'any';
+  }
+  if (facetValuesForKey(selection.must, key).includes(value)) {
+    return 'must';
+  }
+  if (facetValuesForKey(selection.not, key).includes(value)) {
+    return 'not';
+  }
+  return null;
+}
+
+export function setFacetValueState(
+  selection: BookFacetSelection,
+  key: string,
+  value: string,
+  state: FacetValueState | null,
+): BookFacetSelection {
+  const without = (bucket: FacetValueMap): FacetValueMap => {
+    const values = facetValuesForKey(bucket, key);
+    if (!values?.includes(value)) {
+      return bucket;
+    }
+    const remaining = values.filter(item => item !== value);
+    const next: Partial<Record<string, readonly string[]>> = {...bucket};
+    if (remaining.length > 0) {
+      next[key] = remaining;
+    } else {
+      delete next[key];
+    }
+    return next;
+  };
+  const withValue = (bucket: FacetValueMap): FacetValueMap =>
+    ({...bucket, [key]: [...facetValuesForKey(bucket, key), value]});
+
+  const cleared: BookFacetSelection = {
+    any: without(selection.any),
+    must: without(selection.must),
+    not: without(selection.not),
+  };
+  switch (state) {
+    case null:
+      return cleared;
+    case 'any':
+      return {...cleared, any: withValue(cleared.any)};
+    case 'must':
+      return {...cleared, must: withValue(cleared.must)};
+    case 'not':
+      return {...cleared, not: withValue(cleared.not)};
+  }
 }
 
 export function toggleFacetSelection(
-  current: FacetValueMap,
+  current: BookFacetSelection,
   key: string,
   value: string,
   selected: boolean,
-): FacetValueMap {
-  if (!isBookQueryFacetKey(key)) {
-    return current;
-  }
-  const values = facetValuesForKey(current, key);
-  if (selected === values.includes(value)) {
-    return current;
-  }
-  const remaining = selected ? [...values, value] : values.filter(item => item !== value);
-  const next: Partial<Record<BookQueryFacetKey, readonly string[]>> = {...current};
-  if (remaining.length > 0) {
-    next[key] = remaining;
-  } else {
-    delete next[key];
-  }
-  return next;
+): BookFacetSelection {
+  return setFacetValueState(current, key, value, selected ? 'any' : null);
 }
 
-export function countFacetSelections(facets: FacetValueMap): number {
-  return Object.values(facets).reduce((count, values) => count + (values?.length ?? 0), 0);
+export function nextFacetValueState(state: FacetValueState | null): FacetValueState | null {
+  switch (state) {
+    case null:
+      return 'any';
+    case 'any':
+      return 'must';
+    case 'must':
+      return 'not';
+    case 'not':
+      return null;
+  }
+}
+
+export function cycleFacetValue(
+  selection: BookFacetSelection,
+  key: string,
+  value: string,
+): BookFacetSelection {
+  return setFacetValueState(selection, key, value,
+    nextFacetValueState(facetValueState(selection, key, value)));
+}
+
+export function countFacetSelections(selection: BookFacetSelection): number {
+  return [selection.any, selection.must, selection.not].reduce(
+    (total, bucket) =>
+      total + Object.values(bucket).reduce((count, values) => count + (values?.length ?? 0), 0),
+    0,
+  );
 }
 
 export function facetValuesForKey(facets: FacetValueMap, key: string): readonly string[] {
@@ -96,6 +191,11 @@ export function freezeFacetOrders(served: readonly BookFacetGroup[]): FrozenFace
   );
 }
 
+export function mustFacetKeys(selection: BookFacetSelection): ReadonlySet<string> {
+  return new Set(Object.keys(selection.must).filter(key =>
+    facetValuesForKey(selection.must, key).length > 0));
+}
+
 export function orderedFacetVocabularyKeys(
   served: readonly BookFacetGroup[],
   frozen?: FrozenFacetOrders,
@@ -121,6 +221,7 @@ export function orderedFacetVocabularyKeys(
 export function buildRailGroups(
   served: readonly BookFacetGroup[],
   frozen?: FrozenFacetOrders,
+  mustOrderedKeys: ReadonlySet<string> = new Set(),
 ): FilterRailGroup[] {
   const byKey = new Map(
     served
@@ -131,6 +232,10 @@ export function buildRailGroups(
   for (const key of orderedFacetVocabularyKeys(served, frozen)) {
     const servedGroup = byKey.get(key);
     const frozenGroup = frozen && Object.hasOwn(frozen, key) ? frozen[key] : undefined;
+    const states = new Map((servedGroup?.values ?? []).map(value => [value.value, value.state]));
+    const stateOf = (value: string): FacetValueState | null => states.get(value) ?? null;
+    const isSelected = (value: string): boolean => stateOf(value) !== null;
+
     if (!frozenGroup) {
       if (!servedGroup) {
         continue;
@@ -143,22 +248,21 @@ export function buildRailGroups(
           value: value.value,
           label: value.title,
           count: value.count ?? null,
-          selected: value.selected,
+          selected: value.state !== null,
+          state: value.state,
         })),
       });
       continue;
     }
 
     const counts = new Map((servedGroup?.values ?? []).map(value => [value.value, value.count ?? null]));
-    const selected = new Set(
-      (servedGroup?.values ?? []).filter(value => value.selected).map(value => value.value),
-    );
     const known = new Set(frozenGroup.values.map(value => value.value));
     const values = frozenGroup.values.map(frozenValue => ({
       value: frozenValue.value,
       label: frozenValue.label,
       count: counts.has(frozenValue.value) ? counts.get(frozenValue.value) ?? null : 0,
-      selected: selected.has(frozenValue.value),
+      selected: isSelected(frozenValue.value),
+      state: stateOf(frozenValue.value),
     }));
     for (const value of servedGroup?.values ?? []) {
       if (!known.has(value.value)) {
@@ -166,14 +270,17 @@ export function buildRailGroups(
           value: value.value,
           label: value.title,
           count: value.count ?? null,
-          selected: value.selected,
+          selected: value.state !== null,
+          state: value.state,
         });
       }
     }
-    const ordered = [
-      ...values.filter(item => item.count !== 0 || item.selected),
-      ...values.filter(item => item.count === 0 && !item.selected),
-    ];
+    const ordered = mustOrderedKeys.has(key)
+      ? values
+      : [
+          ...values.filter(item => item.count !== 0 || item.selected),
+          ...values.filter(item => item.count === 0 && !item.selected),
+        ];
     if (servedGroup || values.length > 0) {
       groups.push({
         key,

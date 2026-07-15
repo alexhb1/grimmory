@@ -261,8 +261,7 @@ describe('BookSocketService', () => {
       queryClient,
       bookQueryKeys.boundedPage(normalizeBookPageParams({
         size: 20,
-        facets: {},
-        facetLogic: 'or',
+        facets: {any: {}, must: {}, not: {}},
         sort: [],
       })),
       {content: [makeBook(7), makeBook(8)]},

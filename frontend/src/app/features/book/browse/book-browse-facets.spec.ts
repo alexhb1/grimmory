@@ -1,28 +1,33 @@
 import {describe, expect, it} from 'vitest';
 
-import {EMPTY_FACET_SELECTION} from '../data/book-query-params';
+import {EMPTY_FACET_SELECTION, type BookFacetSelection} from '../data/book-query-params';
 import {type BookFacetGroup} from '../data/book-query.models';
 import {
   browseFacetQueryParams,
   buildRailGroups,
   countFacetSelections,
+  cycleFacetValue,
+  facetValueState,
   freezeFacetOrders,
   orderedFacetVocabularyKeys,
+  parseBrowseFacetSelection,
   parseFacetParams,
+  setFacetValueState,
   toggleFacetSelection,
+  type FacetValueState,
 } from './book-browse-facets';
 
 function group(
   key: string,
   title: string,
-  values: [string, number, boolean?][],
+  values: [string, number, FacetValueState?][],
   rel = 'facet',
 ): BookFacetGroup {
   return {
     rel,
     key,
     title,
-    values: values.map(([value, count, selected]) => ({value, title: value, count, selected: selected ?? false})),
+    values: values.map(([value, count, state]) => ({value, title: value, count, state: state ?? null})),
   };
 }
 
@@ -51,7 +56,7 @@ describe('frozen facet orders', () => {
   });
 
   it('keeps a selected zero-count value in the available partition', () => {
-    const narrowed = [group('genre', 'Genre', [['Comedy', 7], ['Gothic', 0, true]])];
+    const narrowed = [group('genre', 'Genre', [['Comedy', 7], ['Gothic', 0, 'any']])];
     const groups = buildRailGroups(narrowed, frozen);
     expect(groups[0].values.map(item => item.value)).toEqual(['Gothic', 'Comedy', 'Drama']);
     expect(groups[0].values[0]).toMatchObject({selected: true, count: 0});
@@ -69,7 +74,7 @@ describe('frozen facet orders', () => {
   });
 
   it('marks selections regardless of position or count', () => {
-    const narrowed = [group('genre', 'Genre', [['Comedy', 7], ['Drama', 0, true]])];
+    const narrowed = [group('genre', 'Genre', [['Comedy', 7], ['Drama', 0, 'any']])];
     const groups = buildRailGroups(narrowed, frozen);
     const drama = groups[0].values.find(item => item.value === 'Drama');
     expect(drama).toMatchObject({selected: true, count: 0});
@@ -92,12 +97,38 @@ describe('frozen facet orders', () => {
     ]);
   });
 
+  it('marks must and not values selected like ordinary ticks', () => {
+    const narrowed = [group('genre', 'Genre', [['Comedy', 7], ['Gothic', 3, 'must'], ['Drama', 0, 'not']])];
+    const groups = buildRailGroups(narrowed, frozen);
+    expect(groups[0].values.map(item => item.value)).toEqual(['Gothic', 'Comedy', 'Drama']);
+    expect(groups[0].values.filter(item => item.selected).map(item => item.value))
+      .toEqual(['Gothic', 'Drama']);
+  });
+
   it('selecting a value never moves it (Baymard: untick where you ticked)', () => {
     const served = [group('genre', 'Genre', [['Gothic', 40], ['Comedy', 30], ['Drama', 20]])];
-    const picked = [group('genre', 'Genre', [['Gothic', 40], ['Comedy', 30, true], ['Drama', 20]])];
+    const picked = [group('genre', 'Genre', [['Gothic', 40], ['Comedy', 30, 'any'], ['Drama', 20]])];
     const unselected = buildRailGroups(served, frozen)[0].values.map(item => item.value);
     const selected = buildRailGroups(picked, frozen)[0].values.map(item => item.value);
     expect(selected).toEqual(unselected);
+  });
+
+  it('freezes order in a group with its own required value: counts change, nothing sinks', () => {
+    const served = [group('genre', 'Genre', [['Gothic', 40], ['Comedy', 30], ['Drama', 20]])];
+    const narrowed = [group('genre', 'Genre', [['Gothic', 40, 'must'], ['Drama', 5]])];
+    const frozenHere = freezeFacetOrders(served);
+
+    const values = buildRailGroups(narrowed, frozenHere, new Set(['genre']))[0].values;
+    expect(values.map(item => item.value)).toEqual(['Gothic', 'Comedy', 'Drama']);
+    expect(values.map(item => item.count)).toEqual([40, 0, 5]);
+  });
+
+  it('keeps row order stable while a value cycles states', () => {
+    const base = [group('genre', 'Genre', [['Gothic', 40, 'any'], ['Comedy', 30, 'any'], ['Drama', 20]])];
+    const promoted = [group('genre', 'Genre', [['Gothic', 40, 'any'], ['Comedy', 30, 'must'], ['Drama', 20]])];
+    const before = buildRailGroups(base, frozen)[0].values.map(item => item.value);
+    const after = buildRailGroups(promoted, frozen, new Set(['genre']))[0].values.map(item => item.value);
+    expect(after).toEqual(before);
   });
 
   it('excludes the sort registry from frozen vocabulary and rail groups', () => {
@@ -153,11 +184,17 @@ describe('frozen facet orders', () => {
   });
 });
 
-describe('facet selection params', () => {
-  it('parses facet route params into a value map', () => {
-    expect(parseFacetParams(['genre:Comedy', 'genre:Drama', 'tag:Anthology'])).toEqual({
-      genre: ['Comedy', 'Drama'],
-      tag: ['Anthology'],
+describe('three-state selection model', () => {
+  it('parses the three route params into their buckets', () => {
+    const selection = parseBrowseFacetSelection(
+      ['genre:Comedy', 'genre:Drama'],
+      ['genre:History'],
+      ['tag:Anthology'],
+    );
+    expect(selection).toEqual({
+      any: {genre: ['Comedy', 'Drama']},
+      must: {genre: ['History']},
+      not: {tag: ['Anthology']},
     });
   });
 
@@ -171,42 +208,97 @@ describe('facet selection params', () => {
     const selection = parseFacetParams(['__proto__:READ']);
 
     expect(selection).toEqual({});
-    expect(buildRailGroups([group('__proto__', 'Prototype', [['READ', 1, true]])])).toEqual([]);
+    expect(buildRailGroups([group('__proto__', 'Prototype', [['READ', 1, 'any']])])).toEqual([]);
   });
 
-  it('serializes the selection to router params, null when empty', () => {
-    expect(browseFacetQueryParams({genre: ['Comedy']})).toEqual({facet: ['genre:Comedy']});
-    expect(browseFacetQueryParams({})).toEqual({facet: null});
+  it('serializes buckets to router params, null for empty ones', () => {
+    const selection: BookFacetSelection = {any: {genre: ['Comedy']}, must: {genre: ['History']}, not: {}};
+    expect(browseFacetQueryParams(selection)).toEqual({
+      facet: ['genre:Comedy'],
+      facet_must: ['genre:History'],
+      facet_not: null,
+    });
   });
 
   it('round-trips a selection through params and back', () => {
-    const selection = parseFacetParams(['genre:Comedy', 'tag:Anthology']);
+    const selection = parseBrowseFacetSelection(['genre:Comedy'], ['genre:History'], ['tag:Anthology']);
     const params = browseFacetQueryParams(selection);
-    expect(parseFacetParams(params.facet ?? [])).toEqual(selection);
+    expect(parseBrowseFacetSelection(params.facet ?? [], params.facet_must ?? [], params.facet_not ?? []))
+      .toEqual(selection);
   });
 
-  it('toggles a value in and out of the selection', () => {
-    let selection = toggleFacetSelection(EMPTY_FACET_SELECTION, 'genre', 'History', true);
-    expect(selection).toEqual({genre: ['History']});
+  it('keeps a value in exactly one state', () => {
+    let selection = setFacetValueState(EMPTY_FACET_SELECTION, 'genre', 'History', 'any');
+    selection = setFacetValueState(selection, 'genre', 'History', 'must');
+    expect(selection.any['genre']).toBeUndefined();
+    expect(selection.must['genre']).toEqual(['History']);
 
-    selection = toggleFacetSelection(selection, 'genre', 'Comedy', true);
-    expect(selection).toEqual({genre: ['History', 'Comedy']});
+    selection = setFacetValueState(selection, 'genre', 'History', 'not');
+    expect(selection.must['genre']).toBeUndefined();
+    expect(selection.not['genre']).toEqual(['History']);
 
-    selection = toggleFacetSelection(selection, 'genre', 'History', false);
-    expect(selection).toEqual({genre: ['Comedy']});
-
-    selection = toggleFacetSelection(selection, 'genre', 'Comedy', false);
-    expect(selection).toEqual({});
+    selection = setFacetValueState(selection, 'genre', 'History', null);
+    expect(selection).toEqual(EMPTY_FACET_SELECTION);
   });
 
-  it('returns the same selection when a toggle is a no-op', () => {
-    const selection = {genre: ['History']};
-    expect(toggleFacetSelection(selection, 'genre', 'History', true)).toBe(selection);
-    expect(toggleFacetSelection(selection, 'tag', 'Owned', false)).toBe(selection);
+  it('reports a value state across buckets', () => {
+    const selection: BookFacetSelection = {any: {genre: ['Comedy']}, must: {genre: ['History']}, not: {}};
+    expect(facetValueState(selection, 'genre', 'Comedy')).toBe('any');
+    expect(facetValueState(selection, 'genre', 'History')).toBe('must');
+    expect(facetValueState(selection, 'genre', 'Drama')).toBeNull();
   });
 
-  it('counts selected values across keys', () => {
-    expect(countFacetSelections({genre: ['Comedy', 'Drama'], tag: ['Anthology']})).toBe(3);
+  it('untick clears a value from every bucket, so chip removal works for all states', () => {
+    const required: BookFacetSelection = {any: {}, must: {genre: ['History']}, not: {}};
+    expect(toggleFacetSelection(required, 'genre', 'History', false)).toEqual(EMPTY_FACET_SELECTION);
+
+    const excluded: BookFacetSelection = {any: {}, must: {}, not: {genre: ['History']}};
+    expect(toggleFacetSelection(excluded, 'genre', 'History', false)).toEqual(EMPTY_FACET_SELECTION);
+  });
+
+  it('a plain tick replaces any prior state for the value', () => {
+    const excluded: BookFacetSelection = {any: {}, must: {}, not: {genre: ['History']}};
+    expect(toggleFacetSelection(excluded, 'genre', 'History', true)).toEqual({
+      any: {genre: ['History']},
+      must: {},
+      not: {},
+    });
+  });
+
+  it('cycles a value tick → require → exclude → clear', () => {
+    let selection: BookFacetSelection = EMPTY_FACET_SELECTION;
+    const states: (string | null)[] = [];
+    for (let clicks = 0; clicks < 4; clicks++) {
+      selection = cycleFacetValue(selection, 'genre', 'History');
+      states.push(facetValueState(selection, 'genre', 'History'));
+    }
+    expect(states).toEqual(['any', 'must', 'not', null]);
+    expect(selection).toEqual(EMPTY_FACET_SELECTION);
+  });
+
+  it('exposes each served value state on the rail model', () => {
+    const served = [group('genre', 'Genre', [
+      ['Comedy', 7, 'any'],
+      ['History', 3, 'must'],
+      ['Drama', 0, 'not'],
+      ['Farce', 1],
+    ])];
+    const values = buildRailGroups(served)[0].values;
+    expect(values.map(item => [item.value, item.state])).toEqual([
+      ['Comedy', 'any'],
+      ['History', 'must'],
+      ['Drama', 'not'],
+      ['Farce', null],
+    ]);
+  });
+
+  it('counts selections across all buckets', () => {
+    const selection: BookFacetSelection = {
+      any: {genre: ['Comedy', 'Drama']},
+      must: {genre: ['History']},
+      not: {tag: ['Anthology']},
+    };
+    expect(countFacetSelections(selection)).toBe(4);
     expect(countFacetSelections(EMPTY_FACET_SELECTION)).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, computed, inject, linkedSignal, signal, untracked} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, Router} from '@angular/router';
 import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
@@ -14,18 +14,21 @@ import {AppButtonComponent} from '../../../shared/ui/button/app-button.component
 import {AppInputComponent} from '../../../shared/ui/input/app-input.component';
 import {AppPageHeaderComponent} from '../../../shared/layout/page-header/app.page-header.component';
 import {type PageHeader} from '../../../shared/layout/page-header/page-header.service';
-import {EMPTY_FACET_SELECTION, type FacetValueMap} from '../data/book-query-params';
+import {EMPTY_FACET_SELECTION, type BookFacetSelection} from '../data/book-query-params';
 import {type BookFacetGroup, type BookPage} from '../data/book-query.models';
 import {BookQueryService} from '../data/book-query.service';
 import {
   browseFacetQueryParams,
   buildRailGroups,
   countFacetSelections,
+  cycleFacetValue,
   freezeFacetOrders,
-  parseFacetParams,
+  mustFacetKeys,
+  parseBrowseFacetSelection,
   toggleFacetSelection,
   type FrozenFacetOrders,
 } from './book-browse-facets';
+import {AdvancedFilteringPreferenceService} from './advanced-filtering-preference.service';
 import {bookBrowseScope, scopedFacetSelection} from './book-browse-scope';
 import {DEFAULT_BOOK_SORT, parseSortToken, sortTerms} from './book-browse-sort.config';
 
@@ -90,6 +93,7 @@ export class BookBrowseFilterPageComponent {
   private readonly router = inject(Router);
   private readonly bookQuery = inject(BookQueryService);
   private readonly transloco = inject(TranslocoService);
+  private readonly advancedFiltering = inject(AdvancedFilteringPreferenceService);
   private readonly queryParamMap = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -97,8 +101,12 @@ export class BookBrowseFilterPageComponent {
     sortTerms(parseSortToken(this.queryParamMap().get('sort')) ?? DEFAULT_BOOK_SORT),
   );
 
-  protected readonly staged = signal<FacetValueMap>(
-    parseFacetParams(this.route.snapshot.queryParamMap.getAll('facet')),
+  protected readonly staged = signal<BookFacetSelection>(
+    parseBrowseFacetSelection(
+      this.route.snapshot.queryParamMap.getAll('facet'),
+      this.route.snapshot.queryParamMap.getAll('facet_must'),
+      this.route.snapshot.queryParamMap.getAll('facet_not'),
+    ),
   );
   protected readonly stagedCount = computed(() => countFacetSelections(this.staged()));
   protected readonly stagedQuery = signal(this.route.snapshot.queryParamMap.get('query') ?? '');
@@ -112,7 +120,6 @@ export class BookBrowseFilterPageComponent {
   private readonly facetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: scopedFacetSelection(this.staged(), this.scope()),
-      facetLogic: 'or',
       query: this.debouncedQuery() || undefined,
     }),
     placeholderData: (previous: BookFacetGroup[] | undefined) => previous,
@@ -120,17 +127,21 @@ export class BookBrowseFilterPageComponent {
   private readonly unfilteredFacetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: scopedFacetSelection(EMPTY_FACET_SELECTION, this.scope()),
-      facetLogic: 'or',
     }),
   }));
   private readonly frozenFacets = computed<FrozenFacetOrders | null>(() => {
     const data = this.unfilteredFacetsQuery.data();
     return data && data.length > 0 ? freezeFacetOrders(data) : null;
   });
+  private readonly displayedMustKeys = linkedSignal({
+    source: () => this.facetsQuery.data(),
+    computation: (): ReadonlySet<string> => untracked(() => mustFacetKeys(this.staged())),
+  });
   protected readonly railGroups = computed(() =>
     buildRailGroups(
       this.facetsQuery.data() ?? [],
       this.frozenFacets() ?? undefined,
+      this.displayedMustKeys(),
     ),
   );
 
@@ -138,7 +149,6 @@ export class BookBrowseFilterPageComponent {
     ...this.bookQuery.page({
       size: 1,
       facets: scopedFacetSelection(this.staged(), this.scope()),
-      facetLogic: 'or',
       sort: this.sort(),
       query: this.debouncedQuery() || undefined,
     }),
@@ -183,7 +193,9 @@ export class BookBrowseFilterPageComponent {
 
   protected onToggle(toggle: FilterRailToggle): void {
     this.staged.update(current =>
-      toggleFacetSelection(current, toggle.key, toggle.value, toggle.selected),
+      toggle.origin === 'row' && this.advancedFiltering.enabled()
+        ? cycleFacetValue(current, toggle.key, toggle.value)
+        : toggleFacetSelection(current, toggle.key, toggle.value, toggle.selected),
     );
   }
 

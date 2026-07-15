@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked, viewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, linkedSignal, signal, untracked, viewChild} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, type ParamMap, Router} from '@angular/router';
 import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
@@ -64,9 +64,9 @@ import {BookBackgroundSubmissionService} from '../data/book-background-submissio
 import {BookShelfCommandService} from '../data/book-shelf-command.service';
 import {
   EMPTY_FACET_SELECTION,
+  type BookFacetSelection,
   type BookPageParams,
   type BookSortTerm,
-  type FacetValueMap,
   isBookQueryFacetKey,
   isBookQuerySortKey,
 } from '../data/book-query-params';
@@ -76,13 +76,17 @@ import {
   browseFacetQueryParams,
   buildRailGroups,
   countFacetSelections,
+  cycleFacetValue,
   facetValuesForKey,
   freezeFacetOrders,
+  mustFacetKeys,
   orderedFacetVocabularyKeys,
-  parseFacetParams,
+  parseBrowseFacetSelection,
   toggleFacetSelection,
+  type FacetValueState,
   type FrozenFacetOrders,
 } from './book-browse-facets';
+import {AdvancedFilteringPreferenceService} from './advanced-filtering-preference.service';
 import {BookBrowseSortLineService, bookSortLineAvailable} from './book-browse-sort-line.service';
 import {cn} from '../../../shared/ui/cn';
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
@@ -164,7 +168,6 @@ const MAX_MOBILE_COLUMNS = 4;
 const BROWSE_PAGE_PARAMS: Omit<BookPageParams, 'sort'> = {
   size: PAGE_SIZE,
   facets: EMPTY_FACET_SELECTION,
-  facetLogic: 'or',
 };
 
 const BULK_BAR_WIDTHS = {
@@ -234,6 +237,7 @@ export class BookBrowsePageComponent {
   protected readonly columnPreferences = inject(BookBrowseColumnPreferenceService);
   private readonly seriesCollapse = inject(SeriesCollapsePreferenceService);
   private readonly sortLine = inject(BookBrowseSortLineService);
+  private readonly advancedFiltering = inject(AdvancedFilteringPreferenceService);
   private readonly shelfDefinitionQuery = inject(ShelfDefinitionQueryService);
   private readonly magicShelfService = inject(MagicShelfService);
   private readonly libraryService = inject(LibraryService);
@@ -359,14 +363,13 @@ export class BookBrowsePageComponent {
   private readonly facetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: this.requestFacets(),
-      facetLogic: 'or',
       query: this.queryText() || undefined,
     }),
     enabled: this.railVisible(),
     placeholderData: (previous: BookFacetGroup[] | undefined) => previous,
   }));
   private readonly unfilteredFacetsQuery = injectQuery(() => ({
-    ...this.bookQuery.facets({facets: this.scopeOnlyFacets(), facetLogic: 'or'}),
+    ...this.bookQuery.facets({facets: this.scopeOnlyFacets()}),
   }));
   protected readonly serverSortTokens = computed<readonly string[]>(() => {
     const sortGroup = this.unfilteredFacetsQuery.data()?.find(group => group.rel === 'sort');
@@ -387,10 +390,15 @@ export class BookBrowsePageComponent {
     const data = this.unfilteredFacetsQuery.data();
     return data && data.length > 0 ? freezeFacetOrders(data) : null;
   });
+  private readonly displayedMustKeys = linkedSignal({
+    source: () => this.facetsQuery.data(),
+    computation: (): ReadonlySet<string> => untracked(() => mustFacetKeys(this.facetSelections())),
+  });
   protected readonly railGroups = computed<FilterRailGroup[]>(() =>
     buildRailGroups(
       this.facetsQuery.data() ?? [],
       this.frozenFacets() ?? undefined,
+      this.displayedMustKeys(),
     ),
   );
   private readonly headerRef = viewChild(AppPageHeaderComponent);
@@ -415,33 +423,64 @@ export class BookBrowsePageComponent {
       frozen ?? undefined,
     );
     const vocabularySet = new Set(vocabularyKeys);
-    const selectionKeys = Object.keys(selections).filter(isBookQueryFacetKey);
+    const selectionKeys = [selections.any, selections.must, selections.not]
+      .flatMap(bucket => Object.keys(bucket))
+      .filter(isBookQueryFacetKey);
     const keys = [
       ...vocabularyKeys,
       ...selectionKeys.filter((key, index) =>
         !vocabularySet.has(key) && selectionKeys.indexOf(key) === index),
     ];
     return keys.flatMap(key => {
-      const values = facetValuesForKey(selections, key);
-      if (values.length === 0) {
+      const stateOf = new Map<string, FacetValueState>();
+      for (const value of facetValuesForKey(selections.any, key)) {
+        stateOf.set(value, 'any');
+      }
+      for (const value of facetValuesForKey(selections.must, key)) {
+        stateOf.set(value, 'must');
+      }
+      for (const value of facetValuesForKey(selections.not, key)) {
+        stateOf.set(value, 'not');
+      }
+      if (stateOf.size === 0) {
         return [];
       }
       const frozenGroup = frozen && Object.hasOwn(frozen, key) ? frozen[key] : undefined;
       const frozenIndex = new Map((frozenGroup?.values ?? []).map((item, index) => [item.value, index]));
-      return [...values]
-        .sort((a, b) => {
+      return [...stateOf.entries()]
+        .sort(([a], [b]) => {
           const indexA = frozenIndex.get(a) ?? Number.MAX_SAFE_INTEGER;
           const indexB = frozenIndex.get(b) ?? Number.MAX_SAFE_INTEGER;
           return indexA - indexB || a.localeCompare(b);
         })
-        .map(value => ({
+        .map(([value, state]) => ({
           key,
           value,
+          state,
           groupLabel: frozenGroup?.title ?? key,
           valueLabel: frozenGroup?.values.find(item => item.value === value)?.label ?? value,
         }));
     });
   });
+
+  protected chipColor(state: FacetValueState): 'neutral' | 'primary' | 'red' {
+    switch (state) {
+      case 'any':
+        return 'neutral';
+      case 'must':
+        return 'primary';
+      case 'not':
+        return 'red';
+    }
+  }
+
+  protected chipValueClass(state: FacetValueState): string {
+    return cn(
+      'max-w-48 truncate',
+      state === 'must' && 'font-[550]',
+      state === 'not' && 'line-through',
+    );
+  }
 
   private readonly menuBookSnapshot = signal<BookSummary | null>(null);
   protected readonly openMenuBookId = signal<number | null>(null);
@@ -565,7 +604,11 @@ export class BookBrowsePageComponent {
     this.activeSortTerms().map(term => ({id: term.key, desc: term.direction === 'desc'})),
   );
   private readonly facetSelections = computed(() =>
-    parseFacetParams(this.queryParamMap().getAll('facet')),
+    parseBrowseFacetSelection(
+      this.queryParamMap().getAll('facet'),
+      this.queryParamMap().getAll('facet_must'),
+      this.queryParamMap().getAll('facet_not'),
+    ),
   );
   private readonly scope = computed(() =>
     bookBrowseScope(this.routeParamMap(), this.route.snapshot.data),
@@ -607,10 +650,10 @@ export class BookBrowsePageComponent {
         return null;
     }
   });
-  private readonly requestFacets = computed<FacetValueMap>(() =>
+  private readonly requestFacets = computed<BookFacetSelection>(() =>
     scopedFacetSelection(this.facetSelections(), this.scope()),
   );
-  private readonly scopeOnlyFacets = computed<FacetValueMap>(() =>
+  private readonly scopeOnlyFacets = computed<BookFacetSelection>(() =>
     scopedFacetSelection(EMPTY_FACET_SELECTION, this.scope()),
   );
   protected readonly filterCount = computed(() => countFacetSelections(this.facetSelections()));
@@ -1320,7 +1363,9 @@ export class BookBrowsePageComponent {
   }
 
   protected onToggleFacet(toggle: FilterRailToggle): void {
-    const next = toggleFacetSelection(this.facetSelections(), toggle.key, toggle.value, toggle.selected);
+    const next = toggle.origin === 'row' && this.advancedFiltering.enabled()
+      ? cycleFacetValue(this.facetSelections(), toggle.key, toggle.value)
+      : toggleFacetSelection(this.facetSelections(), toggle.key, toggle.value, toggle.selected);
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: browseFacetQueryParams(next),
@@ -1369,7 +1414,7 @@ export class BookBrowsePageComponent {
     this.queryDraft.set('');
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: {facet: null, query: null},
+      queryParams: {facet: null, facet_must: null, facet_not: null, query: null},
       queryParamsHandling: 'merge',
     });
   }

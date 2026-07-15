@@ -1,7 +1,6 @@
 import {HttpParams} from '@angular/common/http';
 
 import {
-  BrowseFacetLogic,
   BrowseSortDirection,
   BrowseSortTerm,
 } from '../../../core/data/browse.models';
@@ -67,18 +66,22 @@ export const BOOK_QUERY_SORT_KEYS = [
 
 export type BookQueryFacetKey = typeof BOOK_QUERY_FACET_KEYS[number];
 export type BookQuerySortKey = typeof BOOK_QUERY_SORT_KEYS[number];
-export type FacetLogic = BrowseFacetLogic;
 export type FacetValueMap = Readonly<Partial<Record<BookQueryFacetKey, readonly string[]>>>;
 export type SortDirection = BrowseSortDirection;
 
-export const EMPTY_FACET_SELECTION: FacetValueMap = {};
+export interface BookFacetSelection {
+  any: FacetValueMap;
+  must: FacetValueMap;
+  not: FacetValueMap;
+}
+
+export const EMPTY_FACET_SELECTION: BookFacetSelection = {any: {}, must: {}, not: {}};
 
 export type BookSortTerm = BrowseSortTerm<BookQuerySortKey>;
 
 export interface BookCollectionFilterParams {
   query?: string;
-  facets: FacetValueMap;
-  facetLogic: FacetLogic;
+  facets: BookFacetSelection;
 }
 
 export interface BookQueryParams extends BookCollectionFilterParams {
@@ -92,7 +95,6 @@ export interface BookPageParams extends BookQueryParams {
 export interface BookDescriptionOptions {
   withDescription: boolean;
 }
-
 export interface NormalizedBookBatchParams {
   bookIds: readonly number[];
   withDescription: boolean;
@@ -101,7 +103,6 @@ export interface NormalizedBookBatchParams {
 export const DEFAULT_BOOK_SORT_TERMS: readonly BookSortTerm[] = [{key: 'title', direction: 'asc'}];
 const BOOK_QUERY_FACET_KEY_SET = new Set<string>(BOOK_QUERY_FACET_KEYS);
 const BOOK_QUERY_SORT_KEY_SET = new Set<string>(BOOK_QUERY_SORT_KEYS);
-const FACET_LOGICS = new Set<string>(['and', 'or', 'not']);
 const SORT_DIRECTIONS = new Set<string>(['asc', 'desc']);
 
 export function isBookQueryFacetKey(value: string): value is BookQueryFacetKey {
@@ -177,26 +178,28 @@ export function normalizeBookCollectionFilterParams(
   params: BookCollectionFilterParams,
 ): BookCollectionFilterParams {
   const query = params.query?.trim();
-  const facets = normalizeFacetValueMap(params.facets);
-  if (!FACET_LOGICS.has(params.facetLogic)) {
-    throw new Error(`Unsupported book query facet logic: ${params.facetLogic}`);
-  }
+  const facets: BookFacetSelection = {
+    any: normalizeFacetValueMap(params.facets.any),
+    must: normalizeFacetValueMap(params.facets.must),
+    not: normalizeFacetValueMap(params.facets.not),
+  };
 
   return {
     ...(query ? {query} : {}),
     facets,
-    facetLogic: params.facetLogic,
   };
 }
 
 export function toCollectionHttpParams(params: BookCollectionFilterParams): HttpParams {
-  let httpParams = new HttpParams().set('facet_logic', params.facetLogic);
+  let httpParams = new HttpParams().set('facet_logic', 'or');
 
   if (params.query) {
     httpParams = httpParams.set('query', params.query);
   }
 
-  return appendFacetParams(httpParams, params.facets);
+  httpParams = appendFacetParams(httpParams, 'facet', params.facets.any);
+  httpParams = appendFacetParams(httpParams, 'facet_must', params.facets.must);
+  return appendFacetParams(httpParams, 'facet_not', params.facets.not);
 }
 
 function normalizeFacetValueMap(facets: FacetValueMap): FacetValueMap {
@@ -224,11 +227,15 @@ function normalizeFacetValueMap(facets: FacetValueMap): FacetValueMap {
   return Object.fromEntries(normalized);
 }
 
-function appendFacetParams(httpParams: HttpParams, facets: FacetValueMap): HttpParams {
+function appendFacetParams(
+  httpParams: HttpParams,
+  parameterName: 'facet' | 'facet_must' | 'facet_not',
+  facets: FacetValueMap,
+): HttpParams {
   let result = httpParams;
   for (const [key, values] of Object.entries(facets)) {
     for (const value of values ?? []) {
-      result = result.append('facet', `${key}:${value}`);
+      result = result.append(parameterName, `${key}:${value}`);
     }
   }
 

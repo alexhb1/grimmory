@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, booleanAttribute, computed, input, output, signal, viewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, booleanAttribute, computed, inject, input, output, signal, viewChild} from '@angular/core';
 import {TranslocoPipe} from '@jsverse/transloco';
 import {
   LucideChevronDown,
@@ -37,6 +37,7 @@ import {
   LibraryShelfMenuComponent,
   type LibraryShelfMenuTarget,
 } from '../components/library-shelf-menu/library-shelf-menu.component';
+import {AdvancedFilteringPreferenceService} from './advanced-filtering-preference.service';
 
 export interface BookBrowseColumnOption {
   readonly field: string;
@@ -288,6 +289,12 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
       } @else {
         <app-menu-item [submenu]="columnsMenu">{{ 'browse.toolbar.columns' | transloco }}</app-menu-item>
       }
+      <app-menu-separator />
+      <app-menu-checkbox
+        [checked]="advancedFiltering.enabled()"
+        (selected)="advancedFiltering.setEnabled($event)">
+        {{ 'browse.toolbar.advancedFiltering' | transloco }}
+      </app-menu-checkbox>
       @if (actionTarget(); as target) {
         @if (actionMenu(); as targetMenu) {
           <app-menu-separator />
@@ -332,6 +339,7 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
   `,
 })
 export class BookBrowseToolbarComponent {
+  protected readonly advancedFiltering = inject(AdvancedFilteringPreferenceService);
   readonly activeSort = input.required<BookSortSelection>();
   readonly sortOptions = input.required<readonly BookSortOption[]>();
   readonly sortTerms = input<readonly BookSortTerm[]>([]);

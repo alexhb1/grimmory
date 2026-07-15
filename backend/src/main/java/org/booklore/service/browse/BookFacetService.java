@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.booklore.browse.FacetLogic;
+import org.booklore.browse.FacetSelection;
 import org.booklore.browse.Link;
 import org.booklore.browse.ParamsHash;
 import org.booklore.config.security.service.AuthenticationService;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,23 +69,31 @@ public class BookFacetService {
             .maximumSize(200)
             .build();
 
-    public FacetGroupsResponse getFacets(List<String> facet, String facetLogicParam, String query) {
+    public FacetGroupsResponse getFacets(FacetSelection facets, String facetLogicParam, String query) {
         BookLoreUser user = authenticationService.getAuthenticatedUser();
         Long userId = user.getId();
         boolean isAdmin = user.getPermissions().isAdmin();
         Set<Long> libraryIds = BookFilterSpecifications.libraryIds(user);
 
-        Map<String, List<String>> facets = BookFilterSpecifications.parseFacets(facet);
         FacetLogic facetLogic = FacetLogic.from(facetLogicParam);
 
         String cacheKey = userId + ":" + ParamsHash.compute(query, facets, facetLogic);
         return cache.get(cacheKey, key -> {
-            String preserved = BrowseParams.preserved(facet, facetLogicParam, query);
+            String preserved = BrowseParams.preserved(facets, facetLogicParam, query);
+            long fullFilterCount = facets.must().isEmpty()
+                    ? 0
+                    : countMatchingBooks(filterSpecifications.base(query, facets, facetLogic, userId, isAdmin, libraryIds, null));
             List<FacetGroup> groups = new ArrayList<>();
             groups.add(sortGroup(preserved));
             for (FacetDef def : FACETS) {
                 Specification<BookEntity> base = filterSpecifications.base(query, facets, facetLogic, userId, isAdmin, libraryIds, def.key());
-                groups.add(toGroup(def, count(def, base), facet, preserved));
+                List<FacetCount> counts = count(def, base);
+                List<String> mustValues = facets.must().get(def.key());
+                if (mustValues != null) {
+                    counts = applyMustCounts(counts, mustValues, fullFilterCount);
+                }
+                counts = appendMissingSelections(counts, def.key(), facets);
+                groups.add(toGroup(def, counts, facets, preserved));
             }
             List<Link> links = List.of(Link.json(List.of("self"), href(FACET_PATH, preserved)));
             return new FacetGroupsResponse(links, groups);
@@ -93,6 +103,47 @@ public class BookFacetService {
     // Package-private: lets tests reset the shared singleton cache between runs.
     void clearCache() {
         cache.invalidateAll();
+    }
+
+    private long countMatchingBooks(Specification<BookEntity> base) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
+        Root<BookEntity> root = cq.from(BookEntity.class);
+        cq.select(cb.countDistinct(root.get("id")));
+
+        Predicate basePredicate = base.toPredicate(root, cq, cb);
+        if (basePredicate != null) {
+            cq.where(basePredicate);
+        }
+
+        return entityManager.createQuery(cq).getSingleResult();
+    }
+
+    private List<FacetCount> applyMustCounts(List<FacetCount> counts, List<String> mustValues, long fullFilterCount) {
+        List<FacetCount> adjusted = counts.stream()
+                .map(facetCount -> mustValues.contains(facetCount.value())
+                        ? new FacetCount(facetCount.value(), fullFilterCount)
+                        : facetCount)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        for (String mustValue : mustValues) {
+            if (adjusted.stream().noneMatch(facetCount -> mustValue.equals(facetCount.value()))) {
+                adjusted.add(new FacetCount(mustValue, fullFilterCount));
+            }
+        }
+        return adjusted;
+    }
+
+    private static List<FacetCount> appendMissingSelections(List<FacetCount> counts, String key, FacetSelection facets) {
+        List<FacetCount> result = new ArrayList<>(counts);
+        for (Map<String, List<String>> bucket : List.of(facets.any(), facets.not())) {
+            for (String value : bucket.getOrDefault(key, List.of())) {
+                if (result.stream().noneMatch(c -> value.equalsIgnoreCase(c.value()))) {
+                    result.add(new FacetCount(value, 0));
+                }
+            }
+        }
+        return result;
     }
 
     private List<FacetCount> count(FacetDef def, Specification<BookEntity> base) {
@@ -119,15 +170,16 @@ public class BookFacetService {
                 .toList();
     }
 
-    private FacetGroup toGroup(FacetDef def, List<FacetCount> counts, List<String> facet, String preserved) {
+    private FacetGroup toGroup(FacetDef def, List<FacetCount> counts, FacetSelection facets, String preserved) {
         List<FacetLink> links = counts.stream()
                 .map(c -> {
-                    boolean active = BrowseParams.hasFacet(facet, def.key(), c.value());
-                    List<String> rel = active ? List.of("self", "facet") : List.of("facet");
-                    String href = active
+                    String state = BrowseParams.selectionState(facets, def.key(), c.value());
+                    List<String> rel = state != null ? List.of("self", "facet") : List.of("facet");
+                    String href = state != null
                             ? href(PAGE_PATH, preserved)
                             : pageLink(preserved, "facet=" + BrowseParams.encode(def.key() + ":" + c.value()));
-                    return new FacetLink(rel, href, Link.JSON_TYPE, c.value(), c.value(), new Properties(c.count()));
+                    String selection = "any".equals(state) ? null : state;
+                    return new FacetLink(rel, href, Link.JSON_TYPE, c.value(), c.value(), new Properties(c.count(), selection));
                 })
                 .toList();
         return new FacetGroup(new Metadata("facet", def.key(), def.title()), links);

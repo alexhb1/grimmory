@@ -11,8 +11,11 @@ import {bookQueryKeys} from './book-query-keys';
 describe('book query keys', () => {
   const query = {
     query: 'dune',
-    facets: {genre: ['Fantasy']} as const,
-    facetLogic: 'or' as const,
+    facets: {
+      any: {genre: ['Fantasy']},
+      must: {},
+      not: {},
+    } as const,
     sort: [{key: 'title', direction: 'asc'}] as const,
   };
   const page = normalizeBookPageParams({...query, size: 20});
@@ -40,11 +43,18 @@ describe('book query keys', () => {
     expect(bookQueryKeys.infinitePage(page).at(-1)).toBe(page);
   });
 
-  it('keeps facet selection as part of query identity', () => {
-    const genreSelected = normalizeBookCollectionFilterParams(query);
-    const unfiltered = normalizeBookCollectionFilterParams({...query, facets: {}});
+  it('keeps facet bucket placement as part of query identity', () => {
+    const anyGenre = normalizeBookCollectionFilterParams(query);
+    const requiredGenre = normalizeBookCollectionFilterParams({
+      ...query,
+      facets: {
+        any: {},
+        must: {genre: ['Fantasy']},
+        not: {},
+      },
+    });
 
-    expect(bookQueryKeys.facets(genreSelected)).not.toEqual(bookQueryKeys.facets(unfiltered));
+    expect(bookQueryKeys.facets(anyGenre)).not.toEqual(bookQueryKeys.facets(requiredGenre));
   });
 
   it('nests every leaf under the prefix its invalidation targets', () => {

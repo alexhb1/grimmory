@@ -65,8 +65,7 @@ function resetProgressResponse(bookId: number, readStatusModifiedTime: string | 
 }
 
 const commandPageKey = bookQueryKeys.boundedPage(normalizeBookPageParams({
-  facets: {},
-  facetLogic: 'or',
+  facets: {any: {}, must: {}, not: {}},
   sort: [],
   size: 20,
 }));

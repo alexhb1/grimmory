@@ -498,12 +498,14 @@ describe('BookBrowsePageComponent', () => {
     await flushQueryAsync();
   });
 
-  it('passes sort, search, and facet selections to the paginated endpoint exactly', async () => {
+  it('passes sort, search, and all facet buckets to the paginated endpoint exactly', async () => {
     await TestBed.inject(Router).navigate([], {
       queryParams: {
         sort: '-title,seriesName',
         query: '  warden  ',
         facet: ['genre:Fantasy', 'language:en'],
+        facet_must: 'tag:Owned',
+        facet_not: 'read_status:READ',
       },
     });
     fixture.detectChanges();
@@ -513,7 +515,9 @@ describe('BookBrowsePageComponent', () => {
       request.url === PAGE_URL &&
       request.params.get('sort') === '-title,seriesName' &&
       request.params.get('query') === 'warden' &&
-      request.params.getAll('facet')?.join(',') === 'genre:Fantasy,language:en',
+      request.params.getAll('facet')?.join(',') === 'genre:Fantasy,language:en' &&
+      request.params.getAll('facet_must')?.join(',') === 'tag:Owned' &&
+      request.params.getAll('facet_not')?.join(',') === 'read_status:READ',
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
   });
@@ -673,7 +677,7 @@ describe('BookBrowsePageComponent', () => {
 
     chip.query(By.css('button')).nativeElement.click();
     expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({
-      queryParams: {facet: null},
+      queryParams: {facet: null, facet_must: null, facet_not: null},
       queryParamsHandling: 'merge',
     }));
   });

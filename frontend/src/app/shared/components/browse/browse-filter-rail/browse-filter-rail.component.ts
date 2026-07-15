@@ -1,7 +1,7 @@
 import {NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, booleanAttribute, effect, input, output, signal} from '@angular/core';
 import {TranslocoPipe} from '@jsverse/transloco';
-import {LucideCheck, LucideChevronDown, LucideSearch, LucideX} from '@lucide/angular';
+import {LucideCheck, LucideChevronDown, LucideMinus, LucideSearch, LucideX} from '@lucide/angular';
 
 import {cn} from '../../../ui/cn';
 import {AppButtonComponent} from '../../../ui/button/app-button.component';
@@ -14,11 +14,14 @@ import {
   checkIndicatorUncheckedClass,
 } from '../../../ui/checkbox/check-indicator.styles';
 
+export type FilterRailValueState = 'any' | 'must' | 'not';
+
 export interface FilterRailValue {
   value: string;
   label: string;
   count: number | null;
   selected: boolean;
+  state?: FilterRailValueState | null;
 }
 
 export interface FilterRailGroup {
@@ -41,7 +44,7 @@ const COLLAPSED_VALUE_COUNT = 8;
   selector: 'app-browse-filter-rail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, TranslocoPipe, AppButtonComponent, AppInputComponent, AppTagComponent, LucideCheck, LucideChevronDown, LucideSearch, LucideX],
+  imports: [NgTemplateOutlet, TranslocoPipe, AppButtonComponent, AppInputComponent, AppTagComponent, LucideCheck, LucideChevronDown, LucideMinus, LucideSearch, LucideX],
   host: {class: 'flex flex-col gap-1 text-[13px] [overflow-anchor:none] pointer-coarse:text-sm'},
   template: `
     @for (group of groups(); track group.key) {
@@ -54,9 +57,19 @@ const COLLAPSED_VALUE_COUNT = 8;
             (click)="toggleOpen(group.key)">
             <h3 class="m-0 text-xs font-semibold text-text-muted group-hover/ghead:text-text pointer-coarse:text-sm">{{ group.label }}</h3>
             @if (!isOpen(group) && selectedCount(group) > 0) {
-              <app-tag color="primary" size="sm" styleClass="min-w-4 justify-center px-1! py-px! text-[10px]! tabular-nums">
-                {{ selectedCount(group) }}
-              </app-tag>
+              @if (stateCounts(group); as counts) {
+                <app-tag color="primary" size="sm" styleClass="min-w-4 justify-center px-1! py-px! text-[10px]! tabular-nums">
+                  @if (counts.must > 0 || counts.not > 0) {
+                    <span [class.opacity-45]="counts.any === 0">{{ counts.any }}</span>
+                    <span class="opacity-45">·</span>
+                    <span [class.opacity-45]="counts.must === 0">{{ counts.must }}</span>
+                    <span class="opacity-45">·</span>
+                    <span [class]="counts.not > 0 ? 'text-danger' : 'opacity-45'">{{ counts.not }}</span>
+                  } @else {
+                    {{ counts.any }}
+                  }
+                </app-tag>
+              }
             }
             <svg
               lucideChevronDown
@@ -138,7 +151,9 @@ const COLLAPSED_VALUE_COUNT = 8;
         [attr.aria-pressed]="item.selected"
         (click)="toggleValue.emit({key: group.key, value: item.value, selected: !item.selected, origin: 'row'})">
         <span [class]="boxClass(item)" aria-hidden="true">
-          @if (item.selected) {
+          @if (item.state === 'not') {
+            <svg lucideMinus [class]="checkIconClass" aria-hidden="true"></svg>
+          } @else if (item.selected) {
             <svg lucideCheck [class]="checkIconClass" aria-hidden="true"></svg>
           }
         </span>
@@ -200,6 +215,20 @@ export class BrowseFilterRailComponent {
 
   protected selectedCount(group: FilterRailGroup): number {
     return group.values.reduce((total, item) => total + (item.selected ? 1 : 0), 0);
+  }
+
+  protected stateCounts(group: FilterRailGroup): {any: number; must: number; not: number} {
+    const counts = {any: 0, must: 0, not: 0};
+    for (const item of group.values) {
+      if (item.state === 'must') {
+        counts.must++;
+      } else if (item.state === 'not') {
+        counts.not++;
+      } else if (item.selected) {
+        counts.any++;
+      }
+    }
+    return counts;
   }
 
   protected groupBodyClass(group: FilterRailGroup): string {
@@ -315,14 +344,18 @@ export class BrowseFilterRailComponent {
   protected labelClass(item: FilterRailValue): string {
     return cn(
       'min-w-0 flex-1 truncate',
-      item.selected && 'font-[550] text-text',
+      item.state === 'must'
+        ? 'font-[550] text-primary'
+        : item.selected && 'font-[550] text-text',
     );
   }
 
   protected rowClass(item: FilterRailValue): string {
     return cn(
       'group/frow -mx-1.5 flex min-h-7 w-[calc(100%+0.75rem)] cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-text-secondary pointer-coarse:min-h-11 pointer-coarse:gap-2.5 pointer-coarse:px-2',
-      'hover:bg-surface-hover hover:text-text',
+      item.state === 'must'
+        ? 'bg-active-surface text-text'
+        : 'hover:bg-surface-hover hover:text-text',
       this.isZero(item) && 'opacity-45',
     );
   }
@@ -330,7 +363,11 @@ export class BrowseFilterRailComponent {
   protected boxClass(item: FilterRailValue): string {
     return cn(
       checkIndicatorBaseClass,
-      item.selected ? checkIndicatorCheckedClass : checkIndicatorUncheckedClass,
+      item.state === 'not'
+        ? 'border-transparent bg-danger text-white'
+        : item.selected
+          ? checkIndicatorCheckedClass
+          : checkIndicatorUncheckedClass,
       !this.alwaysShowBoxes() && (item.selected ? 'opacity-100' : 'opacity-0 group-hover/frow:opacity-100'),
     );
   }

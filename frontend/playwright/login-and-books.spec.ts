@@ -82,14 +82,16 @@ test.describe('login and book browser smoke', () => {
     await installLoginAndBooksRoutes(page, createLoginAndBooksScenario());
 
     await page.goto(
-      '/all-books?sort=-title&query=Mock&facet=genre%3AFantasy&facet=tag%3AOwned'
+      '/all-books?sort=-title&query=Mock&facet=genre%3AFantasy&facet_must=tag%3AOwned&facet_not=read_status%3AREAD'
     );
     await expect(page.locator('app-book-card').first()).toBeVisible();
 
     const initial = pageRequests.find(url => !url.searchParams.has('cursor'));
     expect(initial?.searchParams.get('sort')).toBe('-title');
     expect(initial?.searchParams.get('query')).toBe('Mock');
-    expect(initial?.searchParams.getAll('facet')).toEqual(['genre:Fantasy', 'tag:Owned']);
+    expect(initial?.searchParams.getAll('facet')).toEqual(['genre:Fantasy']);
+    expect(initial?.searchParams.getAll('facet_must')).toEqual(['tag:Owned']);
+    expect(initial?.searchParams.getAll('facet_not')).toEqual(['read_status:READ']);
   });
 
   test('keeps a backend-advertised random sort one-way', async ({page}) => {

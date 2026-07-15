@@ -103,6 +103,37 @@ describe('book query response decoder', () => {
     })).toThrow(/facets\.facets\[0\]\.links\[0\]\.properties\.numberOfItems/);
   });
 
+  it('decodes plain, required, excluded, and unselected facet states', () => {
+    const facetLink = (value: string, rel: string | string[], selection?: 'must' | 'not') => ({
+      rel,
+      href: `/api/v1/books/page?facet=genre:${value}`,
+      type: 'application/json',
+      title: value,
+      value,
+      ...(selection ? {properties: {selection}} : {}),
+    });
+
+    const [group] = decodeBookFacetGroups({
+      links: [],
+      facets: [{
+        metadata: {rel: 'facet', key: 'genre', title: 'Genre'},
+        links: [
+          facetLink('Fantasy', ['self', 'facet']),
+          facetLink('Gothic', ['self', 'facet'], 'must'),
+          facetLink('Horror', ['self', 'facet'], 'not'),
+          facetLink('Drama', 'facet'),
+        ],
+      }],
+    });
+
+    expect(group.values.map(value => [value.value, value.state])).toEqual([
+      ['Fantasy', 'any'],
+      ['Gothic', 'must'],
+      ['Horror', 'not'],
+      ['Drama', null],
+    ]);
+  });
+
   it('rejects duplicate book IDs in an ID list', () => {
     expect(() => decodeBookIds([3, 3])).toThrow(/ids\[1\]/);
   });

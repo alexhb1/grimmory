@@ -24,8 +24,11 @@ import {BookQueryService} from './book-query.service';
 
 const PARAMS: BookPageParams = {
   query: 'dune',
-  facets: {genre: ['Science Fiction']},
-  facetLogic: 'or',
+  facets: {
+    any: {genre: ['Science Fiction']},
+    must: {},
+    not: {},
+  },
   sort: [{key: 'title', direction: 'asc'}],
   size: 20,
 };
@@ -103,16 +106,17 @@ describe('BookQueryService', () => {
     });
   });
 
-  it('sends every selected facet value as a repeated facet parameter', async () => {
+  it('sends all three facet selection buckets', async () => {
     const resultPromise = queryClient.fetchQuery(service.page({
       ...PARAMS,
       facets: {
-        genre: ['Science Fiction'],
-        language: ['English'],
+        any: {genre: ['Science Fiction']},
+        must: {language: ['English']},
+        not: {tag: ['Abandoned']},
       },
     }));
     const request = http.expectOne(
-      `${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&facet=language:English&sort=title&size=20`,
+      `${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&facet_must=language:English&facet_not=tag:Abandoned&sort=title&size=20`,
     );
     request.flush(page([1]));
 
@@ -141,7 +145,7 @@ describe('BookQueryService', () => {
       rel: 'facet',
       key: 'genre',
       title: 'Genre',
-      values: [{value: 'Fantasy', title: 'Fantasy', count: 4, selected: true}],
+      values: [{value: 'Fantasy', title: 'Fantasy', count: 4, state: 'any'}],
     }]);
   });
 
@@ -157,7 +161,11 @@ describe('BookQueryService', () => {
     const collection = service.collection({
       ...PARAMS,
       query: '  dune  ',
-      facets: {genre: ['Science Fiction', 'Science Fiction']},
+      facets: {
+        any: {genre: ['Science Fiction', 'Science Fiction']},
+        must: {},
+        not: {},
+      },
     });
     const equivalent = service.collection(PARAMS);
 

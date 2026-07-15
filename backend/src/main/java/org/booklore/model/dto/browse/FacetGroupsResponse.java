@@ -23,6 +23,6 @@ public record FacetGroupsResponse(List<Link> links, List<FacetGroup> facets) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Properties(Long numberOfItems) {
+    public record Properties(Long numberOfItems, String selection) {
     }
 }

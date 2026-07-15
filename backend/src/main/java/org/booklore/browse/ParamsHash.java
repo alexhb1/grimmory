@@ -17,24 +17,35 @@ public final class ParamsHash {
     private ParamsHash() {
     }
 
-    public static String compute(String query, Map<String, List<String>> facets, FacetLogic logic) {
+    public static String compute(String query, FacetSelection facets, FacetLogic logic) {
         StringBuilder canonical = new StringBuilder();
         appendField(canonical, query == null ? "" : query.trim());
         appendField(canonical, (logic == null ? FacetLogic.AND : logic).name());
-        if (facets != null) {
-            List<String> keys = new ArrayList<>(facets.keySet());
-            keys.sort(String::compareTo);
-            for (String key : keys) {
-                appendField(canonical, key);
-                List<String> values = new ArrayList<>(facets.get(key));
-                values.sort(String::compareTo);
-                appendField(canonical, Integer.toString(values.size()));
-                for (String value : values) {
-                    appendField(canonical, value);
-                }
-            }
+        FacetSelection selection = facets == null ? FacetSelection.empty() : facets;
+        appendBucket(canonical, selection.any());
+        if (!selection.must().isEmpty()) {
+            appendField(canonical, "facet_must");
+            appendBucket(canonical, selection.must());
+        }
+        if (!selection.not().isEmpty()) {
+            appendField(canonical, "facet_not");
+            appendBucket(canonical, selection.not());
         }
         return hash(canonical.toString());
+    }
+
+    private static void appendBucket(StringBuilder canonical, Map<String, List<String>> bucket) {
+        List<String> keys = new ArrayList<>(bucket.keySet());
+        keys.sort(String::compareTo);
+        for (String key : keys) {
+            appendField(canonical, key);
+            List<String> values = new ArrayList<>(bucket.get(key));
+            values.sort(String::compareTo);
+            appendField(canonical, Integer.toString(values.size()));
+            for (String value : values) {
+                appendField(canonical, value);
+            }
+        }
     }
 
     private static void appendField(StringBuilder sb, String value) {

@@ -36,11 +36,11 @@ class RelSerializerTest {
 
     @Test
     void facetLinkFollowsTheSameConvention() {
-        FacetLink inactive = new FacetLink(List.of("facet"), "/x", Link.JSON_TYPE, "Horror", "Horror", new Properties(2L));
+        FacetLink inactive = new FacetLink(List.of("facet"), "/x", Link.JSON_TYPE, "Horror", "Horror", new Properties(2L, null));
         assertThat(mapper.writeValueAsString(inactive))
                 .isEqualTo("{\"rel\":\"facet\",\"href\":\"/x\",\"type\":\"application/json\",\"title\":\"Horror\",\"value\":\"Horror\",\"properties\":{\"numberOfItems\":2}}");
 
-        FacetLink active = new FacetLink(List.of("self", "facet"), "/x", Link.JSON_TYPE, "Horror", "Horror", new Properties(2L));
+        FacetLink active = new FacetLink(List.of("self", "facet"), "/x", Link.JSON_TYPE, "Horror", "Horror", new Properties(2L, null));
         assertThat(mapper.writeValueAsString(active))
                 .isEqualTo("{\"rel\":[\"self\",\"facet\"],\"href\":\"/x\",\"type\":\"application/json\",\"title\":\"Horror\",\"value\":\"Horror\",\"properties\":{\"numberOfItems\":2}}");
     }

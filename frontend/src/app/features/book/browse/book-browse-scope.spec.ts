@@ -25,24 +25,31 @@ describe('bookBrowseScope', () => {
 
 describe('scopedFacetSelection', () => {
   it('passes selections through unchanged without a scope', () => {
-    const selection = {genre: ['Fantasy']};
+    const selection = {any: {genre: ['Fantasy']}, must: {}, not: {}};
     expect(scopedFacetSelection(selection, null)).toBe(selection);
   });
 
   it('adds the scope facet and gives the scope sole ownership of its key', () => {
     const scope = bookBrowseScope(convertToParamMap({libraryId: '3'}), {});
-    const selection = {genre: ['Fantasy'], library: ['99']};
+    const selection = {
+      any: {genre: ['Fantasy'], library: ['99']},
+      must: {library: ['42']},
+      not: {library: ['7'], tag: ['Abandoned']},
+    };
 
     expect(scopedFacetSelection(selection, scope)).toEqual({
-      genre: ['Fantasy'],
-      library: ['3'],
+      any: {genre: ['Fantasy'], library: ['3']},
+      must: {},
+      not: {tag: ['Abandoned']},
     });
   });
 
   it('scopes an empty selection to exactly the scope facet', () => {
     const scope = bookBrowseScope(convertToParamMap({}), {browseScope: 'unshelved'});
     expect(scopedFacetSelection(EMPTY_FACET_SELECTION, scope)).toEqual({
-      shelf_status: ['unshelved'],
+      any: {shelf_status: ['unshelved']},
+      must: {},
+      not: {},
     });
   });
 });

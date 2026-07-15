@@ -76,7 +76,7 @@ export class ViewPreferencesComponent implements OnInit {
 
   private readonly bookQuery = inject(BookQueryService);
   private readonly sortVocabularyQuery = injectQuery(() =>
-    this.bookQuery.facets({facets: EMPTY_FACET_SELECTION, facetLogic: 'or'}));
+    this.bookQuery.facets({facets: EMPTY_FACET_SELECTION}));
   readonly editorSortOptions = computed(() => {
     const sortGroup = this.sortVocabularyQuery.data()?.find(group => group.rel === 'sort');
     const seen = new Set<string>();

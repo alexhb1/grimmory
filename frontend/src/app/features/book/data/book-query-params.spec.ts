@@ -18,35 +18,52 @@ describe('book query parameters', () => {
     const first = normalizeBookPageParams({
       query: '  dune  ',
       facets: {
-        language: [' French ', 'English'],
-        genre: [' Science Fiction ', 'Fantasy', 'Science Fiction', ' '],
+        any: {
+          language: [' French ', 'English'],
+          genre: [' Science Fiction ', 'Fantasy', 'Science Fiction', ' '],
+        },
+        must: {
+          library: [' Secondary ', 'Main', 'Main'],
+        },
+        not: {
+          tag: ['Spoiler', ' Abandoned ', 'Spoiler'],
+        },
       },
-      facetLogic: 'or',
       sort: [{key: 'title', direction: 'asc'}],
       size: 40,
     });
     const second = normalizeBookPageParams({
       query: 'dune',
       facets: {
-        genre: ['Fantasy', 'Science Fiction'],
-        language: ['English', 'French'],
+        any: {
+          genre: ['Fantasy', 'Science Fiction'],
+          language: ['English', 'French'],
+        },
+        must: {
+          library: ['Main', 'Secondary'],
+        },
+        not: {
+          tag: ['Abandoned', 'Spoiler'],
+        },
       },
-      facetLogic: 'or',
       sort: [{key: 'title', direction: 'asc'}],
       size: 40,
     });
 
     expect(first).toEqual(second);
     expect(first.facets).toEqual({
-      genre: ['Fantasy', 'Science Fiction'],
-      language: ['English', 'French'],
+      any: {
+        genre: ['Fantasy', 'Science Fiction'],
+        language: ['English', 'French'],
+      },
+      must: {library: ['Main', 'Secondary']},
+      not: {tag: ['Abandoned', 'Spoiler']},
     });
   });
 
   it('rejects an unsupported outbound facet key received at runtime', () => {
     const params = {
-      facets: {narrator: ['A Narrator']},
-      facetLogic: 'or',
+      facets: {any: {narrator: ['A Narrator']}, must: {}, not: {}},
       sort: [],
       size: 20,
     } as unknown as BookPageParams;
@@ -56,8 +73,7 @@ describe('book query parameters', () => {
 
   it('rejects an unsupported outbound sort key received at runtime', () => {
     const params = {
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [{key: ' futureScore ', direction: 'desc'}],
       size: 20,
     } as unknown as BookPageParams;
@@ -67,8 +83,11 @@ describe('book query parameters', () => {
 
   it('rejects a prototype-named facet key as unsupported', () => {
     const params = {
-      facets: Object.fromEntries([['__proto__', ['READ']]]),
-      facetLogic: 'or',
+      facets: {
+        any: Object.fromEntries([['__proto__', ['READ']]]),
+        must: {},
+        not: {},
+      },
       sort: [],
       size: 20,
     } as unknown as BookPageParams;
@@ -78,8 +97,7 @@ describe('book query parameters', () => {
 
   it('rejects an empty sort key', () => {
     const params = {
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [{key: '  ', direction: 'asc'}],
       size: 20,
     } as unknown as BookPageParams;
@@ -87,10 +105,9 @@ describe('book query parameters', () => {
     expect(() => normalizeBookPageParams(params)).toThrow('Book query sort key must not be empty.');
   });
 
-  it('rejects a blank facet key', () => {
+  it.each(['any', 'must', 'not'] as const)('rejects a blank facet key in the %s bucket', bucket => {
     const params: BookPageParams = {
-      facets: {'  ': ['value']} as unknown as BookPageParams['facets'],
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}, [bucket]: {'  ': ['value']}},
       sort: [],
       size: 20,
     };
@@ -100,8 +117,7 @@ describe('book query parameters', () => {
 
   it('uses the browser default title sort when no sort is provided', () => {
     const normalized = normalizeBookQueryParams({
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [],
     });
 
@@ -110,8 +126,7 @@ describe('book query parameters', () => {
 
   it.each([0, 101, 1.5])('rejects invalid page size %s', size => {
     expect(() => normalizeBookPageParams({
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [],
       size,
     })).toThrow('Book query page size must be between 1 and 100.');
@@ -119,8 +134,7 @@ describe('book query parameters', () => {
 
   it('rejects an unsupported sort direction received at runtime', () => {
     const params = {
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [{key: 'title', direction: 'sideways'}],
       size: 20,
     } as unknown as BookPageParams;
@@ -128,21 +142,10 @@ describe('book query parameters', () => {
     expect(() => normalizeBookPageParams(params)).toThrow('Unsupported book query sort direction: sideways');
   });
 
-  it.each(['and', 'or', 'not'] as const)('preserves explicit %s facet logic', facetLogic => {
-    const normalized = normalizeBookQueryParams({facets: {}, facetLogic, sort: []});
+  it('uses or logic for the plain facet bucket', () => {
+    const normalized = normalizeBookQueryParams({facets: {any: {}, must: {}, not: {}}, sort: []});
 
-    expect(normalized.facetLogic).toBe(facetLogic);
-    expect(toIdsHttpParams(normalized).get('facet_logic')).toBe(facetLogic);
-  });
-
-  it('rejects unsupported facet logic received at runtime', () => {
-    const params = {
-      facets: {},
-      facetLogic: 'xor',
-      sort: [],
-    } as unknown as BookPageParams;
-
-    expect(() => normalizeBookQueryParams(params)).toThrow('Unsupported book query facet logic: xor');
+    expect(toIdsHttpParams(normalized).get('facet_logic')).toBe('or');
   });
 
   it('normalizes batch IDs without promising response order', () => {
@@ -168,10 +171,17 @@ describe('book query parameters', () => {
     const params = toPageHttpParams(normalizeBookPageParams({
       query: 'dune',
       facets: {
-        genre: ['Science Fiction'],
-        shelf: ['magic:12'],
+        any: {
+          genre: ['Science Fiction'],
+          shelf: ['magic:12'],
+        },
+        must: {
+          language: ['English'],
+        },
+        not: {
+          tag: ['Abandoned'],
+        },
       },
-      facetLogic: 'not',
       sort: [
         {key: 'seriesName', direction: 'asc'},
         {key: 'seriesNumber', direction: 'desc'},
@@ -181,7 +191,9 @@ describe('book query parameters', () => {
 
     expect(params.get('query')).toBe('dune');
     expect(params.getAll('facet')).toEqual(['genre:Science Fiction', 'shelf:magic:12']);
-    expect(params.get('facet_logic')).toBe('not');
+    expect(params.get('facet_logic')).toBe('or');
+    expect(params.getAll('facet_must')).toEqual(['language:English']);
+    expect(params.getAll('facet_not')).toEqual(['tag:Abandoned']);
     expect(params.get('sort')).toBe('seriesName,-seriesNumber');
     expect(params.get('size')).toBe('50');
     expect(params.has('page')).toBe(false);
@@ -191,30 +203,33 @@ describe('book query parameters', () => {
   it('excludes sort and size from facet requests', () => {
     const params = toCollectionHttpParams(normalizeBookCollectionFilterParams({
       query: 'dune',
-      facets: {genre: ['Fantasy']},
-      facetLogic: 'and',
+      facets: {
+        any: {genre: ['Fantasy']},
+        must: {},
+        not: {},
+      },
     }));
 
     expect(params.get('query')).toBe('dune');
     expect(params.getAll('facet')).toEqual(['genre:Fantasy']);
-    expect(params.get('facet_logic')).toBe('and');
+    expect(params.get('facet_logic')).toBe('or');
     expect(params.has('sort')).toBe(false);
     expect(params.has('size')).toBe(false);
   });
 
-  it('does not emit facet parameters for an empty selection', () => {
+  it('does not emit facet parameters for empty buckets', () => {
     const params = toCollectionHttpParams(normalizeBookCollectionFilterParams({
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
     }));
 
     expect(params.has('facet')).toBe(false);
+    expect(params.has('facet_must')).toBe(false);
+    expect(params.has('facet_not')).toBe(false);
   });
 
   it('includes sort but excludes size from ID requests', () => {
     const params = toIdsHttpParams(normalizeBookQueryParams({
-      facets: {},
-      facetLogic: 'or',
+      facets: {any: {}, must: {}, not: {}},
       sort: [{key: 'title', direction: 'desc'}],
     }));
 
