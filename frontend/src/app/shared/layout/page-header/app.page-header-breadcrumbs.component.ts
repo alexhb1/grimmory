@@ -93,6 +93,7 @@ const COLLAPSE_AFTER_ITEMS = 4;
           class="inline-flex min-h-6 min-w-0 max-w-40 items-center rounded px-1 text-inherit transition-colors duration-150 hover:bg-text/8 hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:max-w-72"
           [ngClass]="mobile() ? touchTargetClass : ''"
           [routerLink]="routeCommands(breadcrumb)"
+          [queryParamsHandling]="breadcrumb.queryParamsHandling"
         >
           <span class="truncate">{{ breadcrumb.label }}</span>
         </a>
@@ -134,7 +135,9 @@ export class AppPageHeaderBreadcrumbsComponent {
 
   navigate(breadcrumb: PageHeaderBreadcrumb): void {
     if (breadcrumb.commands?.length) {
-      this.router.navigate([...breadcrumb.commands]);
+      this.router.navigate([...breadcrumb.commands], {
+        queryParamsHandling: breadcrumb.queryParamsHandling,
+      });
     }
   }
 
@@ -144,8 +147,8 @@ export class AppPageHeaderBreadcrumbsComponent {
 
   toggleHiddenBreadcrumbs(event: MouseEvent): void {
     const menu = this.hiddenBreadcrumbMenu();
-    if (!menu) return;
-    const origin = event.currentTarget as HTMLElement;
+    const origin = event.currentTarget as HTMLElement | null;
+    if (!menu || !origin) return;
     if (menu.openerElement() === origin) {
       menu.close();
     } else {

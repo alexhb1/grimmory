@@ -10,6 +10,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { type FormValueControl } from '@angular/forms/signals';
+import { LucideDynamicIcon, type LucideIconData } from '@lucide/angular';
 import { cn } from '../cn';
 import { APP_FIELD } from '../field/app-field.context';
 import {
@@ -24,6 +25,7 @@ import {
 export interface RadioOption<T> {
   readonly value: T;
   readonly label: string;
+  readonly icon?: LucideIconData;
   readonly description?: string;
   readonly disabled?: boolean;
 }
@@ -34,6 +36,7 @@ let nextGroupId = 0;
 @Component({
   selector: 'app-radio-group',
   standalone: true,
+  imports: [LucideDynamicIcon],
   host: { class: 'block' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -60,6 +63,9 @@ let nextGroupId = 0;
             (change)="onSelect(option)"
             (blur)="touched.set(true)" />
           @if (variant() === 'segmented') {
+            @if (option.icon; as optionIcon) {
+              <svg [lucideIcon]="optionIcon" [class]="segmentIconClass" aria-hidden="true"></svg>
+            }
             <span class="truncate leading-none">{{ option.label }}</span>
           } @else {
             <span [class]="dotClass()" aria-hidden="true"></span>
@@ -125,6 +131,7 @@ export class AppRadioGroupComponent<T> implements FormValueControl<T | null> {
       this.variant() === 'card' && 'peer-checked:text-primary-text',
     ),
   );
+  protected readonly segmentIconClass = 'size-[1em] shrink-0';
 
   protected isSelected(option: RadioOption<T>): boolean {
     const value = this.value();
