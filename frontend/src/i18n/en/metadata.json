@@ -304,7 +304,7 @@
     "playBtn": "Play",
     "continueReadingBtn": "Continue Reading",
     "continueBtn": "Continue",
-    "fetchMetadataBtn": "Fetch Metadata",
+    "fetchMetadataBtn": "Fetch metadata",
     "fetchingBtn": "Fetching...",
     "fetchMetadataTooltip": "Quickly refresh metadata using your default fetch settings",
     "goToPreviousBook": "Go to Previous Book",

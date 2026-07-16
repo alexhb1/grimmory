@@ -36,6 +36,7 @@ export class AppComponent implements OnInit, OnDestroy {
   offline = signal(false);
   private subscriptions: Subscription[] = [];
   private subscriptionsInitialized = false;
+  private hasConnectedWebSocket = false;
 
   private appThemeService = inject(AppThemeService); // DO NOT REMOVE: Used to initialize app theme on startup
   private authInit = inject(AuthInitializationService);
@@ -109,18 +110,17 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private setupWebSocketSubscriptions(): void {
-    let hasConnected = false;
     this.subscriptions.push(
       this.rxStompService.connectionState$.subscribe(state => {
         if (state !== RxStompState.OPEN) {
           return;
         }
-        if (hasConnected) {
+        if (this.hasConnectedWebSocket) {
           this.bookService.handleReconnect();
           this.authorService.invalidateAuthors();
-          return;
+        } else {
+          this.hasConnectedWebSocket = true;
         }
-        hasConnected = true;
       })
     );
     this.subscriptions.push(

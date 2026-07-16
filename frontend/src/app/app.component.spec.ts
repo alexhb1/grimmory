@@ -33,7 +33,6 @@ describe("AppComponent", () => {
   let fixture: ComponentFixture<AppComponent>;
   let component: AppComponent;
   let topics: Map<string, Subject<StompMessage>>;
-  let connectionState: BehaviorSubject<RxStompState>;
   let rxStompService: {
     watch: ReturnType<typeof vi.fn>;
     connectionState$: BehaviorSubject<RxStompState>;
@@ -83,12 +82,11 @@ describe("AppComponent", () => {
     auth = DEFAULT_AUTH
   ): void {
     topics = new Map();
-    connectionState = new BehaviorSubject<RxStompState>(RxStompState.CLOSED);
     rxStompService = {
       watch: vi.fn((topic: string) =>
         (topics.get(topic) ?? createTopicStream(topic)).asObservable(),
       ),
-      connectionState$: connectionState,
+      connectionState$: new BehaviorSubject<RxStompState>(RxStompState.CLOSED),
     };
     bookService = {
       handleNewlyCreatedBook: vi.fn(),
@@ -218,7 +216,13 @@ describe("AppComponent", () => {
       ?.next({ body: JSON.stringify({ pendingCount: 1, totalCount: 2 }) });
     topics
       .get("/user/queue/task-progress")
-      ?.next({ body: JSON.stringify({ taskId: "task-2" }) });
+      ?.next({ body: JSON.stringify({
+        taskId: "task-2",
+        taskType: "UPDATE_BOOK_RECOMMENDATIONS",
+        message: "Done",
+        progress: 100,
+        taskStatus: "COMPLETED",
+      }) });
 
     expect(bookService.handleBookUpdate).toHaveBeenNthCalledWith(
       1,
@@ -247,25 +251,15 @@ describe("AppComponent", () => {
       pendingCount: 1,
       totalCount: 2,
     });
-    expect(taskService.handleTaskProgress).toHaveBeenCalledWith({
+    const taskProgress = {
       taskId: "task-2",
-    });
-    expect(bookService.handleTaskProgress).toHaveBeenCalledWith({
-      taskId: "task-2",
-    });
-  });
-
-  it("reconciles book caches after a websocket reconnect", () => {
-    configureComponent();
-
-    connectionState.next(RxStompState.OPEN);
-    expect(bookService.handleReconnect).not.toHaveBeenCalled();
-
-    connectionState.next(RxStompState.CLOSED);
-    connectionState.next(RxStompState.OPEN);
-
-    expect(bookService.handleReconnect).toHaveBeenCalledOnce();
-    expect(authorService.invalidateAuthors).toHaveBeenCalledOnce();
+      taskType: "UPDATE_BOOK_RECOMMENDATIONS",
+      message: "Done",
+      progress: 100,
+      taskStatus: "COMPLETED",
+    };
+    expect(taskService.handleTaskProgress).toHaveBeenCalledWith(taskProgress);
+    expect(bookService.handleTaskProgress).toHaveBeenCalledWith(taskProgress);
   });
 
   it("forces logout when the session is revoked", () => {
@@ -274,6 +268,18 @@ describe("AppComponent", () => {
     topics.get("/user/queue/session-revoked")?.next({ body: "" });
 
     expect(authService.forceLogout).toHaveBeenCalledWith("session_revoked");
+  });
+
+  it("does not reset caches on first connection but does after reconnect", () => {
+    configureComponent();
+
+    rxStompService.connectionState$.next(RxStompState.OPEN);
+    expect(bookService.handleReconnect).not.toHaveBeenCalled();
+
+    rxStompService.connectionState$.next(RxStompState.CLOSED);
+    rxStompService.connectionState$.next(RxStompState.OPEN);
+    expect(bookService.handleReconnect).toHaveBeenCalledOnce();
+    expect(authorService.invalidateAuthors).toHaveBeenCalledOnce();
   });
 
   it("unsubscribes when destroyed", () => {
