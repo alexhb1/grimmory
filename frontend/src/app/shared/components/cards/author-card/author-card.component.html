@@ -1,0 +1,60 @@
+<a
+  [routerLink]="['/author', authorId()]"
+  [class]="rootClass"
+  (click)="onCardClick($event)"
+  (keydown.space)="onCardSpace($event)"
+  (keydown.shift.space)="onCardSpace($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <div class="relative mx-auto w-[78%]" data-testid="circle-wrap">
+    <div [class]="circleClass()" data-testid="circle">
+      @if (showPhoto()) {
+        <img
+          class="h-full w-full object-cover"
+          [src]="photoUrl()"
+          [alt]="'cards.aria.coverAlt' | transloco: {title: name()}"
+          decoding="async"
+          (error)="onImgError()"
+        />
+      } @else {
+        <div
+          class="flex h-full w-full items-center justify-center bg-surface-hover text-[26px] font-[600] tracking-[0.03em] text-text-muted"
+          data-testid="monogram"
+        >
+          {{ initials() }}
+        </div>
+      }
+    </div>
+
+    @if (selectable()) {
+      <button
+        type="button"
+        [class]="checkboxClass()"
+        [attr.aria-pressed]="selected()"
+        [attr.aria-label]="'cards.aria.selectAuthorToggle' | transloco: {name: name()}"
+        (click)="onCheckboxClick($event)"
+      >
+        <svg lucideCheck [class]="checkIconClass()"></svg>
+      </button>
+    }
+  </div>
+
+  <div class="px-1 pt-2" data-testid="meta">
+    <div class="relative inline-flex max-w-[calc(100%-24px)] items-center">
+      <span [class]="metaTitleClass">{{ name() }}</span>
+      @if (hasMenu()) {
+        <button
+          type="button"
+          [class]="kebabClass()"
+          [attr.aria-label]="'cards.aria.authorMenu' | transloco: {name: name()}"
+          (click)="onMenu($event)"
+        >
+          <svg lucideEllipsisVertical class="size-3.5"></svg>
+        </button>
+      }
+    </div>
+    <div [class]="metaMutedClass" data-testid="count">{{
+      (bookCount() === 1 ? 'cards.author.book' : 'cards.author.books') | transloco: {count: bookCount()}
+    }}</div>
+  </div>
+</a>

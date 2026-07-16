@@ -1,0 +1,114 @@
+<a
+  [routerLink]="selectionActive() ? null : ['/book', book().id]"
+  [attr.tabindex]="selectionActive() ? 0 : null"
+  [class]="rootClass()"
+  (click)="onCardClick($event)"
+  (keydown.space)="onCardSpace($event)"
+  (keydown.shift.space)="onCardSpace($event)"
+  (contextmenu)="onContextMenu($event)"
+>
+  <div [class]="slotClass()" data-testid="slot">
+    <div [class]="coverClass()" data-testid="cover">
+      <app-cover
+        class="absolute inset-0 h-full w-full"
+        [src]="coverSrc()"
+        [title]="title()"
+        [authors]="authors()"
+        [fit]="coverFit()"
+        [alt]="'cards.aria.coverAlt' | transloco: {title: title()}"
+      />
+
+      @if (badgeVisible()) {
+        <span [class]="badgeClass()" data-testid="badge">#{{ seriesNumber() }}</span>
+      }
+
+      @if (audiobookHero()) {
+        <span
+          class="absolute right-2 top-2 z-10 flex size-5.5 items-center justify-center rounded-md bg-black/55 text-white"
+          data-testid="hero-glyph"
+        >
+          <svg lucideHeadphones class="size-3"></svg>
+        </span>
+      }
+
+      @if (selectable()) {
+        <button
+          type="button"
+          [class]="checkboxClass()"
+          [attr.aria-pressed]="selected()"
+          [attr.aria-label]="'cards.aria.selectToggle' | transloco: {title: title()}"
+          (click)="onCheckboxClick($event)"
+        >
+          <svg lucideCheck [class]="checkIconClass()"></svg>
+        </button>
+      }
+
+      @if (showProgress() && progressPercentage() !== null) {
+        <span [class]="progressTrackClass" [appTooltip]="progressTooltip()" data-testid="progress">
+          <i class="block h-full rounded-r-sm bg-primary" [style.width.%]="progressPercentage()"></i>
+        </span>
+      }
+
+      @if (overlays() && actionMode() === 'hover' && !selectionActive()) {
+        <div [class]="overlayClass()" data-testid="overlay">
+          <button
+            #actionButton
+            type="button"
+            [class]="translucentAction + ' relative h-7 min-w-0 flex-1 overflow-hidden px-1.5'"
+            [attr.aria-label]="actionText()"
+            (click)="onAction($event)"
+          >
+            @if (isAudiobook()) {
+              <svg lucidePlay class="size-3.5 shrink-0"></svg>
+            } @else if (isContinueAction()) {
+              <svg lucideArrowRight class="size-3.5 shrink-0"></svg>
+            } @else {
+              <svg lucideBookOpen class="size-3.5 shrink-0"></svg>
+            }
+            <span #actionLabel [class]="actionLabelClass()" aria-hidden="true">{{ actionText() }}</span>
+          </button>
+          <button
+            type="button"
+            [class]="translucentAction + ' size-7 flex-none'"
+            [attr.aria-label]="'cards.aria.bookMenu' | transloco: {title: title()}"
+            (click)="onMenu($event)"
+          >
+            <svg lucideEllipsisVertical class="size-3.5"></svg>
+          </button>
+        </div>
+      }
+
+      @if (actionMode() === 'always' && !selectionActive()) {
+        <button
+          #actionButton
+          type="button"
+          [class]="translucentAction + ' absolute inset-x-2 bottom-2 z-20 h-7 overflow-hidden px-1.5'"
+          [attr.aria-label]="actionText()"
+          (click)="onAction($event)"
+        >
+          @if (isAudiobook()) {
+            <svg lucidePlay class="size-3.5 shrink-0"></svg>
+          } @else if (isContinueAction()) {
+            <svg lucideArrowRight class="size-3.5 shrink-0"></svg>
+          } @else {
+            <svg lucideBookOpen class="size-3.5 shrink-0"></svg>
+          }
+          <span #actionLabel [class]="actionLabelClass()" aria-hidden="true">{{ actionText() }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (showMeta()) {
+    <div class="px-0.5 pt-2" data-testid="meta">
+      @if (eyebrow() !== null) {
+        <div [class]="eyebrowClass()">{{ eyebrow() }}</div>
+      }
+      <div [class]="metaTitleClass">{{ title() }}</div>
+      <div [class]="metaMutedClass + ' mt-px'">{{ authorsLabel() }}</div>
+      @if (whenLine() !== null) {
+        <div [class]="metaMutedClass">{{ whenLine() }}</div>
+      }
+    </div>
+  }
+</a>

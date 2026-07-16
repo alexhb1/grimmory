@@ -1,0 +1,78 @@
+<a
+  [routerLink]="['/series', seriesName()]"
+  [class]="rootClass()"
+  (contextmenu)="onContextMenu($event)"
+>
+  <div class="flex aspect-[5/7] flex-col justify-end" data-testid="slot">
+    <div class="relative aspect-[5/7] w-full" data-testid="deck">
+      @if (!single()) {
+        @if (back2(); as book) {
+          <div [class]="backLayerBase + ' left-[12px] right-0 top-0 bottom-[12px] z-0 brightness-50 saturate-[0.7] group-hover/card:translate-x-0.5 group-hover/card:-translate-y-0.5'" data-testid="layer-b2">
+            <app-cover
+              class="absolute inset-0 h-full w-full"
+              [src]="coverSrc(book)"
+              [title]="coverTitle(book)"
+              [authors]="coverAuthors(book)"
+            />
+          </div>
+        }
+        @if (back1(); as book) {
+          <div [class]="backLayerBase + ' inset-[6px] z-10 brightness-75 saturate-[0.85] group-hover/card:translate-x-px group-hover/card:-translate-y-px'" data-testid="layer-b1">
+            <app-cover
+              class="absolute inset-0 h-full w-full"
+              [src]="coverSrc(book)"
+              [title]="coverTitle(book)"
+              [authors]="coverAuthors(book)"
+            />
+          </div>
+        }
+      }
+
+      @if (front(); as book) {
+        <div
+          [class]="frontLayerClass + ' z-20 ' + (single() ? 'inset-0' : 'left-0 right-[12px] top-[12px] bottom-0')"
+          data-testid="layer-front"
+        >
+          <app-cover
+            class="absolute inset-0 h-full w-full"
+            [src]="coverSrc(book)"
+            [title]="coverTitle(book)"
+            [authors]="coverAuthors(book)"
+            [alt]="'cards.aria.coverAlt' | transloco: {title: coverTitle(book)}"
+          />
+
+          @if (showProgress()) {
+            <span [class]="progressTrackClass()" data-testid="progress">
+              <i class="block h-full rounded-r-sm bg-primary" [style.width.%]="readPercent()"></i>
+            </span>
+          }
+
+          <div [class]="overlayClass()" data-testid="overlay">
+            <button type="button" [class]="translucentAction + ' h-7 flex-1'" (click)="onAction($event)">
+              <svg lucideBookOpen class="size-3.5"></svg>
+              {{ (readCount() > 0 ? 'cards.series.continue' : 'cards.series.start') | transloco }}
+            </button>
+            @if (hasMenu()) {
+              <button
+                type="button"
+                [class]="translucentAction + ' size-7 flex-none'"
+                [attr.aria-label]="'cards.aria.seriesMenu' | transloco: {name: seriesName()}"
+                (click)="onMenu($event)"
+              >
+                <svg lucideEllipsisVertical class="size-3.5"></svg>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="px-0.5 pt-2" data-testid="meta">
+    <div [class]="metaTitleClass">{{ seriesName() }}</div>
+    <div
+      [class]="metaMutedClass + ' mt-px'"
+      data-testid="count"
+    >{{ (bookCount() === 1 ? 'cards.series.book' : 'cards.series.books') | transloco: {count: bookCount()} }}@if (readCount() > 0) {{{ 'cards.series.readSuffix' | transloco: {count: readCount()} }}}</div>
+  </div>
+</a>

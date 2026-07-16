@@ -1,0 +1,48 @@
+<app-menu [ariaLabel]="'cards.menu.cardActions' | transloco" (opened)="opened.emit()" (closed)="closed.emit()">
+  <app-menu-item [submenu]="shelfMenu.ariaMenu()">{{ 'cards.menu.addToShelf' | transloco }}</app-menu-item>
+  <app-menu-item [submenu]="markAsMenu">{{ 'cards.menu.markAs' | transloco }}</app-menu-item>
+  @if (capabilities().canEmailBook && digital()) {
+    <app-menu-item [submenu]="sendMenu">{{ 'cards.menu.send' | transloco }}</app-menu-item>
+  }
+  @if (capabilities().canDownload && digital()) {
+    <app-menu-item (selected)="download.emit()">{{ 'book.card.menu.download' | transloco }}</app-menu-item>
+  }
+  @if (capabilities().canEditMetadata) {
+    <app-menu-item [submenu]="metadataMenu">{{ 'book.card.menu.metadata' | transloco }}</app-menu-item>
+  }
+  @if (capabilities().canDeleteBook) {
+    <app-menu-separator />
+    <app-menu-item variant="destructive" (selected)="deleteRequested.emit()">{{ 'cards.menu.delete' | transloco }}</app-menu-item>
+  }
+</app-menu>
+
+<app-shelf-membership-menu
+  #shelfMenu
+  [shelves]="shelves()"
+  (toggleShelf)="onToggleShelf($event)"
+  (createShelf)="createShelf.emit()" />
+
+<app-menu #markAsMenu="ngMenu" [ariaLabel]="'cards.menu.markAs' | transloco">
+  <app-menu-radio-group [value]="readStatus()" (valueSelected)="setReadStatus.emit($event)">
+    @for (status of readStatusTargets; track status) {
+      <app-menu-radio [value]="status">{{ statusLabelKey(status) | transloco }}</app-menu-radio>
+    }
+  </app-menu-radio-group>
+</app-menu>
+
+<app-menu #sendMenu="ngMenu" [ariaLabel]="'cards.menu.send' | transloco">
+  <app-menu-item (selected)="quickSend.emit()">{{ 'book.card.menu.quickSend' | transloco }}</app-menu-item>
+  <app-menu-item (selected)="customSend.emit()">{{ 'cards.menu.customSend' | transloco }}</app-menu-item>
+</app-menu>
+
+<app-menu #metadataMenu="ngMenu" [ariaLabel]="'book.card.menu.metadata' | transloco">
+  <app-menu-item (selected)="fetchMetadata.emit()">{{ 'metadata.viewer.fetchMetadataBtn' | transloco }}</app-menu-item>
+  <app-menu-item (selected)="fetchMetadataWithOptions.emit()">{{ 'cards.menu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
+  <app-menu-item (selected)="editMetadata.emit()">{{ 'cards.menu.editMetadata' | transloco }}</app-menu-item>
+  <app-menu-separator />
+  <app-menu-checkbox
+    [checked]="book()?.metadata?.allMetadataLocked ?? false"
+    (selected)="metadataLockChange.emit($event)">
+    {{ 'cards.menu.lockMetadata' | transloco }}
+  </app-menu-checkbox>
+</app-menu>

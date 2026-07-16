@@ -2,6 +2,7 @@
   <header class="page-header flex flex-wrap items-center justify-between gap-3">
     <h1>Design System</h1>
     <div class="flex flex-wrap items-center gap-2">
+      <app-button variant="soft" size="sm" label="Cards" (clicked)="openCards()"><svg lucideLayoutGrid></svg></app-button>
       <app-button variant="soft" size="sm" label="Create library" (clicked)="openExample('library')"><svg lucideFolder></svg></app-button>
       <app-button variant="soft" size="sm" label="Device settings" (clicked)="openExample('device')"><svg lucideSmartphone></svg></app-button>
       <app-button variant="soft" size="sm" label="Everything" (clicked)="openExample('everything')"><svg lucideList></svg></app-button>

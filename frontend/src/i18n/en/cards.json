@@ -1,0 +1,39 @@
+{
+  "book": {
+    "read": "Read",
+    "continue": "Continue",
+    "play": "Play"
+  },
+  "series": {
+    "continue": "Continue",
+    "start": "Start",
+    "book": "1 book",
+    "books": "{{ count }} books",
+    "readSuffix": " · {{ count }} read"
+  },
+  "author": {
+    "book": "1 book",
+    "books": "{{ count }} books"
+  },
+  "aria": {
+    "selectToggle": "Select {{ title }}",
+    "bookMenu": "Options for {{ title }}",
+    "seriesMenu": "Options for {{ name }}",
+    "selectAuthorToggle": "Select {{ name }}",
+    "authorMenu": "Options for {{ name }}",
+    "coverAlt": "Cover of {{ title }}"
+  },
+  "menu": {
+    "cardActions": "Card actions",
+    "addToShelf": "Add to shelf",
+    "allShelves": "All shelves…",
+    "newShelf": "New shelf…",
+    "markAs": "Mark as",
+    "send": "Send",
+    "customSend": "Custom send…",
+    "fetchMetadataWithOptions": "Fetch with options…",
+    "editMetadata": "Edit metadata…",
+    "lockMetadata": "Lock metadata",
+    "delete": "Delete…"
+  }
+}

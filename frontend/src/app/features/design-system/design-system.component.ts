@@ -11,6 +11,7 @@ import {
   LucideFolder,
   LucideFolderOpen,
   LucideHeart,
+  LucideLayoutGrid,
   LucideList,
   LucidePencil,
   LucideSave,
@@ -120,6 +121,7 @@ interface ButtonExample {
     LucideZap,
     LucideChevronLeft,
     LucideHeart,
+    LucideLayoutGrid,
     LucideSave,
     LucideSettings,
     LucideEllipsisVertical,
@@ -140,6 +142,10 @@ export class DesignSystemComponent {
 
   openExample(path: string): void {
     void this.router.navigate(['/design-system', 'form', path]);
+  }
+
+  openCards(): void {
+    void this.router.navigate(['/design-system', 'cards']);
   }
 
   readonly buttonExamples: ButtonExample[] = [
