@@ -23,7 +23,7 @@ import {DatePicker} from "primeng/datepicker";
 import {Textarea} from "primeng/textarea";
 import {Select} from "primeng/select";
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
-import {BookDialogHelperService} from "../../../../book/components/book-browser/book-dialog-helper.service";
+import {BookDialogHelperService} from "../../../../book/service/book-dialog-helper.service";
 import {BookNavigationService} from '../../../../book/service/book-navigation.service';
 import {BookMetadataHostService} from '../../../../../shared/service/book-metadata-host.service';
 import {Router} from '@angular/router';

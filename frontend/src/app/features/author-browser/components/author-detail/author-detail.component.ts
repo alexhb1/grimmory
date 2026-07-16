@@ -12,7 +12,7 @@ import { AuthorService } from '../../service/author.service';
 import { AuthorDetails } from '../../model/author.model';
 import { BookService } from '../../../book/service/book.service';
 import { BookCardComponent } from '../../../book/components/book-browser/book-card/book-card.component';
-import { CoverScalePreferenceService } from '../../../book/components/book-browser/cover-scale-preference.service';
+import { CoverScalePreferenceService } from '../../../../shared/service/cover-scale-preference.service';
 import { BookCardOverlayPreferenceService } from '../../../book/components/book-browser/book-card-overlay-preference.service';
 import { UserService } from '../../../settings/user-management/user.service';
 import { AuthorMatchComponent } from '../author-match/author-match.component';

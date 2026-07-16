@@ -2,7 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {ConfirmationService, MenuItem, MessageService} from 'primeng/api';
 import {BookService} from './book.service';
 import {BookMetadataManageService} from './book-metadata-manage.service';
-import {AGE_RATING_OPTIONS, CONTENT_RATING_LABELS, readStatusLabels} from '../components/book-browser/book-filter/book-filter.config';
+import {AGE_RATING_OPTIONS, CONTENT_RATING_LABELS, readStatusLabels} from '../model/book-filter.config';
 import {ReadStatus} from '../model/book.model';
 import {ResetProgressTypes} from '../../../shared/constants/reset-progress-type';
 import {finalize} from 'rxjs';

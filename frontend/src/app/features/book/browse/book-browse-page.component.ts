@@ -34,7 +34,7 @@ import {LocalStorageService} from '../../../shared/service/local-storage.service
 import {PageTitleService} from '../../../shared/service/page-title.service';
 import {createGridDensity} from '../../../shared/util/grid-density.util';
 import {type GridDensityDirection} from '../../../shared/components/grid-density-buttons/grid-density-buttons.component';
-import {CoverScalePreferenceService} from '../components/book-browser/cover-scale-preference.service';
+import {CoverScalePreferenceService} from '../../../shared/service/cover-scale-preference.service';
 import {BookBrowseColumnPreferenceService} from './book-browse-column-preference.service';
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
 import {MagicShelfService} from '../../magic-shelf/service/magic-shelf.service';
@@ -48,7 +48,7 @@ import {
 } from '../../settings/user-management/user.service';
 import {type MultiSortDialogResult} from './multi-sort-dialog.component';
 import {DialogLauncherService} from '../../../shared/services/dialog-launcher.service';
-import {BookDialogHelperService} from '../components/book-browser/book-dialog-helper.service';
+import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {type Book} from '../model/book.model';
 import {BookFileService} from '../service/book-file.service';
 import {

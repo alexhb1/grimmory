@@ -4,9 +4,9 @@ import {FormsModule} from '@angular/forms';
 
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {MessageService} from 'primeng/api';
-import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';
+import {BookMetadataManageService} from '../../service/book-metadata-manage.service';
 import {Divider} from 'primeng/divider';
-import {LoadingService} from '../../../../../core/services/loading.service';
+import {LoadingService} from '../../../../core/services/loading.service';
 import {finalize} from 'rxjs';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 

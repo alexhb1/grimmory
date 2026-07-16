@@ -25,11 +25,11 @@ import {ResetProgressType, ResetProgressTypes} from '../../../../../shared/const
 import {DatePicker} from 'primeng/datepicker';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {TieredMenu} from 'primeng/tieredmenu';
-import {BookDialogHelperService} from '../../../../book/components/book-browser/book-dialog-helper.service';
+import {BookDialogHelperService} from '../../../../book/service/book-dialog-helper.service';
 import {LibraryService} from '../../../../book/service/library.service';
 import {TagColor, TagComponent} from '../../../../../shared/components/tag/tag.component';
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
-import {AGE_RATING_OPTIONS, CONTENT_RATING_LABELS, fileSizeRanges, matchScoreRanges, pageCountRanges} from '../../../../book/components/book-browser/book-filter/book-filter.config';
+import {AGE_RATING_OPTIONS, CONTENT_RATING_LABELS, fileSizeRanges, matchScoreRanges, pageCountRanges} from '../../../../book/model/book-filter.config';
 import {BookNavigationService} from '../../../../book/service/book-navigation.service';
 import {BookMetadataHostService} from '../../../../../shared/service/book-metadata-host.service';
 import {AppSettingsService} from '../../../../../shared/service/app-settings.service';

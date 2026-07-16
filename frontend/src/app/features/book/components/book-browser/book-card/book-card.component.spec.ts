@@ -11,7 +11,7 @@ import {User, UserService} from '../../../../settings/user-management/user.servi
 import {AppSettingsService} from '../../../../../shared/service/app-settings.service';
 import {UrlHelperService} from '../../../../../shared/service/url-helper.service';
 import {AdditionalFile, Book, ReadStatus} from '../../../model/book.model';
-import {BookDialogHelperService} from '../book-dialog-helper.service';
+import {BookDialogHelperService} from '../../../service/book-dialog-helper.service';
 import {BookCardComponent} from './book-card.component';
 import {BookFileService} from '../../../service/book-file.service';
 import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';

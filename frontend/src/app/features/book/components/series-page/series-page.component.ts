@@ -16,7 +16,7 @@ import {ConfirmationService, MenuItem, MessageService} from "primeng/api";
 import {UserService} from "../../../settings/user-management/user.service";
 import {BookMenuService} from "../../service/book-menu.service";
 import {LoadingService} from "../../../../core/services/loading.service";
-import {BookDialogHelperService} from "../book-browser/book-dialog-helper.service";
+import {BookDialogHelperService} from "../../service/book-dialog-helper.service";
 import {TaskHelperService} from "../../../settings/task-management/task-helper.service";
 import {MetadataRefreshType} from "../../../metadata/model/request/metadata-refresh-type.enum";
 import {TieredMenu} from "primeng/tieredmenu";

@@ -1,4 +1,4 @@
-import {Book, ReadStatus} from '../../../model/book.model';
+import {Book, ReadStatus} from './book.model';
 
 // ============================================================================
 // TYPES

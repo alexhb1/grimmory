@@ -1,7 +1,7 @@
 import {Component, effect, ElementRef, inject, viewChild} from '@angular/core';
 import {Select} from 'primeng/select';
 import {ALL_FILTER_OPTION_VALUES, ALL_FILTER_OPTIONS, BookFilterMode, DEFAULT_VISIBLE_FILTERS, User, UserService, UserSettings, VisibleFilterType} from '../../user-management/user.service';
-import {FILTER_LABEL_KEYS} from '../../../book/components/book-browser/book-filter/book-filter.config';
+import {FILTER_LABEL_KEYS} from '../../../book/model/book-filter.config';
 import {MessageService} from 'primeng/api';
 import {FormsModule} from '@angular/forms';
 import {CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray} from '@angular/cdk/drag-drop';
