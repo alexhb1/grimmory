@@ -1,22 +1,35 @@
 import {ElementRef, Signal, computed, effect, signal} from '@angular/core';
-import {injectVirtualizer, observeElementRect, type Rect, type VirtualItem} from '@tanstack/angular-virtual';
+import {
+  injectVirtualizer,
+  injectWindowVirtualizer,
+  observeElementRect,
+  type AngularVirtualizer,
+  type Rect,
+  type VirtualItem,
+} from '@tanstack/angular-virtual';
 
 const DEFAULT_OVERSCAN_ROWS = 2;
 const DEFAULT_ITEM_SIZE = 1;
 
+export type VirtualGridScrollMode = 'element' | 'window';
+
 export interface VirtualGridOptions {
   items: Signal<readonly unknown[]>;
+  itemKey?: (item: unknown, index: number) => VirtualItem['key'];
   scrollElement: Signal<ElementRef<HTMLElement> | undefined>;
   minItemWidth: Signal<number>;
   estimateItemHeight: (itemWidth: number) => number;
   gap: number | Signal<number>;
+  rowGap?: number | Signal<number>;
   overscan?: number;
-  count?: Signal<number>;
+  trailingRows?: Signal<number>;
   minimumCount?: (metrics: VirtualGridMetrics) => number;
   columns?: Signal<number | undefined>;
   initialOffset?: () => number;
   fillItemWidth?: boolean;
-  deferViewportUpdates?: Signal<boolean>;
+  scrollMode?: VirtualGridScrollMode;
+  scrollMargin?: Signal<number>;
+  measureElement?: Signal<ElementRef<HTMLElement> | undefined>;
 }
 
 export interface VirtualGridMetrics {
@@ -78,8 +91,6 @@ export function createVirtualGrid(options: VirtualGridOptions) {
   const viewportWidth = signal(0);
   const viewportHeight = signal(0);
   const gap = computed(() => typeof options.gap === 'number' ? options.gap : options.gap());
-  let pendingViewport: { rect: Rect; width: number; height: number } | undefined;
-  let flushPendingViewport: (() => void) | undefined;
 
   const setViewportSizeIfChanged = (width: number, height: number): void => {
     if (viewportWidth() === width && viewportHeight() === height) {
@@ -127,6 +138,12 @@ export function createVirtualGrid(options: VirtualGridOptions) {
     const remainingWidth = viewportWidth() - (columns * itemWidth());
     return Math.max(gap(), remainingWidth / (columns - 1));
   });
+  const rowGap = computed(() => {
+    if (options.rowGap === undefined) {
+      return columnGap();
+    }
+    return typeof options.rowGap === 'number' ? options.rowGap : options.rowGap();
+  });
   const minimumCount = computed(() => {
     const getMinimumCount = options.minimumCount;
     if (!getMinimumCount) {
@@ -138,65 +155,113 @@ export function createVirtualGrid(options: VirtualGridOptions) {
       viewportHeight: viewportHeight(),
       columns: gridColumns(),
       itemHeight: itemHeight(),
-      gap: columnGap(),
+      gap: rowGap(),
     }));
   });
 
-  const virtualizer = injectVirtualizer<HTMLElement, HTMLElement>(() => ({
-    scrollElement: options.scrollElement(),
-    count: toSafeInteger(Math.max(options.count?.() ?? options.items().length, minimumCount())),
+  const scrollMargin = computed(() => options.scrollMargin?.() ?? 0);
+
+  const sharedVirtualizerOptions = () => ({
+    count: toSafeInteger(Math.max(
+      options.items().length + (gridColumns() * toSafeInteger(options.trailingRows?.())),
+      minimumCount(),
+    )),
+    getItemKey: (index: number): VirtualItem['key'] => {
+      const item = options.items()[index];
+      return item === undefined
+        ? `skeleton-${index}`
+        : (options.itemKey?.(item, index) ?? index);
+    },
     estimateSize: () => toSafeSize(itemHeight(), DEFAULT_ITEM_SIZE),
     overscan: toSafeInteger(options.overscan ?? gridColumns() * DEFAULT_OVERSCAN_ROWS, DEFAULT_OVERSCAN_ROWS),
-    gap: toSafeSize(columnGap(), DEFAULT_ITEM_SIZE),
+    gap: toSafeSize(rowGap(), DEFAULT_ITEM_SIZE),
     lanes: toSafeInteger(gridColumns(), 1),
     initialOffset: () => options.initialOffset?.() ?? 0,
-    observeElementRect: (instance, callback) => {
-      const applyViewport = (rect: Rect, width: number, height: number): void => {
-        callback(rect);
-        setViewportSizeIfChanged(width, height);
-      };
-
-      flushPendingViewport = () => {
-        if (!pendingViewport) {
-          return;
-        }
-
-        const {rect, width, height} = pendingViewport;
-        pendingViewport = undefined;
-        applyViewport(rect, width, height);
-      };
-
-      const cleanup = observeElementRect(instance, rect => {
-        const width = Math.round(getScrollContentWidth(instance.scrollElement));
-        const height = Math.round(rect.height);
-        if (options.deferViewportUpdates?.()) {
-          pendingViewport = {rect, width, height};
-          return;
-        }
-
-        pendingViewport = undefined;
-        applyViewport(rect, width, height);
-      });
-
-      return () => {
-        pendingViewport = undefined;
-        flushPendingViewport = undefined;
-        cleanup?.();
-      };
-    },
-  }));
-
-  effect(() => {
-    if (!options.deferViewportUpdates?.()) {
-      queueMicrotask(() => flushPendingViewport?.());
-    }
   });
+
+  const windowObserveElementRect = (
+    instance: {scrollElement: Window | null},
+    callback: (rect: Rect) => void,
+  ): (() => void) => {
+    const win = instance.scrollElement ?? (typeof window !== 'undefined' ? window : null);
+    let latestWidth = 0;
+    let latestHeight = 0;
+    const emit = (): void => setViewportSizeIfChanged(latestWidth, latestHeight);
+    const measuredEl = (): HTMLElement | undefined => options.measureElement?.()?.nativeElement;
+
+    const onWindowResize = (): void => {
+      const width = win?.innerWidth ?? 0;
+      const height = win?.innerHeight ?? 0;
+      callback({width, height});
+      latestHeight = Math.round(height);
+      if (!measuredEl()) {
+        latestWidth = Math.round(width);
+      }
+      emit();
+    };
+
+    win?.addEventListener('resize', onWindowResize, {passive: true});
+    onWindowResize();
+
+    let resizeObserver: ResizeObserver | undefined;
+    const el = measuredEl();
+    if (el && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        latestWidth = Math.round(getScrollContentWidth(el));
+        emit();
+      });
+      resizeObserver.observe(el);
+    }
+
+    return () => {
+      win?.removeEventListener('resize', onWindowResize);
+      resizeObserver?.disconnect();
+    };
+  };
+
+  const virtualizer: AngularVirtualizer<HTMLElement, HTMLElement> = options.scrollMode === 'window'
+    ? (injectWindowVirtualizer<HTMLElement>(() => ({
+        ...sharedVirtualizerOptions(),
+        scrollMargin: scrollMargin(),
+        observeElementRect: windowObserveElementRect,
+      })) as unknown as AngularVirtualizer<HTMLElement, HTMLElement>)
+    : injectVirtualizer<HTMLElement, HTMLElement>(() => ({
+        scrollElement: options.scrollElement(),
+        ...sharedVirtualizerOptions(),
+        observeElementRect: (instance, callback) => {
+          const emitViewport = (rect: Rect): void => {
+            const measured = options.measureElement?.()?.nativeElement ?? instance.scrollElement;
+            callback(rect);
+            setViewportSizeIfChanged(Math.round(getScrollContentWidth(measured)), Math.round(rect.height));
+          };
+
+          const cleanup = observeElementRect(instance, emitViewport);
+
+          let measureObserver: ResizeObserver | undefined;
+          const measured = options.measureElement?.()?.nativeElement;
+          if (measured && typeof ResizeObserver !== 'undefined') {
+            measureObserver = new ResizeObserver(() => {
+              const scroller = instance.scrollElement;
+              if (!scroller) return;
+              const bounds = scroller.getBoundingClientRect();
+              emitViewport({width: bounds.width, height: bounds.height});
+            });
+            measureObserver.observe(measured);
+          }
+
+          return () => {
+            cleanup?.();
+            measureObserver?.disconnect();
+          };
+        },
+      }));
 
   // Reset measured sizes when geometry changes; otherwise density toggles flash.
   effect(() => {
     itemHeight();
     gridColumns();
     columnGap();
+    rowGap();
     queueMicrotask(() => virtualizer.measure());
   });
 
@@ -233,7 +298,7 @@ export function createVirtualGrid(options: VirtualGridOptions) {
     itemWidth,
     itemHeight,
     itemTransform: (item: VirtualItem) =>
-      `translateX(${item.lane * (itemWidth() + columnGap())}px) translateY(${item.start}px)`,
+      `translateX(${item.lane * (itemWidth() + columnGap())}px) translateY(${item.start - scrollMargin()}px)`,
     updatePreservingScrollPosition,
     virtualizer,
   };
