@@ -275,7 +275,12 @@ export async function installLoginAndBooksRoutes(
       }
       await asJson(route, {
         content,
-        page: {totalElements: scenario.books.length},
+        page: {
+          number: pageIndex,
+          size: scenario.bookPageSize,
+          totalElements: scenario.books.length,
+          totalPages: Math.ceil(scenario.books.length / scenario.bookPageSize),
+        },
         links,
       });
       return;
@@ -288,7 +293,7 @@ export async function installLoginAndBooksRoutes(
           links: [
             {rel: 'sort', href: '/api/v1/books/page?sort=title', type: 'application/json', title: 'Title ascending', value: 'title'},
             {rel: 'sort', href: '/api/v1/books/page?sort=-title', type: 'application/json', title: 'Title descending', value: '-title'},
-            {rel: 'sort', href: '/api/v1/books/page?sort=random', type: 'application/json', title: 'Random', value: 'random'},
+            {rel: 'sort', href: '/api/v1/books/page?sort=pageCount', type: 'application/json', title: 'Page count', value: 'pageCount'},
           ],
         }],
       });

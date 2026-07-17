@@ -42,34 +42,19 @@ describe('book browse sort config', () => {
     });
   });
 
-  it('keeps a one-way random capability one-way', () => {
-    expect(buildSortOptions(['random'])).toEqual([{
-      id: 'random',
-      fallbackLabel: 'Random',
+  it('keeps a one-way supported capability one-way', () => {
+    expect(buildSortOptions(['narrator'])).toEqual([{
+      id: 'narrator',
+      labelKey: 'book.sorting.options.narrator',
+      fallbackLabel: 'Narrator',
       group: 'more',
       defaultDirection: 'asc',
       directions: ['asc'],
     }]);
   });
 
-  it('humanizes unknown server keys and places them in more with ascending default', () => {
-    expect(buildSortOptions(['amazonPopularityScore'])).toEqual([{
-      id: 'amazonPopularityScore',
-      fallbackLabel: 'Amazon Popularity Score',
-      group: 'more',
-      defaultDirection: 'asc',
-      directions: ['asc'],
-    }]);
-  });
-
-  it('treats prototype-named server keys as unknown keys', () => {
-    expect(buildSortOptions(['constructor'])).toEqual([{
-      id: 'constructor',
-      fallbackLabel: 'Constructor',
-      group: 'more',
-      defaultDirection: 'asc',
-      directions: ['asc'],
-    }]);
+  it('ignores unknown and prototype-named server keys', () => {
+    expect(buildSortOptions(['amazonPopularityScore', 'constructor'])).toEqual([]);
   });
 
   it('parses an ordered multi-sort token for the server', () => {
@@ -80,10 +65,9 @@ describe('book browse sort config', () => {
     ]);
   });
 
-  it('passes unknown terms through and deduplicates without changing precedence', () => {
+  it('drops unknown terms and deduplicates without changing precedence', () => {
     expect(parseSortTermsToken('title,futureScore,-title,-pageCount')).toEqual([
       {key: 'title', direction: 'asc'},
-      {key: 'futureScore', direction: 'asc'},
       {key: 'pageCount', direction: 'desc'},
     ]);
   });
@@ -101,16 +85,17 @@ describe('book browse sort config', () => {
     ])).toBe('seriesName,-seriesNumber');
   });
 
-  it('uses the first non-empty term for the compact toolbar label', () => {
+  it('uses the first supported term for the compact toolbar label', () => {
     expect(parseSortToken('futureScore,-pageCount,title')).toEqual({
       option: {
-        id: 'futureScore',
-        fallbackLabel: 'Future Score',
+        id: 'pageCount',
+        labelKey: 'book.filter.labels.pageCount',
+        fallbackLabel: 'Page Count',
         group: 'more',
-        defaultDirection: 'asc',
-        directions: ['asc'],
+        defaultDirection: 'desc',
+        directions: ['desc'],
       },
-      direction: 'asc',
+      direction: 'desc',
     });
   });
 

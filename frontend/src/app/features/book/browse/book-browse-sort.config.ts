@@ -14,12 +14,14 @@ import {
 
 import {
   DEFAULT_BOOK_SORT_TERMS,
+  isBookQuerySortKey,
+  type BookQuerySortKey,
   type BookSortTerm,
   type SortDirection,
 } from '../data/book-query-params';
 
 export interface BookSortOption {
-  id: string;
+  id: BookQuerySortKey;
   labelKey?: string;
   fallbackLabel: string;
   group: 'common' | 'more';
@@ -135,7 +137,7 @@ function humanizeSortKey(key: string): string {
 }
 
 function buildSortOption(
-  key: string,
+  key: BookQuerySortKey,
   directions: readonly SortDirection[],
 ): BookSortOption {
   const labelKey = Object.hasOwn(LABEL_KEYS, key) ? LABEL_KEYS[key] : undefined;
@@ -151,7 +153,7 @@ function buildSortOption(
 }
 
 export function buildSortOptions(serverSortTokens: readonly string[]): BookSortOption[] {
-  const directionsByKey = new Map<string, SortDirection[]>();
+  const directionsByKey = new Map<BookQuerySortKey, SortDirection[]>();
   for (const token of serverSortTokens) {
     const [term] = parseSortTermsToken(token);
     if (!term || token.includes(',')) {
@@ -192,7 +194,7 @@ export function parseSortTermsToken(token: string | null): BookSortTerm[] {
     if (!term) continue;
     const descending = term.startsWith('-');
     const key = (descending ? term.slice(1) : term).trim();
-    if (!key || seen.has(key)) continue;
+    if (!isBookQuerySortKey(key) || seen.has(key)) continue;
     seen.add(key);
     terms.push({key, direction: descending ? 'desc' : 'asc'});
   }

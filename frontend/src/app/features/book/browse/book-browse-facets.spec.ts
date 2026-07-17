@@ -113,7 +113,7 @@ describe('frozen facet orders', () => {
       .toEqual(['genre']);
   });
 
-  it('renders unknown served groups after preferred rail groups', () => {
+  it('ignores served groups outside the accepted backend filter vocabulary', () => {
     const served = [
       group('binding', 'Binding', [['Hardback', 2]]),
       group('genre', 'Genre', [['Gothic', 1]]),
@@ -121,7 +121,7 @@ describe('frozen facet orders', () => {
     ];
 
     expect(buildRailGroups(served).map(item => item.key))
-      .toEqual(['genre', 'binding', 'award']);
+      .toEqual(['genre']);
   });
 
   it('orders the frozen and newly served union before applying rail preferences', () => {
@@ -135,18 +135,18 @@ describe('frozen facet orders', () => {
     ];
 
     expect(orderedFacetVocabularyKeys(served, frozenHere))
-      .toEqual(['author', 'publisher', 'binding', 'award']);
+      .toEqual(['author', 'publisher']);
     expect(buildRailGroups(served, frozenHere).map(item => item.key))
-      .toEqual(['author', 'publisher', 'binding', 'award']);
+      .toEqual(['author', 'publisher']);
   });
 
-  it('renders an explicitly served empty group with an empty frozen vocabulary', () => {
-    const served = [group('binding', 'Binding', [])];
+  it('renders an explicitly served empty accepted group with an empty frozen vocabulary', () => {
+    const served = [group('publisher', 'Publisher', [])];
     const frozenHere = freezeFacetOrders(served);
 
     expect(buildRailGroups(served, frozenHere)).toEqual([{
-      key: 'binding',
-      label: 'Binding',
+      key: 'publisher',
+      label: 'Publisher',
       defaultOpen: false,
       values: [],
     }]);
@@ -161,21 +161,17 @@ describe('facet selection params', () => {
     });
   });
 
-  it('parses unknown facet keys and keeps the first-colon split', () => {
+  it('drops unknown facet keys while preserving accepted values', () => {
     expect(parseFacetParams(['read_status:READ', 'future_group:a:b', 'future_group:a:b'])).toEqual({
       read_status: ['READ'],
-      future_group: ['a:b'],
     });
   });
 
-  it('treats prototype-named facet keys as ordinary keys', () => {
+  it('drops prototype-named facet keys', () => {
     const selection = parseFacetParams(['__proto__:READ']);
 
-    expect(Object.hasOwn(selection, '__proto__')).toBe(true);
-    expect(selection['__proto__']).toEqual(['READ']);
-    expect(buildRailGroups(
-      [group('__proto__', 'Prototype', [['READ', 1, true]])],
-    )[0].values[0]).toMatchObject({value: 'READ', selected: true});
+    expect(selection).toEqual({});
+    expect(buildRailGroups([group('__proto__', 'Prototype', [['READ', 1, true]])])).toEqual([]);
   });
 
   it('serializes the selection to router params, null when empty', () => {

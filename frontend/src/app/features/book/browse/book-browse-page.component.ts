@@ -52,8 +52,8 @@ import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {type Book} from '../model/book.model';
 import {BookFileService} from '../service/book-file.service';
 import {
-  legacyBookInvalidationSelectors,
-  withLegacyBookInvalidation,
+  legacyBookCachePatches,
+  withLegacyBookCache,
 } from '../service/book-command-legacy-adapter';
 import {EmailService} from '../../settings/email-v2/email.service';
 import {SeriesCollapsePreferenceService} from './series-collapse-preference.service';
@@ -67,7 +67,8 @@ import {
   type BookPageParams,
   type BookSortTerm,
   type FacetValueMap,
-  normalizeBookPageParams,
+  isBookQueryFacetKey,
+  isBookQuerySortKey,
 } from '../data/book-query-params';
 import {bookBrowseScope, scopedFacetSelection} from './book-browse-scope';
 import {type BookFacetGroup, flattenBookPages} from '../data/book-query.models';
@@ -162,6 +163,7 @@ const MAX_MOBILE_COLUMNS = 4;
 const BROWSE_PAGE_PARAMS: Omit<BookPageParams, 'sort'> = {
   size: PAGE_SIZE,
   facets: EMPTY_FACET_SELECTION,
+  facetLogic: 'or',
 };
 
 const BULK_BAR_WIDTHS = {
@@ -257,35 +259,41 @@ export class BookBrowsePageComponent {
     readStatuses: this.pendingReadStatuses(),
     shelfMembership: this.pendingShelfMembership(),
     metadataLocks: this.pendingMetadataLocks(),
-    shelfNamesById: new Map(
-      (this.shelfDefinitionsQuery.data() ?? []).map(shelf => [shelf.id, shelf.name]),
+    shelvesById: new Map(
+      (this.shelfDefinitionsQuery.data() ?? []).map(shelf => [shelf.id, {
+        id: shelf.id,
+        name: shelf.name,
+        ...(shelf.icon ? {
+          icon: shelf.icon.value,
+          ...(shelf.icon.type ? {iconType: shelf.icon.type} : {}),
+        } : {}),
+        publicShelf: shelf.visibility === 'public',
+        bookCount: shelf.bookCount,
+      }]),
     ),
   }));
-  private readonly shelfMembershipMutation = injectMutation(() => withLegacyBookInvalidation(
+  private readonly shelfMembershipMutation = injectMutation(() => withLegacyBookCache(
     this.shelfCommand.updateMembership(),
-    legacyBookInvalidationSelectors.shelfMembership,
+    legacyBookCachePatches.shelfMembership,
   ));
-  private readonly readStatusMutation = injectMutation(() => withLegacyBookInvalidation(
+  private readonly readStatusMutation = injectMutation(() => withLegacyBookCache(
     this.bookCommand.setReadStatus(),
-    legacyBookInvalidationSelectors.readStatus,
+    legacyBookCachePatches.readStatus,
   ));
-  private readonly refreshMetadataMutation = injectMutation(() => withLegacyBookInvalidation(
-    this.metadataRefresh.refreshMetadata(),
-    result => result.target.kind === 'books'
-      ? {changedBookIds: result.target.bookIds}
-      : {allBooks: true},
-  ));
-  private readonly deleteBooksMutation = injectMutation(() => withLegacyBookInvalidation(
+  private readonly refreshMetadataMutation = injectMutation(() =>
+    this.metadataRefresh.refreshMetadata()
+  );
+  private readonly deleteBooksMutation = injectMutation(() => withLegacyBookCache(
     this.bookCommand.deleteBooks(),
-    legacyBookInvalidationSelectors.deleteBooks,
+    legacyBookCachePatches.deleteBooks,
   ));
-  private readonly resetProgressMutation = injectMutation(() => withLegacyBookInvalidation(
+  private readonly resetProgressMutation = injectMutation(() => withLegacyBookCache(
     this.bookCommand.resetProgress(),
-    legacyBookInvalidationSelectors.resetProgress,
+    legacyBookCachePatches.resetProgress,
   ));
-  private readonly metadataLocksMutation = injectMutation(() => withLegacyBookInvalidation(
+  private readonly metadataLocksMutation = injectMutation(() => withLegacyBookCache(
     this.bookCommand.setAllMetadataLocks(),
-    legacyBookInvalidationSelectors.metadataAllLocks,
+    legacyBookCachePatches.metadataAllLocks,
   ));
   private readonly changeCoversMutation = injectMutation(() => this.backgroundSubmission.changeCovers());
 
@@ -350,14 +358,14 @@ export class BookBrowsePageComponent {
   private readonly facetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: this.requestFacets(),
-      sort: [],
+      facetLogic: 'or',
       query: this.queryText() || undefined,
     }),
     enabled: this.railVisible(),
     placeholderData: (previous: BookFacetGroup[] | undefined) => previous,
   }));
   private readonly unfilteredFacetsQuery = injectQuery(() => ({
-    ...this.bookQuery.facets({facets: this.scopeOnlyFacets(), sort: []}),
+    ...this.bookQuery.facets({facets: this.scopeOnlyFacets(), facetLogic: 'or'}),
   }));
   protected readonly serverSortTokens = computed<readonly string[]>(() => {
     const sortGroup = this.unfilteredFacetsQuery.data()?.find(group => group.rel === 'sort');
@@ -406,7 +414,7 @@ export class BookBrowsePageComponent {
       frozen ?? undefined,
     );
     const vocabularySet = new Set(vocabularyKeys);
-    const selectionKeys = Object.keys(selections);
+    const selectionKeys = Object.keys(selections).filter(isBookQueryFacetKey);
     const keys = [
       ...vocabularyKeys,
       ...selectionKeys.filter((key, index) =>
@@ -459,7 +467,9 @@ export class BookBrowsePageComponent {
       return [];
     }
     const onShelfIds = new Set((book.shelves ?? []).map(shelf => shelf.id));
+    const currentUserId = this.userService.currentUser()?.id;
     return (this.shelfDefinitionsQuery.data() ?? [])
+      .filter(shelf => shelf.userId === currentUserId)
       .map(shelf => ({id: shelf.id, name: shelf.name, checked: onShelfIds.has(shelf.id)}));
   });
 
@@ -490,12 +500,16 @@ export class BookBrowsePageComponent {
         : candidate.sortKey
           ? [{field: candidate.sortKey, direction: candidate.sortDir ?? 'ASC'}]
           : [];
-      const terms = criteria
-        .filter(criterion => advertised.size === 0 || advertised.has(criterion.field))
-        .map(criterion => ({
+      const terms = criteria.flatMap((criterion): BookSortTerm[] => {
+        if (!isBookQuerySortKey(criterion.field)
+          || (advertised.size > 0 && !advertised.has(criterion.field))) {
+          return [];
+        }
+        return [{
           key: criterion.field,
           direction: criterion.direction === 'DESC' ? 'desc' as const : 'asc' as const,
-        }));
+        }];
+      });
       if (terms.length > 0) {
         return terms;
       }
@@ -600,9 +614,12 @@ export class BookBrowsePageComponent {
     sort: this.activeSortTerms(),
     query: this.queryText() || undefined,
   }));
-  private readonly normalizedParams = computed(() => normalizeBookPageParams(this.params()));
-  private readonly paramsKey = computed(() => JSON.stringify(this.normalizedParams()));
-  private readonly booksQuery = injectInfiniteQuery(() => this.bookQuery.infinitePage(this.params()));
+  private readonly collection = computed(() => this.bookQuery.collection(this.params()));
+  private readonly membershipIdentity = computed(() => this.collection().membershipIdentity);
+  private readonly orderingIdentity = computed(() => this.collection().orderingIdentity);
+  private readonly booksQuery = injectInfiniteQuery(() =>
+    this.collection().infinitePage(this.params().size)
+  );
   private readonly activeLang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
@@ -632,10 +649,11 @@ export class BookBrowsePageComponent {
   protected readonly hasNextPage = this.booksQuery.hasNextPage;
 
   protected readonly selection = createBookBrowseSelection({
-    paramsKey: this.paramsKey,
+    membershipIdentity: this.membershipIdentity,
+    orderingIdentity: this.orderingIdentity,
     books: this.books,
     totalElements: this.total,
-    fetchIds: () => this.queryClient.fetchQuery(this.bookQuery.ids(this.normalizedParams())),
+    fetchIds: () => this.queryClient.fetchQuery(this.collection().ids()),
   });
   protected readonly selectionEnabled = computed(() => !this.isMobile() || this.mobileSelectMode());
   protected readonly allBooksSelected = this.selection.allCurrentResultsSelected;
@@ -653,7 +671,10 @@ export class BookBrowsePageComponent {
       }
     }
     const complete = evidenced.length === this.selection.count();
-    return (this.shelfDefinitionsQuery.data() ?? []).map(shelf => {
+    const currentUserId = this.userService.currentUser()?.id;
+    return (this.shelfDefinitionsQuery.data() ?? [])
+      .filter(shelf => shelf.userId === currentUserId)
+      .map(shelf => {
       let onCount = 0;
       for (const book of evidenced) {
         if ((book.shelves ?? []).some(entry => entry.id === shelf.id)) {
@@ -667,7 +688,7 @@ export class BookBrowsePageComponent {
         checked,
         mixed: !checked && (onCount > 0 || !complete),
       };
-    });
+      });
   });
 
   private readonly sortLineKey = computed<string | null>(() => {
@@ -747,16 +768,16 @@ export class BookBrowsePageComponent {
       });
     });
 
-    let lastParamsKey: string | null = null;
+    let lastOrderingIdentity: string | null = null;
     effect(() => {
-      const key = this.paramsKey();
-      if (lastParamsKey !== null && key !== lastParamsKey) {
+      const identity = this.orderingIdentity();
+      if (lastOrderingIdentity !== null && identity !== lastOrderingIdentity) {
         untracked(() => {
           this.tableRef()?.scrollToTop();
           this.gridRef()?.scrollToTop();
         });
       }
-      lastParamsKey = key;
+      lastOrderingIdentity = identity;
     });
 
     effect(() => {
@@ -1415,7 +1436,7 @@ export class BookBrowsePageComponent {
     const options = new Map(this.sortOptions().map(option => [option.id, option]));
     const terms = sorting.flatMap((item): BookSortTerm[] => {
       const direction = item.desc ? 'desc' : 'asc';
-      return options.get(item.id)?.directions.includes(direction)
+      return isBookQuerySortKey(item.id) && options.get(item.id)?.directions.includes(direction)
         ? [{key: item.id, direction}]
         : [];
     });

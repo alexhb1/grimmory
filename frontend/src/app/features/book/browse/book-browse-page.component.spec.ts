@@ -14,7 +14,7 @@ import {createQueryClientHarness, flushQueryAsync} from '../../../core/testing/q
 import {BrowseGridComponent} from '../../../shared/components/browse/browse-grid/browse-grid.component';
 import {AppSettingsService} from '../../../shared/service/app-settings.service';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
-import {type PageLinkResponse} from '../data/book-query.models';
+import {type PageLink} from '../data/book-query.models';
 import {type BookSummary} from '../data/book-response.models';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {DialogService} from 'primeng/dynamicdialog';
@@ -40,12 +40,15 @@ class TestRouteComponent {}
 function bookPage(
   ids: number[],
   totalElements = ids.length,
-  links: PageLinkResponse[] = [],
+  links: PageLink[] = [],
 ) {
   return {
     content: ids.map(id => ({id, libraryId: 1, libraryName: 'Library'})),
     page: {
+      number: 0,
+      size: 60,
       totalElements,
+      totalPages: Math.ceil(totalElements / 60),
     },
     links,
   };
@@ -86,11 +89,12 @@ describe('BookBrowsePageComponent', () => {
   let http: HttpTestingController;
   let queryClient: QueryClient;
   let currentUser: WritableSignal<{
+    id?: number;
     permissions: Record<string, boolean>;
     userSettings?: {entityViewPreferences?: unknown};
   } | null>;
   let appSettings: WritableSignal<{diskType: string} | null>;
-  let shelfDefinitions: {id: number; name: string; visibility: 'private' | 'public'; bookCount: number; icon: null}[];
+  let shelfDefinitions: {id: number; userId: number; name: string; visibility: 'private' | 'public'; bookCount: number; icon: null}[];
   let dialogHelper: {
     openBulkMetadataEditDialog: ReturnType<typeof vi.fn>;
     openMultibookMetadataEditorDialog: ReturnType<typeof vi.fn>;
@@ -124,7 +128,7 @@ describe('BookBrowsePageComponent', () => {
           links: [
             {rel: 'sort', href: '', type: '', title: 'title ascending', value: 'title'},
             {rel: 'sort', href: '', type: '', title: 'title descending', value: '-title'},
-            {rel: 'sort', href: '', type: '', title: 'random', value: 'random'},
+            {rel: 'sort', href: '', type: '', title: 'page count', value: 'pageCount'},
           ],
         }],
       });
@@ -306,7 +310,7 @@ describe('BookBrowsePageComponent', () => {
 
   it('supplies only shelf actions to the header menu on a shelf route', async () => {
     currentUser.set({permissions: {canManageLibrary: true}});
-    shelfDefinitions = [{id: 5, name: 'Favorites', visibility: 'private', bookCount: 1, icon: null}];
+    shelfDefinitions = [{id: 5, userId: 7, name: 'Favorites', visibility: 'private', bookCount: 1, icon: null}];
     fixture.destroy();
     const routerHarness = await RouterTestingHarness.create();
     await routerHarness.navigateByUrl('/shelf/5/books');
@@ -418,7 +422,7 @@ describe('BookBrowsePageComponent', () => {
   it('follows the opaque next link and retries a continuation failure', async () => {
     fixture.detectChanges();
     expectInitialPageRequest().flush(bookPage([1], 600, [{
-      rel: 'next',
+      rel: ['next'],
       href: '/api/v1/books/page?cursor=opaque%2Bcursor&sort=title&size=60',
       type: 'application/json',
     }]));
@@ -477,6 +481,39 @@ describe('BookBrowsePageComponent', () => {
     expect(grid().items().map(item => item?.id)).toEqual([1]);
   });
 
+  it('preserves selected IDs when only ordering changes', async () => {
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(bookPage([1, 2], 2));
+    await flushQueryAsync();
+    page().selection.toggle(book(1), 0, false);
+
+    await TestBed.inject(Router).navigate([], {queryParams: {sort: '-title'}});
+    await fixture.whenStable();
+    http.expectOne(request =>
+      request.url === PAGE_URL && request.params.get('sort') === '-title',
+    ).flush(bookPage([2, 1], 2));
+    await flushQueryAsync();
+
+    expect(page().selection.count()).toBe(1);
+  });
+
+  it('clears selected IDs as soon as collection membership changes', async () => {
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(bookPage([1, 2], 2));
+    await flushQueryAsync();
+    page().selection.toggle(book(1), 0, false);
+
+    await TestBed.inject(Router).navigate([], {queryParams: {query: 'warden'}});
+    await fixture.whenStable();
+
+    expect(page().selection.count()).toBe(0);
+    flushFacetRegistry();
+    http.expectOne(request =>
+      request.url === PAGE_URL && request.params.get('query') === 'warden',
+    ).flush(bookPage([2], 1));
+    await flushQueryAsync();
+  });
+
   it('passes sort, search, and facet selections to the paginated endpoint exactly', async () => {
     await TestBed.inject(Router).navigate([], {
       queryParams: {
@@ -520,16 +557,7 @@ describe('BookBrowsePageComponent', () => {
     });
     fixture.detectChanges();
 
-    // Before the vocabulary loads, saved terms pass through as-is and the
-    // server rejects the stale key.
-    http.expectOne(request =>
-      request.url === PAGE_URL &&
-      request.params.get('sort') === 'author,-title',
-    ).flush('unknown sort key', {status: 400, statusText: 'Bad Request'});
-
     flushFacetRegistry();
-    await flushQueryAsync();
-
     http.expectOne(request =>
       request.url === PAGE_URL &&
       request.params.get('sort') === '-title' &&
@@ -539,18 +567,18 @@ describe('BookBrowsePageComponent', () => {
   });
 
   it('reselecting the active sort keeps the URL and issues no new request', async () => {
-    await TestBed.inject(Router).navigate([], {queryParams: {sort: 'random'}});
+    await TestBed.inject(Router).navigate([], {queryParams: {sort: 'pageCount'}});
     fixture.detectChanges();
     flushFacetRegistry();
 
     http.expectOne(request =>
       request.url === PAGE_URL &&
-      request.params.get('sort') === 'random' &&
+      request.params.get('sort') === 'pageCount' &&
       !request.params.has('cursor'),
     ).flush(bookPage([1], 100));
     await flushQueryAsync();
 
-    page().onSortChange({option: buildSortOptions(['random'])[0], direction: 'asc'});
+    page().onSortChange({option: buildSortOptions(['pageCount'])[0], direction: 'asc'});
     await fixture.whenStable();
     await flushQueryAsync(1);
 
@@ -559,13 +587,13 @@ describe('BookBrowsePageComponent', () => {
   });
 
   it('flips only the primary term on direction toggle, keeping the multi-sort tail', async () => {
-    await TestBed.inject(Router).navigate([], {queryParams: {sort: '-title,random'}});
+    await TestBed.inject(Router).navigate([], {queryParams: {sort: '-title,pageCount'}});
     fixture.detectChanges();
     flushFacetRegistry();
 
     http.expectOne(request =>
       request.url === PAGE_URL &&
-      request.params.get('sort') === '-title,random',
+      request.params.get('sort') === '-title,pageCount',
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
 
@@ -575,7 +603,7 @@ describe('BookBrowsePageComponent', () => {
 
     http.expectOne(request =>
       request.url === PAGE_URL &&
-      request.params.get('sort') === 'title,random',
+      request.params.get('sort') === 'title,pageCount',
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
   });
@@ -583,7 +611,7 @@ describe('BookBrowsePageComponent', () => {
   it('does not start a second next-page request while one is active', async () => {
     fixture.detectChanges();
     expectInitialPageRequest().flush(bookPage([1, 2], 600, [{
-      rel: 'next',
+      rel: ['next'],
       href: '/api/v1/books/page?cursor=next&sort=title&size=60',
       type: 'application/json',
     }]));
@@ -942,5 +970,26 @@ describe('BookBrowsePageComponent', () => {
     flushFacetRegistry();
     expectInitialPageRequest().flush(bookPage([1], 1));
     await flushQueryAsync();
+  });
+
+  it('offers only the current user shelves in book assignment menus', async () => {
+    currentUser.set({id: 7, permissions: {}});
+    shelfDefinitions = [
+      {id: 5, userId: 7, name: 'Mine', visibility: 'private', bookCount: 1, icon: null},
+      {id: 6, userId: 9, name: 'Shared by someone else', visibility: 'public', bookCount: 1, icon: null},
+    ];
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(bookPage([1], 1));
+    await flushQueryAsync();
+
+    const component = fixture.componentInstance as unknown as {
+      menuBookSnapshot: {set(value: BookSummary): void};
+      menuShelves(): readonly {id: number}[];
+      bulkShelves(): readonly {id: number}[];
+    };
+    component.menuBookSnapshot.set(book(1));
+
+    expect(component.menuShelves().map(shelf => shelf.id)).toEqual([5]);
+    expect(component.bulkShelves().map(shelf => shelf.id)).toEqual([5]);
   });
 });

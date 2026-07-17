@@ -7,7 +7,7 @@ import {LucideChevronDown, LucideChevronUp, LucideDynamicIcon, LucideGripVertica
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
 import {AppSelectComponent} from '../../../shared/ui/select/app-select.component';
 import {type SelectOption} from '../../../shared/ui/select/app-select.options';
-import {type BookSortTerm} from '../data/book-query-params';
+import {isBookQuerySortKey, type BookSortTerm} from '../data/book-query-params';
 import {sortDirectionIcon, type BookSortOption} from './book-browse-sort.config';
 
 @Component({
@@ -173,7 +173,7 @@ export class MultiSortEditorComponent {
   }
 
   protected add(key: string | null): void {
-    if (!key) {
+    if (!key || !isBookQuerySortKey(key)) {
       return;
     }
     const option = this.options().find(candidate => candidate.id === key);

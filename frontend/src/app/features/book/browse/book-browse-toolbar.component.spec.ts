@@ -149,9 +149,9 @@ describe('BookBrowseToolbarComponent', () => {
 
   it('keeps but disables the direction toggle for a one-way backend sort', async () => {
     const changes: unknown[] = [];
-    const [random] = buildSortOptions(['random']);
-    fixture.componentRef.setInput('activeSort', {option: random, direction: 'asc'});
-    fixture.componentRef.setInput('sortOptions', [random]);
+    const [narrator] = buildSortOptions(['narrator']);
+    fixture.componentRef.setInput('activeSort', {option: narrator, direction: 'asc'});
+    fixture.componentRef.setInput('sortOptions', [narrator]);
     fixture.componentInstance.sortChange.subscribe(change => changes.push(change));
     await fixture.whenStable();
 
@@ -159,13 +159,13 @@ describe('BookBrowseToolbarComponent', () => {
     expect(toggle).not.toBeNull();
     expect(toggle!.disabled).toBe(true);
 
-    buttonByText('Random').click();
+    buttonByText('Narrator').click();
     await fixture.whenStable();
     const menuItem = Array.from(document.querySelectorAll('.cdk-overlay-container app-menu-item'))
-      .find(item => item.textContent?.trim() === 'Random') as HTMLElement;
+      .find(item => item.textContent?.trim() === 'Narrator') as HTMLElement;
     menuItem.click();
 
-    expect(changes).toEqual([{option: random, direction: 'asc'}]);
+    expect(changes).toEqual([{option: narrator, direction: 'asc'}]);
   });
 
   it('routes the direction toggle through sortDirectionChange, not sortChange', async () => {

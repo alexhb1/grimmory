@@ -112,13 +112,16 @@ export class BookBrowseFilterPageComponent {
   private readonly facetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: scopedFacetSelection(this.staged(), this.scope()),
-      sort: [],
+      facetLogic: 'or',
       query: this.debouncedQuery() || undefined,
     }),
     placeholderData: (previous: BookFacetGroup[] | undefined) => previous,
   }));
   private readonly unfilteredFacetsQuery = injectQuery(() => ({
-    ...this.bookQuery.facets({facets: scopedFacetSelection(EMPTY_FACET_SELECTION, this.scope()), sort: []}),
+    ...this.bookQuery.facets({
+      facets: scopedFacetSelection(EMPTY_FACET_SELECTION, this.scope()),
+      facetLogic: 'or',
+    }),
   }));
   private readonly frozenFacets = computed<FrozenFacetOrders | null>(() => {
     const data = this.unfilteredFacetsQuery.data();
@@ -135,6 +138,7 @@ export class BookBrowseFilterPageComponent {
     ...this.bookQuery.page({
       size: 1,
       facets: scopedFacetSelection(this.staged(), this.scope()),
+      facetLogic: 'or',
       sort: this.sort(),
       query: this.debouncedQuery() || undefined,
     }),

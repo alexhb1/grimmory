@@ -1,15 +1,19 @@
-import {type FacetValueMap} from '../data/book-query-params';
+import {
+  isBookQueryFacetKey,
+  type BookQueryFacetKey,
+  type FacetValueMap,
+} from '../data/book-query-params';
 import {type BookFacetGroup} from '../data/book-query.models';
 import {type FilterRailGroup} from '../../../shared/components/browse/browse-filter-rail/browse-filter-rail.component';
 
-export const RAIL_GROUP_ORDER: readonly string[] = [
+export const RAIL_GROUP_ORDER: readonly BookQueryFacetKey[] = [
   'author', 'genre', 'tag', 'mood', 'series', 'publisher', 'language', 'file_type',
 ];
-const RAIL_OPEN_BY_DEFAULT: ReadonlySet<string> = new Set(['author', 'genre', 'tag', 'series']);
-const RAIL_GROUP_ORDER_SET: ReadonlySet<string> = new Set(RAIL_GROUP_ORDER);
+const RAIL_OPEN_BY_DEFAULT: ReadonlySet<BookQueryFacetKey> = new Set(['author', 'genre', 'tag', 'series']);
+const RAIL_GROUP_ORDER_SET: ReadonlySet<BookQueryFacetKey> = new Set(RAIL_GROUP_ORDER);
 
 export function parseFacetParams(tokens: readonly string[]): FacetValueMap {
-  const facets = new Map<string, string[]>();
+  const facets = new Map<BookQueryFacetKey, string[]>();
   for (const token of tokens) {
     const separator = token.indexOf(':');
     if (separator <= 0) {
@@ -17,7 +21,7 @@ export function parseFacetParams(tokens: readonly string[]): FacetValueMap {
     }
     const key = token.slice(0, separator);
     const value = token.slice(separator + 1);
-    if (value === '') {
+    if (!isBookQueryFacetKey(key) || value === '') {
       continue;
     }
     const values = facets.get(key) ?? [];
@@ -46,12 +50,15 @@ export function toggleFacetSelection(
   value: string,
   selected: boolean,
 ): FacetValueMap {
+  if (!isBookQueryFacetKey(key)) {
+    return current;
+  }
   const values = facetValuesForKey(current, key);
   if (selected === values.includes(value)) {
     return current;
   }
   const remaining = selected ? [...values, value] : values.filter(item => item !== value);
-  const next: Partial<Record<string, readonly string[]>> = {...current};
+  const next: Partial<Record<BookQueryFacetKey, readonly string[]>> = {...current};
   if (remaining.length > 0) {
     next[key] = remaining;
   } else {
@@ -65,7 +72,7 @@ export function countFacetSelections(facets: FacetValueMap): number {
 }
 
 export function facetValuesForKey(facets: FacetValueMap, key: string): readonly string[] {
-  return Object.hasOwn(facets, key) ? facets[key] ?? [] : [];
+  return isBookQueryFacetKey(key) && Object.hasOwn(facets, key) ? facets[key] ?? [] : [];
 }
 
 export interface FrozenFacetValue {
@@ -82,7 +89,7 @@ export type FrozenFacetOrders = Readonly<Record<string, FrozenFacetGroup>>;
 
 export function freezeFacetOrders(served: readonly BookFacetGroup[]): FrozenFacetOrders {
   return Object.fromEntries(
-    served.filter(group => group.rel === 'facet').map(group => [group.key, {
+    served.filter(group => group.rel === 'facet' && isBookQueryFacetKey(group.key)).map(group => [group.key, {
       title: group.title,
       values: group.values.map(value => ({value: value.value, label: value.title})),
     }] as const),
@@ -92,11 +99,11 @@ export function freezeFacetOrders(served: readonly BookFacetGroup[]): FrozenFace
 export function orderedFacetVocabularyKeys(
   served: readonly BookFacetGroup[],
   frozen?: FrozenFacetOrders,
-): string[] {
-  const vocabularyKeys: string[] = [];
-  const seen = new Set<string>();
+): BookQueryFacetKey[] {
+  const vocabularyKeys: BookQueryFacetKey[] = [];
+  const seen = new Set<BookQueryFacetKey>();
   const append = (key: string): void => {
-    if (!seen.has(key)) {
+    if (isBookQueryFacetKey(key) && !seen.has(key)) {
       seen.add(key);
       vocabularyKeys.push(key);
     }
@@ -116,7 +123,9 @@ export function buildRailGroups(
   frozen?: FrozenFacetOrders,
 ): FilterRailGroup[] {
   const byKey = new Map(
-    served.filter(group => group.rel === 'facet').map(group => [group.key, group]),
+    served
+      .filter(group => group.rel === 'facet' && isBookQueryFacetKey(group.key))
+      .map(group => [group.key, group]),
   );
   const groups: FilterRailGroup[] = [];
   for (const key of orderedFacetVocabularyKeys(served, frozen)) {

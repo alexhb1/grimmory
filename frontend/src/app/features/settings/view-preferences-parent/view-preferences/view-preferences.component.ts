@@ -18,7 +18,11 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {take} from 'rxjs/operators';
 
 import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
-import {EMPTY_FACET_SELECTION, type BookSortTerm} from '../../../book/data/book-query-params';
+import {
+  EMPTY_FACET_SELECTION,
+  isBookQuerySortKey,
+  type BookSortTerm,
+} from '../../../book/data/book-query-params';
 import {BookQueryService} from '../../../book/data/book-query.service';
 import {buildSortOptions} from '../../../book/browse/book-browse-sort.config';
 import {type MultiSortDialogResult} from '../../../book/browse/multi-sort-dialog.component';
@@ -72,7 +76,7 @@ export class ViewPreferencesComponent implements OnInit {
 
   private readonly bookQuery = inject(BookQueryService);
   private readonly sortVocabularyQuery = injectQuery(() =>
-    this.bookQuery.facets({facets: EMPTY_FACET_SELECTION, sort: []}));
+    this.bookQuery.facets({facets: EMPTY_FACET_SELECTION, facetLogic: 'or'}));
   readonly editorSortOptions = computed(() => {
     const sortGroup = this.sortVocabularyQuery.data()?.find(group => group.rel === 'sort');
     const seen = new Set<string>();
@@ -215,10 +219,12 @@ export class ViewPreferencesComponent implements OnInit {
 
   // Conversion helpers
   private toTerms(criteria: SortCriterion[]): BookSortTerm[] {
-    return criteria.map(criterion => ({
-      key: criterion.field,
-      direction: criterion.direction === 'ASC' ? 'asc' as const : 'desc' as const,
-    }));
+    return criteria.flatMap((criterion): BookSortTerm[] => isBookQuerySortKey(criterion.field)
+      ? [{
+          key: criterion.field,
+          direction: criterion.direction === 'ASC' ? 'asc' : 'desc',
+        }]
+      : []);
   }
 
   private fromTerms(terms: readonly BookSortTerm[]): SortCriterion[] {

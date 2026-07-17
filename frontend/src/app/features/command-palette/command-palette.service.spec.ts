@@ -119,7 +119,10 @@ describe('CommandPaletteService', () => {
     const response: BookPage = {
       content: books,
       page: {
+        number: 0,
+        size: 50,
         totalElements: books.length,
+        totalPages: books.length > 0 ? 1 : 0,
       },
       links: [],
     };

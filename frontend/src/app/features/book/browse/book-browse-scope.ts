@@ -1,6 +1,6 @@
 import {type Data, type ParamMap} from '@angular/router';
 
-import {type FacetValueMap} from '../data/book-query-params';
+import {type BookQueryFacetKey, type FacetValueMap} from '../data/book-query-params';
 
 export type BookBrowseScope =
   | {kind: 'library'; entityId: number; facetKey: 'library'; facetValue: string}
@@ -51,7 +51,7 @@ function positiveId(raw: string | null): number | null {
   return raw !== null && Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-function omitKey(facets: FacetValueMap, key: string): FacetValueMap {
+function omitKey(facets: FacetValueMap, key: BookQueryFacetKey): FacetValueMap {
   if (!Object.hasOwn(facets, key)) {
     return facets;
   }
