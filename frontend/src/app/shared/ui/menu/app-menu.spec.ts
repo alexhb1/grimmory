@@ -39,7 +39,7 @@ import { AppContextMenuDirective, AppMenuTriggerDirective } from './app-menu-tri
       </app-menu-radio-group>
       <app-menu-item [submenu]="sub" (selected)="onSend()">Send</app-menu-item>
       <app-menu-item [loading]="busy()" (selected)="onBusy()">Working</app-menu-item>
-      <app-menu-item [closeOnSelect]="false" (selected)="onKeepOpen()">Keep open</app-menu-item>
+      <app-menu-item [closeOnSelect]="false" (selected)="onKeepOpen()">{{ keepOpenLabel() }}</app-menu-item>
       <app-menu-item [link]="'/books'" (selected)="onLink()">Go to books</app-menu-item>
     </app-menu>
 
@@ -68,6 +68,7 @@ class HostComponent {
   readonly fav = signal(false);
   readonly favMixed = signal(false);
   readonly busy = signal(true);
+  readonly keepOpenLabel = signal('Keep open');
   readonly status = signal<string | null>(null);
   readonly onDownload = vi.fn();
   readonly onDisabled = vi.fn();
@@ -307,6 +308,17 @@ describe('AppMenu', () => {
     menuEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     fixture.detectChanges();
     expect(isOpen(subMenuEl())).toBe(true);
+  });
+
+  it('updates typeahead when projected label text changes', async () => {
+    const fixture = openMenu();
+    fixture.componentInstance.keepOpenLabel.set('Archive');
+    await fixture.whenStable();
+
+    rootMenuEl().dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(itemByText('Archive').getAttribute('data-active')).toBe('true');
   });
 
   it('opens at coordinates and survives the auxclick fired when the right button releases', () => {

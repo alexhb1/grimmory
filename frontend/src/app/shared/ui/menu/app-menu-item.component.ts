@@ -66,7 +66,7 @@ import {
           <svg [lucideIcon]="iconData" [class]="iconClass" aria-hidden="true"></svg>
         </span>
       } @else if (badge()) {
-        <span [class]="badgeSlotClass" aria-hidden="true">{{ badge() }}</span>
+        <span [class]="badgeSlotClass">{{ badge() }}</span>
       } @else if (inset()) {
         <span [class]="leadingSlotClass" aria-hidden="true"></span>
       }
