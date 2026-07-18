@@ -1,0 +1,201 @@
+import {HttpParams} from '@angular/common/http';
+
+import {
+  BrowseFacetLogic,
+  BrowseSortDirection,
+  BrowseSortTerm,
+} from '../../../core/data/browse.models';
+import {normalizeBookIds} from './book-id';
+
+export {normalizeBookId} from './book-id';
+
+export const BOOK_QUERY_FACET_KEYS = [
+  'author',
+  'series',
+  'genre',
+  'tag',
+  'mood',
+  'language',
+  'publisher',
+  'library',
+  'shelf',
+  'file_type',
+  'read_status',
+  'personal_rating',
+  'amazon_rating',
+  'goodreads_rating',
+  'hardcover_rating',
+  'ranobedb_rating',
+  'age_rating',
+  'content_rating',
+  'match_score',
+  'published_year',
+  'file_size',
+  'page_count',
+  'shelf_status',
+  'comic_character',
+  'comic_team',
+  'comic_location',
+  'comic_creator',
+] as const;
+
+export const BOOK_QUERY_SORT_KEYS = [
+  'addedOn',
+  'title',
+  'seriesName',
+  'seriesNumber',
+  'publisher',
+  'publishedDate',
+  'amazonRating',
+  'amazonReviewCount',
+  'goodreadsRating',
+  'goodreadsReviewCount',
+  'hardcoverRating',
+  'hardcoverReviewCount',
+  'ranobedbRating',
+  'narrator',
+  'pageCount',
+  'language',
+  'personalRating',
+  'lastReadTime',
+  'readStatus',
+  'dateFinished',
+  'readingProgress',
+] as const;
+
+export type BookQueryFacetKey = typeof BOOK_QUERY_FACET_KEYS[number];
+export type BookQuerySortKey = typeof BOOK_QUERY_SORT_KEYS[number];
+export type FacetLogic = BrowseFacetLogic;
+export type FacetValueMap = Readonly<Partial<Record<BookQueryFacetKey, readonly string[]>>>;
+export type SortDirection = BrowseSortDirection;
+
+export const EMPTY_FACET_SELECTION: FacetValueMap = {};
+
+export type BookSortTerm = BrowseSortTerm<BookQuerySortKey>;
+
+export interface BookCollectionFilterParams {
+  query?: string;
+  facets: FacetValueMap;
+  facetLogic: FacetLogic;
+}
+
+export interface BookQueryParams extends BookCollectionFilterParams {
+  sort: readonly BookSortTerm[];
+}
+
+export interface BookPageParams extends BookQueryParams {
+  size: number;
+  page?: number;
+}
+
+export interface BookDescriptionOptions {
+  withDescription: boolean;
+}
+
+export interface NormalizedBookBatchParams {
+  bookIds: readonly number[];
+  withDescription: boolean;
+}
+
+export const DEFAULT_BOOK_SORT_TERMS: readonly BookSortTerm[] = [{key: 'title', direction: 'asc'}];
+const BOOK_QUERY_FACET_KEY_SET = new Set<string>(BOOK_QUERY_FACET_KEYS);
+const BOOK_QUERY_SORT_KEY_SET = new Set<string>(BOOK_QUERY_SORT_KEYS);
+
+export function isBookQueryFacetKey(value: string): value is BookQueryFacetKey {
+  return BOOK_QUERY_FACET_KEY_SET.has(value);
+}
+
+export function isBookQuerySortKey(value: string): value is BookQuerySortKey {
+  return BOOK_QUERY_SORT_KEY_SET.has(value);
+}
+
+export function normalizeBookPageParams(params: BookPageParams): BookPageParams {
+  return {
+    ...normalizeBookQueryParams(params),
+    size: params.size,
+    page: params.page ?? 0,
+  };
+}
+
+export function normalizeBookBatchParams(
+  bookIds: readonly number[],
+  withDescription: boolean,
+): NormalizedBookBatchParams {
+  const normalizedIds = normalizeBookIds(bookIds, {sort: true});
+  return {bookIds: normalizedIds, withDescription};
+}
+
+export function toPageHttpParams(params: BookPageParams, cursor?: string): HttpParams {
+  const httpParams = toCollectionHttpParams(params)
+    .set('sort', serializeSort(params.sort))
+    .set('size', params.size.toString());
+  return cursor === undefined ? httpParams : httpParams.set('cursor', cursor);
+}
+
+export function toIdsHttpParams(params: BookQueryParams): HttpParams {
+  return toCollectionHttpParams(params).set('sort', serializeSort(params.sort));
+}
+
+export function normalizeBookQueryParams(params: BookQueryParams): BookQueryParams {
+  return {
+    ...normalizeBookCollectionFilterParams(params),
+    sort: params.sort,
+  };
+}
+
+export function normalizeBookCollectionFilterParams(
+  params: BookCollectionFilterParams,
+): BookCollectionFilterParams {
+  const query = params.query?.trim();
+  const facets = normalizeFacetValueMap(params.facets);
+
+  return {
+    ...(query ? {query} : {}),
+    facets,
+    facetLogic: params.facetLogic,
+  };
+}
+
+export function toCollectionHttpParams(params: BookCollectionFilterParams): HttpParams {
+  let httpParams = new HttpParams().set('facet_logic', params.facetLogic);
+
+  if (params.query) {
+    httpParams = httpParams.set('query', params.query);
+  }
+
+  return appendFacetParams(httpParams, params.facets);
+}
+
+function normalizeFacetValueMap(facets: FacetValueMap): FacetValueMap {
+  const normalized = new Map<string, readonly string[]>();
+  const rawFacets = facets as Readonly<Record<string, readonly string[] | undefined>>;
+
+  for (const key of Object.keys(rawFacets).sort()) {
+    const values = [...new Set((rawFacets[key] ?? [])
+      .map(value => value.trim())
+      .filter(Boolean))].sort();
+
+    if (values.length > 0) {
+      normalized.set(key, values);
+    }
+  }
+
+  return Object.fromEntries(normalized);
+}
+
+function appendFacetParams(httpParams: HttpParams, facets: FacetValueMap): HttpParams {
+  let result = httpParams;
+  for (const [key, values] of Object.entries(facets)) {
+    for (const value of values ?? []) {
+      result = result.append('facet', `${key}:${value}`);
+    }
+  }
+
+  return result;
+}
+
+function serializeSort(sort: readonly BookSortTerm[]): string {
+  return sort
+    .map(term => `${term.direction === 'desc' ? '-' : ''}${term.key}`)
+    .join(',');
+}

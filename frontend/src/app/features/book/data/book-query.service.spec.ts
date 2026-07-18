@@ -1,0 +1,279 @@
+import {HttpErrorResponse} from '@angular/common/http';
+import {HttpTestingController} from '@angular/common/http/testing';
+import {TestBed} from '@angular/core/testing';
+import {QueryClient} from '@tanstack/angular-query-experimental';
+import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest';
+
+import {API_CONFIG} from '../../../core/config/api-config';
+import {
+  createAuthServiceStub,
+  createQueryClientHarness,
+  flushSignalAndQueryEffects,
+} from '../../../core/testing/query-testing';
+import {AuthService} from '../../../shared/service/auth.service';
+import {bookQueryKeys} from './book-query-keys';
+import {BookPageParams} from './book-query-params';
+import {BookPage} from './book-query.models';
+import {BookDetail, BookRecommendation} from './book-response.models';
+import {retryTransientBookQueryError} from './book-query-transport';
+import {BookQueryService} from './book-query.service';
+
+const PARAMS: BookPageParams = {
+  query: 'dune',
+  facets: {genre: ['Science Fiction']},
+  facetLogic: 'or',
+  sort: [{key: 'title', direction: 'asc'}],
+  size: 20,
+};
+
+function page(
+  ids: number[],
+  links: BookPage['links'] = [],
+): BookPage {
+  return {
+    content: ids.map(id => ({id, libraryId: 1, libraryName: 'Library'})),
+    page: {
+      number: 0,
+      size: 20,
+      totalElements: ids.length,
+      totalPages: ids.length === 0 ? 0 : 1,
+      cursor: 'opaque-current-cursor',
+    },
+    links,
+  };
+}
+
+function pageWithCursor(ids: number[], cursor: string): BookPage {
+  const base = page(ids);
+  return {...base, page: {...base.page, cursor}};
+}
+
+function encodeCursor(state: Record<string, unknown>): string {
+  return btoa(JSON.stringify(state)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeCursor(cursor: string): Record<string, unknown> {
+  const padded = cursor.replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(padded + '='.repeat((4 - padded.length % 4) % 4))) as Record<string, unknown>;
+}
+
+describe('BookQueryService', () => {
+  let service: BookQueryService;
+  let queryClient: QueryClient;
+  let authService: ReturnType<typeof createAuthServiceStub>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    const harness = createQueryClientHarness();
+    queryClient = harness.queryClient;
+    authService = createAuthServiceStub();
+    queryClient.setDefaultOptions({queries: {retry: false}});
+
+    TestBed.configureTestingModule({
+      providers: [
+        ...harness.providers,
+        {provide: AuthService, useValue: authService},
+        BookQueryService,
+      ],
+    });
+
+    service = TestBed.inject(BookQueryService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
+
+  it('removes its cached book queries when the authenticated session ends', () => {
+    const key = bookQueryKeys.detail(7, false);
+    queryClient.setQueryData(key, {id: 7});
+
+    authService.token.set(null);
+    flushSignalAndQueryEffects();
+
+    expect(queryClient.getQueryData(key)).toBeUndefined();
+  });
+
+  it('fetches one bounded summary page with normalized parameters', async () => {
+    const resultPromise = queryClient.fetchQuery(service.page(PARAMS));
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    request.flush(page([1, 2]));
+
+    await expect(resultPromise).resolves.toMatchObject({
+      content: [{id: 1}, {id: 2}],
+    });
+  });
+
+  it('sends every selected facet value as a repeated facet parameter', async () => {
+    const resultPromise = queryClient.fetchQuery(service.page({
+      ...PARAMS,
+      facets: {
+        genre: ['Science Fiction'],
+        language: ['English'],
+      },
+    }));
+    const request = http.expectOne(
+      `${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&facet=language:English&sort=title&size=20`,
+    );
+    request.flush(page([1]));
+
+    await expect(resultPromise).resolves.toMatchObject({content: [{id: 1}]});
+  });
+
+  it('fetches facets without sort or size', async () => {
+    const resultPromise = queryClient.fetchQuery(service.facets(PARAMS));
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/facets?facet_logic=or&query=dune&facet=genre:Science%20Fiction`);
+    request.flush({
+      links: [{rel: 'self', href: '/api/v1/books/facets?query=dune', type: 'application/json'}],
+      facets: [{
+        metadata: {rel: 'facet', key: 'genre', title: 'Genre'},
+        links: [{
+          rel: ['self', 'facet'],
+          href: '/api/v1/books/page?facet=genre%3AFantasy',
+          type: 'application/json',
+          title: 'Fantasy',
+          value: 'Fantasy',
+          properties: {numberOfItems: 4},
+        }],
+      }],
+    });
+
+    await expect(resultPromise).resolves.toEqual([{
+      rel: 'facet',
+      key: 'genre',
+      title: 'Genre',
+      values: [{value: 'Fantasy', title: 'Fantasy', count: 4, selected: true}],
+    }]);
+  });
+
+  it('fetches matching IDs with sort but no size', async () => {
+    const resultPromise = queryClient.fetchQuery(service.ids(PARAMS));
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/ids?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title`);
+    request.flush([3, 1, 2]);
+
+    await expect(resultPromise).resolves.toEqual([3, 1, 2]);
+  });
+
+  it('addresses a page beyond the first by patching the offset into the first-page cursor', async () => {
+    const template = encodeCursor({o: 0, l: 20, s: 'title', f: 'abc123'});
+    const resultPromise = queryClient.fetchQuery(service.page({...PARAMS, page: 3}));
+
+    const firstRequest = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`);
+    expect(firstRequest.request.params.has('cursor')).toBe(false);
+    firstRequest.flush(pageWithCursor([1, 2], template));
+
+    const secondRequest = await vi.waitFor(() => http.expectOne(candidate =>
+      candidate.url === `${API_CONFIG.BASE_URL}/api/v1/books/page` && candidate.params.has('cursor'),
+    ));
+    expect(decodeCursor(secondRequest.request.params.get('cursor') ?? ''))
+      .toEqual({o: 60, l: 20, s: 'title', f: 'abc123'});
+    expect(secondRequest.request.params.has('page')).toBe(false);
+    expect(secondRequest.request.params.get('query')).toBe('dune');
+    expect(secondRequest.request.params.get('sort')).toBe('title');
+    secondRequest.flush(page([61]));
+
+    await expect(resultPromise).resolves.toMatchObject({content: [{id: 61}]});
+  });
+
+  it('reuses the cached first page as the cursor template without refetching it', async () => {
+    const template = encodeCursor({o: 0, l: 20, s: 'title', f: 'abc123'});
+    const firstPromise = queryClient.fetchQuery(service.page(PARAMS));
+    http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/page?facet_logic=or&query=dune&facet=genre:Science%20Fiction&sort=title&size=20`)
+      .flush(pageWithCursor([1, 2], template));
+    await firstPromise;
+
+    const laterPromise = queryClient.fetchQuery(service.page({...PARAMS, page: 2}));
+    const request = await vi.waitFor(() => http.expectOne(candidate =>
+      candidate.url === `${API_CONFIG.BASE_URL}/api/v1/books/page` && candidate.params.has('cursor'),
+    ));
+    expect(decodeCursor(request.request.params.get('cursor') ?? '')).toEqual({o: 40, l: 20, s: 'title', f: 'abc123'});
+    request.flush(page([41]));
+
+    await expect(laterPromise).resolves.toMatchObject({content: [{id: 41}]});
+  });
+
+  it('keys the first page identically whether the page number is omitted or zero', () => {
+    expect(service.page(PARAMS).queryKey).toEqual(service.page({...PARAMS, page: 0}).queryKey);
+  });
+
+  it('fetches full book detail with the description flag', async () => {
+    const resultPromise = queryClient.fetchQuery(service.detail(42, {withDescription: true}));
+    expectTypeOf(resultPromise).toEqualTypeOf<Promise<BookDetail>>();
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/42?withDescription=true`);
+    const response: BookDetail = {
+      id: 42,
+      libraryId: 1,
+      libraryName: 'Library',
+      metadata: {bookId: 42, title: 'Dune', description: 'Desert power.'},
+    };
+    request.flush(response);
+
+    await expect(resultPromise).resolves.toMatchObject({
+      id: 42,
+      metadata: {description: 'Desert power.'},
+    });
+  });
+
+  it('normalizes batch IDs while preserving the backend response order', async () => {
+    const resultPromise = queryClient.fetchQuery(service.batch(
+      [9, 3, 9],
+      {withDescription: false},
+    ));
+    expectTypeOf(resultPromise).toEqualTypeOf<Promise<BookDetail[]>>();
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/batch?ids=3,9&withDescription=false`);
+    const response: BookDetail[] = [
+      {id: 9, libraryId: 1, libraryName: 'Library'},
+      {id: 3, libraryId: 1, libraryName: 'Library'},
+    ];
+    request.flush(response);
+
+    await expect(resultPromise).resolves.toMatchObject([{id: 9}, {id: 3}]);
+  });
+
+  it('fetches recommendations and preserves similarity order', async () => {
+    const resultPromise = queryClient.fetchQuery(service.recommendations(42, 2));
+    expectTypeOf(resultPromise).toEqualTypeOf<Promise<BookRecommendation[]>>();
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/42/recommendations?limit=2`);
+    const response: BookRecommendation[] = [
+      {book: {id: 8, libraryId: 1, libraryName: 'Library'}, similarityScore: 0.4},
+      {book: {id: 5, libraryId: 1, libraryName: 'Library'}, similarityScore: 0.9},
+    ];
+    request.flush(response);
+
+    await expect(resultPromise).resolves.toMatchObject([
+      {book: {id: 8}, similarityScore: 0.4},
+      {book: {id: 5}, similarityScore: 0.9},
+    ]);
+  });
+
+  it('cancels an active HTTP request through the query signal', async () => {
+    const options = service.detail(42, {withDescription: false});
+    const resultPromise = queryClient.fetchQuery(options);
+    const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/42?withDescription=false`);
+
+    await queryClient.cancelQueries({queryKey: options.queryKey});
+
+    expect(request.cancelled).toBe(true);
+    await expect(resultPromise).rejects.toBeDefined();
+  });
+
+  it('rejects invalid detail and batch requests before HTTP', () => {
+    expect(() => service.detail(0, {withDescription: false})).toThrow('Book ID must be a positive integer.');
+    expect(() => service.batch([], {withDescription: false})).toThrow('At least one book ID is required.');
+    http.expectNone(() => true);
+  });
+
+  it('retries only transient failures and only twice', () => {
+    const networkError = new HttpErrorResponse({status: 0});
+    const badRequest = new HttpErrorResponse({status: 400});
+    const serverError = new HttpErrorResponse({status: 503});
+
+    expect(retryTransientBookQueryError(0, networkError)).toBe(true);
+    expect(retryTransientBookQueryError(0, badRequest)).toBe(false);
+    expect(retryTransientBookQueryError(0, serverError)).toBe(true);
+    expect(retryTransientBookQueryError(0, new Error('Unexpected failure'))).toBe(false);
+    expect(retryTransientBookQueryError(2, serverError)).toBe(false);
+  });
+});
