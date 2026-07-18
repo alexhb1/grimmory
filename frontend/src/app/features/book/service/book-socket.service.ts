@@ -1,56 +1,191 @@
-import {inject, Injectable} from '@angular/core';
-import {Book} from '../model/book.model';
+import {DestroyRef, inject, Injectable} from '@angular/core';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {BOOKS_QUERY_KEY} from './book-query-keys';
+
+import {invalidateBookRecommendations} from '../data/book-query-cache';
+import {isPositiveSafeInteger, isRecord} from '../data/json-guards';
+import {Book} from '../model/book.model';
 import {
-  addBookToCache,
-  invalidateBookDetailQueries,
+  awaitBookCacheReconciliations,
   invalidateBooksQuery,
-  patchAppBooksCoverInCache,
+  invalidateLegacyBookRecommendations,
   patchBooksInCache,
-  removeBookQueries,
-} from './book-query-cache';
+  patchBookCoversInCache,
+  reconcileBookCacheChangeSet,
+  upsertBooksInCache,
+} from './legacy-book-cache';
 
-@Injectable({
-  providedIn: 'root',
-})
+interface BookCoverPatch {
+  readonly id: number;
+  readonly coverUpdatedOn: string;
+}
+@Injectable({providedIn: 'root'})
 export class BookSocketService {
-  private queryClient = inject(QueryClient);
+  private readonly queryClient = inject(QueryClient);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly reconciliationDelayMs = 50;
+  private readonly pendingChangedBookIds = new Set<number>();
+  private readonly pendingDeletedBookIds = new Set<number>();
+  private reconciliationTimer: ReturnType<typeof setTimeout> | null = null;
 
-  handleNewlyCreatedBook(book: Book): void {
-    addBookToCache(this.queryClient, book);
+  constructor() {
+    this.destroyRef.onDestroy(() => this.clearPendingReconciliation());
   }
 
-  handleRemovedBookIds(removedBookIds: number[]): void {
+  handleNewlyCreatedBook(payload: unknown): void {
+    const book = decodeLegacyBookPayload(payload);
+    if (book === null) {
+      console.warn('[BookSocket] Ignored malformed book-add payload');
+      return;
+    }
+    upsertBooksInCache(this.queryClient, [book]);
+  }
+
+  handleRemovedBookIds(payload: unknown): void {
+    if (Array.isArray(payload) && payload.length === 0) {
+      return;
+    }
+    const bookIds = decodeBookIds(payload);
+    if (bookIds === null) {
+      console.warn('[BookSocket] Ignored malformed books-remove payload');
+      return;
+    }
+
+    this.queueDeletedBooks(bookIds);
+  }
+
+  handleBookUpdate(payload: unknown): void {
+    const book = decodeLegacyBookPayload(payload);
+    if (book !== null) {
+      patchBooksInCache(this.queryClient, [book]);
+      return;
+    }
+
+    if (Array.isArray(payload) && payload.length === 0) {
+      return;
+    }
+    const bookIds = decodeBookIds(payload);
+    if (bookIds === null) {
+      console.warn('[BookSocket] Ignored malformed book-update payload');
+      return;
+    }
+    this.queueKnownChanges(bookIds);
+  }
+
+  handleBookMetadataUpdate(payload: unknown): void {
+    if (!isPositiveSafeInteger(payload)) {
+      console.warn('[BookSocket] Ignored malformed book-metadata-update payload');
+      return;
+    }
+    this.queueKnownChanges([payload]);
+  }
+
+  handleMultipleBookCoverPatches(payload: unknown): void {
+    if (Array.isArray(payload) && payload.length === 0) {
+      return;
+    }
+    const patches = decodeBookCoverPatches(payload);
+    if (patches === null) {
+      console.warn('[BookSocket] Ignored malformed books-cover-update payload');
+      return;
+    }
+
+    patchBookCoversInCache(this.queryClient, patches);
+  }
+
+  handleTaskProgress(payload: unknown): void {
+    if (!isRecord(payload)
+      || payload['taskType'] !== 'UPDATE_BOOK_RECOMMENDATIONS'
+      || payload['taskStatus'] !== 'COMPLETED') {
+      return;
+    }
+    void awaitBookCacheReconciliations([
+      () => invalidateBookRecommendations(this.queryClient),
+      () => invalidateLegacyBookRecommendations(this.queryClient),
+    ]);
+  }
+
+  handleReconnect(): void {
+    this.clearPendingReconciliation();
     invalidateBooksQuery(this.queryClient);
-    removeBookQueries(this.queryClient, removedBookIds);
   }
 
-  handleBookUpdate(updatedBook: Book): void {
-    patchBooksInCache(this.queryClient, [updatedBook]);
+  private queueKnownChanges(bookIds: readonly number[]): void {
+    for (const bookId of bookIds) {
+      if (!this.pendingDeletedBookIds.has(bookId)) {
+        this.pendingChangedBookIds.add(bookId);
+      }
+    }
+    this.scheduleReconciliation();
   }
 
-  handleMultipleBookUpdates(updatedBooks: Book[]): void {
-    patchBooksInCache(this.queryClient, updatedBooks);
+  private queueDeletedBooks(bookIds: readonly number[]): void {
+    for (const bookId of bookIds) {
+      this.pendingChangedBookIds.delete(bookId);
+      this.pendingDeletedBookIds.add(bookId);
+    }
+    this.scheduleReconciliation();
   }
 
-  handleBookMetadataUpdate(bookId: number): void {
-    invalidateBooksQuery(this.queryClient);
-    invalidateBookDetailQueries(this.queryClient, [bookId]);
+  private scheduleReconciliation(): void {
+    if (this.reconciliationTimer !== null) {
+      return;
+    }
+
+    this.reconciliationTimer = setTimeout(() => this.flushPendingReconciliation(), this.reconciliationDelayMs);
   }
 
-  handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
-    if (!patches || patches.length === 0) return;
-    const patchMap = new Map(patches.map(p => [p.id, p.coverUpdatedOn]));
-    this.queryClient.setQueryData<Book[]>(BOOKS_QUERY_KEY, current =>
-      (current ?? []).map(book => {
-        const coverUpdatedOn = patchMap.get(book.id);
-        return coverUpdatedOn && book.metadata
-          ? {...book, metadata: {...book.metadata, coverUpdatedOn}}
-          : book;
-      })
+  private flushPendingReconciliation(): void {
+    this.reconciliationTimer = null;
+    const changedBookIds = [...this.pendingChangedBookIds];
+    const deletedBookIds = [...this.pendingDeletedBookIds];
+    this.pendingChangedBookIds.clear();
+    this.pendingDeletedBookIds.clear();
+
+    void reconcileBookCacheChangeSet(
+      this.queryClient,
+      {changedBookIds, deletedBookIds},
+      {legacyList: 'needs-refetch'},
     );
-    patchAppBooksCoverInCache(this.queryClient, patches);
-    invalidateBookDetailQueries(this.queryClient, patches.map(p => p.id));
   }
+
+  private clearPendingReconciliation(): void {
+    if (this.reconciliationTimer !== null) {
+      clearTimeout(this.reconciliationTimer);
+      this.reconciliationTimer = null;
+    }
+    this.pendingChangedBookIds.clear();
+    this.pendingDeletedBookIds.clear();
+  }
+}
+
+function decodeLegacyBookPayload(payload: unknown): Book | null {
+  if (!isRecord(payload) || !isPositiveSafeInteger(payload['id'])) {
+    return null;
+  }
+  return payload as Book;
+}
+
+function decodeBookIds(payload: unknown): readonly number[] | null {
+  if (!Array.isArray(payload) || payload.length === 0 || !payload.every(isPositiveSafeInteger)) {
+    return null;
+  }
+  return [...new Set(payload)];
+}
+
+function decodeBookCoverPatches(payload: unknown): readonly BookCoverPatch[] | null {
+  if (!Array.isArray(payload) || payload.length === 0) {
+    return null;
+  }
+
+  const patchesById = new Map<number, BookCoverPatch>();
+  for (const item of payload) {
+    if (!isRecord(item)
+      || !isPositiveSafeInteger(item['id'])
+      || typeof item['coverUpdatedOn'] !== 'string') {
+      return null;
+    }
+    patchesById.set(item['id'], {id: item['id'], coverUpdatedOn: item['coverUpdatedOn']});
+  }
+
+  return [...patchesById.values()];
 }

@@ -13,7 +13,6 @@ describe('shelf.model', () => {
       userId: 9,
       bookCount: 24,
       sort: {
-        label: 'Title',
         field: 'title',
         direction: SortDirection.ASCENDING
       }

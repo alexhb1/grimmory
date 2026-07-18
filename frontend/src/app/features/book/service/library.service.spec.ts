@@ -6,6 +6,7 @@ import {AuthService} from '../../../shared/service/auth.service';
 import {createAuthServiceStub, createQueryClientHarness, flushSignalAndQueryEffects} from '../../../core/testing/query-testing';
 import type {Library} from '../model/library.model';
 import {BookService} from './book.service';
+import {bookQueryKeys} from '../data/book-query-keys';
 import {BOOKS_QUERY_KEY} from './book-query-keys';
 import {LIBRARIES_QUERY_KEY, libraryFormatCountsQueryKey} from './library-query-keys';
 import {LibraryService} from './library.service';
@@ -92,6 +93,7 @@ describe('LibraryService', () => {
 
     expect(queryClientHarness.queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: LIBRARIES_QUERY_KEY, exact: true});
     expect(queryClientHarness.queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: BOOKS_QUERY_KEY, exact: true});
+    expect(queryClientHarness.queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: bookQueryKeys.all()});
     expect(queryClientHarness.queryClient.removeQueries).toHaveBeenCalledWith({queryKey: libraryFormatCountsQueryKey(4), exact: true});
   });
 

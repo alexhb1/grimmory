@@ -17,12 +17,12 @@ import {
   bookDetailQueryKey,
   bookRecommendationsQueryKey,
 } from './book-query-keys';
+import {invalidateAllBookQueries} from '../data/book-query-cache';
 import {
-  invalidateAppBooksQueries,
   invalidateBooksQuery,
+  invalidateDeletedBookQueries,
   patchBooksInCache,
-  removeBookQueries,
-} from './book-query-cache';
+} from './legacy-book-cache';
 
 @Injectable({
   providedIn: 'root',
@@ -152,7 +152,7 @@ export class BookService {
         shelves: book.shelves?.filter(shelf => shelf.id !== shelfId),
       }))
     );
-    invalidateAppBooksQueries(this.queryClient);
+    void invalidateAllBookQueries(this.queryClient);
   }
 
   /*------------------ Book Retrieval ------------------*/
@@ -195,8 +195,7 @@ export class BookService {
     return this.http.delete<BookDeletionResponse>(this.url, {params}).pipe(
       tap(response => {
         const deletedIds = response.deleted.length > 0 ? response.deleted : idList;
-        invalidateBooksQuery(this.queryClient);
-        removeBookQueries(this.queryClient, deletedIds);
+        invalidateDeletedBookQueries(this.queryClient, deletedIds);
 
         if (response.failedFileDeletions?.length > 0) {
           this.messageService.add({
@@ -377,12 +376,8 @@ export class BookService {
     this.bookSocketService.handleRemovedBookIds(removedBookIds);
   }
 
-  handleBookUpdate(updatedBook: Book): void {
-    this.bookSocketService.handleBookUpdate(updatedBook);
-  }
-
-  handleMultipleBookUpdates(updatedBooks: Book[]): void {
-    this.bookSocketService.handleMultipleBookUpdates(updatedBooks);
+  handleBookUpdate(payload: unknown): void {
+    this.bookSocketService.handleBookUpdate(payload);
   }
 
   handleBookMetadataUpdate(bookId: number): void {
@@ -391,5 +386,13 @@ export class BookService {
 
   handleMultipleBookCoverPatches(patches: { id: number; coverUpdatedOn: string }[]): void {
     this.bookSocketService.handleMultipleBookCoverPatches(patches);
+  }
+
+  handleTaskProgress(payload: unknown): void {
+    this.bookSocketService.handleTaskProgress(payload);
+  }
+
+  handleReconnect(): void {
+    this.bookSocketService.handleReconnect();
   }
 }

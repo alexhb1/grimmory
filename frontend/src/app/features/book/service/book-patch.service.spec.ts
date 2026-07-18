@@ -8,6 +8,7 @@ import {ResetProgressTypes} from '../../../shared/constants/reset-progress-type'
 import {ReadStatus} from '../model/book.model';
 import {BOOKS_QUERY_KEY} from './book-query-keys';
 import {BookPatchService} from './book-patch.service';
+import {shelfDefinitionQueryKeys} from '../data/shelf-definition-query-keys';
 
 describe('BookPatchService', () => {
   let service: BookPatchService;
@@ -100,8 +101,6 @@ describe('BookPatchService', () => {
     ]);
 
     expect(queryClient.setQueryData).toHaveBeenCalledWith(BOOKS_QUERY_KEY, expect.any(Function));
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: ['app-books']});
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: ['app-filter-options']});
   });
 
   it('updates cached date finished after the backend accepts the change', () => {
@@ -134,8 +133,6 @@ describe('BookPatchService', () => {
     ]);
 
     expect(queryClient.setQueryData).toHaveBeenCalledWith(BOOKS_QUERY_KEY, expect.any(Function));
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: ['app-books']});
-    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: ['app-filter-options']});
   });
 
   it('updates the cached last read timestamp without calling the backend', () => {
@@ -148,5 +145,22 @@ describe('BookPatchService', () => {
     httpTestingController.expectNone(req => req.url.includes('/api/v1/books'));
 
     vi.useRealTimers();
+  });
+
+  it('refreshes shelf counts after changing book membership', () => {
+    service.updateBookShelves(new Set([1]), new Set([7]), new Set()).subscribe();
+
+    const request = httpTestingController.expectOne(req => req.url.endsWith('/api/v1/books/shelves'));
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      bookIds: [1],
+      shelvesToAssign: [7],
+      shelvesToUnassign: [],
+    });
+    request.flush([]);
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: shelfDefinitionQueryKeys.all(),
+    });
   });
 });
