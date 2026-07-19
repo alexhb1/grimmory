@@ -29,8 +29,8 @@ export interface MultiSortDialogResult {
       <h2 class="text-lg font-semibold text-text">{{ 'browse.sort.multiSort' | transloco }}</h2>
       <app-multi-sort-editor [(terms)]="draft" [options]="data.options" />
       @if (data.saveDefaultLabelKey; as labelKey) {
-        <label class="flex cursor-pointer select-none items-center gap-2 text-sm text-text">
-          <app-checkbox [(checked)]="saveAsDefault" />
+        <label for="save-as-default" class="flex cursor-pointer select-none items-center gap-2 text-sm text-text">
+          <app-checkbox inputId="save-as-default" [(checked)]="saveAsDefault" />
           {{ labelKey | transloco }}
         </label>
       }

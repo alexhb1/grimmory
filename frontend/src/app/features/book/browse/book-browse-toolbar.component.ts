@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, booleanAttribute, computed, inject, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, booleanAttribute, computed, input, output, signal, viewChild} from '@angular/core';
 import {TranslocoPipe} from '@jsverse/transloco';
 import {
   LucideChevronDown,
@@ -9,10 +9,8 @@ import {
   LucideLayoutGrid,
   LucideListOrdered,
   LucideMinus,
-  LucidePencil,
   LucidePlus,
   LucideTableProperties,
-  LucideTrash2,
   type LucideIconData,
 } from '@lucide/angular';
 
@@ -28,7 +26,7 @@ import {AppMenuRadioComponent} from '../../../shared/ui/menu/app-menu-radio.comp
 import {AppMenuRadioGroupComponent} from '../../../shared/ui/menu/app-menu-radio-group.component';
 import {AppMenuSectionComponent} from '../../../shared/ui/menu/app-menu-section.component';
 import {AppMenuSeparatorComponent} from '../../../shared/ui/menu/app-menu-separator.component';
-import {AppMenuTriggerForDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
+import {AppMenuTriggerDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
 import {
   sortDirectionIcon,
   type BookSortOption,
@@ -36,9 +34,9 @@ import {
 } from './book-browse-sort.config';
 import {type BookBrowseViewMode} from './book-browse.models';
 import {
-  LibraryShelfMenuService,
-  type LibraryShelfMenuType,
-} from '../service/library-shelf-menu.service';
+  LibraryShelfMenuComponent,
+  type LibraryShelfMenuTarget,
+} from '../components/library-shelf-menu/library-shelf-menu.component';
 
 export interface BookBrowseColumnOption {
   readonly field: string;
@@ -110,14 +108,13 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
     AppMenuRadioGroupComponent,
     AppMenuSectionComponent,
     AppMenuSeparatorComponent,
-    AppMenuTriggerForDirective,
+    AppMenuTriggerDirective,
+    LibraryShelfMenuComponent,
     LucideDynamicIcon,
     LucideEllipsis,
     LucideFunnel,
     LucideMinus,
-    LucidePencil,
     LucidePlus,
-    LucideTrash2,
   ],
   host: {class: 'contents'},
   template: `
@@ -229,6 +226,12 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
       }
     </app-menu>
 
+    @if (actionTarget(); as target) {
+      <app-library-shelf-menu
+        [target]="target"
+        [ariaLabel]="'common.moreActionsFor' | transloco: {label: target.entity.name}" />
+    }
+
     <app-button
       variant="soft"
       [label]="'browse.toolbar.filter' | transloco"
@@ -285,79 +288,21 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
       } @else {
         <app-menu-item [submenu]="columnsMenu">{{ 'browse.toolbar.columns' | transloco }}</app-menu-item>
       }
-      @if (actionType() !== null && actionId() !== null) {
-        <app-menu-separator />
-        @switch (actionType()) {
-          @case ('library') {
-            <app-menu-section>{{ 'settingsView.librarySort.entityLibrary' | transloco }}</app-menu-section>
-            <app-menu-item (selected)="menuService.addPhysicalBook(actionId()!)">
-              {{ 'book.shelfMenuService.library.addPhysicalBook' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.importIsbns(actionId()!)">
-              {{ 'book.shelfMenuService.library.bulkIsbnImport' | transloco }}
-            </app-menu-item>
-            <app-menu-separator />
-            <app-menu-item (selected)="menuService.editLibrary(actionId()!)">
-              <svg lucidePencil class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.library.editLibrary' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.rescanLibrary(actionId()!)">
-              {{ 'book.shelfMenuService.library.rescanLibrary' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.customFetchLibraryMetadata(actionId()!)">
-              {{ 'book.shelfMenuService.library.customFetchMetadata' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.autoFetchLibraryMetadata(actionId()!)">
-              {{ 'book.shelfMenuService.library.autoFetchMetadata' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.findLibraryDuplicates(actionId()!)">
-              {{ 'book.shelfMenuService.library.findDuplicates' | transloco }}
-            </app-menu-item>
-            <app-menu-separator />
-            <app-menu-item
-              variant="destructive"
-              (selected)="menuService.deleteLibrary(actionId()!)">
-              <svg lucideTrash2 class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.library.deleteLibrary' | transloco }}
-            </app-menu-item>
+      @if (actionTarget(); as target) {
+        @if (actionMenu(); as targetMenu) {
+          <app-menu-separator />
+          @switch (target.type) {
+            @case ('library') {
+              <app-menu-section>{{ 'settingsView.librarySort.entityLibrary' | transloco }}</app-menu-section>
+            }
+            @case ('shelf') {
+              <app-menu-section>{{ 'settingsView.librarySort.entityShelf' | transloco }}</app-menu-section>
+            }
+            @case ('magicShelf') {
+              <app-menu-section>{{ 'settingsView.librarySort.entityMagicShelf' | transloco }}</app-menu-section>
+            }
           }
-          @case ('shelf') {
-            <app-menu-section>{{ 'settingsView.librarySort.entityShelf' | transloco }}</app-menu-section>
-            <app-menu-item
-              [disabled]="!menuService.canManageShelf(actionId()!)"
-              (selected)="menuService.editShelf(actionId()!)">
-              <svg lucidePencil class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.shelf.editShelf' | transloco }}
-            </app-menu-item>
-            <app-menu-separator />
-            <app-menu-item
-              [disabled]="!menuService.canManageShelf(actionId()!)"
-              variant="destructive"
-              (selected)="menuService.deleteShelf(actionId()!)">
-              <svg lucideTrash2 class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.shelf.deleteShelf' | transloco }}
-            </app-menu-item>
-          }
-          @case ('magicShelf') {
-            <app-menu-section>{{ 'settingsView.librarySort.entityMagicShelf' | transloco }}</app-menu-section>
-            <app-menu-item
-              [disabled]="!menuService.canManageMagicShelf(actionId()!)"
-              (selected)="menuService.editMagicShelf(actionId()!)">
-              <svg lucidePencil class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.magicShelf.editMagicShelf' | transloco }}
-            </app-menu-item>
-            <app-menu-item (selected)="menuService.copyMagicShelfJson(actionId()!)">
-              {{ 'book.shelfMenuService.magicShelf.exportJson' | transloco }}
-            </app-menu-item>
-            <app-menu-separator />
-            <app-menu-item
-              [disabled]="!menuService.canManageMagicShelf(actionId()!)"
-              variant="destructive"
-              (selected)="menuService.deleteMagicShelf(actionId()!)">
-              <svg lucideTrash2 class="mr-1.5 inline size-4 shrink-0 align-[-0.125em] text-text-muted" aria-hidden="true"></svg>
-              {{ 'book.shelfMenuService.magicShelf.deleteMagicShelf' | transloco }}
-            </app-menu-item>
-          }
+          <app-menu-item [submenu]="targetMenu.menu().menu">{{ target.entity.name }}</app-menu-item>
         }
       }
     </app-menu>
@@ -387,8 +332,6 @@ const COLUMN_GROUPS: readonly BookBrowseColumnGroup[] = [
   `,
 })
 export class BookBrowseToolbarComponent {
-  protected readonly menuService = inject(LibraryShelfMenuService);
-
   readonly activeSort = input.required<BookSortSelection>();
   readonly sortOptions = input.required<readonly BookSortOption[]>();
   readonly sortTerms = input<readonly BookSortTerm[]>([]);
@@ -401,8 +344,7 @@ export class BookBrowseToolbarComponent {
   readonly mobileSelectMode = input(false, {transform: booleanAttribute});
   readonly selectionCount = input(0);
   readonly selectionTotal = input<number | null>(null);
-  readonly actionType = input<LibraryShelfMenuType | null>(null);
-  readonly actionId = input<number | null>(null);
+  readonly actionTarget = input<LibraryShelfMenuTarget | null>(null);
 
   readonly sortChange = output<BookSortSelection>();
   readonly sortDirectionChange = output<BookSortSelection>();
@@ -414,6 +356,8 @@ export class BookBrowseToolbarComponent {
   readonly filtersToggle = output<void>();
   readonly mobileSelectToggle = output<void>();
   readonly selectAllRequested = output<void>();
+
+  protected readonly actionMenu = viewChild(LibraryShelfMenuComponent);
 
   protected readonly stepperClass =
     'flex h-full min-h-7 w-10 items-center justify-center rounded-sm text-text-muted ' +

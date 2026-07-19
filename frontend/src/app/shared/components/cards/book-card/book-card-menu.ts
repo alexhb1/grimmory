@@ -1,4 +1,9 @@
-import {BookFileType, BookReadStatus, BookSummary} from '../../../../features/book/data/book-response.models';
+import {
+  BookFileType,
+  BookReadStatus,
+  KnownBookReadStatus,
+  BookSummary,
+} from '../../../../features/book/data/book-response.models';
 
 export interface BookCardMenuCapabilities {
   canDownload: boolean;
@@ -13,7 +18,7 @@ export interface BookCardMenuShelf {
   checked: boolean;
 }
 
-export type ReadStatusTarget = Exclude<BookReadStatus, 'UNSET'>;
+export type ReadStatusTarget = Exclude<KnownBookReadStatus, 'UNSET'>;
 
 export const READ_STATUS_TARGET_LABEL_KEYS: Readonly<Record<ReadStatusTarget, string>> = {
   UNREAD: 'book.filter.readStatus.unread',
@@ -29,6 +34,10 @@ export const READ_STATUS_TARGET_LABEL_KEYS: Readonly<Record<ReadStatusTarget, st
 export const READ_STATUS_TARGETS: readonly ReadStatusTarget[] = Object.keys(
   READ_STATUS_TARGET_LABEL_KEYS,
 ) as ReadStatusTarget[];
+
+export function isReadStatusTarget(status: BookReadStatus): status is ReadStatusTarget {
+  return READ_STATUS_TARGETS.some(target => target === status);
+}
 
 const isDigitalType = (type: BookFileType | undefined): boolean => !!type && type !== 'AUDIOBOOK';
 

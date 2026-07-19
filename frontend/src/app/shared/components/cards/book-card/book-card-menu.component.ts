@@ -11,6 +11,7 @@ import {ShelfMembershipMenuComponent} from '../../shelf-menu/shelf-membership-me
 import {BookReadStatus, BookSummary} from '../../../../features/book/data/book-response.models';
 import {
   bookHasDigitalFile,
+  isReadStatusTarget,
   READ_STATUS_TARGET_LABEL_KEYS,
   READ_STATUS_TARGETS,
   type BookCardMenuCapabilities,
@@ -43,7 +44,7 @@ export class BookCardMenuComponent {
 
   readonly toggleShelf = output<{shelf: BookCardMenuShelf; checked: boolean}>();
   readonly createShelf = output<void>();
-  readonly setReadStatus = output<BookReadStatus>();
+  readonly setReadStatus = output<ReadStatusTarget>();
   readonly quickSend = output<void>();
   readonly customSend = output<void>();
   readonly download = output<void>();
@@ -66,6 +67,12 @@ export class BookCardMenuComponent {
 
   protected statusLabelKey(status: ReadStatusTarget): string {
     return READ_STATUS_TARGET_LABEL_KEYS[status];
+  }
+
+  protected onReadStatusSelected(status: BookReadStatus): void {
+    if (isReadStatusTarget(status)) {
+      this.setReadStatus.emit(status);
+    }
   }
 
   protected onToggleShelf(event: {shelfId: number; checked: boolean}): void {

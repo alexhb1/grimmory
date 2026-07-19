@@ -14,7 +14,7 @@ import {createQueryClientHarness, flushQueryAsync} from '../../../core/testing/q
 import {BrowseGridComponent} from '../../../shared/components/browse/browse-grid/browse-grid.component';
 import {AppSettingsService} from '../../../shared/service/app-settings.service';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
-import {type PageLink} from '../data/book-query.models';
+import {type BrowseLink} from '../../../core/data/browse.models';
 import {type BookSummary} from '../data/book-response.models';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {DialogService} from 'primeng/dynamicdialog';
@@ -40,7 +40,7 @@ class TestRouteComponent {}
 function bookPage(
   ids: number[],
   totalElements = ids.length,
-  links: PageLink[] = [],
+  links: BrowseLink[] = [],
 ) {
   return {
     content: ids.map(id => ({id, libraryId: 1, libraryName: 'Library'})),
@@ -141,7 +141,7 @@ describe('BookBrowsePageComponent', () => {
 
   function headerActionLabels(root: ParentNode): string[] {
     const menu = root.querySelector('app-menu[aria-label="More options"]');
-    return Array.from(menu?.querySelectorAll(':scope > app-menu-item') ?? [])
+    return Array.from(menu?.querySelectorAll('app-menu-item') ?? [])
       .map(item => item.textContent?.trim() ?? '');
   }
 
@@ -175,7 +175,7 @@ describe('BookBrowsePageComponent', () => {
   }
 
   function bulkMetadataItemLabels(): string[] {
-    return Array.from(bulkMetadataMenu().querySelectorAll(':scope > app-menu-item'))
+    return Array.from(bulkMetadataMenu().querySelectorAll('app-menu-item'))
       .map(item => item.textContent?.trim() ?? '');
   }
 
@@ -243,10 +243,7 @@ describe('BookBrowsePageComponent', () => {
         {provide: LibraryService, useValue: {libraries: () => [{id: 3, name: 'Cookbooks'}]}},
         {
           provide: LibraryShelfMenuService,
-          useValue: {
-            canManageShelf: () => true,
-            canManageMagicShelf: () => true,
-          },
+          useValue: {},
         },
         {provide: BookService, useValue: {readBook: () => undefined}},
         {provide: UserService, useValue: {currentUser}},
@@ -296,16 +293,7 @@ describe('BookBrowsePageComponent', () => {
     routerHarness.detectChanges();
 
     expect(routerHarness.routeNativeElement?.textContent).toContain('Cookbooks');
-    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual([
-      'Add Physical Book',
-      'Import ISBNs from File',
-      'Edit Library',
-      'Re-scan Library',
-      'Custom Fetch Metadata',
-      'Auto Fetch Metadata',
-      'Find Duplicates',
-      'Delete Library',
-    ]);
+    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual(['Cookbooks']);
   });
 
   it('supplies only shelf actions to the header menu on a shelf route', async () => {
@@ -321,7 +309,7 @@ describe('BookBrowsePageComponent', () => {
     await flushQueryAsync();
     routerHarness.detectChanges();
 
-    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual(['Edit Shelf', 'Delete Shelf']);
+    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual(['Favorites']);
   });
 
   it('scopes a magic shelf route and titles it with the shelf name', async () => {
@@ -339,11 +327,7 @@ describe('BookBrowsePageComponent', () => {
     routerHarness.detectChanges();
 
     expect(routerHarness.routeNativeElement?.textContent).toContain('Witchy Reads');
-    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual([
-      'Edit Magic Shelf',
-      'Copy JSON',
-      'Delete Magic Shelf',
-    ]);
+    expect(headerActionLabels(routerHarness.routeNativeElement!)).toEqual(['Witchy Reads']);
   });
 
   it('scopes the unshelved route through the shelf_status facet', async () => {
@@ -794,7 +778,7 @@ describe('BookBrowsePageComponent', () => {
       'Unlock All',
       'Lock/unlock metadata',
     ]);
-    expect(bulkMetadataMenu().querySelectorAll(':scope > app-menu-separator')).toHaveLength(0);
+    expect(bulkMetadataMenu().querySelectorAll('app-menu-separator')).toHaveLength(0);
   });
 
   it('shows only fetch and cover actions in Metadata for an edit-only user', async () => {
@@ -810,7 +794,7 @@ describe('BookBrowsePageComponent', () => {
       'Regenerate covers',
       'Custom covers',
     ]);
-    expect(bulkMetadataMenu().querySelectorAll(':scope > app-menu-separator')).toHaveLength(1);
+    expect(bulkMetadataMenu().querySelectorAll('app-menu-separator')).toHaveLength(1);
   });
 
   it('opens Lock/Unlock metadata with the resolved selection and clears it on close', async () => {
@@ -905,7 +889,7 @@ describe('BookBrowsePageComponent', () => {
     expect(moreMenuItem('Attach files')?.getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('disables Attach files when a selected book is outside the loaded windows', async () => {
+  it('clears Attach files when a query change clears the selection', async () => {
     currentUser.set({permissions: {admin: true}});
     await loadAndSelect([book(91), book(92)]);
 
@@ -917,7 +901,8 @@ describe('BookBrowsePageComponent', () => {
     await flushQueryAsync();
     fixture.detectChanges();
 
-    expect(moreMenuItem('Attach files')?.getAttribute('aria-disabled')).toBe('true');
+    expect(page().selection.count()).toBe(0);
+    expect(moreMenuItem('Attach files')).toBeUndefined();
   });
 
   it('enables Attach files with complete single-library evidence', async () => {

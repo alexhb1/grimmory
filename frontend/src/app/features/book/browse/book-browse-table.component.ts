@@ -37,7 +37,7 @@ import {AppButtonComponent} from '../../../shared/ui/button/app-button.component
 import {AppCheckboxComponent} from '../../../shared/ui/checkbox/app-checkbox.component';
 import {AppMenuComponent} from '../../../shared/ui/menu/app-menu.component';
 import {AppMenuItemComponent} from '../../../shared/ui/menu/app-menu-item.component';
-import {AppMenuTriggerForDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
+import {AppMenuTriggerDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
 import {cn} from '../../../shared/ui/cn';
 import {SKELETON_DELAY_MS} from '../../../shared/components/browse/browse-grid/browse-grid.util';
 import {type BookSummary} from '../data/book-response.models';
@@ -124,7 +124,7 @@ const BODY_CELL_CLASS =
     AppCheckboxComponent,
     AppMenuComponent,
     AppMenuItemComponent,
-    AppMenuTriggerForDirective,
+    AppMenuTriggerDirective,
     CoverComponent,
     RouterLink,
     TranslocoPipe,

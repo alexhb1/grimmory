@@ -43,7 +43,8 @@ function rootMenu(host: HTMLElement): HTMLElement {
 }
 
 function submenu(host: HTMLElement, ariaLabel: string): HTMLElement {
-  return host.querySelector(`app-menu[aria-label="${ariaLabel}"]`) as HTMLElement;
+  return (host.ownerDocument.querySelector(`app-menu[aria-label="${ariaLabel}"]`)
+    ?? host.querySelector(`app-menu[aria-label="${ariaLabel}"]`)) as HTMLElement;
 }
 
 function itemLabels(container: HTMLElement): string[] {
@@ -77,6 +78,13 @@ describe('BookCardMenuComponent', () => {
   });
 
   function render(): void {
+    fixture.detectChanges();
+  }
+
+  function renderShelfMenu(): void {
+    component.openAt(0, 0);
+    fixture.detectChanges();
+    clickItem(document.body, 'Add to shelf');
     fixture.detectChanges();
   }
 
@@ -127,6 +135,7 @@ describe('BookCardMenuComponent', () => {
     it('renders every shelf with no inline cap — the menu scrolls, no overflow dialog', () => {
       fixture.componentRef.setInput('shelves', shelves(7));
       render();
+      renderShelfMenu();
       const shelfMenu = submenu(host, 'Add to shelf');
       expect(shelfMenu.querySelectorAll('app-menu-checkbox').length).toBe(7);
       expect(itemLabels(shelfMenu)).toEqual(['New shelf…']);
@@ -138,6 +147,7 @@ describe('BookCardMenuComponent', () => {
         {id: 2, name: 'To read', checked: false},
       ]);
       render();
+      renderShelfMenu();
       const checkboxes = submenu(host, 'Add to shelf').querySelectorAll('app-menu-checkbox');
       expect(checkboxes[0].getAttribute('aria-checked')).toBe('true');
       expect(checkboxes[1].getAttribute('aria-checked')).toBe('false');
@@ -157,6 +167,7 @@ describe('BookCardMenuComponent', () => {
     it('emits toggleShelf with the shelf and next checked state', () => {
       fixture.componentRef.setInput('shelves', [{id: 3, name: 'Sci-fi', checked: false}]);
       render();
+      renderShelfMenu();
       const spy = vi.fn();
       component.toggleShelf.subscribe(spy);
       clickItem(submenu(host, 'Add to shelf'), 'Sci-fi');
@@ -165,6 +176,7 @@ describe('BookCardMenuComponent', () => {
 
     it('emits createShelf from the shelf submenu', () => {
       render();
+      renderShelfMenu();
       const create = vi.fn();
       component.createShelf.subscribe(create);
       clickItem(submenu(host, 'Add to shelf'), 'New shelf…');

@@ -1,3 +1,4 @@
+import {signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it} from 'vitest';
 
@@ -9,6 +10,8 @@ import {
 } from './book-browse-toolbar.component';
 import {type BookBrowseViewMode} from './book-browse.models';
 import {LibraryShelfMenuService} from '../service/library-shelf-menu.service';
+import {type LibraryShelfMenuTarget} from '../components/library-shelf-menu/library-shelf-menu.component';
+import {UserService} from '../../settings/user-management/user.service';
 
 describe('BookBrowseToolbarComponent', () => {
   let fixture: ComponentFixture<BookBrowseToolbarComponent>;
@@ -16,13 +19,15 @@ describe('BookBrowseToolbarComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [BookBrowseToolbarComponent, getTranslocoModule()],
-      providers: [{
-        provide: LibraryShelfMenuService,
-        useValue: {
-          canManageShelf: () => true,
-          canManageMagicShelf: () => true,
+      providers: [
+        {provide: LibraryShelfMenuService, useValue: {}},
+        {
+          provide: UserService,
+          useValue: {
+            currentUser: signal({id: 7, permissions: {admin: true, canManageLibrary: true}}),
+          },
         },
-      }],
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BookBrowseToolbarComponent);
@@ -109,42 +114,32 @@ describe('BookBrowseToolbarComponent', () => {
   });
 
   it.each([
-    ['library', [
-      'Add Physical Book',
-      'Import ISBNs from File',
-      'Edit Library',
-      'Re-scan Library',
-      'Custom Fetch Metadata',
-      'Auto Fetch Metadata',
-      'Find Duplicates',
-      'Delete Library',
-    ]],
-    ['shelf', ['Edit Shelf', 'Delete Shelf']],
-    ['magicShelf', ['Edit Magic Shelf', 'Copy JSON', 'Delete Magic Shelf']],
-  ] as const)('adds every %s action with standard inline edit and delete icons', async (type, labels) => {
-    fixture.componentRef.setInput('actionType', type);
-    fixture.componentRef.setInput('actionId', 12);
+    {
+      target: {type: 'library', entity: {id: 12, name: 'Cookbooks', watch: true, paths: []}},
+      entityLabel: 'Library',
+    },
+    {
+      target: {type: 'shelf', entity: {id: 12, name: 'Favorites', userId: 7, publicShelf: false}},
+      entityLabel: 'Shelf',
+    },
+    {
+      target: {type: 'magicShelf', entity: {id: 12, name: 'Witchy Reads', filterJson: '{}'}},
+      entityLabel: 'Magic Shelf',
+    },
+  ] as const)('composes the $entityLabel action component as an entity submenu', async ({target, entityLabel}) => {
+    fixture.componentRef.setInput('actionTarget', target as LibraryShelfMenuTarget);
     await fixture.whenStable();
 
     const menu = fixture.nativeElement.querySelector('app-menu[aria-label="More options"]') as HTMLElement;
-    const items = Array.from(menu.querySelectorAll(':scope > app-menu-item')) as HTMLElement[];
-    const expectedLabels: readonly string[] = labels;
-    const actionItems = items.filter(item => expectedLabels.includes(item.textContent?.trim() ?? ''));
+    const items = Array.from(menu.querySelectorAll('app-menu-item')) as HTMLElement[];
 
-    expect(actionItems.map(item => item.textContent?.trim())).toEqual(labels);
-    const iconItems = actionItems.filter(item => item.querySelector('svg') !== null);
-    expect(iconItems.map(item => item.textContent?.trim())).toEqual(labels.filter(label =>
-        label.startsWith('Edit ') || label.startsWith('Delete ')));
-    for (const item of iconItems) {
-      const icon = item.querySelector('svg')!;
-      expect(icon.classList).toContain('size-4');
-      expect(icon.classList).toContain('shrink-0');
-      expect(icon.classList).toContain('text-text-muted');
-      expect(icon.parentElement).not.toBe(item);
-    }
-    const entityLabel = type === 'library' ? 'Library' : type === 'shelf' ? 'Shelf' : 'Magic Shelf';
-    expect(Array.from(menu.querySelectorAll(':scope > app-menu-section'))
+    expect(items.at(-1)?.textContent?.trim()).toBe(target.entity.name);
+    expect(items.at(-1)?.getAttribute('aria-haspopup')).toBe('true');
+    expect(Array.from(menu.querySelectorAll('app-menu-section'))
       .map(section => section.textContent?.trim())).toEqual(['View', entityLabel]);
+    expect(fixture.nativeElement.querySelector(
+      `app-library-shelf-menu app-menu[aria-label="More actions for ${target.entity.name}"]`,
+    )).toBeTruthy();
   });
 
   it('keeps but disables the direction toggle for a one-way backend sort', async () => {
@@ -224,7 +219,8 @@ describe('BookBrowseToolbarComponent', () => {
 
     const title = checkboxByText('Title');
     expect(title.getAttribute('aria-checked')).toBe('true');
-    expect(title.getAttribute('aria-disabled')).toBe('true');
+    title.click();
+    expect(changes).toEqual([]);
 
     checkboxByText('Authors').click();
     await fixture.whenStable();

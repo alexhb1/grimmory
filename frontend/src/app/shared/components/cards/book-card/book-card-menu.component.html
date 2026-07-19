@@ -23,7 +23,7 @@
   (createShelf)="createShelf.emit()" />
 
 <app-menu #markAsMenu="ngMenu" [ariaLabel]="'cards.menu.markAs' | transloco">
-  <app-menu-radio-group [value]="readStatus()" (valueSelected)="setReadStatus.emit($event)">
+  <app-menu-radio-group [value]="readStatus()" (valueSelected)="onReadStatusSelected($event)">
     @for (status of readStatusTargets; track status) {
       <app-menu-radio [value]="status">{{ statusLabelKey(status) | transloco }}</app-menu-radio>
     }

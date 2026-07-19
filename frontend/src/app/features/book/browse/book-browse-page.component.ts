@@ -92,7 +92,7 @@ import {LucideBookmark, LucideCheck, LucideDatabase, LucideEllipsis, LucidePenLi
 import {AppMenuComponent} from '../../../shared/ui/menu/app-menu.component';
 import {AppMenuItemComponent} from '../../../shared/ui/menu/app-menu-item.component';
 import {AppMenuSeparatorComponent} from '../../../shared/ui/menu/app-menu-separator.component';
-import {AppMenuTriggerForDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
+import {AppMenuTriggerDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
 import {ShelfMembershipMenuComponent} from '../../../shared/components/shelf-menu/shelf-membership-menu.component';
 import {
   BrowseFilterRailComponent,
@@ -114,7 +114,7 @@ import {
   type BookSortSelection,
 } from './book-browse-sort.config';
 import {BookQueryService} from '../data/book-query.service';
-import {type BookReadStatus, type BookSummary} from '../data/book-response.models';
+import {type BookSummary} from '../data/book-response.models';
 import {
   injectPendingBookDeletions,
   injectPendingBookMetadataLocks,
@@ -126,6 +126,7 @@ import {
 import {createBookBrowseSelection} from './book-browse-selection';
 import {BookBrowseTableComponent} from './book-browse-table.component';
 import {type BookBrowseViewMode, type BrowseVisibleRange} from './book-browse.models';
+import {type LibraryShelfMenuTarget} from '../components/library-shelf-menu/library-shelf-menu.component';
 
 const PAGE_SIZE = 60;
 const PAGE_PREFETCH_THRESHOLD = 12;
@@ -202,7 +203,7 @@ const BULK_BAR_WIDTHS = {
     AppMenuComponent,
     AppMenuItemComponent,
     AppMenuSeparatorComponent,
-    AppMenuTriggerForDirective,
+    AppMenuTriggerDirective,
     ShelfMembershipMenuComponent,
     LucideBookmark,
     LucideCheck,
@@ -569,33 +570,42 @@ export class BookBrowsePageComponent {
   private readonly scope = computed(() =>
     bookBrowseScope(this.routeParamMap(), this.route.snapshot.data),
   );
-  protected readonly headerActionType = computed(() => {
-    const permissions = this.userService.currentUser()?.permissions;
-    if (permissions?.admin !== true && permissions?.canManageLibrary !== true) return null;
-
+  protected readonly headerActionTarget = computed<LibraryShelfMenuTarget | null>(() => {
     const scope = this.scope();
     switch (scope?.kind) {
-      case 'library':
-        return this.libraryService.libraries().some(library => library.id === scope.entityId)
-          ? scope.kind
+      case 'library': {
+        const entity = this.libraryService.libraries()
+          .find(library => library.id === scope.entityId);
+        return entity?.id == null
+          ? null
+          : {type: 'library', entity: {...entity, id: entity.id}};
+      }
+      case 'shelf': {
+        const entity = (this.shelfDefinitionsQuery.data() ?? [])
+          .find(shelf => shelf.id === scope.entityId);
+        return entity
+          ? {
+              type: 'shelf',
+              entity: {
+                id: entity.id,
+                name: entity.name,
+                userId: entity.userId,
+                publicShelf: entity.visibility === 'public',
+                bookCount: entity.bookCount,
+              },
+            }
           : null;
-      case 'shelf':
-        return (this.shelfDefinitionsQuery.data() ?? []).some(shelf => shelf.id === scope.entityId)
-          ? scope.kind
-          : null;
-      case 'magicShelf':
-        return this.magicShelfService.shelves().some(shelf => shelf.id === scope.entityId)
-          ? scope.kind
-          : null;
+      }
+      case 'magicShelf': {
+        const entity = this.magicShelfService.shelves()
+          .find(shelf => shelf.id === scope.entityId);
+        return entity?.id == null
+          ? null
+          : {type: 'magicShelf', entity: {...entity, id: entity.id}};
+      }
       default:
         return null;
     }
-  });
-  protected readonly headerActionId = computed(() => {
-    const scope = this.scope();
-    return this.headerActionType() !== null && scope && scope.kind !== 'unshelved'
-      ? scope.entityId
-      : null;
   });
   private readonly requestFacets = computed<FacetValueMap>(() =>
     scopedFacetSelection(this.facetSelections(), this.scope()),
@@ -1178,7 +1188,7 @@ export class BookBrowsePageComponent {
     }, {onError: this.shelfUpdateErrorToast});
   }
 
-  protected onSetReadStatus(status: BookReadStatus): void {
+  protected onSetReadStatus(status: ReadStatusTarget): void {
     const book = this.menuBook();
     if (!book) {
       return;

@@ -120,7 +120,7 @@ export class AppPageHeaderBreadcrumbsComponent {
   readonly touchTargetClass = "relative after:absolute after:inset-x-0 after:-inset-y-3 after:content-['']";
 
   private readonly router = inject(Router);
-  private readonly hiddenBreadcrumbMenu = viewChild<AppMenuComponent>('hiddenBreadcrumbMenu');
+  protected readonly hiddenBreadcrumbMenu = viewChild<AppMenuComponent>('hiddenBreadcrumbMenu');
 
   readonly backButton = computed(() => {
     if (this.mobile()) return null;
