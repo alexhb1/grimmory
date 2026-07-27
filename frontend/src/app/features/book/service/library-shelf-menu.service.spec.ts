@@ -42,6 +42,7 @@ describe('LibraryShelfMenuService', () => {
   const translocoService = {translate: vi.fn((key: string) => key)};
 
   beforeEach(() => {
+    router.url = '/';
     TestBed.configureTestingModule({
       providers: [
         LibraryShelfMenuService,
@@ -78,6 +79,12 @@ describe('LibraryShelfMenuService', () => {
     confirmationService.confirm.mock.calls[1][0].accept();
     expect(libraryService.deleteLibrary).toHaveBeenCalledWith(7);
     expect(loadingService.hide).toHaveBeenCalledWith('loader-token');
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    router.url = '/library/7/books?sort=title#results';
+    service.deleteLibrary({id: 7, name: 'Main Library'});
+    confirmationService.confirm.mock.calls[2][0].accept();
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 
   it('runs shelf and magic-shelf actions', () => {
@@ -94,6 +101,17 @@ describe('LibraryShelfMenuService', () => {
     confirmationService.confirm.mock.calls[1][0].accept();
     expect(shelfService.deleteShelf).toHaveBeenCalledWith(11);
     expect(magicShelfService.deleteShelf).toHaveBeenCalledWith(13);
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    router.url = '/shelf/11/books?sort=title#results';
+    service.deleteShelf({id: 11, name: 'Favorites'});
+    confirmationService.confirm.mock.calls[2][0].accept();
+
+    router.url = '/magic-shelf/13/books?sort=title#results';
+    service.deleteMagicShelf({id: 13, name: 'Magic Shelf'});
+    confirmationService.confirm.mock.calls[3][0].accept();
+    expect(router.navigate).toHaveBeenNthCalledWith(1, ['/']);
+    expect(router.navigate).toHaveBeenNthCalledWith(2, ['/']);
   });
 
   it('copies magic-shelf JSON', async () => {
