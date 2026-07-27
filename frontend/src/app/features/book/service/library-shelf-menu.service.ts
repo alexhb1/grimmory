@@ -112,7 +112,7 @@ export class LibraryShelfMenuService {
           .pipe(finalize(() => this.loadingService.hide(loader)))
           .subscribe({
             complete: () => {
-              void this.router.navigate(['/']);
+              this.navigateHomeIfViewing(`/library/${library.id}/books`);
               this.messageService.add({
                 severity: 'info',
                 summary: this.t.translate('common.success'),
@@ -137,6 +137,7 @@ export class LibraryShelfMenuService {
 
   deleteShelf(shelf: LibraryShelfActionTarget): void {
     this.confirmShelfDeletion(shelf, () => this.shelfService.deleteShelf(shelf.id), {
+      targetUrl: `/shelf/${shelf.id}/books`,
       confirm: 'book.shelfMenuService.confirm.deleteShelfMessage',
       success: 'book.shelfMenuService.toast.shelfDeletedDetail',
       failure: 'book.shelfMenuService.toast.shelfDeleteFailedDetail',
@@ -175,6 +176,7 @@ export class LibraryShelfMenuService {
 
   deleteMagicShelf(shelf: LibraryShelfActionTarget): void {
     this.confirmShelfDeletion(shelf, () => this.magicShelfService.deleteShelf(shelf.id), {
+      targetUrl: `/magic-shelf/${shelf.id}/books`,
       confirm: 'book.shelfMenuService.confirm.deleteMagicShelfMessage',
       success: 'book.shelfMenuService.toast.magicShelfDeletedDetail',
       failure: 'book.shelfMenuService.toast.magicShelfDeleteFailedDetail',
@@ -184,7 +186,7 @@ export class LibraryShelfMenuService {
   private confirmShelfDeletion(
     shelf: LibraryShelfActionTarget,
     deleteShelf: () => Observable<void>,
-    messages: Readonly<{confirm: string; success: string; failure: string}>,
+    messages: Readonly<{targetUrl: string; confirm: string; success: string; failure: string}>,
   ): void {
     this.confirmationService.confirm({
       message: this.t.translate(messages.confirm, {name: shelf.name}),
@@ -200,7 +202,7 @@ export class LibraryShelfMenuService {
       accept: () => {
         deleteShelf().subscribe({
           complete: () => {
-            void this.router.navigate(['/']);
+            this.navigateHomeIfViewing(messages.targetUrl);
             this.messageService.add({
               severity: 'info',
               summary: this.t.translate('common.success'),
@@ -217,5 +219,12 @@ export class LibraryShelfMenuService {
         });
       },
     });
+  }
+
+  private navigateHomeIfViewing(deletedTargetUrl: string): void {
+    const currentPath = this.router.url.replace(/[?#].*$/, '');
+    if (currentPath === deletedTargetUrl) {
+      void this.router.navigate(['/']);
+    }
   }
 }

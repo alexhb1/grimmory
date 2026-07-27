@@ -26,7 +26,7 @@ describe('LibraryShelfMenuService', () => {
   const shelfService = {deleteShelf: vi.fn(() => of(undefined))};
   const magicShelfService = {deleteShelf: vi.fn(() => of(undefined))};
   const taskHelperService = {refreshMetadataTask: vi.fn(() => of(undefined))};
-  const router = {navigate: vi.fn(() => Promise.resolve(true))};
+  const router = {url: '/', navigate: vi.fn(() => Promise.resolve(true))};
   const dialogLauncherService = {
     openLibraryEditDialog: vi.fn(() => Promise.resolve(null)),
     openShelfEditDialog: vi.fn(() => Promise.resolve(null)),
