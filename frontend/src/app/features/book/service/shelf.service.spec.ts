@@ -6,6 +6,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {createAuthServiceStub, createQueryClientHarness, flushQueryAsync, flushSignalAndQueryEffects} from '../../../core/testing/query-testing';
 import type {Book} from '../model/book.model';
 import type {Shelf} from '../model/shelf.model';
+import {shelfDefinitionQueryKeys} from '../data/shelf-definition-query-keys';
+import {bookQueryKeys} from '../data/book-query-keys';
 import {AuthService} from '../../../shared/service/auth.service';
 import {UserService} from '../../settings/user-management/user.service';
 import {BookService} from './book.service';
@@ -149,8 +151,10 @@ describe('ShelfService', () => {
     expect(deleteRequest.request.method).toBe('DELETE');
     deleteRequest.flush(null);
 
-    expect(invalidateQueriesSpy).toHaveBeenCalledTimes(4);
     expect(invalidateQueriesSpy).toHaveBeenCalledWith({queryKey: ['shelves'], exact: true});
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({queryKey: shelfDefinitionQueryKeys.definitions()});
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({queryKey: bookQueryKeys.all()});
+    expect(invalidateQueriesSpy).not.toHaveBeenCalledWith({queryKey: ['books'], exact: true});
     expect(bookService.removeBooksFromShelf).toHaveBeenCalledWith(11);
   });
 
