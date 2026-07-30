@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild} from '@angular/core';
-import {LucidePencil, LucideTrash2} from '@lucide/angular';
+import {LucideTrash2} from '@lucide/angular';
 import {TranslocoPipe} from '@jsverse/transloco';
 
 import {AppMenuComponent} from '../../../../shared/ui/menu/app-menu.component';
@@ -51,7 +51,6 @@ export type LibraryShelfMenuTarget =
               </app-menu-item>
               <app-menu-separator />
               <app-menu-item
-                [icon]="pencilIcon"
                 (selected)="actions.editLibrary(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.library.editLibrary' | transloco }}
               </app-menu-item>
@@ -87,7 +86,6 @@ export type LibraryShelfMenuTarget =
                 </app-menu-section>
               }
               <app-menu-item
-                [icon]="pencilIcon"
                 [disabled]="!canManageShelf()"
                 (selected)="actions.editShelf(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.shelf.editShelf' | transloco }}
@@ -103,7 +101,6 @@ export type LibraryShelfMenuTarget =
             }
             @case ('magicShelf') {
               <app-menu-item
-                [icon]="pencilIcon"
                 [disabled]="!canManageMagicShelf()"
                 (selected)="actions.editMagicShelf(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.magicShelf.editMagicShelf' | transloco }}
@@ -136,7 +133,6 @@ export class LibraryShelfMenuComponent {
 
   private readonly currentUser = inject(UserService).currentUser;
   protected readonly actions = inject(LibraryShelfMenuService);
-  protected readonly pencilIcon = LucidePencil.icon;
   protected readonly trashIcon = LucideTrash2.icon;
 
   readonly available = computed(() => {
