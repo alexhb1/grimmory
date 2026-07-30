@@ -57,6 +57,7 @@ export type LibraryShelfMenuTarget =
               <app-menu-item (selected)="actions.rescanLibrary(currentTarget.entity)">
                 {{ 'book.shelfMenuService.library.rescanLibrary' | transloco }}
               </app-menu-item>
+              <app-menu-separator />
               <app-menu-item (selected)="actions.customFetchLibraryMetadata(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.library.customFetchMetadata' | transloco }}
               </app-menu-item>
