@@ -170,6 +170,27 @@ describe('AuthorEditorComponent', () => {
     });
   });
 
+  it('omits the author name when a lock toggle leaves it unchanged', () => {
+    updateAuthor.mockReturnValue(new Subject<AuthorDetails>());
+
+    const component = createComponent();
+    component.ngOnInit();
+    component.toggleLock('description');
+
+    expect(updateAuthor).toHaveBeenCalledWith(9, expect.objectContaining({name: undefined}));
+  });
+
+  it('sends the author name when it has actually changed', () => {
+    updateAuthor.mockReturnValue(new Subject<AuthorDetails>());
+
+    const component = createComponent();
+    component.ngOnInit();
+    component.form.patchValue({name: 'Augusta Ada King'});
+    component.onSave();
+
+    expect(updateAuthor).toHaveBeenCalledWith(9, expect.objectContaining({name: 'Augusta Ada King'}));
+  });
+
   it('clears the saving flag and reports an error toast when saveMetadata fails', () => {
     updateAuthor.mockReturnValue(throwError(() => new Error('boom')));
 
