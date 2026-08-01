@@ -8,7 +8,7 @@ import {
   MetadataBatchProgressNotification,
   MetadataBatchStatus,
 } from '../../../shared/model/metadata-batch-progress.model';
-import {AUTHORS_QUERY_KEY} from '../../author-browser/service/author-query-keys';
+import {invalidateAuthorsQuery} from '../../author-browser/service/author-query-cache';
 import {invalidateAllBookQueries} from '../../book/data/book-query-cache';
 import {metadataRefreshSubmissionKeys} from './metadata-refresh-submission-keys';
 import {RefreshMetadataVariables} from './metadata-refresh-submission.models';
@@ -44,11 +44,11 @@ export class MetadataRefreshSubmissionService {
     if (progress.status === MetadataBatchStatus.ERROR) {
       this.errorReconcileTimer = setTimeout(() => {
         this.errorReconcileTimer = null;
-        void reconcileMetadataRefresh(this.queryClient);
+        reconcileMetadataRefresh(this.queryClient);
       }, ERROR_QUIET_PERIOD_MS);
       return;
     }
-    void reconcileMetadataRefresh(this.queryClient);
+    reconcileMetadataRefresh(this.queryClient);
   }
 
   private clearErrorReconcileTimer(): void {
@@ -59,9 +59,9 @@ export class MetadataRefreshSubmissionService {
   }
 }
 
-async function reconcileMetadataRefresh(client: QueryClient): Promise<void> {
-  await Promise.all([
-    invalidateAllBookQueries(client),
-    client.invalidateQueries({queryKey: AUTHORS_QUERY_KEY, exact: true}),
-  ]);
+function reconcileMetadataRefresh(client: QueryClient): void {
+  // invalidateQueries never rejects (refetch errors surface through query
+  // state, not this promise), so there is nothing to await or catch.
+  void invalidateAllBookQueries(client);
+  invalidateAuthorsQuery(client);
 }
