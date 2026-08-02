@@ -1,212 +1,145 @@
-import {Component, computed, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface RatingStats {
-  ratingRange: string;
-  count: number;
-  averageRating: number;
-}
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 
-const CHART_COLORS = [
-  '#DC2626', // Red (rating 1)
-  '#EA580C', // Red-orange (rating 2)
-  '#F59E0B', // Orange (rating 3)
-  '#EAB308', // Yellow-orange (rating 4)
-  '#FACC15', // Yellow (rating 5)
-  '#BEF264', // Yellow-green (rating 6)
-  '#65A30D', // Green (rating 7)
-  '#16A34A', // Green (rating 8)
-  '#059669', // Teal-green (rating 9)
-  '#2563EB'  // Blue (rating 10)
-] as const;
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { type PersonalRatingStats } from '../../../../data/user/personal-rating-stats';
 
-const CHART_DEFAULTS = {
-  borderWidth: 1,
-  hoverBorderWidth: 2,
-} as const;
+type PersonalRatingChartData = ChartData<'bar', number[], string>;
 
-const RATING_RANGES = [
-  {range: '1', min: 1.0, max: 1.0},
-  {range: '2', min: 2.0, max: 2.0},
-  {range: '3', min: 3.0, max: 3.0},
-  {range: '4', min: 4.0, max: 4.0},
-  {range: '5', min: 5.0, max: 5.0},
-  {range: '6', min: 6.0, max: 6.0},
-  {range: '7', min: 7.0, max: 7.0},
-  {range: '8', min: 8.0, max: 8.0},
-  {range: '9', min: 9.0, max: 9.0},
-  {range: '10', min: 10.0, max: 10.0}
-] as const;
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
-type RatingChartData = ChartData<'bar', number[], string>;
+const RATING_COLORS: readonly string[] = [
+  '#DC2626',
+  '#EA580C',
+  '#F59E0B',
+  '#EAB308',
+  '#FACC15',
+  '#BEF264',
+  '#65A30D',
+  '#16A34A',
+  '#059669',
+  '#2563EB',
+];
 
 @Component({
   selector: 'app-personal-rating-chart',
   standalone: true,
-  imports: [BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './personal-rating-chart.component.html',
-  styleUrls: ['./personal-rating-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class PersonalRatingChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly ratingStats = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
-
-    return this.calculatePersonalRatingStats(this.bookService.books());
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'bar' as const;
+  readonly stats = input.required<PersonalRatingStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 25}
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderWidth: 1,
-        cornerRadius: 6,
-        displayColors: true,
-        padding: 12,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13},
-        callbacks: {
-          title: (context) => this.t.translate('statsUser.personalRating.tooltipTitle', {label: context[0].label}),
-          label: (context) => {
-            const value = context.parsed.y;
-            const key = value === 1 ? 'statsUser.personalRating.tooltipBook' : 'statsUser.personalRating.tooltipBooks';
-            return this.t.translate(key, {value});
-          }
-        }
-      },
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.personalRating.axisPersonalRating'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          }
-        },
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {display: false},
-        border: {display: false}
-      },
-      y: {
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.personalRating.axisNumberOfBooks'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          }
-        },
-        beginAtZero: true,
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          },
-          stepSize: 1,
-          maxTicksLimit: 8
-        },
-        grid: {
-        },
-        border: {display: false}
-      }
-    }
-  };
+  readonly chartType = 'bar' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalRatedBooks > 0 ? 'ready' : 'empty';
+  });
+  readonly emptyMessage = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('statsUser.bookFlow.noData');
+  });
 
-  public readonly chartData = computed<RatingChartData>(() => {
-    try {
-      const stats = this.ratingStats();
-      const allLabels = RATING_RANGES.map(r => r.range);
-      const dataValues = allLabels.map(label => {
-        const stat = stats.find(s => s.ratingRange === label);
-        return stat ? stat.count : 0;
-      });
-      const colors = allLabels.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
+  readonly chartData = computed<PersonalRatingChartData>(() => {
+    this.activeLanguage();
+    const buckets = this.stats().buckets;
+    const colors = buckets.map((_, index) => RATING_COLORS[index % RATING_COLORS.length]);
 
-      return {
-        labels: allLabels,
-        datasets: [{
-          label: this.t.translate('statsUser.personalRating.booksByPersonalRating'),
-          data: dataValues,
+    return {
+      labels: buckets.map((bucket) => String(bucket.rating)),
+      datasets: [
+        {
+          label: this.transloco.translate('statsUser.personalRating.booksByPersonalRating'),
+          data: buckets.map((bucket) => bucket.bookCount),
           backgroundColor: colors,
-          borderColor: colors.map(color => color),
+          borderColor: colors,
           borderWidth: 1,
           borderRadius: 4,
           barPercentage: 0.8,
-          categoryPercentage: 0.6
-        }]
-      };
-    } catch (error) {
-      console.error('Error updating personal rating chart data:', error);
-      return {
-        labels: [],
-        datasets: [{
-          label: this.t.translate('statsUser.personalRating.booksByPersonalRating'),
-          data: [],
-          backgroundColor: [...CHART_COLORS],
-          ...CHART_DEFAULTS
-        }]
-      };
-    }
+          categoryPercentage: 0.6,
+        },
+      ],
+    };
   });
 
-  private calculatePersonalRatingStats(books: Book[]): RatingStats[] {
-    if (books.length === 0) {
-      return [];
-    }
+  readonly chartOptions = computed<ChartConfiguration<'bar'>['options']>(() => {
+    this.activeLanguage();
 
-    return this.processPersonalRatingStats(books);
-  }
-
-  private processPersonalRatingStats(books: Book[]): RatingStats[] {
-    const rangeCounts = new Map<string, { count: number, totalRating: number }>();
-    RATING_RANGES.forEach(range => rangeCounts.set(range.range, {count: 0, totalRating: 0}));
-
-    books.forEach(book => {
-      const personalRating = book.personalRating;
-
-      if (personalRating && personalRating > 0) {
-        for (const range of RATING_RANGES) {
-          if (personalRating >= range.min && personalRating <= range.max) {
-            const rangeData = rangeCounts.get(range.range)!;
-            rangeData.count++;
-            rangeData.totalRating += personalRating;
-            break;
-          }
-        }
-      }
-    });
-
-    // Return all ratings, including those with 0 count
-    return RATING_RANGES.map(range => {
-      const data = rangeCounts.get(range.range)!;
-      return {
-        ratingRange: range.range,
-        count: data.count,
-        averageRating: data.count > 0 ? data.totalRating / data.count : 0
-      };
-    });
-  }
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 25 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderWidth: 1,
+          cornerRadius: 6,
+          displayColors: true,
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            title: (context) =>
+              this.transloco.translate('statsUser.personalRating.tooltipTitle', {
+                label: context[0].label,
+              }),
+            label: (context) => {
+              const value = context.parsed.y;
+              return this.transloco.translate(
+                value === 1
+                  ? 'statsUser.personalRating.tooltipBook'
+                  : 'statsUser.personalRating.tooltipBooks',
+                { value },
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.personalRating.axisPersonalRating'),
+            font: { family: CHART_FONT_FAMILY, size: 12 },
+          },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 } },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.personalRating.axisNumberOfBooks'),
+            font: { family: CHART_FONT_FAMILY, size: 12 },
+          },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 }, stepSize: 1, maxTicksLimit: 8 },
+          border: { display: false },
+        },
+      },
+    };
+  });
 }
