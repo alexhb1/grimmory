@@ -1,6 +1,4 @@
 import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -29,7 +27,6 @@ type TrendChartData = ChartData<'line', number[], string>;
 @Component({
   selector: 'app-publication-trend-chart',
   standalone: true,
-  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './publication-trend-chart.component.html',
   styleUrls: ['./publication-trend-chart.component.scss']
