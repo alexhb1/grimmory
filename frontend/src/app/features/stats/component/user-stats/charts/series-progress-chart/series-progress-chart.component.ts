@@ -1,632 +1,378 @@
-import {Component, effect, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
-import {LibraryFilterService} from '../../../library-stats/service/library-filter.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface SeriesInfo {
-  name: string;
-  booksOwned: number;
-  booksRead: number;
-  booksReading: number;
-  booksPartiallyRead: number;
-  booksPaused: number;
-  booksAbandoned: number;
-  booksWontRead: number;
-  booksUnread: number;
-  totalInSeries: number | null;
-  completionPercentage: number;
-  avgPersonalRating: number | null;
-  avgExternalRating: number | null;
-  nextUnread: string | null;
-  status: 'completed' | 'in-progress' | 'not-started' | 'abandoned' | 'paused';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { AppButtonComponent } from '../../../../../../shared/ui/button/app-button.component';
+import { AppInputComponent } from '../../../../../../shared/ui/input/app-input.component';
+import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
+import { type SelectOption } from '../../../../../../shared/ui/select/app-select.options';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import {
+  type SeriesProgressSeries,
+  type SeriesProgressStats,
+  type SeriesProgressStatus,
+} from '../../../../data/user/series-progress-stats';
+
+type SeriesProgressFilter = 'all' | SeriesProgressStatus;
+
+type SeriesProgressSort = 'progress' | 'rating' | 'books' | 'name';
+
+interface SeriesProgressSegment {
+  readonly key: string;
+  readonly labelKey: string;
+  readonly fill: string;
+  readonly border: string;
+  readonly count: (series: SeriesProgressSeries) => number;
 }
 
-interface SeriesStats {
-  totalSeries: number;
-  completedSeries: number;
-  inProgressSeries: number;
-  notStartedSeries: number;
-  avgSeriesCompletion: number;
-  mostReadSeries: SeriesInfo | null;
-  highestRatedSeries: SeriesInfo | null;
+interface SeriesProgressLegendEntry {
+  readonly key: string;
+  readonly label: string;
+  readonly color: string;
 }
 
-type SeriesChartData = ChartData<'bar', number[], string>;
+const SEGMENTS: readonly SeriesProgressSegment[] = [
+  {
+    key: 'read',
+    labelKey: 'read',
+    fill: 'rgba(76, 175, 80, 0.85)',
+    border: '#4caf50',
+    count: (series) => series.booksRead,
+  },
+  {
+    key: 'reading',
+    labelKey: 'reading',
+    fill: 'rgba(255, 193, 7, 0.85)',
+    border: '#ffc107',
+    count: (series) => series.booksReading,
+  },
+  {
+    key: 'partiallyRead',
+    labelKey: 'partiallyRead',
+    fill: 'rgba(255, 152, 0, 0.85)',
+    border: '#ff9800',
+    count: (series) => series.booksPartiallyRead,
+  },
+  {
+    key: 'paused',
+    labelKey: 'paused',
+    fill: 'rgba(33, 150, 243, 0.85)',
+    border: '#2196f3',
+    count: (series) => series.booksPaused,
+  },
+  {
+    key: 'abandoned',
+    labelKey: 'abandoned',
+    fill: 'rgba(239, 83, 80, 0.85)',
+    border: '#ef5350',
+    count: (series) => series.booksAbandoned,
+  },
+  {
+    key: 'wontRead',
+    labelKey: 'wontRead',
+    fill: 'rgba(158, 158, 158, 0.6)',
+    border: '#9e9e9e',
+    count: (series) => series.booksWontRead,
+  },
+  {
+    key: 'unread',
+    labelKey: 'unread',
+    fill: 'rgba(158, 158, 158, 0.3)',
+    border: '#9e9e9e',
+    count: (series) => series.booksUnread,
+  },
+];
+
+const STATUS_COLORS: Readonly<Record<SeriesProgressStatus, string>> = {
+  completed: '#4caf50',
+  'in-progress': '#ffc107',
+  'not-started': '#9e9e9e',
+  paused: '#2196f3',
+  abandoned: '#ef5350',
+};
+
+const FILTER_OPTIONS: readonly { value: SeriesProgressFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'allStatus' },
+  { value: 'in-progress', labelKey: 'inProgress' },
+  { value: 'completed', labelKey: 'completed' },
+  { value: 'not-started', labelKey: 'notStarted' },
+];
+
+const SORT_OPTIONS: readonly { value: SeriesProgressSort; labelKey: string }[] = [
+  { value: 'progress', labelKey: 'sortByProgress' },
+  { value: 'rating', labelKey: 'sortByRating' },
+  { value: 'books', labelKey: 'sortByBooks' },
+  { value: 'name', labelKey: 'sortByName' },
+];
+
+const PAGE_SIZE = 10;
+const CHART_DISPLAY_COUNT = 8;
+const LABEL_LIMIT = 25;
 
 @Component({
   selector: 'app-series-progress-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
+    AppButtonComponent,
+    AppInputComponent,
+    AppSelectComponent,
+    BaseChartDirective,
+    LucideChevronLeft,
+    LucideChevronRight,
+    StatsChartCardComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './series-progress-chart.component.html',
-  styleUrls: ['./series-progress-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class SeriesProgressChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
-  private readonly t = inject(TranslocoService);
-  private readonly syncChartEffect = effect(() => {
-    if (this.bookService.isBooksLoading()) {
-      return;
-    }
-
-    this.calculateAndUpdateChart(this.bookService.books(), this.libraryFilterService.selectedLibrary());
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'bar' as const;
-  public seriesList: SeriesInfo[] = [];
-  public filteredSeriesList: SeriesInfo[] = [];
-  public stats: SeriesStats | null = null;
-  public displayedSeries: SeriesInfo[] = [];
-  public chartSeries: SeriesInfo[] = [];
+  readonly stats = input.required<SeriesProgressStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  // Pagination & filtering
-  public searchTerm = '';
-  public currentPage = 0;
-  public readonly PAGE_SIZE = 10;
-  public readonly CHART_DISPLAY_COUNT = 8;
-  public sortBy: 'progress' | 'rating' | 'books' | 'name' = 'progress';
-  public filterStatus: 'all' | 'completed' | 'in-progress' | 'not-started' | 'paused' | 'abandoned' = 'all';
+  readonly chartType = 'bar' as const;
+  readonly searchTerm = signal('');
+  readonly filterStatus = signal<SeriesProgressFilter>('all');
+  readonly sortBy = signal<SeriesProgressSort>('progress');
+  readonly page = signal(0);
 
-  public readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y',
-    layout: {
-      padding: {top: 10, right: 20, bottom: 10, left: 10}
-    },
-    scales: {
-      x: {
-        stacked: true,
-        max: 100,
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.seriesProgress.axisCompletion'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11,
-            weight: 500
-          }
-        },
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 10
-          },
-          callback: (value) => `${value}%`
-        },
-        grid: {
-        }
-      },
-      y: {
-        stacked: true,
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 10
-          }
-        },
-        grid: {
-          display: false
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 10
-          },
-          usePointStyle: true,
-          pointStyle: 'rect',
-          padding: 12
-        }
-      },
-      tooltip: {
-        enabled: true,
-        borderColor: '#673ab7',
-        borderWidth: 2,
-        cornerRadius: 8,
-        padding: 12,
-        titleFont: {size: 12, weight: 'bold'},
-        bodyFont: {size: 10},
-        callbacks: {
-          title: (context) => {
-            const series = this.chartSeries[context[0].dataIndex];
-            return series ? series.name : '';
-          },
-          afterBody: (context) => {
-            const series = this.chartSeries[context[0].dataIndex];
-            if (!series) return [];
-            const lines = [
-              this.t.translate('statsUser.seriesProgress.tooltipRead', {read: series.booksRead, owned: series.booksOwned})
-            ];
-            if (series.totalInSeries) {
-              lines.push(this.t.translate('statsUser.seriesProgress.tooltipSeriesTotal', {total: series.totalInSeries}));
-            }
-            if (series.avgPersonalRating) {
-              lines.push(this.t.translate('statsUser.seriesProgress.tooltipYourRating', {rating: series.avgPersonalRating.toFixed(1)}));
-            }
-            return lines;
-          }
-        }
-      }
-    }
-  };
-
-  private readonly chartDataSubject = new BehaviorSubject<SeriesChartData>({
-    labels: [],
-    datasets: []
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().series.length > 0 ? 'ready' : 'empty';
   });
 
-  public readonly chartData$: Observable<SeriesChartData> = this.chartDataSubject.asObservable();
+  readonly filterOptions = computed<readonly SelectOption<SeriesProgressFilter>[]>(() => {
+    this.activeLanguage();
+    return FILTER_OPTIONS.map(({ value, labelKey }) => ({
+      value,
+      label: this.transloco.translate(`statsUser.seriesProgress.${labelKey}`),
+    }));
+  });
 
-  onSearchInput(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
+  readonly sortOptions = computed<readonly SelectOption<SeriesProgressSort>[]>(() => {
+    this.activeLanguage();
+    return SORT_OPTIONS.map(({ value, labelKey }) => ({
+      value,
+      label: this.transloco.translate(`statsUser.seriesProgress.${labelKey}`),
+    }));
+  });
 
-    this.onSearchChange(target.value);
-  }
+  readonly filteredSeries = computed<readonly SeriesProgressSeries[]>(() => {
+    const term = this.searchTerm().toLowerCase().trim();
+    const status = this.filterStatus();
+    const sortBy = this.sortBy();
 
-  onFilterSelect(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) {
-      return;
-    }
-
-    this.onFilterChange(target.value as typeof this.filterStatus);
-  }
-
-  onSortSelect(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) {
-      return;
-    }
-
-    this.onSortChange(target.value as typeof this.sortBy);
-  }
-
-  onSearchChange(term: string): void {
-    this.searchTerm = term.toLowerCase().trim();
-    this.currentPage = 0;
-    this.applyFiltersAndSort();
-  }
-
-  onSortChange(sortBy: 'progress' | 'rating' | 'books' | 'name'): void {
-    this.sortBy = sortBy;
-    this.currentPage = 0;
-    this.applyFiltersAndSort();
-  }
-
-  onFilterChange(status: 'all' | 'completed' | 'in-progress' | 'not-started' | 'paused' | 'abandoned'): void {
-    this.filterStatus = status;
-    this.currentPage = 0;
-    this.applyFiltersAndSort();
-  }
-
-  nextPage(): void {
-    if (this.hasNextPage()) {
-      this.currentPage++;
-      this.updateDisplayedSeries();
-    }
-  }
-
-  prevPage(): void {
-    if (this.hasPrevPage()) {
-      this.currentPage--;
-      this.updateDisplayedSeries();
-    }
-  }
-
-  hasNextPage(): boolean {
-    return (this.currentPage + 1) * this.PAGE_SIZE < this.filteredSeriesList.length;
-  }
-
-  hasPrevPage(): boolean {
-    return this.currentPage > 0;
-  }
-
-  getTotalPages(): number {
-    return Math.ceil(this.filteredSeriesList.length / this.PAGE_SIZE);
-  }
-
-  private applyFiltersAndSort(): void {
-    let filtered = [...this.seriesList];
-
-    // Apply search filter
-    if (this.searchTerm) {
-      filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(this.searchTerm)
-      );
-    }
-
-    // Apply status filter
-    if (this.filterStatus !== 'all') {
-      filtered = filtered.filter(s => s.status === this.filterStatus);
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      switch (this.sortBy) {
-        case 'progress':
-          return b.completionPercentage - a.completionPercentage;
-        case 'rating':
-          return (b.avgPersonalRating || 0) - (a.avgPersonalRating || 0);
-        case 'books':
-          return b.booksOwned - a.booksOwned;
-        case 'name':
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
-      }
-    });
-
-    this.filteredSeriesList = filtered;
-    this.updateDisplayedSeries();
-    this.updateChartSeries();
-    this.updateChartData();
-  }
-
-  private calculateAndUpdateChart(books: Book[], selectedLibraryId: number | null): void {
-    if (books.length === 0) {
-      this.chartDataSubject.next({labels: [], datasets: []});
-      this.seriesList = [];
-      this.displayedSeries = [];
-      this.stats = null;
-      return;
-    }
-
-    const filteredBooks = this.filterBooksByLibrary(books, selectedLibraryId);
-    const seriesBooks = this.getBooksInSeries(filteredBooks);
-
-    if (seriesBooks.length === 0) {
-      this.chartDataSubject.next({labels: [], datasets: []});
-      this.seriesList = [];
-      this.filteredSeriesList = [];
-      this.displayedSeries = [];
-      this.chartSeries = [];
-      this.stats = null;
-      return;
-    }
-
-    this.seriesList = this.calculateSeriesInfo(seriesBooks);
-    this.stats = this.calculateSeriesStats(this.seriesList);
-    this.currentPage = 0;
-    this.applyFiltersAndSort();
-  }
-
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: string | number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private getBooksInSeries(books: Book[]): Book[] {
-    return books.filter(book => book.metadata?.seriesName);
-  }
-
-  private calculateSeriesInfo(books: Book[]): SeriesInfo[] {
-    const seriesMap = new Map<string, Book[]>();
-
-    books.forEach(book => {
-      const seriesName = book.metadata!.seriesName!;
-      if (!seriesMap.has(seriesName)) {
-        seriesMap.set(seriesName, []);
-      }
-      seriesMap.get(seriesName)!.push(book);
-    });
-
-    const seriesInfoList: SeriesInfo[] = [];
-
-    seriesMap.forEach((seriesBooks, seriesName) => {
-      const booksOwned = seriesBooks.length;
-      let booksRead = 0;
-      let booksReading = 0;
-      let booksPartiallyRead = 0;
-      let booksPaused = 0;
-      let booksAbandoned = 0;
-      let booksWontRead = 0;
-      let booksUnread = 0;
-      let totalRating = 0;
-      let ratedCount = 0;
-      let totalExternalRating = 0;
-      let externalRatedCount = 0;
-      let totalInSeries: number | null = null;
-      let nextUnread: string | null = null;
-
-      // Sort by series number for finding next unread
-      const sortedBooks = [...seriesBooks].sort((a, b) => {
-        const numA = a.metadata?.seriesNumber || 999;
-        const numB = b.metadata?.seriesNumber || 999;
-        return numA - numB;
-      });
-
-      sortedBooks.forEach(book => {
-        // Track series total
-        if (book.metadata?.seriesTotal && (!totalInSeries || book.metadata.seriesTotal > totalInSeries)) {
-          totalInSeries = book.metadata.seriesTotal;
-        }
-
-        // Count by status - handle ALL ReadStatus values
-        switch (book.readStatus) {
-          case ReadStatus.READ:
-            booksRead++;
-            break;
-          case ReadStatus.READING:
-          case ReadStatus.RE_READING:
-            booksReading++;
-            break;
-          case ReadStatus.PARTIALLY_READ:
-            booksPartiallyRead++;
-            if (!nextUnread) {
-              nextUnread = book.metadata?.title || book.fileName || null;
-            }
-            break;
-          case ReadStatus.PAUSED:
-            booksPaused++;
-            if (!nextUnread) {
-              nextUnread = book.metadata?.title || book.fileName || null;
-            }
-            break;
-          case ReadStatus.ABANDONED:
-            booksAbandoned++;
-            break;
-          case ReadStatus.WONT_READ:
-            booksWontRead++;
-            break;
-          case ReadStatus.UNREAD:
-          case ReadStatus.UNSET:
-          default:
-            booksUnread++;
-            if (!nextUnread) {
-              nextUnread = book.metadata?.title || book.fileName || null;
-            }
-            break;
-        }
-
-        // Personal rating
-        if (book.personalRating && book.personalRating > 0) {
-          totalRating += book.personalRating;
-          ratedCount++;
-        }
-
-        // External rating
-        const extRating = this.getExternalRating(book);
-        if (extRating > 0) {
-          totalExternalRating += extRating;
-          externalRatedCount++;
+    return this.stats()
+      .series.filter(
+        (series) =>
+          (!term || series.name.toLowerCase().includes(term))
+          && (status === 'all' || series.status === status),
+      )
+      .sort((left, right) => {
+        switch (sortBy) {
+          case 'progress':
+            return right.completionPercent - left.completionPercent;
+          case 'rating':
+            return (right.averagePersonalRating ?? 0) - (left.averagePersonalRating ?? 0);
+          case 'books':
+            return right.booksOwned - left.booksOwned;
+          case 'name':
+            return left.name.localeCompare(right.name);
         }
       });
+  });
 
-      // Calculate completion percentage based on what we own (excluding won't read/abandoned)
-      const relevantBooks = booksOwned - booksWontRead - booksAbandoned;
-      const completionPercentage = relevantBooks > 0 ? Math.round((booksRead / relevantBooks) * 100) : 0;
+  readonly totalPages = computed(() => Math.ceil(this.filteredSeries().length / PAGE_SIZE));
+  readonly hasPreviousPage = computed(() => this.page() > 0);
+  readonly hasNextPage = computed(
+    () => (this.page() + 1) * PAGE_SIZE < this.filteredSeries().length,
+  );
+  readonly displayedSeries = computed<readonly SeriesProgressSeries[]>(() => {
+    const start = this.page() * PAGE_SIZE;
+    return this.filteredSeries().slice(start, start + PAGE_SIZE);
+  });
 
-      // Determine series status based on comprehensive analysis
-      let status: 'completed' | 'in-progress' | 'not-started' | 'abandoned' | 'paused';
-      if (booksRead === relevantBooks && relevantBooks > 0) {
-        status = 'completed';
-      } else if (booksReading > 0) {
-        status = 'in-progress';
-      } else if (booksPaused > 0 && booksRead > 0) {
-        status = 'paused';
-      } else if (booksRead > 0 || booksPartiallyRead > 0) {
-        status = 'in-progress';
-      } else if ((booksAbandoned > 0 || booksWontRead > 0) && booksRead === 0 && booksReading === 0) {
-        status = 'abandoned';
-      } else {
-        status = 'not-started';
-      }
+  readonly chartSeries = computed<readonly SeriesProgressSeries[]>(() =>
+    this.stats().series.slice(0, CHART_DISPLAY_COUNT),
+  );
 
-      seriesInfoList.push({
-        name: seriesName,
-        booksOwned,
-        booksRead,
-        booksReading,
-        booksPartiallyRead,
-        booksPaused,
-        booksAbandoned,
-        booksWontRead,
-        booksUnread,
-        totalInSeries,
-        completionPercentage,
-        avgPersonalRating: ratedCount > 0 ? totalRating / ratedCount : null,
-        avgExternalRating: externalRatedCount > 0 ? totalExternalRating / externalRatedCount : null,
-        nextUnread,
-        status
-      });
-    });
+  readonly previousPageLabel = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('common.back');
+  });
+  readonly nextPageLabel = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('common.next');
+  });
 
-    // Sort by: in-progress first, then by completion %, then by books owned
-    return seriesInfoList.sort((a, b) => {
-      // Priority: in-progress > not-started > completed > abandoned
-      const statusOrder = {'in-progress': 0, 'paused': 1, 'not-started': 2, 'completed': 3, 'abandoned': 4};
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (statusDiff !== 0) return statusDiff;
+  readonly legend = computed<readonly SeriesProgressLegendEntry[]>(() => {
+    this.activeLanguage();
+    return SEGMENTS.map((segment) => ({
+      key: segment.key,
+      label: this.transloco.translate(`statsUser.seriesProgress.${segment.labelKey}`),
+      color: segment.fill,
+    }));
+  });
 
-      // Then by books owned (more books = more interesting)
-      return b.booksOwned - a.booksOwned;
-    });
-  }
-
-  private getExternalRating(book: Book): number {
-    const ratings: number[] = [];
-    if (book.metadata?.goodreadsRating) ratings.push(book.metadata.goodreadsRating);
-    if (book.metadata?.amazonRating) ratings.push(book.metadata.amazonRating);
-    if (book.metadata?.hardcoverRating) ratings.push(book.metadata.hardcoverRating);
-
-    if (ratings.length > 0) {
-      return ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
-    }
-    return 0;
-  }
-
-  private calculateSeriesStats(seriesList: SeriesInfo[]): SeriesStats {
-    const completedSeries = seriesList.filter(s => s.status === 'completed').length;
-    const inProgressSeries = seriesList.filter(s => s.status === 'in-progress').length;
-    const notStartedSeries = seriesList.filter(s => s.status === 'not-started').length;
-
-    const totalCompletion = seriesList.reduce((sum, s) => sum + s.completionPercentage, 0);
-    const avgSeriesCompletion = seriesList.length > 0 ? Math.round(totalCompletion / seriesList.length) : 0;
-
-    const mostReadSeries = [...seriesList].sort((a, b) => b.booksRead - a.booksRead)[0] || null;
-
-    const ratedSeries = seriesList.filter(s => s.avgPersonalRating !== null);
-    const highestRatedSeries = ratedSeries.length > 0
-      ? [...ratedSeries].sort((a, b) => (b.avgPersonalRating || 0) - (a.avgPersonalRating || 0))[0]
-      : null;
+  readonly chartData = computed<ChartData<'bar', number[], string>>(() => {
+    this.activeLanguage();
+    const series = this.chartSeries();
 
     return {
-      totalSeries: seriesList.length,
-      completedSeries,
-      inProgressSeries,
-      notStartedSeries,
-      avgSeriesCompletion,
-      mostReadSeries,
-      highestRatedSeries
+      labels: series.map((entry) => truncate(entry.name, LABEL_LIMIT)),
+      datasets: SEGMENTS.map((segment) => ({
+        label: this.transloco.translate(`statsUser.seriesProgress.${segment.labelKey}`),
+        data: series.map((entry) =>
+          entry.booksOwned > 0 ? Math.round((segment.count(entry) / entry.booksOwned) * 100) : 0,
+        ),
+        backgroundColor: segment.fill,
+        borderColor: segment.border,
+        borderWidth: 1,
+        borderRadius: 2,
+      })),
     };
+  });
+
+  readonly chartOptions = computed<ChartConfiguration<'bar'>['options']>(() => {
+    const series = this.chartSeries();
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      layout: { padding: { top: 10, right: 20, bottom: 10, left: 10 } },
+      scales: {
+        x: {
+          stacked: true,
+          max: 100,
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.seriesProgress.axisCompletion'),
+            font: { family: "'Inter', sans-serif", size: 11, weight: 500 },
+          },
+          ticks: {
+            font: { family: "'Inter', sans-serif", size: 10 },
+            callback: (value) => `${value}%`,
+          },
+        },
+        y: {
+          stacked: true,
+          ticks: { font: { family: "'Inter', sans-serif", size: 10 } },
+          grid: { display: false },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderColor: '#673ab7',
+          borderWidth: 2,
+          cornerRadius: 8,
+          padding: 12,
+          titleFont: { size: 12, weight: 'bold' },
+          bodyFont: { size: 10 },
+          callbacks: {
+            title: (context) => series[context[0]?.dataIndex ?? -1]?.name ?? '',
+            afterBody: (context) => {
+              const item = context.at(0);
+              if (!item) return [];
+
+              const entry = series.at(item.dataIndex);
+              if (!entry) return [];
+
+              const lines = [
+                this.transloco.translate('statsUser.seriesProgress.tooltipRead', {
+                  read: entry.booksRead,
+                  owned: entry.booksOwned,
+                }),
+              ];
+              if (entry.totalInSeries) {
+                lines.push(
+                  this.transloco.translate('statsUser.seriesProgress.tooltipSeriesTotal', {
+                    total: entry.totalInSeries,
+                  }),
+                );
+              }
+              if (entry.averagePersonalRating) {
+                lines.push(
+                  this.transloco.translate('statsUser.seriesProgress.tooltipYourRating', {
+                    rating: this.formatRating(entry.averagePersonalRating),
+                  }),
+                );
+              }
+
+              return lines;
+            },
+          },
+        },
+      },
+    };
+  });
+
+  protected onSearchChange(term: string): void {
+    this.searchTerm.set(term);
+    this.page.set(0);
   }
 
-  private updateDisplayedSeries(): void {
-    const start = this.currentPage * this.PAGE_SIZE;
-    const end = start + this.PAGE_SIZE;
-    this.displayedSeries = this.filteredSeriesList.slice(start, end);
+  protected onFilterChange(status: SeriesProgressFilter | null): void {
+    this.filterStatus.set(status ?? 'all');
+    this.page.set(0);
   }
 
-  private updateChartSeries(): void {
-    // For chart, show top series by in-progress first, then by books owned
-    const chartData = [...this.seriesList]
-      .sort((a, b) => {
-        const statusOrder = {'in-progress': 0, 'paused': 1, 'not-started': 2, 'completed': 3, 'abandoned': 4};
-        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-        if (statusDiff !== 0) return statusDiff;
-        return b.booksOwned - a.booksOwned;
-      })
-      .slice(0, this.CHART_DISPLAY_COUNT);
-
-    this.chartSeries = chartData;
+  protected onSortChange(sortBy: SeriesProgressSort | null): void {
+    this.sortBy.set(sortBy ?? 'progress');
+    this.page.set(0);
   }
 
-  private updateChartData(): void {
-    const labels = this.chartSeries.map(s =>
-      s.name.length > 25 ? s.name.substring(0, 22) + '...' : s.name
-    );
+  protected previousPage(): void {
+    if (this.hasPreviousPage()) this.page.update((page) => page - 1);
+  }
 
-    const readPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksRead / s.booksOwned) * 100) : 0
-    );
-    const readingPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksReading / s.booksOwned) * 100) : 0
-    );
-    const partiallyReadPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksPartiallyRead / s.booksOwned) * 100) : 0
-    );
-    const pausedPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksPaused / s.booksOwned) * 100) : 0
-    );
-    const abandonedPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksAbandoned / s.booksOwned) * 100) : 0
-    );
-    const wontReadPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksWontRead / s.booksOwned) * 100) : 0
-    );
-    const unreadPercentages = this.chartSeries.map(s =>
-      s.booksOwned > 0 ? Math.round((s.booksUnread / s.booksOwned) * 100) : 0
-    );
+  protected nextPage(): void {
+    if (this.hasNextPage()) this.page.update((page) => page + 1);
+  }
 
-    this.chartDataSubject.next({
-      labels,
-      datasets: [
-        {
-          label: this.t.translate('statsUser.seriesProgress.read'),
-          data: readPercentages,
-          backgroundColor: 'rgba(76, 175, 80, 0.85)',
-          borderColor: '#4caf50',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.reading'),
-          data: readingPercentages,
-          backgroundColor: 'rgba(255, 193, 7, 0.85)',
-          borderColor: '#ffc107',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.partiallyRead'),
-          data: partiallyReadPercentages,
-          backgroundColor: 'rgba(255, 152, 0, 0.85)',
-          borderColor: '#ff9800',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.paused'),
-          data: pausedPercentages,
-          backgroundColor: 'rgba(33, 150, 243, 0.85)',
-          borderColor: '#2196f3',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.abandoned'),
-          data: abandonedPercentages,
-          backgroundColor: 'rgba(239, 83, 80, 0.85)',
-          borderColor: '#ef5350',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.wontRead'),
-          data: wontReadPercentages,
-          backgroundColor: 'rgba(158, 158, 158, 0.6)',
-          borderColor: '#9e9e9e',
-          borderWidth: 1,
-          borderRadius: 2
-        },
-        {
-          label: this.t.translate('statsUser.seriesProgress.unread'),
-          data: unreadPercentages,
-          backgroundColor: 'rgba(158, 158, 158, 0.3)',
-          borderColor: '#9e9e9e',
-          borderWidth: 1,
-          borderRadius: 2
-        }
-      ]
+  protected readonly progressColors = { read: '#4caf50', reading: '#ffc107' };
+
+  protected statusColor(status: SeriesProgressStatus): string {
+    return STATUS_COLORS[status];
+  }
+
+  protected readingPercent(series: SeriesProgressSeries): number {
+    return series.booksOwned > 0 ? (series.booksReading / series.booksOwned) * 100 : 0;
+  }
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.activeLanguage());
+  }
+
+  protected formatRating(value: number): string {
+    return value.toLocaleString(this.activeLanguage(), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
     });
   }
+}
 
-  getStatusIcon(status: string): string {
-    switch (status) {
-      case 'completed': return 'pi-check-circle';
-      case 'in-progress': return 'pi-spinner';
-      case 'not-started': return 'pi-clock';
-      case 'paused': return 'pi-pause';
-      case 'abandoned': return 'pi-times-circle';
-      default: return 'pi-question-circle';
-    }
-  }
-
-  getStatusColor(status: string): string {
-    switch (status) {
-      case 'completed': return '#4caf50';
-      case 'in-progress': return '#ffc107';
-      case 'not-started': return '#9e9e9e';
-      case 'paused': return '#2196f3';
-      case 'abandoned': return '#ef5350';
-      default: return '#9e9e9e';
-    }
-  }
+function truncate(value: string, maximumLength: number): string {
+  return value.length > maximumLength ? `${value.slice(0, maximumLength - 3)}...` : value;
 }
