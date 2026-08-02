@@ -1,16 +1,13 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {ReadingJourneyStats} from '../../../../data/library/reading-journey-stats';
 
 interface MonthlyData {
-  month: string;
   label: string;
-  added: number;
-  finished: number;
   cumulativeAdded: number;
   cumulativeFinished: number;
 }
@@ -35,31 +32,52 @@ type JourneyChartData = ChartData<'line', number[], string>;
 @Component({
   selector: 'app-reading-journey-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './reading-journey-chart.component.html',
   styleUrls: ['./reading-journey-chart.component.scss']
 })
 export class ReadingJourneyChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly filteredBooks = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
 
-    return this.filterBooksByLibrary(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-  });
-  private readonly monthlyData = computed(() => this.calculateMonthlyData(this.filteredBooks()));
+  readonly stats = input.required<ReadingJourneyStats>();
+  readonly loading = input(false);
+  private readonly monthlyData = computed<MonthlyData[]>(() => this.stats().months.map(month => ({
+    label: this.formatMonthLabel(month.month),
+    cumulativeAdded: month.cumulativeAdded,
+    cumulativeFinished: month.cumulativeFinished,
+  })));
 
   public readonly chartType = 'line' as const;
   public chartOptions: ChartConfiguration<'line'>['options'];
   public readonly insights = computed(() => {
-    const filteredBooks = this.filteredBooks();
-    const monthlyData = this.monthlyData();
-    return filteredBooks.length > 0 ? this.calculateInsights(filteredBooks, monthlyData) : null;
+    const insights = this.stats().insights;
+    if (!insights) return null;
+
+    return {
+      totalAdded: insights.totalAdded,
+      totalFinished: insights.totalFinished,
+      currentBacklog: insights.currentBacklog,
+      backlogPercent: insights.backlogPercent,
+      avgTimeToFinishDays: insights.averageDaysToFinish ?? 0,
+      mostProductiveMonth: insights.bestReadingMonth
+        ? this.formatMonthLabel(insights.bestReadingMonth.month)
+        : 'N/A',
+      mostProductiveCount: insights.bestReadingMonth?.count ?? 0,
+      busiestAcquisitionMonth: insights.peakAcquisitionMonth
+        ? this.formatMonthLabel(insights.peakAcquisitionMonth.month)
+        : 'N/A',
+      busiestAcquisitionCount: insights.peakAcquisitionMonth?.count ?? 0,
+      finishRate: insights.finishRate,
+      recentActivity: insights.recentFinishedCount > 0
+        ? this.t.translate('statsLibrary.readingJourney.recentActivityBooks', {
+          count: insights.recentFinishedCount,
+        })
+        : this.t.translate('statsLibrary.readingJourney.recentActivityNone'),
+      longestStreak: insights.longestReadingStreak,
+    } satisfies JourneyInsights;
   });
-  public readonly totalBooks = computed(() => this.filteredBooks().length);
+  public readonly hasData = computed(() => this.monthlyData().length > 0);
   public readonly dateRange = computed(() => {
     const monthlyData = this.monthlyData();
     if (monthlyData.length === 0) {
@@ -214,200 +232,10 @@ export class ReadingJourneyChartComponent {
     };
   }
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private calculateMonthlyData(books: Book[]): MonthlyData[] {
-    const monthlyAdded = new Map<string, number>();
-    const monthlyFinished = new Map<string, number>();
-
-    for (const book of books) {
-      // Track added dates
-      if (book.addedOn) {
-        const monthKey = this.getMonthKey(book.addedOn);
-        if (monthKey) {
-          monthlyAdded.set(monthKey, (monthlyAdded.get(monthKey) || 0) + 1);
-        }
-      }
-
-      // Track finished dates
-      if (book.dateFinished && book.readStatus === ReadStatus.READ) {
-        const monthKey = this.getMonthKey(book.dateFinished);
-        if (monthKey) {
-          monthlyFinished.set(monthKey, (monthlyFinished.get(monthKey) || 0) + 1);
-        }
-      }
-    }
-
-    // Get all unique months and sort them
-    const allMonths = new Set([...monthlyAdded.keys(), ...monthlyFinished.keys()]);
-    const sortedMonths = Array.from(allMonths).sort();
-
-    if (sortedMonths.length === 0) {
-      return [];
-    }
-
-    // Fill in gaps and calculate cumulative values
-    const firstMonth = sortedMonths[0];
-    const lastMonth = sortedMonths[sortedMonths.length - 1];
-    const allMonthsRange = this.getMonthRange(firstMonth, lastMonth);
-
-    let cumulativeAdded = 0;
-    let cumulativeFinished = 0;
-
-    return allMonthsRange.map(month => {
-      const added = monthlyAdded.get(month) || 0;
-      const finished = monthlyFinished.get(month) || 0;
-      cumulativeAdded += added;
-      cumulativeFinished += finished;
-
-      return {
-        month,
-        label: this.formatMonthLabel(month),
-        added,
-        finished,
-        cumulativeAdded,
-        cumulativeFinished
-      };
-    });
-  }
-
-  private getMonthKey(dateStr: string): string | null {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return null;
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      return `${year}-${month}`;
-    } catch {
-      return null;
-    }
-  }
-
-  private getMonthRange(start: string, end: string): string[] {
-    const months: string[] = [];
-    const [startYear, startMonth] = start.split('-').map(Number);
-    const [endYear, endMonth] = end.split('-').map(Number);
-
-    let year = startYear;
-    let month = startMonth;
-
-    while (year < endYear || (year === endYear && month <= endMonth)) {
-      months.push(`${year}-${String(month).padStart(2, '0')}`);
-      month++;
-      if (month > 12) {
-        month = 1;
-        year++;
-      }
-    }
-
-    return months;
-  }
-
   private formatMonthLabel(monthKey: string): string {
     const [year, month] = monthKey.split('-');
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
   }
 
-  private calculateInsights(books: Book[], monthlyData: MonthlyData[]): JourneyInsights {
-    const booksWithAddedDate = books.filter(b => b.addedOn);
-    const booksFinished = books.filter(b => b.dateFinished && b.readStatus === ReadStatus.READ);
-
-    const totalAdded = booksWithAddedDate.length;
-    const totalFinished = booksFinished.length;
-    const currentBacklog = totalAdded - totalFinished;
-    const backlogPercent = totalAdded > 0 ? Math.round((currentBacklog / totalAdded) * 100) : 0;
-
-    // Calculate average time to finish
-    let totalDaysToFinish = 0;
-    let finishedWithBothDates = 0;
-
-    for (const book of booksFinished) {
-      if (book.addedOn && book.dateFinished) {
-        const addedDate = new Date(book.addedOn);
-        const finishedDate = new Date(book.dateFinished);
-        if (!isNaN(addedDate.getTime()) && !isNaN(finishedDate.getTime())) {
-          const days = Math.floor((finishedDate.getTime() - addedDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (days >= 0) {
-            totalDaysToFinish += days;
-            finishedWithBothDates++;
-          }
-        }
-      }
-    }
-
-    const avgTimeToFinishDays = finishedWithBothDates > 0
-      ? Math.round(totalDaysToFinish / finishedWithBothDates)
-      : 0;
-
-    // Find most productive reading month
-    let mostProductiveMonth = 'N/A';
-    let mostProductiveCount = 0;
-    let busiestAcquisitionMonth = 'N/A';
-    let busiestAcquisitionCount = 0;
-
-    for (const data of monthlyData) {
-      if (data.finished > mostProductiveCount) {
-        mostProductiveCount = data.finished;
-        mostProductiveMonth = data.label;
-      }
-      if (data.added > busiestAcquisitionCount) {
-        busiestAcquisitionCount = data.added;
-        busiestAcquisitionMonth = data.label;
-      }
-    }
-
-    // Finish rate (books finished per month on average)
-    const finishRate = monthlyData.length > 0
-      ? +(totalFinished / monthlyData.length).toFixed(1)
-      : 0;
-
-    // Recent activity
-    const now = new Date();
-    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-    let recentFinished = 0;
-    for (const book of booksFinished) {
-      if (book.dateFinished) {
-        const finishDate = new Date(book.dateFinished);
-        if (finishDate >= threeMonthsAgo) {
-          recentFinished++;
-        }
-      }
-    }
-    const recentActivity = recentFinished > 0
-      ? this.t.translate('statsLibrary.readingJourney.recentActivityBooks', {count: recentFinished})
-      : this.t.translate('statsLibrary.readingJourney.recentActivityNone');
-
-    // Longest reading streak (consecutive months with finished books)
-    let longestStreak = 0;
-    let currentStreak = 0;
-    for (const data of monthlyData) {
-      if (data.finished > 0) {
-        currentStreak++;
-        longestStreak = Math.max(longestStreak, currentStreak);
-      } else {
-        currentStreak = 0;
-      }
-    }
-
-    return {
-      totalAdded,
-      totalFinished,
-      currentBacklog,
-      backlogPercent,
-      avgTimeToFinishDays,
-      mostProductiveMonth,
-      mostProductiveCount,
-      busiestAcquisitionMonth,
-      busiestAcquisitionCount,
-      finishRate,
-      recentActivity,
-      longestStreak
-    };
-  }
 }

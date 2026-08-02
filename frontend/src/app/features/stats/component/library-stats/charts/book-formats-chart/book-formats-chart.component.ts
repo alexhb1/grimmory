@@ -1,16 +1,10 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-
-interface FormatStats {
-  format: string;
-  count: number;
-  percentage: number;
-}
+import {BookFormatStats} from '../../../../data/library/book-format-stats';
 
 type FormatChartData = ChartData<'pie', number[], string>;
 
@@ -26,25 +20,19 @@ const FORMAT_COLORS: Record<string, string> = {
 @Component({
   selector: 'app-book-formats-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './book-formats-chart.component.html',
   styleUrls: ['./book-formats-chart.component.scss']
 })
 export class BookFormatsChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly filteredBooks = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
 
-    return this.filterBooksByLibrary(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-  });
+  readonly stats = input.required<BookFormatStats>();
+  readonly loading = input(false);
 
   public readonly chartType = 'pie' as const;
-  public readonly formatStats = computed(() => this.calculateFormatStats(this.filteredBooks()));
-  public readonly totalBooks = computed(() => this.filteredBooks().length);
+  public readonly totalBooks = computed(() => this.stats().totalBooks);
 
   public readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
     responsive: true,
@@ -87,13 +75,13 @@ export class BookFormatsChartComponent {
   };
 
   public readonly chartData = computed<FormatChartData>(() => {
-    const stats = this.formatStats();
+    const stats = this.stats().formats;
     if (stats.length === 0) {
       return {labels: [], datasets: []};
     }
 
     const labels = stats.map(s => s.format);
-    const data = stats.map(s => s.count);
+    const data = stats.map(s => s.bookCount);
     const colors = stats.map(s => FORMAT_COLORS[s.format] || '#6B7280');
 
     return {
@@ -105,27 +93,4 @@ export class BookFormatsChartComponent {
     };
   });
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private calculateFormatStats(books: Book[]): FormatStats[] {
-    const formatCounts = new Map<string, number>();
-
-    books.forEach(book => {
-      const format = book.primaryFile?.bookType || 'Unknown';
-      formatCounts.set(format, (formatCounts.get(format) || 0) + 1);
-    });
-
-    const total = books.length;
-    return Array.from(formatCounts.entries())
-      .map(([format, count]) => ({
-        format,
-        count,
-        percentage: (count / total) * 100
-      }))
-      .sort((a, b) => b.count - a.count);
-  }
 }

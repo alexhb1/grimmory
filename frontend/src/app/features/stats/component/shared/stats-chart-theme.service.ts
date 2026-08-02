@@ -1,6 +1,6 @@
 import {DOCUMENT, isPlatformBrowser} from '@angular/common';
 import {DestroyRef, inject, Injectable, PLATFORM_ID, signal} from '@angular/core';
-import {Chart, ChartConfiguration, registerables} from 'chart.js';
+import {Chart, ChartConfiguration} from 'chart.js';
 import {ThemeService} from 'ng2-charts';
 
 export interface StatsChartThemeColors {
@@ -14,7 +14,6 @@ export interface StatsChartThemeColors {
 
 let cachedSignature = '';
 let cachedColors: StatsChartThemeColors | null = null;
-let chartDefaultsRegistered = false;
 
 @Injectable({
   providedIn: 'root',
@@ -79,11 +78,6 @@ function buildStatsChartThemeOptions(): ChartConfiguration['options'] {
 }
 
 function applyStatsChartDefaults(colors: StatsChartThemeColors): void {
-  if (!chartDefaultsRegistered) {
-    Chart.register(...registerables);
-    chartDefaultsRegistered = true;
-  }
-
   Chart.defaults.color = colors.textSecondary;
   Chart.defaults.backgroundColor = colors.surface;
   Chart.defaults.borderColor = colors.grid;

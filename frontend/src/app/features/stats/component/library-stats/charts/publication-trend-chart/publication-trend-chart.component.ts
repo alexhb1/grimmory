@@ -1,10 +1,10 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {PublicationTrendStats} from '../../../../data/library/publication-trend-stats';
 
 interface TrendInsights {
   peakYear: number;
@@ -29,65 +29,57 @@ type TrendChartData = ChartData<'line', number[], string>;
 @Component({
   selector: 'app-publication-trend-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './publication-trend-chart.component.html',
   styleUrls: ['./publication-trend-chart.component.scss']
 })
 export class PublicationTrendChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly booksWithDate = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
 
-    const filteredBooks = this.filterBooksByLibrary(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-    return filteredBooks.filter(b => b.metadata?.publishedDate);
-  });
-  private readonly yearCounts = computed(() => this.calculateYearCounts(this.booksWithDate()));
+  readonly stats = input.required<PublicationTrendStats>();
+  readonly loading = input(false);
 
   public readonly chartType = 'line' as const;
   public chartOptions: ChartConfiguration<'line'>['options'];
   public readonly insights = computed(() => {
-    const booksWithDate = this.booksWithDate();
-    if (booksWithDate.length === 0) {
-      return null;
-    }
+    const stats = this.stats();
+    const insights = stats.insights;
+    if (!insights) return null;
 
-    return this.calculateInsights(this.yearCounts(), booksWithDate.length);
+    return {
+      peakYear: insights.peakYear?.year ?? 0,
+      peakYearCount: insights.peakYear?.bookCount ?? 0,
+      booksLast10Years: insights.recentBookCount,
+      booksLast10YearsPercent: insights.recentPercent,
+      averageBooksPerYear: insights.averageBooksPerActiveYear,
+      mostProductiveSpan: insights.busiestSpan
+        ? `${insights.busiestSpan.startYear}-${insights.busiestSpan.endYear}`
+        : 'N/A',
+      timeSpan: insights.yearSpan,
+      classicBooks: insights.classicBookCount,
+      classicBooksPercent: insights.classicPercent,
+      century21Books: insights.modernBookCount,
+      century21Percent: insights.modernPercent,
+      uniqueYears: insights.activeYearCount,
+      oldestDecade: this.decadeLabel(stats.firstYear),
+      newestDecade: this.decadeLabel(stats.lastYear),
+    } satisfies TrendInsights;
   });
-  public readonly totalBooks = computed(() => this.booksWithDate().length);
-  public readonly yearRange = computed(() => {
-    const years = Array.from(this.yearCounts().keys()).sort((a, b) => a - b);
-    if (years.length === 0) {
-      return '';
-    }
-
-    return `${years[0]} - ${years[years.length - 1]}`;
-  });
+  public readonly totalBooks = computed(() => this.stats().totalBooks);
+  public readonly yearRange = computed(() => this.stats().firstYear == null
+    ? ''
+    : `${this.stats().firstYear} - ${this.stats().lastYear}`);
   public readonly chartData = computed<TrendChartData>(() => {
-    const yearCounts = this.yearCounts();
-    const years = Array.from(yearCounts.keys()).sort((a, b) => a - b);
-
+    const years = this.stats().years;
     if (years.length === 0) {
       return {labels: [], datasets: []};
     }
 
-    const minYear = years[0];
-    const maxYear = years[years.length - 1];
-    const labels: string[] = [];
-    const data: number[] = [];
-
-    for (let year = minYear; year <= maxYear; year++) {
-      labels.push(year.toString());
-      data.push(yearCounts.get(year) || 0);
-    }
-
     return {
-      labels,
+      labels: years.map(year => year.year.toString()),
       datasets: [{
-        data,
+        data: years.map(year => year.bookCount),
         borderColor: '#06b6d4',
         backgroundColor: 'rgba(6, 182, 212, 0.1)',
         pointBackgroundColor: '#06b6d4',
@@ -197,123 +189,8 @@ export class PublicationTrendChartComponent {
     };
   }
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private calculateYearCounts(books: Book[]): Map<number, number> {
-    const yearCounts = new Map<number, number>();
-
-    for (const book of books) {
-      const year = this.extractYear(book.metadata?.publishedDate);
-      if (!year) continue;
-      yearCounts.set(year, (yearCounts.get(year) || 0) + 1);
-    }
-
-    return yearCounts;
-  }
-
-  private extractYear(dateStr: string | undefined): number | null {
-    if (!dateStr) return null;
-
-    const yearMatch = dateStr.match(/\d{4}/);
-    if (yearMatch) {
-      const year = parseInt(yearMatch[0], 10);
-      if (year >= 1000 && year <= new Date().getFullYear() + 1) {
-        return year;
-      }
-    }
-    return null;
-  }
-
-  private calculateInsights(yearCounts: Map<number, number>, totalBooks: number): TrendInsights {
-    const currentYear = new Date().getFullYear();
-    const years = Array.from(yearCounts.keys()).sort((a, b) => a - b);
-
-    // Peak year
-    let peakYear = 0;
-    let peakYearCount = 0;
-    for (const [year, count] of yearCounts) {
-      if (count > peakYearCount) {
-        peakYear = year;
-        peakYearCount = count;
-      }
-    }
-
-    // Books in last 10 years
-    let booksLast10Years = 0;
-    let classicBooks = 0; // Pre-1970
-    let century21Books = 0; // 2000+
-
-    for (const [year, count] of yearCounts) {
-      if (year >= currentYear - 10) {
-        booksLast10Years += count;
-      }
-      if (year < 1970) {
-        classicBooks += count;
-      }
-      if (year >= 2000) {
-        century21Books += count;
-      }
-    }
-
-    const booksLast10YearsPercent = totalBooks > 0 ? Math.round((booksLast10Years / totalBooks) * 100) : 0;
-    const classicBooksPercent = totalBooks > 0 ? Math.round((classicBooks / totalBooks) * 100) : 0;
-    const century21Percent = totalBooks > 0 ? Math.round((century21Books / totalBooks) * 100) : 0;
-
-    // Average books per year (only counting years with books)
-    const activeYears = years.length;
-    const averageBooksPerYear = activeYears > 0 ? +(totalBooks / activeYears).toFixed(1) : 0;
-
-    // Most productive 5-year span
-    const mostProductiveSpan = this.findMostProductiveSpan(yearCounts, years);
-
-    // Time span
-    const timeSpan = years.length > 1 ? years[years.length - 1] - years[0] : 0;
-
-    // Oldest and newest decades
-    const oldestYear = years[0] || currentYear;
-    const newestYear = years[years.length - 1] || currentYear;
-    const oldestDecade = oldestYear < 1900 ? 'Pre-1900' : `${Math.floor(oldestYear / 10) * 10}s`;
-    const newestDecade = `${Math.floor(newestYear / 10) * 10}s`;
-
-    return {
-      peakYear,
-      peakYearCount,
-      booksLast10Years,
-      booksLast10YearsPercent,
-      averageBooksPerYear,
-      mostProductiveSpan,
-      timeSpan,
-      classicBooks,
-      classicBooksPercent,
-      century21Books,
-      century21Percent,
-      uniqueYears: activeYears,
-      oldestDecade,
-      newestDecade
-    };
-  }
-
-  private findMostProductiveSpan(yearCounts: Map<number, number>, years: number[]): string {
-    if (years.length === 0) return 'N/A';
-
-    let maxCount = 0;
-    let bestStartYear = years[0];
-
-    for (const startYear of years) {
-      let count = 0;
-      for (let y = startYear; y < startYear + 5; y++) {
-        count += yearCounts.get(y) || 0;
-      }
-      if (count > maxCount) {
-        maxCount = count;
-        bestStartYear = startYear;
-      }
-    }
-
-    return `${bestStartYear}-${bestStartYear + 4}`;
+  private decadeLabel(year: number | null): string {
+    if (year == null) return '';
+    return year < 1900 ? 'Pre-1900' : `${Math.floor(year / 10) * 10}s`;
   }
 }

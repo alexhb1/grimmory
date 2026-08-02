@@ -1,32 +1,13 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-
-interface DecadeStats {
-  decade: string;
-  label: string;
-  count: number;
-  color: string;
-}
-
-interface TimelineInsights {
-  oldestBook: { title: string; year: number } | null;
-  newestBook: { title: string; year: number } | null;
-  averageYear: number;
-  medianYear: number;
-  totalWithDate: number;
-  timeSpan: number;
-  peakDecade: string;
-  peakDecadeCount: number;
-  centuryBreakdown: { c21: number; c20: number; older: number };
-  goldenEra: { start: number; end: number; count: number };
-  mostCommonYear: { year: number; count: number };
-  rarityScore: number;
-}
+import {
+  PRE_1900_DECADE_START,
+  PublicationTimelineStats,
+} from '../../../../data/library/publication-timeline-stats';
 
 type TimelineChartData = ChartData<'bar', number[], string>;
 
@@ -51,40 +32,30 @@ const DECADE_COLORS: Record<string, string> = {
 @Component({
   selector: 'app-publication-timeline-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './publication-timeline-chart.component.html',
   styleUrls: ['./publication-timeline-chart.component.scss']
 })
 export class PublicationTimelineChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly booksWithDate = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
 
-    const filteredBooks = this.filterBooksByLibrary(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-    return filteredBooks.filter(b => b.metadata?.publishedDate);
-  });
-  private readonly decadeStats = computed(() => this.calculateDecadeStats(this.booksWithDate()));
+  readonly stats = input.required<PublicationTimelineStats>();
+  readonly loading = input(false);
 
   public readonly chartType = 'bar' as const;
   public chartOptions: ChartConfiguration<'bar'>['options'];
-  public readonly insights = computed(() => {
-    const booksWithDate = this.booksWithDate();
-    return booksWithDate.length > 0 ? this.calculateInsights(booksWithDate) : null;
-  });
-  public readonly totalBooks = computed(() => this.booksWithDate().length);
+  public readonly insights = computed(() => this.stats().insights);
+  public readonly totalBooks = computed(() => this.stats().totalBooks);
   public readonly chartData = computed<TimelineChartData>(() => {
-    const stats = this.decadeStats();
+    const stats = this.stats().decades;
     if (stats.length === 0) {
       return {labels: [], datasets: []};
     }
 
-    const labels = stats.map(s => s.label);
-    const data = stats.map(s => s.count);
-    const colors = stats.map(s => s.color);
+    const labels = stats.map(s => this.decadeLabel(s.decadeStart));
+    const data = stats.map(s => s.bookCount);
+    const colors = stats.map(s => DECADE_COLORS[this.decadeKey(s.decadeStart)] ?? '#6B7280');
 
     return {
       labels,
@@ -174,172 +145,13 @@ export class PublicationTimelineChartComponent {
     };
   }
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
+  private decadeKey(decadeStart: number): string {
+    if (decadeStart < 1900) return 'pre1900';
+    if (decadeStart >= 2020) return '2020s';
+    return `${decadeStart}s`;
   }
 
-  private calculateDecadeStats(books: Book[]): DecadeStats[] {
-    const decadeCounts = new Map<string, number>();
-
-    for (const book of books) {
-      const year = this.extractYear(book.metadata?.publishedDate);
-      if (!year) continue;
-
-      const decadeKey = this.getDecadeKey(year);
-      decadeCounts.set(decadeKey, (decadeCounts.get(decadeKey) || 0) + 1);
-    }
-
-    // Define decade order
-    const decadeOrder = [
-      'pre1900', '1900s', '1910s', '1920s', '1930s', '1940s',
-      '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'
-    ];
-
-    const decadeLabels: Record<string, string> = {
-      'pre1900': 'Pre-1900',
-      '1900s': '1900s',
-      '1910s': '1910s',
-      '1920s': '1920s',
-      '1930s': '1930s',
-      '1940s': '1940s',
-      '1950s': '1950s',
-      '1960s': '1960s',
-      '1970s': '1970s',
-      '1980s': '1980s',
-      '1990s': '1990s',
-      '2000s': '2000s',
-      '2010s': '2010s',
-      '2020s': '2020s'
-    };
-
-    return decadeOrder
-      .filter(decade => decadeCounts.has(decade))
-      .map(decade => ({
-        decade,
-        label: decadeLabels[decade],
-        count: decadeCounts.get(decade) || 0,
-        color: DECADE_COLORS[decade]
-      }));
-  }
-
-  private extractYear(dateStr: string | undefined): number | null {
-    if (!dateStr) return null;
-
-    // Try parsing as full date or just year
-    const yearMatch = dateStr.match(/\d{4}/);
-    if (yearMatch) {
-      const year = parseInt(yearMatch[0], 10);
-      if (year >= 1000 && year <= new Date().getFullYear() + 1) {
-        return year;
-      }
-    }
-    return null;
-  }
-
-  private getDecadeKey(year: number): string {
-    if (year < 1900) return 'pre1900';
-    if (year >= 2020) return '2020s';
-    const decade = Math.floor(year / 10) * 10;
-    return `${decade}s`;
-  }
-
-  private calculateInsights(books: Book[]): TimelineInsights {
-    const years: number[] = [];
-    const decadeCounts = new Map<string, number>();
-    let oldest: { title: string; year: number } | null = null;
-    let newest: { title: string; year: number } | null = null;
-    let c21 = 0, c20 = 0, older = 0;
-
-    for (const book of books) {
-      const year = this.extractYear(book.metadata?.publishedDate);
-      if (!year) continue;
-
-      years.push(year);
-      const title = book.metadata?.title || 'Unknown';
-
-      if (!oldest || year < oldest.year) {
-        oldest = {title, year};
-      }
-      if (!newest || year > newest.year) {
-        newest = {title, year};
-      }
-
-      // Count by century
-      if (year >= 2000) c21++;
-      else if (year >= 1900) c20++;
-      else older++;
-
-      // Count by decade for peak decade
-      const decadeKey = this.getDecadeKey(year);
-      decadeCounts.set(decadeKey, (decadeCounts.get(decadeKey) || 0) + 1);
-    }
-
-    years.sort((a, b) => a - b);
-    const averageYear = years.length > 0
-      ? Math.round(years.reduce((a, b) => a + b, 0) / years.length)
-      : 0;
-    const medianYear = years.length > 0
-      ? years[Math.floor(years.length / 2)]
-      : 0;
-
-    // Find peak decade
-    let peakDecade = '';
-    let peakDecadeCount = 0;
-    for (const [decade, count] of decadeCounts) {
-      if (count > peakDecadeCount) {
-        peakDecade = decade === 'pre1900' ? 'Pre-1900' : decade;
-        peakDecadeCount = count;
-      }
-    }
-
-    const timeSpan = oldest && newest ? newest.year - oldest.year : 0;
-
-    // Golden Era: best 20-year window
-    let goldenEra = {start: 0, end: 0, count: 0};
-    if (years.length > 0) {
-      for (const windowStart of years) {
-        const windowEnd = windowStart + 19;
-        const windowCount = years.filter(y => y >= windowStart && y <= windowEnd).length;
-        if (windowCount > goldenEra.count) {
-          goldenEra = {start: windowStart, end: windowEnd, count: windowCount};
-        }
-      }
-    }
-
-    // Most Common Year
-    const yearCounts = new Map<number, number>();
-    for (const y of years) {
-      yearCounts.set(y, (yearCounts.get(y) || 0) + 1);
-    }
-    let mostCommonYear = {year: 0, count: 0};
-    for (const [y, c] of yearCounts) {
-      if (c > mostCommonYear.count) {
-        mostCommonYear = {year: y, count: c};
-      }
-    }
-
-    // Rarity Score: % of books in decades with fewer than 3 books
-    let rareBooks = 0;
-    for (const count of decadeCounts.values()) {
-      if (count < 3) rareBooks += count;
-    }
-    const rarityScore = years.length > 0 ? Math.round((rareBooks / years.length) * 100) : 0;
-
-    return {
-      oldestBook: oldest,
-      newestBook: newest,
-      averageYear,
-      medianYear,
-      totalWithDate: years.length,
-      timeSpan,
-      peakDecade,
-      peakDecadeCount,
-      centuryBreakdown: {c21, c20, older},
-      goldenEra,
-      mostCommonYear,
-      rarityScore
-    };
+  protected decadeLabel(decadeStart: number): string {
+    return decadeStart === PRE_1900_DECADE_START ? 'Pre-1900' : `${decadeStart}s`;
   }
 }

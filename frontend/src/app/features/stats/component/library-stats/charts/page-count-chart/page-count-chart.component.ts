@@ -1,58 +1,33 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-
-interface PageRange {
-  label: string;
-  min: number;
-  max: number;
-  color: string;
-}
-
-interface PageStats {
-  range: string;
-  count: number;
-  color: string;
-}
+import {PageCountStats} from '../../../../data/library/page-count-stats';
 
 type PageChartData = ChartData<'bar', number[], string>;
 
-const PAGE_RANGES: PageRange[] = [
-  {label: '0-100', min: 0, max: 100, color: '#06B6D4'},
-  {label: '101-200', min: 101, max: 200, color: '#0EA5E9'},
-  {label: '201-300', min: 201, max: 300, color: '#3B82F6'},
-  {label: '301-500', min: 301, max: 500, color: '#6366F1'},
-  {label: '501-750', min: 501, max: 750, color: '#8B5CF6'},
-  {label: '751-1000', min: 751, max: 1000, color: '#A855F7'},
-  {label: '1000+', min: 1001, max: Infinity, color: '#D946EF'}
-];
+const PAGE_COLORS = [
+  '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF',
+] as const;
 
 @Component({
   selector: 'app-page-count-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './page-count-chart.component.html',
   styleUrls: ['./page-count-chart.component.scss']
 })
 export class PageCountChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly booksWithPageCount = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
 
-    const filteredBooks = this.filterBooksByLibrary(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-    return filteredBooks.filter(b => b.metadata?.pageCount != null && b.metadata.pageCount > 0);
-  });
+  readonly stats = input.required<PageCountStats>();
+  readonly loading = input(false);
 
   public readonly chartType = 'bar' as const;
-  public readonly totalBooks = computed(() => this.booksWithPageCount().length);
+  public readonly totalBooks = computed(() => this.stats().totalBooks);
 
   public readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
@@ -126,21 +101,17 @@ export class PageCountChartComponent {
   };
 
   public readonly chartData = computed<PageChartData>(() => {
-    const booksWithPageCount = this.booksWithPageCount();
-    if (booksWithPageCount.length === 0) {
+    if (this.stats().totalBooks === 0) {
       return {labels: [], datasets: []};
     }
 
-    const stats = this.calculatePageStats(booksWithPageCount);
-    const labels = stats.map(s => s.range);
-    const data = stats.map(s => s.count);
-    const colors = stats.map(s => s.color);
-
+    const labels = this.stats().buckets.map(bucket => bucket.label);
+    const data = this.stats().buckets.map(bucket => bucket.bookCount);
     return {
       labels,
       datasets: [{
         data,
-        backgroundColor: colors,
+        backgroundColor: PAGE_COLORS,
         borderWidth: 1,
         borderRadius: 4,
         barPercentage: 0.8,
@@ -149,37 +120,4 @@ export class PageCountChartComponent {
     };
   });
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private calculatePageStats(books: Book[]): PageStats[] {
-    const rangeCounts = new Map<string, { count: number, color: string }>();
-
-    PAGE_RANGES.forEach(range => {
-      rangeCounts.set(range.label, {count: 0, color: range.color});
-    });
-
-    books.forEach(book => {
-      const pageCount = book.metadata!.pageCount!;
-      for (const range of PAGE_RANGES) {
-        if (pageCount >= range.min && pageCount <= range.max) {
-          const data = rangeCounts.get(range.label)!;
-          data.count++;
-          break;
-        }
-      }
-    });
-
-    return PAGE_RANGES.map(range => {
-      const data = rangeCounts.get(range.label)!;
-      return {
-        range: range.label,
-        count: data.count,
-        color: data.color
-      };
-    });
-  }
 }

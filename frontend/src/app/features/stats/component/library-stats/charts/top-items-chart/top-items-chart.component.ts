@@ -1,14 +1,19 @@
-import {Component, effect, inject, Input, OnInit} from '@angular/core';
+import {NgClass} from '@angular/common';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
+import {Component, computed, inject, input, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData, TooltipItem} from 'chart.js';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {Select} from '@openng/optimus-ui/select';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {NgClass, AsyncPipe} from '@angular/common';
+import {Select} from '@openng/optimus-ui/select';
+import {ChartConfiguration, ChartData, TooltipItem} from 'chart.js';
+import {BaseChartDirective} from 'ng2-charts';
+
+import {ReadStatus} from '../../../../../book/model/book.model';
+import {
+  TopItemsKind,
+  TopItemsKindStats,
+  TopItemsStats,
+} from '../../../../data/library/top-items-stats';
 
 interface ItemStats {
   name: string;
@@ -18,21 +23,20 @@ interface ItemStats {
 
 interface DataTypeOption {
   label: string;
-  value: DataType;
+  value: TopItemsKind;
   icon: string;
   color: string;
 }
 
-type DataType = 'authors' | 'categories' | 'publishers' | 'tags' | 'moods' | 'series';
 type ItemChartData = ChartData<'bar', number[], string>;
 
-const DATA_TYPE_DEFS: { key: string; value: DataType; icon: string; color: string }[] = [
+const DATA_TYPE_DEFS: {key: string; value: TopItemsKind; icon: string; color: string}[] = [
   {key: 'authors', value: 'authors', icon: 'pi-th-large', color: '#2563EB'},
   {key: 'categories', value: 'categories', icon: 'pi-user', color: '#0D9488'},
   {key: 'series', value: 'series', icon: 'pi-tag', color: '#DB2777'},
   {key: 'publishers', value: 'publishers', icon: 'pi-building', color: '#7C3AED'},
   {key: 'tags', value: 'tags', icon: 'pi-bookmark', color: '#EAB308'},
-  {key: 'moods', value: 'moods', icon: 'pi-heart', color: '#EA580C'}
+  {key: 'moods', value: 'moods', icon: 'pi-heart', color: '#EA580C'},
 ];
 
 const READ_STATUS_KEYS: Record<ReadStatus, string> = {
@@ -44,7 +48,7 @@ const READ_STATUS_KEYS: Record<ReadStatus, string> = {
   [ReadStatus.PAUSED]: 'paused',
   [ReadStatus.WONT_READ]: 'wontRead',
   [ReadStatus.ABANDONED]: 'abandoned',
-  [ReadStatus.UNSET]: 'notSet'
+  [ReadStatus.UNSET]: 'notSet',
 };
 
 const READ_STATUS_COLORS: Record<ReadStatus, string> = {
@@ -56,371 +60,175 @@ const READ_STATUS_COLORS: Record<ReadStatus, string> = {
   [ReadStatus.PAUSED]: '#eab308',
   [ReadStatus.WONT_READ]: '#ef4444',
   [ReadStatus.ABANDONED]: '#dc2626',
-  [ReadStatus.UNSET]: '#9ca3af'
+  [ReadStatus.UNSET]: '#9ca3af',
 };
-
-const READ_STATUS_ORDER: ReadStatus[] = [
-  ReadStatus.READ,
-  ReadStatus.READING,
-  ReadStatus.RE_READING,
-  ReadStatus.PARTIALLY_READ,
-  ReadStatus.PAUSED,
-  ReadStatus.UNREAD,
-  ReadStatus.WONT_READ,
-  ReadStatus.ABANDONED,
-  ReadStatus.UNSET
-];
 
 @Component({
   selector: 'app-top-items-chart',
   standalone: true,
-  imports: [
-    AsyncPipe,
-    NgClass,FormsModule, BaseChartDirective, Select, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [NgClass, FormsModule, BaseChartDirective, Select, TranslocoDirective],
   templateUrl: './top-items-chart.component.html',
-  styleUrls: ['./top-items-chart.component.scss']
+  styleUrls: ['./top-items-chart.component.scss'],
 })
 export class TopItemsChartComponent implements OnInit {
-  @Input() initialDataType: DataType | null = null;
-
-  public readonly chartType = 'bar' as const;
-  public readonly chartData$: Observable<ItemChartData>;
-  public chartOptions: ChartConfiguration<'bar'>['options'];
-  public dataTypeOptions: DataTypeOption[];
-  public selectedDataType: DataTypeOption;
-
-  public totalItems = 0;
-  public totalBooks = 0;
-  public insights: { icon: string; label: string; value: string }[] = [];
-
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
-  private readonly syncChartEffect = effect(() => {
-    if (this.bookService.isBooksLoading()) {
-      return;
-    }
 
-    this.loadAndProcessData(this.bookService.books(), this.libraryFilterService.selectedLibrary());
+  readonly stats = input.required<TopItemsStats>();
+  readonly loading = input(false);
+  readonly initialDataType = input<TopItemsKind | null>(null);
+
+  readonly chartType = 'bar' as const;
+  readonly dataTypeOptions = DATA_TYPE_DEFS.map(def => ({
+    label: this.t.translate(`statsLibrary.topItems.dataTypes.${def.key}`),
+    value: def.value,
+    icon: def.icon,
+    color: def.color,
+  }));
+  readonly selectedDataType = signal(this.dataTypeOptions[0]);
+  readonly kindStats = computed(() => this.stats().kinds[this.selectedDataType().value]);
+  readonly itemStats = computed<ItemStats[]>(() => this.kindStats().items.map(item => ({
+    name: item.name,
+    count: item.bookCount,
+    statusBreakdown: Object.fromEntries(
+      Object.values(ReadStatus).map(status => [
+        status,
+        item.segments
+          .filter(segment => segment.status === status)
+          .reduce((total, segment) => total + segment.count, 0),
+      ]),
+    ) as Record<ReadStatus, number>,
+  })));
+  readonly totalItems = computed(() => this.itemStats().length);
+  readonly insights = computed(() => this.buildInsights(this.kindStats()));
+
+  readonly chartData = computed<ItemChartData>(() => {
+    const stats = this.itemStats();
+    return {
+      labels: stats.map(item => this.truncateTitle(item.name, 30)),
+      datasets: this.kindStats().statuses.map(status => ({
+        label: this.t.translate(`statsLibrary.topItems.readStatus.${READ_STATUS_KEYS[status]}`),
+        data: stats.map(item => item.statusBreakdown[status]),
+        backgroundColor: READ_STATUS_COLORS[status],
+        borderColor: READ_STATUS_COLORS[status],
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.85,
+        categoryPercentage: 0.8,
+        hoverBorderWidth: 2,
+      })),
+    };
   });
-  private readonly chartDataSubject: BehaviorSubject<ItemChartData>;
-  private lastCalculatedStats: ItemStats[] = [];
-  private allBooks: Book[] = [];
 
-  constructor() {
-    this.dataTypeOptions = DATA_TYPE_DEFS.map(def => ({
-      label: this.t.translate(`statsLibrary.topItems.dataTypes.${def.key}`),
-      value: def.value,
-      icon: def.icon,
-      color: def.color
-    }));
-    this.selectedDataType = this.dataTypeOptions[0];
-    this.chartDataSubject = new BehaviorSubject<ItemChartData>({
-      labels: [],
-      datasets: []
-    });
-    this.chartData$ = this.chartDataSubject.asObservable();
-    this.initChartOptions();
-  }
+  readonly chartOptions = computed<ChartConfiguration<'bar'>['options']>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    layout: {padding: {top: 10, right: 20, bottom: 10, left: 10}},
+    scales: {
+      x: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: {font: {family: "'Inter', sans-serif", size: 11}, precision: 0, stepSize: 1},
+        border: {display: false},
+        title: {
+          display: true,
+          text: this.t.translate('statsLibrary.topItems.axisNumberOfBooks'),
+          font: {family: "'Inter', sans-serif", size: 12, weight: 500},
+        },
+      },
+      y: {
+        stacked: true,
+        ticks: {font: {family: "'Inter', sans-serif", size: 11}, maxTicksLimit: 25},
+        grid: {display: false},
+        border: {display: false},
+      },
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 11},
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
+        },
+      },
+      tooltip: {
+        enabled: true,
+        borderColor: this.selectedDataType().color,
+        borderWidth: 2,
+        cornerRadius: 8,
+        displayColors: true,
+        padding: 12,
+        titleFont: {size: 14, weight: 'bold'},
+        bodyFont: {size: 12},
+        callbacks: {
+          title: context => this.itemStats()[context[0].dataIndex]?.name || 'Unknown',
+          label: context => this.formatTooltipLabel(context),
+        },
+      },
+    },
+    interaction: {intersect: true, mode: 'nearest', axis: 'y'},
+  }));
 
   ngOnInit(): void {
-    if (this.initialDataType) {
-      const initialOption = this.dataTypeOptions.find(opt => opt.value === this.initialDataType);
-      if (initialOption) {
-        this.selectedDataType = initialOption;
-        this.initChartOptions();
-      }
-    }
+    const initialOption = this.dataTypeOptions.find(option => option.value === this.initialDataType());
+    if (initialOption) this.selectedDataType.set(initialOption);
   }
 
-  onDataTypeChange(): void {
-    this.initChartOptions();
-    this.processData();
+  onDataTypeChange(option: DataTypeOption): void {
+    this.selectedDataType.set(option);
   }
 
-  private initChartOptions(): void {
-    const currentColor = this.selectedDataType.color;
-    this.chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
-      layout: {
-        padding: {top: 10, right: 20, bottom: 10, left: 10}
-      },
-      scales: {
-        x: {
-          stacked: true,
-          beginAtZero: true,
-          ticks: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            precision: 0,
-            stepSize: 1
-          },
-          grid: {
-          },
-          border: {display: false},
-          title: {
-            display: true,
-            text: this.t.translate('statsLibrary.topItems.axisNumberOfBooks'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12,
-              weight: 500
-            }
-          }
-        },
-        y: {
-          stacked: true,
-          ticks: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            maxTicksLimit: 25
-          },
-          grid: {
-            display: false
-          },
-          border: {display: false}
-        }
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            padding: 15,
-            usePointStyle: true,
-            pointStyle: 'rectRounded'
-          }
-        },
-        tooltip: {
-          enabled: true,
-          borderColor: currentColor,
-          borderWidth: 2,
-          cornerRadius: 8,
-          displayColors: true,
-          padding: 12,
-          titleFont: {size: 14, weight: 'bold'},
-          bodyFont: {size: 12},
-          callbacks: {
-            title: (context) => {
-              const dataIndex = context[0].dataIndex;
-              return this.lastCalculatedStats[dataIndex]?.name || 'Unknown';
-            },
-            label: this.formatTooltipLabel.bind(this)
-          }
-        }
-      },
-      interaction: {
-        intersect: true,
-        mode: 'nearest',
-        axis: 'y'
-      }
-    };
-  }
+  private buildInsights(stats: TopItemsKindStats): {icon: string; label: string; value: string}[] {
+    const top = stats.items[0];
+    if (!top) return [];
 
-  private loadAndProcessData(books: Book[], selectedLibraryId: number | null): void {
-    if (books.length === 0) {
-      this.allBooks = [];
-      this.updateChartData([]);
-      return;
-    }
-
-    this.allBooks = this.filterBooksByLibrary(books, selectedLibraryId);
-    this.processData();
-  }
-
-  private processData(): void {
-    const stats = this.calculateStats(this.allBooks);
-    this.updateChartData(stats);
-  }
-
-  private updateChartData(stats: ItemStats[]): void {
-    try {
-      this.lastCalculatedStats = stats;
-      this.totalItems = stats.length;
-      this.totalBooks = stats.reduce((sum, s) => sum + s.count, 0);
-
-      const labels = stats.map(s => this.truncateTitle(s.name, 30));
-
-      const datasets = READ_STATUS_ORDER
-        .filter(status => stats.some(s => s.statusBreakdown[status] > 0))
-        .map(status => {
-          const statusKey = READ_STATUS_KEYS[status];
-          const color = READ_STATUS_COLORS[status];
-          return {
-            label: this.t.translate(`statsLibrary.topItems.readStatus.${statusKey}`),
-            data: stats.map(s => s.statusBreakdown[status]),
-            backgroundColor: color,
-            borderColor: color,
-            borderWidth: 1,
-            borderRadius: 4,
-            barPercentage: 0.85,
-            categoryPercentage: 0.8,
-            hoverBorderWidth: 2,
-          };
-        });
-
-      this.chartDataSubject.next({
-        labels,
-        datasets
-      });
-
-      this.generateInsights(stats);
-    } catch (error) {
-      console.error('Error updating items chart data:', error);
-    }
-  }
-
-  private generateInsights(stats: ItemStats[]): void {
-    this.insights = [];
-    if (stats.length === 0) return;
-
-    const typeName = this.selectedDataType.label.toLowerCase().slice(0, -1); // Remove 's' for singular
-
-    // 1. Top item
-    const top = stats[0];
-    this.insights.push({
+    const typeName = this.selectedDataType().label.toLowerCase().slice(0, -1);
+    const insights = [{
       icon: 'pi-trophy',
       label: this.t.translate('statsLibrary.topItems.insightTop', {type: typeName}),
-      value: this.t.translate('statsLibrary.topItems.insightTopValue', {name: top.name, count: top.count})
+      value: this.t.translate('statsLibrary.topItems.insightTopValue', {
+        name: top.name,
+        count: top.bookCount,
+      }),
+    }];
+
+    if (stats.mostCompleted && stats.mostCompleted.readPercent > 0) {
+      insights.push({
+        icon: 'pi-check-circle',
+        label: this.t.translate('statsLibrary.topItems.insightMostCompleted'),
+        value: this.t.translate('statsLibrary.topItems.insightMostCompletedValue', {
+          name: stats.mostCompleted.name,
+          percent: stats.mostCompleted.readPercent,
+        }),
+      });
+    }
+    if (stats.topFiveSharePercent !== null) {
+      insights.push({
+        icon: 'pi-chart-pie',
+        label: this.t.translate('statsLibrary.topItems.insightTop5Coverage'),
+        value: this.t.translate('statsLibrary.topItems.insightTop5CoverageValue', {
+          percent: stats.topFiveSharePercent,
+        }),
+      });
+    }
+    insights.push({
+      icon: 'pi-book',
+      label: this.t.translate('statsLibrary.topItems.insightAvgPer', {type: typeName}),
+      value: this.t.translate('statsLibrary.topItems.insightAvgPerValue', {
+        avg: stats.averageBooksPerItem.toFixed(1),
+      }),
     });
 
-    // 2. Most completed - highest read percentage
-    const withReads = stats.filter(s => s.count >= 2);
-    if (withReads.length > 0) {
-      const mostRead = withReads.reduce((best, curr) => {
-        const bestPct = best.statusBreakdown[ReadStatus.READ] / best.count;
-        const currPct = curr.statusBreakdown[ReadStatus.READ] / curr.count;
-        return currPct > bestPct ? curr : best;
-      });
-      const readPct = Math.round((mostRead.statusBreakdown[ReadStatus.READ] / mostRead.count) * 100);
-      if (readPct > 0) {
-        this.insights.push({
-          icon: 'pi-check-circle',
-          label: this.t.translate('statsLibrary.topItems.insightMostCompleted'),
-          value: this.t.translate('statsLibrary.topItems.insightMostCompletedValue', {name: mostRead.name, percent: readPct})
-        });
-      }
-    }
-
-    // 3. Top 5 concentration
-    if (stats.length >= 5) {
-      const top5Books = stats.slice(0, 5).reduce((sum, s) => sum + s.count, 0);
-      const totalAllBooks = this.allBooks.length;
-      if (totalAllBooks > 0) {
-        const concentration = Math.round((top5Books / totalAllBooks) * 100);
-        this.insights.push({
-          icon: 'pi-chart-pie',
-          label: this.t.translate('statsLibrary.topItems.insightTop5Coverage'),
-          value: this.t.translate('statsLibrary.topItems.insightTop5CoverageValue', {percent: concentration})
-        });
-      }
-    }
-
-    // 4. Average books per item
-    if (stats.length > 0) {
-      const avgBooks = (this.totalBooks / stats.length).toFixed(1);
-      this.insights.push({
-        icon: 'pi-book',
-        label: this.t.translate('statsLibrary.topItems.insightAvgPer', {type: typeName}),
-        value: this.t.translate('statsLibrary.topItems.insightAvgPerValue', {avg: avgBooks})
-      });
-    }
-  }
-
-  private calculateStats(books: Book[]): ItemStats[] {
-    if (books.length === 0) {
-      return [];
-    }
-
-    const itemMap = new Map<string, { count: number; statusBreakdown: Record<ReadStatus, number> }>();
-    const dataType = this.selectedDataType.value;
-
-    for (const book of books) {
-      const items = this.getItemsFromBook(book, dataType);
-      const bookStatus = book.readStatus || ReadStatus.UNSET;
-
-      for (const item of items) {
-        if (item && item.trim()) {
-          const normalizedName = item.trim();
-          let entry = itemMap.get(normalizedName);
-
-          if (!entry) {
-            entry = {
-              count: 0,
-              statusBreakdown: this.createEmptyStatusBreakdown()
-            };
-            itemMap.set(normalizedName, entry);
-          }
-
-          entry.count++;
-          entry.statusBreakdown[bookStatus]++;
-        }
-      }
-    }
-
-    return Array.from(itemMap.entries())
-      .map(([name, data]) => ({name, count: data.count, statusBreakdown: data.statusBreakdown}))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
-  }
-
-  private createEmptyStatusBreakdown(): Record<ReadStatus, number> {
-    return {
-      [ReadStatus.READ]: 0,
-      [ReadStatus.READING]: 0,
-      [ReadStatus.RE_READING]: 0,
-      [ReadStatus.UNREAD]: 0,
-      [ReadStatus.PARTIALLY_READ]: 0,
-      [ReadStatus.PAUSED]: 0,
-      [ReadStatus.WONT_READ]: 0,
-      [ReadStatus.ABANDONED]: 0,
-      [ReadStatus.UNSET]: 0
-    };
-  }
-
-  private getItemsFromBook(book: Book, dataType: DataType): string[] {
-    const metadata = book.metadata;
-    if (!metadata) return [];
-
-    switch (dataType) {
-      case 'authors':
-        return metadata.authors || [];
-      case 'categories':
-        return metadata.categories || [];
-      case 'publishers':
-        return metadata.publisher ? [metadata.publisher] : [];
-      case 'tags':
-        return metadata.tags || [];
-      case 'moods':
-        return metadata.moods || [];
-      case 'series':
-        return metadata.seriesName ? [metadata.seriesName] : [];
-      default:
-        return [];
-    }
-  }
-
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
+    return insights;
   }
 
   private formatTooltipLabel(context: TooltipItem<'bar'>): string {
     const value = context.parsed.x;
-    if (value === 0) {
-      return '';
-    }
+    if (value === 0) return '';
 
     const statusLabel = context.dataset.label || this.t.translate('statsLibrary.pageCount.axisBooks');
     return value === 1

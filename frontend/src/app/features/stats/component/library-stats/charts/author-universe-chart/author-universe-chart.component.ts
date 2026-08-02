@@ -1,12 +1,15 @@
-import {Component, DestroyRef, effect, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {Chart, ChartConfiguration, ChartData, TooltipModel} from 'chart.js';
-import {LibraryFilterService} from '../../service/library-filter.service';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
+import {Component, computed, DestroyRef, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import {Chart, ChartConfiguration, ChartData, TooltipModel} from 'chart.js';
+import {BaseChartDirective} from 'ng2-charts';
+
+import {
+  AuthorUniverseAuthor,
+  AuthorUniverseInsights,
+  AuthorUniverseStats,
+} from '../../../../data/library/author-universe-stats';
 import {StatsChartThemeService} from '../../../shared/stats-chart-theme.service';
 
 interface AuthorStats {
@@ -16,9 +19,7 @@ interface AuthorStats {
   avgRating: number;
   readCount: number;
   completionRate: number;
-  categories: string[];
-  ratingSum: number;
-  ratingCount: number;
+  categories: readonly string[];
 }
 
 interface BubbleDataPoint {
@@ -31,445 +32,203 @@ interface BubbleDataPoint {
 type AuthorUniverseChartData = ChartData<'bubble', BubbleDataPoint[], string>;
 
 const COMPLETION_COLORS = {
-  high: '#22c55e',      // 75-100% read - green
-  medium: '#f59e0b',    // 50-74% read - amber
-  low: '#3b82f6',       // 25-49% read - blue
-  minimal: '#8b5cf6',   // 1-24% read - purple
-  unread: '#6b7280'     // 0% read - gray
+  high: '#22c55e',
+  medium: '#f59e0b',
+  low: '#3b82f6',
+  minimal: '#8b5cf6',
+  unread: '#6b7280',
 };
 
 @Component({
   selector: 'app-author-universe-chart',
   standalone: true,
-  imports: [
-    AsyncPipe, BaseChartDirective, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './author-universe-chart.component.html',
-  styleUrls: ['./author-universe-chart.component.scss']
+  styleUrls: ['./author-universe-chart.component.scss'],
 })
 export class AuthorUniverseChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
   private readonly t = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly chartTheme = inject(StatsChartThemeService);
-  private readonly syncChartEffect = effect(() => {
-    if (this.bookService.isBooksLoading()) {
-      return;
-    }
 
-    this.calculateAndUpdateChart(this.bookService.books(), this.libraryFilterService.selectedLibrary());
-  });
+  readonly stats = input.required<AuthorUniverseStats>();
+  readonly loading = input(false);
 
-  public readonly chartType = 'bubble' as const;
-  public chartOptions: ChartConfiguration<'bubble'>['options'];
-  public totalAuthors = 0;
-  public topAuthors: AuthorStats[] = [];
-  public insights: string[] = [];
+  readonly chartType = 'bubble' as const;
+  readonly authors = computed<AuthorStats[]>(() => this.stats().authors.map(this.toChartAuthor));
+  readonly totalAuthors = computed(() => this.authors().length);
+  readonly insights = computed(() => this.buildInsights(this.stats().insights));
+  readonly chartData = computed<AuthorUniverseChartData>(() => this.buildChartData(this.authors()));
 
-  private readonly chartDataSubject = new BehaviorSubject<AuthorUniverseChartData>({
-    labels: [],
-    datasets: []
-  });
-
-  public readonly chartData$: Observable<AuthorUniverseChartData> = this.chartDataSubject.asObservable();
+  readonly chartOptions: ChartConfiguration<'bubble'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {padding: {top: 20, right: 20, bottom: 20, left: 20}},
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: this.t.translate('statsLibrary.authorUniverse.axisBooks'),
+          font: {family: "'Inter', sans-serif", size: 12, weight: 500},
+        },
+        ticks: {font: {family: "'Inter', sans-serif", size: 11}, precision: 0, stepSize: 1},
+        border: {display: false},
+        min: 0,
+      },
+      y: {
+        title: {
+          display: true,
+          text: this.t.translate('statsLibrary.authorUniverse.axisRating'),
+          font: {family: "'Inter', sans-serif", size: 12, weight: 500},
+        },
+        ticks: {
+          font: {family: "'Inter', sans-serif", size: 11},
+          callback: value => value.toLocaleString(),
+        },
+        border: {display: false},
+        min: 0,
+        max: 5.5,
+        beginAtZero: true,
+      },
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 11},
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'circle',
+        },
+      },
+      tooltip: {
+        enabled: false,
+        external: context => this.handleExternalTooltip(context),
+      },
+    },
+    interaction: {intersect: true, mode: 'nearest'},
+  };
 
   constructor() {
-    this.initChartOptions();
-    this.destroyRef.onDestroy(() => {
-      document.getElementById('author-chart-tooltip')?.remove();
-    });
+    this.destroyRef.onDestroy(() => document.getElementById('author-chart-tooltip')?.remove());
   }
 
-  private initChartOptions(): void {
-    this.chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: {top: 20, right: 20, bottom: 20, left: 20}
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: this.t.translate('statsLibrary.authorUniverse.axisBooks'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12,
-              weight: 500
-            }
-          },
-          ticks: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            precision: 0,
-            stepSize: 1
-          },
-          grid: {
-          },
-          border: {display: false},
-          min: 0
-        },
-        y: {
-          title: {
-            display: true,
-            text: this.t.translate('statsLibrary.authorUniverse.axisRating'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12,
-              weight: 500
-            }
-          },
-          ticks: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            callback: (value) => value.toLocaleString()
-          },
-          grid: {
-          },
-          border: {display: false},
-          min: 0,
-          max: 5.5,
-          beginAtZero: true
-        }
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 11
-            },
-            padding: 15,
-            usePointStyle: true,
-            pointStyle: 'circle'
-          }
-        },
-        tooltip: {
-          enabled: false,
-          external: (context) => this.handleExternalTooltip(context)
-        },
-      },
-      interaction: {
-        intersect: true,
-        mode: 'nearest'
-      }
+  private readonly toChartAuthor = (author: AuthorUniverseAuthor): AuthorStats => ({
+    name: author.name,
+    bookCount: author.bookCount,
+    totalPages: author.totalPages,
+    avgRating: author.averageRating,
+    readCount: author.readCount,
+    completionRate: author.completionPercent,
+    categories: author.topGenres,
+  });
+
+  private buildChartData(authorStats: readonly AuthorStats[]): AuthorUniverseChartData {
+    if (authorStats.length === 0) return {labels: [], datasets: []};
+
+    const grouped = {
+      high: [] as BubbleDataPoint[],
+      medium: [] as BubbleDataPoint[],
+      low: [] as BubbleDataPoint[],
+      minimal: [] as BubbleDataPoint[],
+      unread: [] as BubbleDataPoint[],
+    };
+    const maxPages = Math.max(...authorStats.map(author => author.totalPages), 1);
+
+    for (const author of authorStats) {
+      const point: BubbleDataPoint = {
+        x: author.bookCount,
+        y: author.avgRating || 2.5,
+        r: Math.max(5, Math.min(25, 5 + (author.totalPages / maxPages) * 20)),
+        authorStats: author,
+      };
+
+      if (author.completionRate >= 75) grouped.high.push(point);
+      else if (author.completionRate >= 50) grouped.medium.push(point);
+      else if (author.completionRate >= 25) grouped.low.push(point);
+      else if (author.completionRate > 0) grouped.minimal.push(point);
+      else grouped.unread.push(point);
+    }
+
+    const definitions = [
+      {key: 'high', label: 'legend75to100'},
+      {key: 'medium', label: 'legend50to74'},
+      {key: 'low', label: 'legend25to49'},
+      {key: 'minimal', label: 'legend1to24'},
+      {key: 'unread', label: 'legendUnread'},
+    ] as const;
+
+    return {
+      labels: [],
+      datasets: definitions
+        .filter(definition => grouped[definition.key].length > 0)
+        .map(definition => ({
+          label: this.t.translate(`statsLibrary.authorUniverse.${definition.label}`),
+          data: grouped[definition.key],
+          backgroundColor: this.hexToRgba(COMPLETION_COLORS[definition.key], 0.6),
+          borderColor: COMPLETION_COLORS[definition.key],
+          borderWidth: 2,
+          hoverBorderWidth: 3,
+        })),
     };
   }
 
-  private calculateAndUpdateChart(books: Book[], selectedLibraryId: number | null): void {
-    if (books.length === 0) {
-      this.chartDataSubject.next({labels: [], datasets: []});
-      this.totalAuthors = 0;
-      this.topAuthors = [];
-      this.insights = [];
-      return;
-    }
+  private buildInsights(stats: AuthorUniverseInsights | null): string[] {
+    if (!stats) return [];
 
-    const filteredBooks = this.filterBooksByLibrary(books, selectedLibraryId);
-    const authorStats = this.calculateAuthorStats(filteredBooks);
-
-    this.totalAuthors = authorStats.length;
-    this.topAuthors = authorStats.slice(0, 10);
-    this.insights = this.generateInsights(authorStats);
-    this.updateChartData(authorStats);
-  }
-
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
-
-  private calculateAuthorStats(books: Book[]): AuthorStats[] {
-    // Single-pass aggregation - O(n) where n = books * avg_authors_per_book
-    const authorMap = new Map<string, AuthorStats>();
-    const categorySet = new Map<string, Set<string>>(); // Track unique categories per author
-
-    for (const book of books) {
-      const authors = book.metadata?.authors;
-      if (!authors || authors.length === 0) continue;
-
-      // Get book's rating once
-      const bookRating = book.personalRating ||
-        book.metadata?.goodreadsRating ||
-        book.metadata?.amazonRating ||
-        book.metadata?.hardcoverRating || 0;
-
-      const isRead = book.readStatus === ReadStatus.READ;
-      const pageCount = book.metadata?.pageCount || 0;
-      const bookCategories = book.metadata?.categories;
-
-      for (const authorName of authors) {
-        const normalizedName = authorName.trim();
-        if (!normalizedName) continue;
-
-        let stats = authorMap.get(normalizedName);
-        if (!stats) {
-          stats = {
-            name: normalizedName,
-            bookCount: 0,
-            totalPages: 0,
-            avgRating: 0,
-            readCount: 0,
-            completionRate: 0,
-            categories: [],
-            ratingSum: 0,
-            ratingCount: 0
-          };
-          authorMap.set(normalizedName, stats);
-          categorySet.set(normalizedName, new Set());
-        }
-
-        // Aggregate in single pass
-        stats.bookCount++;
-        stats.totalPages += pageCount;
-
-        if (isRead) {
-          stats.readCount++;
-        }
-
-        if (bookRating > 0) {
-          stats.ratingSum += bookRating;
-          stats.ratingCount++;
-        }
-
-        // Track unique categories using Set (O(1) lookup)
-        if (bookCategories) {
-          const catSet = categorySet.get(normalizedName)!;
-          for (const cat of bookCategories) {
-            catSet.add(cat);
-          }
-        }
-      }
-    }
-
-    // Finalize calculations and filter - only process authors with 2+ books
-    const results: AuthorStats[] = [];
-
-    for (const [name, stats] of authorMap) {
-      if (stats.bookCount < 2) continue; // Skip single-book authors early
-
-      stats.completionRate = (stats.readCount / stats.bookCount) * 100;
-      stats.avgRating = stats.ratingCount > 0 ? stats.ratingSum / stats.ratingCount : 0;
-      stats.categories = Array.from(categorySet.get(name) || []).slice(0, 5); // Limit to 5 categories
-
-      results.push(stats);
-    }
-
-    // Sort and limit to top 50 for rendering performance
-    results.sort((a, b) => b.bookCount - a.bookCount);
-    return results.slice(0, 50);
-  }
-
-  private updateChartData(authorStats: AuthorStats[]): void {
-    if (authorStats.length === 0) {
-      this.chartDataSubject.next({labels: [], datasets: []});
-      return;
-    }
-
-    // Group authors by completion rate for different colored datasets
-    const highCompletion: BubbleDataPoint[] = [];
-    const mediumCompletion: BubbleDataPoint[] = [];
-    const lowCompletion: BubbleDataPoint[] = [];
-    const minimalCompletion: BubbleDataPoint[] = [];
-    const unread: BubbleDataPoint[] = [];
-
-    const maxPages = Math.max(...authorStats.map(s => s.totalPages));
-
-    for (const stats of authorStats) {
-      // Scale bubble radius based on total pages (min 5, max 25)
-      const normalizedPages = stats.totalPages / maxPages;
-      const radius = 5 + (normalizedPages * 20);
-
-      const point: BubbleDataPoint = {
-        x: stats.bookCount,
-        y: stats.avgRating || 2.5, // Default to 2.5 if no rating
-        r: Math.max(5, Math.min(25, radius)),
-        authorStats: stats
-      };
-
-      if (stats.completionRate >= 75) {
-        highCompletion.push(point);
-      } else if (stats.completionRate >= 50) {
-        mediumCompletion.push(point);
-      } else if (stats.completionRate >= 25) {
-        lowCompletion.push(point);
-      } else if (stats.completionRate > 0) {
-        minimalCompletion.push(point);
-      } else {
-        unread.push(point);
-      }
-    }
-
-    const datasets: AuthorUniverseChartData['datasets'] = [];
-
-    if (highCompletion.length > 0) {
-      datasets.push({
-        label: this.t.translate('statsLibrary.authorUniverse.legend75to100'),
-        data: highCompletion,
-        backgroundColor: this.hexToRgba(COMPLETION_COLORS.high, 0.6),
-        borderColor: COMPLETION_COLORS.high,
-        borderWidth: 2,
-        hoverBorderWidth: 3,
-      });
-    }
-
-    if (mediumCompletion.length > 0) {
-      datasets.push({
-        label: this.t.translate('statsLibrary.authorUniverse.legend50to74'),
-        data: mediumCompletion,
-        backgroundColor: this.hexToRgba(COMPLETION_COLORS.medium, 0.6),
-        borderColor: COMPLETION_COLORS.medium,
-        borderWidth: 2,
-        hoverBorderWidth: 3,
-      });
-    }
-
-    if (lowCompletion.length > 0) {
-      datasets.push({
-        label: this.t.translate('statsLibrary.authorUniverse.legend25to49'),
-        data: lowCompletion,
-        backgroundColor: this.hexToRgba(COMPLETION_COLORS.low, 0.6),
-        borderColor: COMPLETION_COLORS.low,
-        borderWidth: 2,
-        hoverBorderWidth: 3,
-      });
-    }
-
-    if (minimalCompletion.length > 0) {
-      datasets.push({
-        label: this.t.translate('statsLibrary.authorUniverse.legend1to24'),
-        data: minimalCompletion,
-        backgroundColor: this.hexToRgba(COMPLETION_COLORS.minimal, 0.6),
-        borderColor: COMPLETION_COLORS.minimal,
-        borderWidth: 2,
-        hoverBorderWidth: 3,
-      });
-    }
-
-    if (unread.length > 0) {
-      datasets.push({
-        label: this.t.translate('statsLibrary.authorUniverse.legendUnread'),
-        data: unread,
-        backgroundColor: this.hexToRgba(COMPLETION_COLORS.unread, 0.6),
-        borderColor: COMPLETION_COLORS.unread,
-        borderWidth: 2,
-        hoverBorderWidth: 3,
-      });
-    }
-
-    this.chartDataSubject.next({
-      labels: [],
-      datasets
-    });
-  }
-
-  private generateInsights(authorStats: AuthorStats[]): string[] {
     const insights: string[] = [];
-
-    if (authorStats.length === 0) return insights;
-
-    // Most prolific author
-    const mostProlific = authorStats[0];
-    if (mostProlific) {
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostCollected', {name: mostProlific.name, count: mostProlific.bookCount}));
+    if (stats.mostCollected) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostCollected', stats.mostCollected));
     }
-
-    // Highest rated author (with at least 2 books)
-    const ratedAuthors = authorStats.filter(a => a.avgRating > 0);
-    if (ratedAuthors.length > 0) {
-      const highestRated = ratedAuthors.reduce((a, b) => a.avgRating > b.avgRating ? a : b);
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightHighestRated', {name: highestRated.name, rating: `${highestRated.avgRating.toFixed(1)}\u2605`}));
+    if (stats.highestRated) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightHighestRated', {
+        name: stats.highestRated.name,
+        rating: `${stats.highestRated.averageRating.toFixed(1)}★`,
+      }));
     }
-
-    // Most pages by author
-    const mostPages = authorStats.reduce((a, b) => a.totalPages > b.totalPages ? a : b);
-    if (mostPages.totalPages > 0) {
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostPages', {name: mostPages.name, count: mostPages.totalPages.toLocaleString()}));
+    if (stats.mostPages) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostPages', stats.mostPages));
     }
-
-    // Best completion rate (with at least 3 books)
-    const completionCandidates = authorStats.filter(a => a.bookCount >= 3);
-    if (completionCandidates.length > 0) {
-      const bestCompletion = completionCandidates.reduce((a, b) =>
-        a.completionRate > b.completionRate ? a : b
-      );
-      if (bestCompletion.completionRate > 0) {
-        insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostRead', {name: bestCompletion.name, percent: Math.round(bestCompletion.completionRate)}));
-      }
+    if (stats.bestCompletion) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostRead', {
+        name: stats.bestCompletion.name,
+        percent: stats.bestCompletion.count,
+      }));
     }
-
-    // Hidden gem - high rated but fewer books (quality over quantity)
-    const hiddenGems = ratedAuthors.filter(a => a.bookCount <= 3 && a.avgRating >= 4.0);
-    if (hiddenGems.length > 0) {
-      const gem = hiddenGems.reduce((a, b) => a.avgRating > b.avgRating ? a : b);
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightHiddenGem', {name: gem.name, rating: `${gem.avgRating.toFixed(1)}\u2605`, count: gem.bookCount}));
+    if (stats.hiddenGem) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightHiddenGem', {
+        name: stats.hiddenGem.name,
+        rating: `${stats.hiddenGem.averageRating.toFixed(1)}★`,
+        count: stats.hiddenGem.bookCount,
+      }));
     }
-
-    // Biggest backlog - author with most unread books
-    const authorsWithBacklog = authorStats.filter(a => a.bookCount - a.readCount > 0);
-    if (authorsWithBacklog.length > 0) {
-      const biggestBacklog = authorsWithBacklog.reduce((a, b) =>
-        (a.bookCount - a.readCount) > (b.bookCount - b.readCount) ? a : b
-      );
-      const unreadCount = biggestBacklog.bookCount - biggestBacklog.readCount;
-      if (unreadCount >= 2) {
-        insights.push(this.t.translate('statsLibrary.authorUniverse.insightBiggestBacklog', {name: biggestBacklog.name, count: unreadCount}));
-      }
+    if (stats.biggestBacklog) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightBiggestBacklog', stats.biggestBacklog));
     }
-
-    // Author concentration - what % of total books come from top 3 authors
-    if (authorStats.length >= 3) {
-      const totalBooks = authorStats.reduce((sum, a) => sum + a.bookCount, 0);
-      const top3Books = authorStats.slice(0, 3).reduce((sum, a) => sum + a.bookCount, 0);
-      const concentration = Math.round((top3Books / totalBooks) * 100);
-      if (concentration >= 25) {
-        insights.push(this.t.translate('statsLibrary.authorUniverse.insightTop3Concentration', {percent: concentration}));
-      }
+    if (stats.topThreeSharePercent !== null) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightTop3Concentration', {
+        percent: stats.topThreeSharePercent,
+      }));
     }
-
-    // Longest reads - author with highest avg pages per book
-    const authorsWithPages = authorStats.filter(a => a.totalPages > 0);
-    if (authorsWithPages.length > 0) {
-      const longestReads = authorsWithPages.reduce((a, b) =>
-        (a.totalPages / a.bookCount) > (b.totalPages / b.bookCount) ? a : b
-      );
-      const avgPages = Math.round(longestReads.totalPages / longestReads.bookCount);
-      if (avgPages >= 300) {
-        insights.push(this.t.translate('statsLibrary.authorUniverse.insightLongestReads', {name: longestReads.name, pages: avgPages}));
-      }
+    if (stats.longestReads) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightLongestReads', {
+        name: stats.longestReads.name,
+        pages: stats.longestReads.count,
+      }));
     }
-
-    // Most versatile - author appearing in most genres
-    const versatileAuthors = authorStats.filter(a => a.categories.length >= 3);
-    if (versatileAuthors.length > 0) {
-      const mostVersatile = versatileAuthors.reduce((a, b) =>
-        a.categories.length > b.categories.length ? a : b
-      );
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostVersatile', {name: mostVersatile.name, count: mostVersatile.categories.length}));
+    if (stats.mostVersatile) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostVersatile', stats.mostVersatile));
     }
-
-    // Completely unread - authors with 0% completion but multiple books
-    const completelyUnread = authorStats.filter(a => a.completionRate === 0 && a.bookCount >= 2);
-    if (completelyUnread.length > 0) {
-      const topUnread = completelyUnread.reduce((a, b) => a.bookCount > b.bookCount ? a : b);
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightUntouchedAuthor', {name: topUnread.name, count: topUnread.bookCount}));
+    if (stats.untouchedAuthor) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightUntouchedAuthor', stats.untouchedAuthor));
     }
-
-    // Total reading commitment
-    const totalPages = authorStats.reduce((sum, a) => sum + a.totalPages, 0);
-    const totalRead = authorStats.reduce((sum, a) => sum + (a.totalPages * a.completionRate / 100), 0);
-    if (totalPages > 0) {
-      const overallProgress = Math.round((totalRead / totalPages) * 100);
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightOverallProgress', {percent: overallProgress}));
+    if (stats.overallProgressPercent !== null) {
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightOverallProgress', {
+        percent: stats.overallProgressPercent,
+      }));
     }
-
     return insights;
   }
 
@@ -482,7 +241,7 @@ export class AuthorUniverseChartComponent {
       .replaceAll("'", '&#39;');
   }
 
-  private handleExternalTooltip(context: { chart: Chart; tooltip: TooltipModel<'bubble'> }): void {
+  private handleExternalTooltip(context: {chart: Chart; tooltip: TooltipModel<'bubble'>}): void {
     const {chart, tooltip} = context;
     const colors = this.chartTheme.colors();
     let tooltipEl = document.getElementById('author-chart-tooltip');
@@ -501,46 +260,43 @@ export class AuthorUniverseChartComponent {
         transform: 'translate(-50%, calc(-100% - 12px))',
         maxWidth: '280px',
         whiteSpace: 'nowrap',
-        fontFamily: "'Inter', sans-serif"
+        fontFamily: "'Inter', sans-serif",
       });
       document.body.appendChild(tooltipEl);
     }
 
     tooltipEl.style.background = colors.surface;
     tooltipEl.style.border = `1px solid ${colors.border}`;
-
     if (tooltip.opacity === 0) {
       tooltipEl.style.opacity = '0';
       return;
     }
 
-    // Only use the first (nearest) data point
     const dataPoint = tooltip.dataPoints?.[0];
     if (!dataPoint) {
       tooltipEl.style.opacity = '0';
       return;
     }
 
-    const raw = dataPoint.raw as BubbleDataPoint;
-    const stats = raw.authorStats;
-
+    const stats = (dataPoint.raw as BubbleDataPoint).authorStats;
     const ratingText = stats.avgRating > 0
-      ? `${stats.avgRating.toFixed(2)} \u2605`
+      ? `${stats.avgRating.toFixed(2)} ★`
       : this.t.translate('statsLibrary.authorUniverse.tooltipNoRatings');
-
     const safeGenres = this.escapeHtml(stats.categories.slice(0, 3).join(', '));
     const categoriesHtml = stats.categories.length > 0
       ? `<div style="color:${colors.textSecondary};font-size:12px;line-height:1.6">${this.t.translate('statsLibrary.authorUniverse.tooltipGenres', {genres: safeGenres})}</div>`
       : '';
-
     const booksLine = this.t.translate('statsLibrary.authorUniverse.tooltipBooks', {count: stats.bookCount});
     const pagesLine = this.t.translate('statsLibrary.authorUniverse.tooltipTotalPages', {count: stats.totalPages.toLocaleString()});
     const ratingLine = this.t.translate('statsLibrary.authorUniverse.tooltipAvgRating', {rating: ratingText});
-    const readLine = this.t.translate('statsLibrary.authorUniverse.tooltipRead', {read: stats.readCount, total: stats.bookCount, percent: Math.round(stats.completionRate)});
+    const readLine = this.t.translate('statsLibrary.authorUniverse.tooltipRead', {
+      read: stats.readCount,
+      total: stats.bookCount,
+      percent: Math.round(stats.completionRate),
+    });
 
-    const safeName = this.escapeHtml(stats.name);
     tooltipEl.innerHTML = `
-      <div style="color:${colors.text};font-size:14px;font-weight:700;margin-bottom:6px">${safeName}</div>
+      <div style="color:${colors.text};font-size:14px;font-weight:700;margin-bottom:6px">${this.escapeHtml(stats.name)}</div>
       <div style="color:${colors.textSecondary};font-size:12px;line-height:1.6">${booksLine}</div>
       <div style="color:${colors.textSecondary};font-size:12px;line-height:1.6">${pagesLine}</div>
       <div style="color:${colors.textSecondary};font-size:12px;line-height:1.6">${ratingLine}</div>
@@ -550,8 +306,8 @@ export class AuthorUniverseChartComponent {
 
     const canvasRect = chart.canvas.getBoundingClientRect();
     tooltipEl.style.opacity = '1';
-    tooltipEl.style.left = (canvasRect.left + tooltip.caretX) + 'px';
-    tooltipEl.style.top = (canvasRect.top + tooltip.caretY) + 'px';
+    tooltipEl.style.left = `${canvasRect.left + tooltip.caretX}px`;
+    tooltipEl.style.top = `${canvasRect.top + tooltip.caretY}px`;
   }
 
   private hexToRgba(hex: string, alpha: number): string {
