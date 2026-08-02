@@ -1,304 +1,296 @@
-import {AfterViewInit, Component, effect, ElementRef, inject, ViewChild} from '@angular/core';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {StatsChartThemeService} from '../../../shared/stats-chart-theme.service';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  type ElementRef,
+  inject,
+  input,
+  viewChild,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 
-interface SankeyNode {
-  id: string;
-  label: string;
-  column: number;
-  y: number;
-  height: number;
-  color: string;
-  count: number;
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { readStatsChartThemeColors } from '../../../shared/stats-chart-theme.service';
+import {
+  BOOK_FLOW_OTHER_QUARTERS_ID,
+  type BookFlowColumn,
+  type BookFlowNode,
+  type BookFlowQuarter,
+  type BookFlowRatingId,
+  type BookFlowStats,
+  type BookFlowStatusId,
+} from '../../../../data/user/book-flow-stats';
+
+interface LayoutNode extends BookFlowNode {
+  readonly columnIndex: number;
+  readonly indexInColumn: number;
+  readonly top: number;
+  readonly height: number;
 }
 
-interface SankeyLink {
-  source: SankeyNode;
-  target: SankeyNode;
-  value: number;
-  color: string;
-}
+const COLUMNS: readonly BookFlowColumn[] = ['added', 'status', 'rating'];
+const QUARTER_COLORS: readonly string[] = [
+  '#42a5f5',
+  '#26c6da',
+  '#66bb6a',
+  '#ffa726',
+  '#ab47bc',
+  '#ef5350',
+  '#ec407a',
+  '#7e57c2',
+];
+
+const STATUS_COLORS: Readonly<Record<BookFlowStatusId, string>> = {
+  read: '#66bb6a',
+  reading: '#42a5f5',
+  unread: '#78909c',
+  paused: '#ffa726',
+  abandoned: '#ef5350',
+  other: '#ab47bc',
+};
+
+const RATING_COLORS: Readonly<Record<BookFlowRatingId, string>> = {
+  high: '#66bb6a',
+  mid: '#ffc107',
+  low: '#ef5350',
+  unrated: '#78909c',
+};
+
+const STATUS_LABEL_KEYS: Readonly<Record<BookFlowStatusId, string>> = {
+  read: 'statsUser.readStatus.read',
+  reading: 'statsUser.readStatus.currentlyReading',
+  unread: 'statsUser.readStatus.unread',
+  paused: 'statsUser.readStatus.paused',
+  abandoned: 'statsUser.readStatus.abandoned',
+  other: 'statsUser.readStatus.noStatus',
+};
+
+const RATING_LABELS: Readonly<Record<Exclude<BookFlowRatingId, 'unrated'>, string>> = {
+  high: '4-5',
+  mid: '3',
+  low: '1-2',
+};
+
+const UNKNOWN_LABEL = '—';
+const NODE_WIDTH = 18;
+const LEFT_MARGIN = 100;
+const RIGHT_MARGIN = 130;
+const LAYOUT_TOP = 30;
+const LAYOUT_BOTTOM = 30;
+const LAYOUT_PADDING = 6;
+const MINIMUM_NODE_HEIGHT = 10;
+const LABEL_LIMIT = 18;
 
 @Component({
   selector: 'app-book-flow-chart',
   standalone: true,
-  imports: [Tooltip, TranslocoDirective],
+  imports: [StatsChartCardComponent, TranslocoDirective],
   templateUrl: './book-flow-chart.component.html',
-  styleUrls: ['./book-flow-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
-export class BookFlowChartComponent implements AfterViewInit {
-  @ViewChild('flowCanvas', {static: false}) canvasRef!: ElementRef<HTMLCanvasElement>;
+export class BookFlowChartComponent {
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
+  private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('flowCanvas');
 
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly chartTheme = inject(StatsChartThemeService);
-  private readonly syncChartEffect = effect(() => {
-    this.chartTheme.themeRevision();
+  readonly stats = input.required<BookFlowStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-    if (this.bookService.isBooksLoading()) {
-      this.dataReady = false;
-      return;
-    }
-
-    this.processData(this.bookService.books());
-    this.dataReady = true;
-    this.tryRender();
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().nodes.length > 0 ? 'ready' : 'empty';
   });
 
-  public hasData = false;
-  public totalBooks = 0;
-  public topQuarter = '';
-  public topStatus = '';
-  public completionRate = '';
+  readonly busiestQuarterLabel = computed(() => {
+    const quarter = this.stats().busiestQuarter;
+    return quarter ? formatQuarter(quarter) : UNKNOWN_LABEL;
+  });
 
-  private nodes: SankeyNode[] = [];
-  private links: SankeyLink[] = [];
-  private canvasReady = false;
-  private dataReady = false;
+  readonly topStatusLabel = computed(() => {
+    this.activeLanguage();
+    const status = this.stats().topStatus;
+    return status ? this.transloco.translate(STATUS_LABEL_KEYS[status]) : UNKNOWN_LABEL;
+  });
 
-  ngAfterViewInit(): void {
-    this.canvasReady = true;
-    this.tryRender();
+  private readonly repaint = effect(() => {
+    const canvas = this.canvas()?.nativeElement;
+    const stats = this.stats();
+    const height = this.plotHeight();
+    this.activeLanguage();
+    if (!canvas || this.loading() || this.state() !== 'ready') return;
+
+    requestAnimationFrame(() => this.draw(canvas, stats, height));
+  });
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.activeLanguage());
   }
 
-  private tryRender(): void {
-    if (this.canvasReady && this.dataReady && this.hasData) {
-      requestAnimationFrame(() => this.draw());
-    }
-  }
+  private draw(canvas: HTMLCanvasElement, stats: BookFlowStats, height: number): void {
+    const context = canvas.getContext('2d');
+    const parent = canvas.parentElement;
+    if (!context || !parent) return;
 
-  private processData(books: Book[]): void {
-    this.hasData = false;
-    this.totalBooks = 0;
-    this.topQuarter = '';
-    this.topStatus = '';
-    this.completionRate = '';
-    this.nodes = [];
-    this.links = [];
+    const width = parent.getBoundingClientRect().width;
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.scale(ratio, ratio);
 
-    if (books.length === 0) {
-      return;
-    }
+    const columnX = [LEFT_MARGIN, width * 0.45, width - RIGHT_MARGIN];
+    const colors = readStatsChartThemeColors();
+    const nodes = layoutNodes(stats.nodes, height);
+    const nodesByKey = new Map(nodes.map((node) => [nodeKey(node.column, node.id), node]));
 
-    const quarterMap = new Map<string, number>();
-    const statusMap = new Map<string, number>();
-    const ratingMap = new Map<string, number>();
-    const quarterToStatus = new Map<string, Map<string, number>>();
-    const statusToRating = new Map<string, Map<string, number>>();
-
-    const statusColors: Record<string, string> = {
-      'Read': '#66bb6a', 'Reading': '#42a5f5', 'Unread': '#78909c',
-      'Paused': '#ffa726', 'Abandoned': '#ef5350', 'Other': '#ab47bc'
-    };
-
-    const ratingColors: Record<string, string> = {
-      'Rated 4-5': '#66bb6a', 'Rated 3': '#ffc107',
-      'Rated 1-2': '#ef5350', 'Unrated': '#78909c'
-    };
-
-    for (const book of books) {
-      const addedOn = book.addedOn;
-      let quarter = 'Unknown';
-      if (addedOn) {
-        const date = new Date(addedOn);
-        const q = Math.ceil((date.getMonth() + 1) / 3);
-        quarter = `${date.getFullYear()} Q${q}`;
-      }
-
-      let status = 'Other';
-      switch (book.readStatus) {
-        case ReadStatus.READ: status = 'Read'; break;
-        case ReadStatus.READING: case ReadStatus.RE_READING: status = 'Reading'; break;
-        case ReadStatus.UNREAD: case ReadStatus.UNSET: status = 'Unread'; break;
-        case ReadStatus.PAUSED: status = 'Paused'; break;
-        case ReadStatus.ABANDONED: case ReadStatus.WONT_READ: status = 'Abandoned'; break;
-      }
-
-      let ratingBucket = 'Unrated';
-      const rating = book.personalRating;
-      if (rating && rating > 0) {
-        const normalized = rating / 2;
-        if (normalized >= 4) ratingBucket = 'Rated 4-5';
-        else if (normalized >= 3) ratingBucket = 'Rated 3';
-        else ratingBucket = 'Rated 1-2';
-      }
-
-      quarterMap.set(quarter, (quarterMap.get(quarter) || 0) + 1);
-      statusMap.set(status, (statusMap.get(status) || 0) + 1);
-      ratingMap.set(ratingBucket, (ratingMap.get(ratingBucket) || 0) + 1);
-
-      if (!quarterToStatus.has(quarter)) quarterToStatus.set(quarter, new Map());
-      const qsMap = quarterToStatus.get(quarter)!;
-      qsMap.set(status, (qsMap.get(status) || 0) + 1);
-
-      if (!statusToRating.has(status)) statusToRating.set(status, new Map());
-      const srMap = statusToRating.get(status)!;
-      srMap.set(ratingBucket, (srMap.get(ratingBucket) || 0) + 1);
-    }
-
-    if (quarterMap.size === 0) return;
-    this.hasData = true;
-    this.totalBooks = books.length;
-
-    const sortedQuarters = [...quarterMap.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-
-    this.topQuarter = sortedQuarters[0]?.[0] || '';
-    const topStatusEntry = [...statusMap.entries()].sort((a, b) => b[1] - a[1])[0];
-    this.topStatus = topStatusEntry?.[0] || '';
-
-    const readCount = statusMap.get('Read') || 0;
-    this.completionRate = books.length > 0 ? Math.round((readCount / books.length) * 100) + '%' : '0%';
-
-    const quarterColors = ['#42a5f5', '#26c6da', '#66bb6a', '#ffa726', '#ab47bc', '#ef5350', '#ec407a', '#7e57c2'];
-
-    const totalHeight = 420;
-    const padding = 6;
-
-    const createColumnNodes = (
-      entries: [string, number][],
-      column: number,
-      colors: Record<string, string> | string[]
-    ): SankeyNode[] => {
-      const total = entries.reduce((s, e) => s + e[1], 0);
-      let currentY = 30;
-      return entries.map(([id, count], i) => {
-        const height = Math.max(10, (count / total) * (totalHeight - entries.length * padding));
-        const node: SankeyNode = {
-          id, label: id, column,
-          y: currentY, height,
-          color: Array.isArray(colors) ? colors[i % colors.length] : (colors[id] || '#78909c'),
-          count
-        };
-        currentY += height + padding;
-        return node;
-      });
-    };
-
-    const quarterNodes = createColumnNodes(sortedQuarters, 0, quarterColors);
-    const statusEntries = [...statusMap.entries()].sort((a, b) => b[1] - a[1]);
-    const statusNodes = createColumnNodes(statusEntries, 1, statusColors);
-    const ratingEntries = [...ratingMap.entries()].sort((a, b) => b[1] - a[1]);
-    const ratingNodes = createColumnNodes(ratingEntries, 2, ratingColors);
-
-    this.nodes = [...quarterNodes, ...statusNodes, ...ratingNodes];
-    this.links = [];
-
-    const findNode = (id: string, col: number) => this.nodes.find(n => n.id === id && n.column === col);
-
-    for (const [quarter, statusCounts] of quarterToStatus) {
-      const qNode = findNode(quarter, 0);
-      if (!qNode) continue;
-      for (const [status, count] of statusCounts) {
-        const sNode = findNode(status, 1);
-        if (sNode) {
-          this.links.push({source: qNode, target: sNode, value: count, color: qNode.color});
-        }
-      }
-    }
-
-    for (const [status, ratingCounts] of statusToRating) {
-      const sNode = findNode(status, 1);
-      if (!sNode) continue;
-      for (const [rating, count] of ratingCounts) {
-        const rNode = findNode(rating, 2);
-        if (rNode) {
-          this.links.push({source: sNode, target: rNode, value: count, color: sNode.color});
-        }
-      }
-    }
-  }
-
-  private draw(): void {
-    const canvas = this.canvasRef?.nativeElement;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.parentElement!.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = 480 * dpr;
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = '480px';
-    ctx.scale(dpr, dpr);
-
-    const width = rect.width;
-    const nodeWidth = 18;
-    const leftMargin = 100;
-    const rightMargin = 110;
-    const colX = [leftMargin, width * 0.45, width - rightMargin];
-    const colors = this.chartTheme.colors();
-
-    ctx.fillStyle = colors.textMuted;
-    ctx.font = '11px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(this.t.translate('statsUser.bookFlow.colAdded'), colX[0] + nodeWidth / 2, 18);
-    ctx.fillText(this.t.translate('statsUser.bookFlow.colStatus'), colX[1] + nodeWidth / 2, 18);
-    ctx.fillText(this.t.translate('statsUser.bookFlow.colRating'), colX[2] + nodeWidth / 2, 18);
+    context.fillStyle = colors.textMuted;
+    context.font = '11px Inter, sans-serif';
+    context.textAlign = 'center';
+    [
+      this.transloco.translate('statsUser.bookFlow.colAdded'),
+      this.transloco.translate('statsUser.bookFlow.colStatus'),
+      this.transloco.translate('statsUser.bookFlow.colRating'),
+    ].forEach((header, column) => {
+      context.fillText(header, columnX[column] + NODE_WIDTH / 2, 18);
+    });
 
     const sourceOffsets = new Map<string, number>();
     const targetOffsets = new Map<string, number>();
 
-    for (const link of this.links) {
-      const sKey = `${link.source.id}-${link.source.column}`;
-      const tKey = `${link.target.id}-${link.target.column}`;
-      const sOff = sourceOffsets.get(sKey) || 0;
-      const tOff = targetOffsets.get(tKey) || 0;
+    for (const link of stats.links) {
+      const sourceKey = nodeKey(link.sourceColumn, link.sourceId);
+      const targetKey = nodeKey(link.targetColumn, link.targetId);
+      const source = nodesByKey.get(sourceKey);
+      const target = nodesByKey.get(targetKey);
+      if (!source || !target) continue;
 
-      const linkHeight = Math.max(1, (link.value / link.source.count) * link.source.height);
-      const tLinkHeight = Math.max(1, (link.value / link.target.count) * link.target.height);
+      const sourceOffset = sourceOffsets.get(sourceKey) ?? 0;
+      const targetOffset = targetOffsets.get(targetKey) ?? 0;
+      const sourceHeight = Math.max(1, (link.value / source.count) * source.height);
+      const targetHeight = Math.max(1, (link.value / target.count) * target.height);
+      const sourceX = columnX[source.columnIndex] + NODE_WIDTH;
+      const targetX = columnX[target.columnIndex];
+      const controlX = (sourceX + targetX) / 2;
+      const sourceTop = source.top + sourceOffset;
+      const sourceBottom = sourceTop + sourceHeight;
+      const targetTop = target.top + targetOffset;
+      const targetBottom = targetTop + targetHeight;
 
-      const x0 = colX[link.source.column] + nodeWidth;
-      const y0 = link.source.y + sOff + linkHeight / 2;
-      const x1 = colX[link.target.column];
-      const y1 = link.target.y + tOff + tLinkHeight / 2;
+      context.beginPath();
+      context.moveTo(sourceX, sourceTop);
+      context.bezierCurveTo(controlX, sourceTop, controlX, targetTop, targetX, targetTop);
+      context.lineTo(targetX, targetBottom);
+      context.bezierCurveTo(controlX, targetBottom, controlX, sourceBottom, sourceX, sourceBottom);
+      context.closePath();
 
-      ctx.beginPath();
-      ctx.moveTo(x0, y0 - linkHeight / 2);
-      const cpx = (x0 + x1) / 2;
-      ctx.bezierCurveTo(cpx, y0 - linkHeight / 2, cpx, y1 - tLinkHeight / 2, x1, y1 - tLinkHeight / 2);
-      ctx.lineTo(x1, y1 + tLinkHeight / 2);
-      ctx.bezierCurveTo(cpx, y1 + tLinkHeight / 2, cpx, y0 + linkHeight / 2, x0, y0 + linkHeight / 2);
-      ctx.closePath();
+      const color = this.nodeColor(source);
+      context.fillStyle = `${color}55`;
+      context.fill();
+      context.strokeStyle = `${color}30`;
+      context.lineWidth = 0.5;
+      context.stroke();
 
-      ctx.fillStyle = link.color + '55';
-      ctx.fill();
-      ctx.strokeStyle = link.color + '30';
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-
-      sourceOffsets.set(sKey, sOff + linkHeight);
-      targetOffsets.set(tKey, tOff + tLinkHeight);
+      sourceOffsets.set(sourceKey, sourceOffset + sourceHeight);
+      targetOffsets.set(targetKey, targetOffset + targetHeight);
     }
 
-    for (const node of this.nodes) {
-      const x = colX[node.column];
+    for (const node of nodes) {
+      const x = columnX[node.columnIndex];
+      const color = this.nodeColor(node);
 
-      ctx.fillStyle = node.color;
-      ctx.globalAlpha = 0.92;
-      ctx.beginPath();
-      ctx.roundRect(x, node.y, nodeWidth, node.height, 3);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      context.fillStyle = color;
+      context.globalAlpha = 0.92;
+      context.beginPath();
+      context.roundRect(x, node.top, NODE_WIDTH, node.height, 3);
+      context.fill();
+      context.globalAlpha = 1;
 
-      ctx.strokeStyle = colors.grid;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(x, node.y, nodeWidth, node.height, 3);
-      ctx.stroke();
+      context.strokeStyle = colors.grid;
+      context.lineWidth = 1;
+      context.beginPath();
+      context.roundRect(x, node.top, NODE_WIDTH, node.height, 3);
+      context.stroke();
 
-      ctx.fillStyle = colors.text;
-      ctx.font = '11px Inter, sans-serif';
-      const labelX = node.column === 2 ? x + nodeWidth + 8 : x - 8;
-      ctx.textAlign = node.column === 2 ? 'left' : 'right';
-      ctx.textBaseline = 'middle';
-      const label = node.label.length > 18 ? node.label.substring(0, 16) + '..' : node.label;
-      ctx.fillText(`${label} (${node.count})`, labelX, node.y + node.height / 2);
+      context.fillStyle = colors.text;
+      context.font = '11px Inter, sans-serif';
+      context.textAlign = node.columnIndex === 2 ? 'left' : 'right';
+      context.textBaseline = 'middle';
+      const label = this.nodeLabel(node);
+      const truncatedLabel = label.length > LABEL_LIMIT
+        ? `${label.slice(0, LABEL_LIMIT - 2)}..`
+        : label;
+      context.fillText(
+        `${truncatedLabel} (${this.formatCount(node.count)})`,
+        node.columnIndex === 2 ? x + NODE_WIDTH + 8 : x - 8,
+        node.top + node.height / 2,
+      );
     }
   }
+
+  private nodeLabel(node: LayoutNode): string {
+    switch (node.column) {
+      case 'added':
+        if (node.id === BOOK_FLOW_OTHER_QUARTERS_ID) {
+          return this.transloco.translate('statsUser.bookFlow.statusOther');
+        }
+        return node.quarter ? formatQuarter(node.quarter) : UNKNOWN_LABEL;
+      case 'status':
+        return this.transloco.translate(STATUS_LABEL_KEYS[node.id as BookFlowStatusId]);
+      case 'rating': {
+        const ratingId = node.id as BookFlowRatingId;
+        return ratingId === 'unrated'
+          ? this.transloco.translate('book.table.noRating')
+          : RATING_LABELS[ratingId];
+      }
+    }
+  }
+
+  private nodeColor(node: LayoutNode): string {
+    switch (node.column) {
+      case 'added':
+        return QUARTER_COLORS[node.indexInColumn % QUARTER_COLORS.length];
+      case 'status':
+        return STATUS_COLORS[node.id as BookFlowStatusId];
+      case 'rating':
+        return RATING_COLORS[node.id as BookFlowRatingId];
+    }
+  }
+}
+
+function layoutNodes(nodes: readonly BookFlowNode[], height: number): readonly LayoutNode[] {
+  return COLUMNS.flatMap((column, columnIndex) => {
+    const columnNodes = nodes.filter((node) => node.column === column);
+    const total = columnNodes.reduce((sum, node) => sum + node.count, 0);
+    const span = height - LAYOUT_TOP - LAYOUT_BOTTOM - columnNodes.length * LAYOUT_PADDING;
+    let top = LAYOUT_TOP;
+
+    return columnNodes.map((node, indexInColumn) => {
+      const height = Math.max(MINIMUM_NODE_HEIGHT, (node.count / total) * span);
+      const layoutNode = { ...node, columnIndex, indexInColumn, top, height };
+      top += height + LAYOUT_PADDING;
+      return layoutNode;
+    });
+  });
+}
+
+function nodeKey(column: BookFlowColumn, id: string): string {
+  return `${column}:${id}`;
+}
+
+function formatQuarter(quarter: BookFlowQuarter): string {
+  return `${quarter.year} Q${quarter.quarter}`;
 }
