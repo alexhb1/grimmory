@@ -1,0 +1,30 @@
+.stats-circular-query {
+  container: stats-circular / size;
+  height: 100%;
+  min-height: var(--stats-circular-plot-size);
+  min-width: 0;
+}
+
+.stats-circular-layout {
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(8rem, var(--stats-circular-plot-size)) 11.25rem;
+  grid-template-rows: var(--stats-circular-plot-size);
+  place-content: center;
+  place-items: center;
+  gap: 0.75rem 1rem;
+}
+
+@container (width < 21.75rem) {
+  .stats-circular-query {
+    min-height: 30.75rem;
+  }
+}
+
+@container stats-circular (height >= 30.75rem) {
+  .stats-circular-layout {
+    grid-template-columns: minmax(0, var(--stats-circular-plot-size));
+    grid-template-rows: var(--stats-circular-plot-size) auto;
+  }
+}
