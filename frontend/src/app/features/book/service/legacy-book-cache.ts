@@ -50,6 +50,7 @@ async function reconcileLegacyBookChangeSet(
     ...[...changeSet.changedBookIds].map(bookId => queryClient.invalidateQueries({
       queryKey: bookDetailQueryPrefix(bookId),
     })),
+    invalidateLegacyBookRecommendations(queryClient),
   ]);
 }
 
@@ -92,11 +93,12 @@ async function reconcilePatchedLegacyBookChangeSet(
     return;
   }
   removeLegacyBookQueries(queryClient, changeSet.deletedBookIds);
-  await Promise.all(
-    [...changeSet.changedBookIds].map(bookId => queryClient.invalidateQueries({
+  await Promise.all([
+    ...[...changeSet.changedBookIds].map(bookId => queryClient.invalidateQueries({
       queryKey: bookDetailQueryPrefix(bookId),
     })),
-  );
+    invalidateLegacyBookRecommendations(queryClient),
+  ]);
 }
 
 export function patchListOnlyBookFields(
