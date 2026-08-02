@@ -1,297 +1,200 @@
-import {Component, computed, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {ChartConfiguration, ChartData, ScatterDataPoint} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book, ReadStatus} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface BookScatterPoint extends ScatterDataPoint {
-  bookTitle: string;
-  readStatus: string;
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData, type ScatterDataPoint } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import {
+  type BookLengthStats,
+  type BookLengthStatusGroup,
+} from '../../../../data/user/book-length-stats';
+
+interface BookLengthDatum extends ScatterDataPoint {
+  readonly title: string;
+  readonly group: BookLengthStatusGroup;
 }
 
-type LengthChartData = ChartData<'scatter', BookScatterPoint[], string>;
-
-interface BookLengthMetrics {
-  totalRatedBooks: number;
-  sweetSpot: string;
-  highestRatedLength: string;
-  chartData: LengthChartData;
+interface BookLengthLegendEntry {
+  readonly group: BookLengthStatusGroup;
+  readonly label: string;
+  readonly color: string;
+  readonly bookCount: number;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; border: string }> = {
-  'read': {bg: 'rgba(76, 175, 80, 0.7)', border: '#4caf50'},
-  'reading': {bg: 'rgba(33, 150, 243, 0.7)', border: '#2196f3'},
-  'abandoned': {bg: 'rgba(244, 67, 54, 0.7)', border: '#f44336'},
-  'other': {bg: 'rgba(158, 158, 158, 0.7)', border: '#9e9e9e'}
+type BookLengthChartData = ChartData<'scatter', BookLengthDatum[], string>;
+
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
+
+const GROUP_COLORS: Readonly<Record<BookLengthStatusGroup, { fill: string; border: string }>> = {
+  read: { fill: 'rgba(76, 175, 80, 0.7)', border: '#4caf50' },
+  reading: { fill: 'rgba(33, 150, 243, 0.7)', border: '#2196f3' },
+  abandoned: { fill: 'rgba(244, 67, 54, 0.7)', border: '#f44336' },
+  other: { fill: 'rgba(158, 158, 158, 0.7)', border: '#9e9e9e' },
 };
 
-const PAGE_RANGES = [
-  {label: '0-100', min: 0, max: 100},
-  {label: '101-200', min: 101, max: 200},
-  {label: '201-300', min: 201, max: 300},
-  {label: '301-400', min: 301, max: 400},
-  {label: '401-500', min: 401, max: 500},
-  {label: '501+', min: 501, max: Infinity}
-];
+const GROUP_LABEL_KEYS: Readonly<Record<BookLengthStatusGroup, string>> = {
+  read: 'statusRead',
+  reading: 'statusReading',
+  abandoned: 'statusAbandoned',
+  other: 'statusOther',
+};
 
 @Component({
   selector: 'app-book-length-chart',
   standalone: true,
-  imports: [BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './book-length-chart.component.html',
-  styleUrls: ['./book-length-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class BookLengthChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly metrics = computed<BookLengthMetrics>(() => {
-    if (this.bookService.isBooksLoading()) {
-      return this.emptyMetrics();
-    }
-
-    return this.calculateMetrics(this.bookService.books());
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'scatter' as const;
-  public readonly sweetSpot = computed(() => this.metrics().sweetSpot);
-  public readonly highestRatedLength = computed(() => this.metrics().highestRatedLength);
-  public readonly totalRatedBooks = computed(() => this.metrics().totalRatedBooks);
+  readonly stats = input.required<BookLengthStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartOptions: ChartConfiguration<'scatter'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 10, right: 20, bottom: 10, left: 10}
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.bookLength.axisPageCount'),
-          font: {family: "'Inter', sans-serif", size: 12, weight: 'bold'}
-        },
-        ticks: {
-          font: {family: "'Inter', sans-serif", size: 11}
-        }
-      },
-      y: {
-        min: 0,
-        max: 10,
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.bookLength.axisPersonalRating'),
-          font: {family: "'Inter', sans-serif", size: 12, weight: 'bold'}
-        },
-        ticks: {
-          stepSize: 1,
-          font: {family: "'Inter', sans-serif", size: 11}
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-        labels: {
-          font: {family: "'Inter', sans-serif", size: 11},
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 15
-        }
-      },
-      tooltip: {
-        enabled: true,
-        borderColor: '#00bcd4',
-        borderWidth: 2,
-        cornerRadius: 8,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 11},
-        callbacks: {
-          title: (context) => {
-            const point = context[0].raw as BookScatterPoint;
-            return point.bookTitle || this.t.translate('statsUser.bookLength.tooltipUnknownBook');
-          },
-          label: (context) => {
-            const point = context.raw as BookScatterPoint;
-            return [
-              this.t.translate('statsUser.bookLength.tooltipPages', {count: point.x}),
-              this.t.translate('statsUser.bookLength.tooltipRating', {rating: point.y}),
-              this.t.translate('statsUser.bookLength.tooltipStatus', {status: point.readStatus})
-            ];
-          }
-        }
-      }
-    },
-    elements: {
-      point: {
-        radius: 6,
-        hoverRadius: 9,
-        borderWidth: 2
-      }
-    }
-  };
+  readonly chartType = 'scatter' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalRatedBooks > 0 ? 'ready' : 'empty';
+  });
+  readonly emptyMessage = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('statsUser.bookFlow.noData');
+  });
+  readonly legend = computed<readonly BookLengthLegendEntry[]>(() => {
+    const points = this.stats().points;
 
-  public readonly chartData = computed(() => this.metrics().chartData);
+    return this.stats().groups.map((group) => ({
+      group,
+      label: this.groupLabel(group),
+      color: GROUP_COLORS[group].border,
+      bookCount: points.filter((point) => point.group === group).length,
+    }));
+  });
 
-  private calculateMetrics(books: Book[]): BookLengthMetrics {
-    if (books.length === 0) {
-      return this.emptyMetrics();
-    }
+  readonly chartData = computed<BookLengthChartData>(() => {
+    const points = this.stats().points;
 
-    const ratedBooks = books.filter(b =>
-      b.personalRating != null && b.personalRating > 0 &&
-      b.metadata?.pageCount != null && b.metadata.pageCount > 0
-    );
-
-    const totalRatedBooks = ratedBooks.length;
-    if (totalRatedBooks === 0) {
-      return this.emptyMetrics();
-    }
-
-    const grouped = new Map<string, { label: string; points: BookScatterPoint[] }>();
-    for (const book of ratedBooks) {
-      const statusKey = this.getStatusKey(book.readStatus);
-      const statusLabel = this.getStatusLabel(book.readStatus);
-      if (!grouped.has(statusKey)) grouped.set(statusKey, {label: statusLabel, points: []});
-      grouped.get(statusKey)!.points.push({
-        x: book.metadata!.pageCount!,
-        y: book.personalRating!,
-        bookTitle: book.metadata?.title || book.fileName || 'Unknown',
-        readStatus: statusLabel
-      });
-    }
-
-    const datasets = Array.from(grouped.entries()).map(([key, {label, points}]) => {
-      const colors = STATUS_COLORS[key] || STATUS_COLORS['other'];
-      return {
-        label: `${label} (${points.length})`,
-        data: points,
-        backgroundColor: colors.bg,
-        borderColor: colors.border,
+    return {
+      datasets: this.stats().groups.map((group) => ({
+        label: this.groupLabel(group),
+        data: points
+          .filter((point) => point.group === group)
+          .map<BookLengthDatum>((point) => ({
+            x: point.pageCount,
+            y: point.personalRating,
+            title: point.title,
+            group: point.group,
+          })),
+        backgroundColor: GROUP_COLORS[group].fill,
+        borderColor: GROUP_COLORS[group].border,
         pointRadius: 6,
         pointHoverRadius: 9,
-        pointBorderWidth: 2
-      };
+        pointBorderWidth: 2,
+      })),
+    };
+  });
+
+  readonly chartOptions = computed<ChartConfiguration<'scatter'>['options']>(() => {
+    this.activeLanguage();
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 10, right: 20, bottom: 10, left: 10 } },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.bookLength.axisPageCount'),
+            font: { family: CHART_FONT_FAMILY, size: 12, weight: 'bold' },
+          },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 } },
+        },
+        y: {
+          min: 0,
+          max: 10,
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.bookLength.axisPersonalRating'),
+            font: { family: CHART_FONT_FAMILY, size: 12, weight: 'bold' },
+          },
+          ticks: { stepSize: 1, font: { family: CHART_FONT_FAMILY, size: 11 } },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderColor: '#00bcd4',
+          borderWidth: 2,
+          cornerRadius: 8,
+          padding: 12,
+          titleFont: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
+          bodyFont: { family: CHART_FONT_FAMILY, size: 11 },
+          callbacks: {
+            title: (context) => {
+              const datum = context[0].raw as BookLengthDatum;
+              return (
+                datum.title || this.transloco.translate('statsUser.bookLength.tooltipUnknownBook')
+              );
+            },
+            label: (context) => {
+              const datum = context.raw as BookLengthDatum;
+
+              return [
+                this.transloco.translate('statsUser.bookLength.tooltipPages', { count: datum.x }),
+                this.transloco.translate('statsUser.bookLength.tooltipRating', { rating: datum.y }),
+                this.transloco.translate('statsUser.bookLength.tooltipStatus', {
+                  status: this.groupLabel(datum.group),
+                }),
+              ];
+            },
+          },
+        },
+      },
+      elements: { point: { radius: 6, hoverRadius: 9, borderWidth: 2 } },
+    };
+  });
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.activeLanguage());
+  }
+
+  protected formatRating(value: number): string {
+    return value.toLocaleString(this.activeLanguage(), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
     });
-
-    // Add trend line
-    const allPoints = ratedBooks.map(b => ({x: b.metadata!.pageCount!, y: b.personalRating!}));
-    const trend = this.computeTrendLine(allPoints);
-    if (trend) {
-      datasets.push({
-        label: this.t.translate('statsUser.bookLength.trend'),
-        data: trend as BookScatterPoint[],
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        pointBorderWidth: 0
-      });
-    }
-
-    const {sweetSpot, highestRatedLength} = this.computeStats(ratedBooks);
-    return {
-      totalRatedBooks,
-      sweetSpot,
-      highestRatedLength,
-      chartData: {datasets}
-    };
   }
 
-  private getStatusKey(status?: ReadStatus): string {
-    if (!status) return 'other';
-    switch (status) {
-      case ReadStatus.READ:
-      case ReadStatus.PARTIALLY_READ:
-        return 'read';
-      case ReadStatus.READING:
-      case ReadStatus.RE_READING:
-        return 'reading';
-      case ReadStatus.ABANDONED:
-      case ReadStatus.WONT_READ:
-        return 'abandoned';
-      default:
-        return 'other';
-    }
+  protected formatTrend(value: number): string {
+    const roundedValue = Math.abs(value) < 0.05 ? 0 : value;
+    const sign = roundedValue > 0 ? '+' : roundedValue < 0 ? '−' : '';
+    return `${sign}${Math.abs(roundedValue).toLocaleString(this.activeLanguage(), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}`;
   }
 
-  private getStatusLabel(status?: ReadStatus): string {
-    if (!status) return this.t.translate('statsUser.bookLength.statusOther');
-    switch (status) {
-      case ReadStatus.READ:
-      case ReadStatus.PARTIALLY_READ:
-        return this.t.translate('statsUser.bookLength.statusRead');
-      case ReadStatus.READING:
-      case ReadStatus.RE_READING:
-        return this.t.translate('statsUser.bookLength.statusReading');
-      case ReadStatus.ABANDONED:
-      case ReadStatus.WONT_READ:
-        return this.t.translate('statsUser.bookLength.statusAbandoned');
-      default:
-        return this.t.translate('statsUser.bookLength.statusOther');
-    }
-  }
-
-  private computeStats(books: Book[]): Pick<BookLengthMetrics, 'sweetSpot' | 'highestRatedLength'> {
-    let bestRange = '';
-    let bestAvg = 0;
-
-    for (const range of PAGE_RANGES) {
-      const rangeBooks = books.filter(b =>
-        b.metadata!.pageCount! >= range.min && b.metadata!.pageCount! <= range.max
-      );
-      if (rangeBooks.length >= 2) {
-        const avg = rangeBooks.reduce((s, b) => s + b.personalRating!, 0) / rangeBooks.length;
-        if (avg > bestAvg) {
-          bestAvg = avg;
-          bestRange = range.label;
-        }
-      }
-    }
-
-    const sweetSpot = bestRange ? `${bestRange} pages (avg ${bestAvg.toFixed(1)})` : '-';
-    const highestRated = books.reduce((a, b) => (a.personalRating! >= b.personalRating! ? a : b));
-    const highestRatedLength = `${highestRated.metadata!.pageCount} pages`;
-
-    return {sweetSpot, highestRatedLength};
-  }
-
-  private computeTrendLine(points: { x: number; y: number }[]): { x: number; y: number }[] | null {
-    if (points.length < 2) return null;
-
-    const n = points.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    for (const p of points) {
-      sumX += p.x;
-      sumY += p.y;
-      sumXY += p.x * p.y;
-      sumX2 += p.x * p.x;
-    }
-
-    const denominator = n * sumX2 - sumX * sumX;
-    if (denominator === 0) return null;
-
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    const intercept = (sumY - slope * sumX) / n;
-
-    const minX = Math.min(...points.map(p => p.x));
-    const maxX = Math.max(...points.map(p => p.x));
-
-    return [
-      {x: minX, y: Math.max(0, Math.min(10, slope * minX + intercept))},
-      {x: maxX, y: Math.max(0, Math.min(10, slope * maxX + intercept))}
-    ];
-  }
-
-  private emptyMetrics(): BookLengthMetrics {
-    return {
-      totalRatedBooks: 0,
-      sweetSpot: '',
-      highestRatedLength: '',
-      chartData: {datasets: []}
-    };
+  private groupLabel(group: BookLengthStatusGroup): string {
+    this.activeLanguage();
+    return this.transloco.translate(`statsUser.bookLength.${GROUP_LABEL_KEYS[group]}`);
   }
 }
