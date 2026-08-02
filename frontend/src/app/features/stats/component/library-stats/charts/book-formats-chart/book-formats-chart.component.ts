@@ -1,6 +1,4 @@
 import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -20,7 +18,6 @@ const FORMAT_COLORS: Record<string, string> = {
 @Component({
   selector: 'app-book-formats-chart',
   standalone: true,
-  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './book-formats-chart.component.html',
   styleUrls: ['./book-formats-chart.component.scss']
