@@ -12,9 +12,10 @@ import {TranslocoService} from '@jsverse/transloco';
 describe('LibraryFilterService', () => {
   const books = signal<Book[]>([]);
   const libraries = signal<Library[]>([]);
-  const translate = vi.fn((key: string, params?: Record<string, unknown>) =>
-    params?.['id'] ? `${key}:${params['id']}` : key
-  );
+  const translate = vi.fn((key: string, params?: Record<string, unknown>) => {
+    const id = params?.['id'];
+    return typeof id === 'number' || typeof id === 'string' ? `${key}:${id}` : key;
+  });
 
   beforeEach(() => {
     books.set([]);
@@ -46,12 +47,12 @@ describe('LibraryFilterService', () => {
 
   it('sorts library options and falls back when the library lookup is missing', () => {
     books.set([
-      {id: 1, libraryId: 2, libraryName: 'Beta'} as Book,
-      {id: 2, libraryId: 1, libraryName: 'Alpha'} as Book,
-      {id: 3, libraryId: 2, libraryName: 'Beta duplicate'} as Book,
+      {id: 1, libraryId: 2, libraryName: 'Beta'},
+      {id: 2, libraryId: 1, libraryName: 'Alpha'},
+      {id: 3, libraryId: 2, libraryName: 'Beta duplicate'},
     ]);
     libraries.set([
-      {id: 1, name: 'Alpha', watch: false, paths: []} as Library,
+      {id: 1, name: 'Alpha', watch: false, paths: []},
     ]);
 
     const service = TestBed.inject(LibraryFilterService);
