@@ -114,7 +114,7 @@ function applyStatsChartDefaults(colors: StatsChartThemeColors): void {
 }
 
 export function readStatsChartThemeColors(): StatsChartThemeColors {
-  if (typeof document === 'undefined' || !document.body) {
+  if (typeof document === 'undefined') {
     throw new Error('Stats chart theme colors require browser CSS theme tokens.');
   }
 
