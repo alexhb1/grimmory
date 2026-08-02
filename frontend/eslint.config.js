@@ -2,6 +2,7 @@
 const eslint = require("@eslint/js");
 const tseslint = require("typescript-eslint");
 const angular = require("angular-eslint");
+const oxlint = require("eslint-plugin-oxlint");
 
 module.exports = tseslint.config(
   {
@@ -32,7 +33,11 @@ module.exports = tseslint.config(
           style: "kebab-case",
         },
       ],
-      "@typescript-eslint/no-inferrable-types": "off"
+      "@typescript-eslint/no-inferrable-types": "off",
+      "@angular-eslint/computed-must-return": "error",
+      "@angular-eslint/no-async-lifecycle-method": "error",
+      "@angular-eslint/no-duplicates-in-metadata-arrays": "error",
+      "@angular-eslint/no-lifecycle-call": "error",
     },
   },
   {
@@ -41,6 +46,13 @@ module.exports = tseslint.config(
       ...angular.configs.templateRecommended,
       ...angular.configs.templateAccessibility,
     ],
-    rules: {},
-  }
+    rules: {
+      "@angular-eslint/template/button-has-type": "warn",
+      "@angular-eslint/template/no-any": "warn",
+      "@angular-eslint/template/no-duplicate-attributes": "error",
+      "@angular-eslint/template/no-empty-control-flow": "error",
+      "@angular-eslint/template/no-positive-tabindex": "error",
+    },
+  },
+  ...oxlint.buildFromOxlintConfigFile("./.oxlintrc.json"),
 );
