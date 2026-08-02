@@ -1,349 +1,224 @@
-import {Component, computed, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {ChartConfiguration, ChartData, ScatterDataPoint} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {LibraryFilterService} from '../../../library-stats/service/library-filter.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface TasteQuadrant {
-  name: string;
-  description: string;
-  count: number;
-  color: string;
-  icon: string;
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData, type ScatterDataPoint } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import {
+  type RatingTasteQuadrant,
+  type RatingTasteQuadrantId,
+  type RatingTasteStats,
+} from '../../../../data/user/rating-taste-stats';
+
+interface RatingTasteDatum extends ScatterDataPoint {
+  readonly title: string;
+  readonly personalRating: number;
+  readonly normalizedRating: number;
+  readonly externalRating: number;
+  readonly quadrant: RatingTasteQuadrantId;
 }
 
-interface BookDataPoint extends ScatterDataPoint {
-  bookTitle: string;
-  personalRating: number;
-  personalRatingNormalized: number;
-  externalRating: number;
-  quadrant: string;
+interface RatingTasteQuadrantView {
+  readonly id: RatingTasteQuadrantId;
+  readonly label: string;
+  readonly color: string;
+  readonly bookCount: number;
+  readonly sharePercent: number;
 }
 
-type RatingTasteChartData = ChartData<'scatter', BookDataPoint[], string>;
+type RatingTasteChartData = ChartData<'scatter', RatingTasteDatum[], string>;
 
-interface RatingTasteMetrics {
-  quadrants: TasteQuadrant[];
-  totalRatedBooks: number;
-  averageDeviation: number;
-  chartData: RatingTasteChartData;
-}
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
+
+const QUADRANT_COLORS: Readonly<Record<RatingTasteQuadrantId, { fill: string; border: string }>> = {
+  'hidden-gems': { fill: 'rgba(156, 39, 176, 0.7)', border: '#9c27b0' },
+  'popular-favorites': { fill: 'rgba(76, 175, 80, 0.7)', border: '#4caf50' },
+  overrated: { fill: 'rgba(255, 152, 0, 0.7)', border: '#ff9800' },
+  'agreed-misses': { fill: 'rgba(158, 158, 158, 0.7)', border: '#9e9e9e' },
+};
+
+const QUADRANT_LABEL_KEYS: Readonly<Record<RatingTasteQuadrantId, string>> = {
+  'hidden-gems': 'quadrantHiddenGems',
+  'popular-favorites': 'quadrantPopularFavorites',
+  overrated: 'quadrantOverrated',
+  'agreed-misses': 'quadrantAgreedMisses',
+};
 
 @Component({
   selector: 'app-rating-taste-chart',
   standalone: true,
-  imports: [BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './rating-taste-chart.component.html',
-  styleUrls: ['./rating-taste-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class RatingTasteChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilterService = inject(LibraryFilterService);
-  private readonly t = inject(TranslocoService);
-  private readonly metrics = computed<RatingTasteMetrics>(() => {
-    if (this.bookService.isBooksLoading()) {
-      return this.emptyMetrics();
-    }
-
-    return this.calculateMetrics(this.bookService.books(), this.libraryFilterService.selectedLibrary());
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'scatter' as const;
-  public readonly quadrants = computed(() => this.metrics().quadrants);
-  public readonly totalRatedBooks = computed(() => this.metrics().totalRatedBooks);
-  public readonly averageDeviation = computed(() => this.metrics().averageDeviation);
+  readonly stats = input.required<RatingTasteStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartOptions: ChartConfiguration<'scatter'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 20, right: 20, bottom: 10, left: 10}
-    },
-    scales: {
-      x: {
-        min: 0,
-        max: 5,
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.ratingTaste.axisExternalRating'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12,
-            weight: 500
-          }
-        },
-        ticks: {
-          stepSize: 1,
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {
-          drawTicks: true
-        }
-      },
-      y: {
-        min: 0,
-        max: 5,
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.ratingTaste.axisPersonalRating'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12,
-            weight: 500
-          }
-        },
-        ticks: {
-          stepSize: 1,
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {
-          drawTicks: true
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          },
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 15
-        }
-      },
-      tooltip: {
-        enabled: true,
-        borderColor: '#9c27b0',
-        borderWidth: 2,
-        cornerRadius: 8,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 11},
-        callbacks: {
-          title: (context) => {
-            const point = context[0].raw as BookDataPoint;
-            return point.bookTitle || this.t.translate('statsUser.ratingTaste.tooltipUnknownBook');
-          },
-          label: (context) => {
-            const point = context.raw as BookDataPoint;
-            const diff = point.personalRatingNormalized - point.externalRating;
-            const diffText = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
-            return [
-              this.t.translate('statsUser.ratingTaste.tooltipYourRating', {rating: point.personalRating, normalized: point.personalRatingNormalized.toFixed(1)}),
-              this.t.translate('statsUser.ratingTaste.tooltipExternalRating', {rating: point.externalRating.toFixed(1)}),
-              this.t.translate('statsUser.ratingTaste.tooltipDifference', {diff: diffText}),
-              this.t.translate('statsUser.ratingTaste.tooltipCategory', {category: point.quadrant})
-            ];
-          }
-        }
-      }
-    },
-    elements: {
-      point: {
-        radius: 6,
-        hoverRadius: 9,
-        borderWidth: 2
-      }
-    }
-  };
+  readonly chartType = 'scatter' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalRatedBooks > 0 ? 'ready' : 'empty';
+  });
+  readonly emptyMessage = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('statsUser.bookFlow.noData');
+  });
+  readonly quadrants = computed<readonly RatingTasteQuadrantView[]>(() =>
+    this.stats().quadrants.map((quadrant) => this.toQuadrantView(quadrant)),
+  );
+  readonly deviationDescription = computed(() => {
+    this.activeLanguage();
+    const deviation = this.stats().averageDeviation;
+    if (deviation > 1) return this.transloco.translate('statsUser.ratingTaste.uniqueTaste');
+    if (deviation <= 0.5) return this.transloco.translate('statsUser.ratingTaste.mainstream');
+    return this.transloco.translate('statsUser.ratingTaste.balanced');
+  });
 
-  public readonly chartData = computed(() => this.metrics().chartData);
-
-  private calculateMetrics(books: Book[], selectedLibraryId: string | number | null): RatingTasteMetrics {
-    if (books.length === 0) {
-      return this.emptyMetrics();
-    }
-
-    const filteredBooks = this.filterBooksByLibrary(books, selectedLibraryId);
-    const ratedBooks = this.getBooksWithBothRatings(filteredBooks);
-
-    if (ratedBooks.length === 0) {
-      return this.emptyMetrics();
-    }
-
-    const totalRatedBooks = ratedBooks.length;
-    const dataPoints = this.categorizeBooks(ratedBooks);
-    const chartData = this.buildChartData(dataPoints);
-    const {quadrants, averageDeviation} = this.calculateStatistics(dataPoints);
+  readonly chartData = computed<RatingTasteChartData>(() => {
+    const books = this.stats().books;
 
     return {
-      quadrants,
-      totalRatedBooks,
-      averageDeviation,
-      chartData
+      datasets: this.stats()
+        .quadrants.filter((quadrant) => quadrant.bookCount > 0)
+        .map((quadrant) => ({
+          label: this.quadrantLabel(quadrant.id),
+          data: books
+            .filter((book) => book.quadrant === quadrant.id)
+            .map<RatingTasteDatum>((book) => ({
+              x: book.externalRating,
+              y: book.normalizedRating,
+              title: book.title,
+              personalRating: book.personalRating,
+              normalizedRating: book.normalizedRating,
+              externalRating: book.externalRating,
+              quadrant: book.quadrant,
+            })),
+          backgroundColor: QUADRANT_COLORS[quadrant.id].fill,
+          borderColor: QUADRANT_COLORS[quadrant.id].border,
+          pointRadius: 6,
+          pointHoverRadius: 9,
+          pointBorderWidth: 2,
+        })),
     };
-  }
+  });
 
-  private filterBooksByLibrary(books: Book[], selectedLibraryId: string | number | null): Book[] {
-    return selectedLibraryId
-      ? books.filter(book => book.libraryId === selectedLibraryId)
-      : books;
-  }
+  readonly chartOptions = computed<ChartConfiguration<'scatter'>['options']>(() => {
+    this.activeLanguage();
 
-  private getBooksWithBothRatings(books: Book[]): Book[] {
-    return books.filter(book => {
-      const hasPersonalRating = book.personalRating && book.personalRating > 0;
-      const hasExternalRating = this.getExternalRating(book) > 0;
-      return hasPersonalRating && hasExternalRating;
-    });
-  }
-
-  private getExternalRating(book: Book): number {
-    const ratings: number[] = [];
-
-    if (book.metadata?.goodreadsRating) ratings.push(book.metadata.goodreadsRating);
-    if (book.metadata?.amazonRating) ratings.push(book.metadata.amazonRating);
-    if (book.metadata?.hardcoverRating) ratings.push(book.metadata.hardcoverRating);
-    if (book.metadata?.lubimyczytacRating) ratings.push(book.metadata.lubimyczytacRating);
-    if (book.metadata?.ranobedbRating) ratings.push(book.metadata.ranobedbRating);
-
-    if (ratings.length > 0) {
-      return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-    }
-
-    if (book.metadata?.rating) return book.metadata.rating;
-    return 0;
-  }
-
-  private categorizeBooks(books: Book[]): Map<string, BookDataPoint[]> {
-    const categories = new Map<string, BookDataPoint[]>([
-      [this.t.translate('statsUser.ratingTaste.quadrantHiddenGems'), []],
-      [this.t.translate('statsUser.ratingTaste.quadrantPopularFavorites'), []],
-      [this.t.translate('statsUser.ratingTaste.quadrantOverrated'), []],
-      [this.t.translate('statsUser.ratingTaste.quadrantAgreedMisses'), []]
-    ]);
-
-    books.forEach(book => {
-      const personalRating = book.personalRating!;
-      // Normalize personal rating from 1-10 to 1-5 scale for comparison
-      const personalRatingNormalized = personalRating / 2;
-      const externalRating = this.getExternalRating(book);
-      const bookTitle = book.metadata?.title || book.fileName || 'Unknown';
-
-      // Use normalized rating (3 is midpoint on 1-5 scale) for quadrant calculation
-      let quadrant: string;
-      if (personalRatingNormalized >= 3 && externalRating >= 3) {
-        quadrant = this.t.translate('statsUser.ratingTaste.quadrantPopularFavorites');
-      } else if (personalRatingNormalized >= 3 && externalRating < 3) {
-        quadrant = this.t.translate('statsUser.ratingTaste.quadrantHiddenGems');
-      } else if (personalRatingNormalized < 3 && externalRating >= 3) {
-        quadrant = this.t.translate('statsUser.ratingTaste.quadrantOverrated');
-      } else {
-        quadrant = this.t.translate('statsUser.ratingTaste.quadrantAgreedMisses');
-      }
-
-      const dataPoint: BookDataPoint = {
-        x: externalRating,
-        y: personalRatingNormalized,
-        bookTitle,
-        personalRating,
-        personalRatingNormalized,
-        externalRating,
-        quadrant
-      };
-
-      categories.get(quadrant)!.push(dataPoint);
-    });
-
-    return categories;
-  }
-
-  private buildChartData(dataPoints: Map<string, BookDataPoint[]>): RatingTasteChartData {
-    const pf = this.t.translate('statsUser.ratingTaste.quadrantPopularFavorites');
-    const hg = this.t.translate('statsUser.ratingTaste.quadrantHiddenGems');
-    const or = this.t.translate('statsUser.ratingTaste.quadrantOverrated');
-    const am = this.t.translate('statsUser.ratingTaste.quadrantAgreedMisses');
-    const quadrantColors: Record<string, { bg: string, border: string }> = {
-      [pf]: {bg: 'rgba(76, 175, 80, 0.7)', border: '#4caf50'},
-      [hg]: {bg: 'rgba(156, 39, 176, 0.7)', border: '#9c27b0'},
-      [or]: {bg: 'rgba(255, 152, 0, 0.7)', border: '#ff9800'},
-      [am]: {bg: 'rgba(158, 158, 158, 0.7)', border: '#9e9e9e'}
-    };
-
-    const datasets = Array.from(dataPoints.entries())
-      .filter(([, points]) => points.length > 0)
-      .map(([label, points]) => ({
-        label: `${label} (${points.length})`,
-        data: points,
-        backgroundColor: quadrantColors[label].bg,
-        borderColor: quadrantColors[label].border,
-        pointRadius: 6,
-        pointHoverRadius: 9,
-        pointBorderWidth: 2
-      }));
-
-    return {datasets};
-  }
-
-  private calculateStatistics(dataPoints: Map<string, BookDataPoint[]>): Pick<RatingTasteMetrics, 'quadrants' | 'averageDeviation'> {
-    const pfKey = this.t.translate('statsUser.ratingTaste.quadrantPopularFavorites');
-    const hgKey = this.t.translate('statsUser.ratingTaste.quadrantHiddenGems');
-    const orKey = this.t.translate('statsUser.ratingTaste.quadrantOverrated');
-    const amKey = this.t.translate('statsUser.ratingTaste.quadrantAgreedMisses');
-    const quadrantInfo: Record<string, { description: string, icon: string, color: string }> = {
-      [pfKey]: {
-        description: this.t.translate('statsUser.ratingTaste.quadrantDescPopularFavorites'),
-        icon: '⭐',
-        color: '#4caf50'
-      },
-      [hgKey]: {
-        description: this.t.translate('statsUser.ratingTaste.quadrantDescHiddenGems'),
-        icon: '💎',
-        color: '#9c27b0'
-      },
-      [orKey]: {
-        description: this.t.translate('statsUser.ratingTaste.quadrantDescOverrated'),
-        icon: '📉',
-        color: '#ff9800'
-      },
-      [amKey]: {
-        description: this.t.translate('statsUser.ratingTaste.quadrantDescAgreedMisses'),
-        icon: '👎',
-        color: '#9e9e9e'
-      }
-    };
-
-    const quadrants = Array.from(dataPoints.entries()).map(([name, points]) => ({
-      name,
-      description: quadrantInfo[name].description,
-      count: points.length,
-      color: quadrantInfo[name].color,
-      icon: quadrantInfo[name].icon
-    }));
-
-    // Calculate average deviation from external ratings (using normalized personal rating)
-    let totalDeviation = 0;
-    let totalPoints = 0;
-    dataPoints.forEach(points => {
-      points.forEach(point => {
-        totalDeviation += Math.abs(point.personalRatingNormalized - point.externalRating);
-        totalPoints++;
-      });
-    });
-    const averageDeviation = totalPoints > 0 ? totalDeviation / totalPoints : 0;
-
-    return {quadrants, averageDeviation};
-  }
-
-  private emptyMetrics(): RatingTasteMetrics {
     return {
-      quadrants: [],
-      totalRatedBooks: 0,
-      averageDeviation: 0,
-      chartData: {datasets: []}
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20, right: 20, bottom: 10, left: 10 } },
+      scales: {
+        x: {
+          min: 0,
+          max: 5,
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.ratingTaste.axisExternalRating'),
+            font: { family: CHART_FONT_FAMILY, size: 12, weight: 500 },
+          },
+          ticks: { stepSize: 1, font: { family: CHART_FONT_FAMILY, size: 11 } },
+          grid: { drawTicks: true },
+        },
+        y: {
+          min: 0,
+          max: 5,
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.ratingTaste.axisPersonalRating'),
+            font: { family: CHART_FONT_FAMILY, size: 12, weight: 500 },
+          },
+          ticks: { stepSize: 1, font: { family: CHART_FONT_FAMILY, size: 11 } },
+          grid: { drawTicks: true },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderColor: '#9c27b0',
+          borderWidth: 2,
+          cornerRadius: 8,
+          padding: 12,
+          titleFont: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
+          bodyFont: { family: CHART_FONT_FAMILY, size: 11 },
+          callbacks: {
+            title: (context) => {
+              const datum = context[0].raw as RatingTasteDatum;
+              return (
+                datum.title || this.transloco.translate('statsUser.ratingTaste.tooltipUnknownBook')
+              );
+            },
+            label: (context) => {
+              const datum = context.raw as RatingTasteDatum;
+              const difference = datum.normalizedRating - datum.externalRating;
+
+              return [
+                this.transloco.translate('statsUser.ratingTaste.tooltipYourRating', {
+                  rating: datum.personalRating,
+                  normalized: datum.normalizedRating.toFixed(1),
+                }),
+                this.transloco.translate('statsUser.ratingTaste.tooltipExternalRating', {
+                  rating: datum.externalRating.toFixed(1),
+                }),
+                this.transloco.translate('statsUser.ratingTaste.tooltipDifference', {
+                  diff: difference > 0 ? `+${difference.toFixed(1)}` : difference.toFixed(1),
+                }),
+                this.transloco.translate('statsUser.ratingTaste.tooltipCategory', {
+                  category: this.quadrantLabel(datum.quadrant),
+                }),
+              ];
+            },
+          },
+        },
+      },
+      elements: { point: { radius: 6, hoverRadius: 9, borderWidth: 2 } },
     };
+  });
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.activeLanguage());
+  }
+
+  protected formatDeviation(value: number): string {
+    return value.toLocaleString(this.activeLanguage(), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  private toQuadrantView(quadrant: RatingTasteQuadrant): RatingTasteQuadrantView {
+    return {
+      id: quadrant.id,
+      label: this.quadrantLabel(quadrant.id),
+      color: QUADRANT_COLORS[quadrant.id].border,
+      bookCount: quadrant.bookCount,
+      sharePercent: quadrant.sharePercent,
+    };
+  }
+
+  private quadrantLabel(id: RatingTasteQuadrantId): string {
+    this.activeLanguage();
+    return this.transloco.translate(`statsUser.ratingTaste.${QUADRANT_LABEL_KEYS[id]}`);
   }
 }

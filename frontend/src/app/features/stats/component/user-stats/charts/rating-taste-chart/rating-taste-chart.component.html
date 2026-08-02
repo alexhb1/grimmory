@@ -1,80 +1,70 @@
 <ng-container *transloco="let t; prefix: 'statsUser.ratingTaste'">
-<div class="rating-taste-container">
-  <div class="chart-header">
-    <div class="chart-title">
-      <h3>
-        <i class="pi pi-chart-scatter rating-taste-icon"></i>
-        {{ t('title') }}
-        <i class="pi pi-question-circle chart-info-icon"
-           [pTooltip]="t('tooltip')"
-           tooltipPosition="bottom"
-           tooltipStyleClass="chart-info-tooltip"
-           [appendTo]="'body'"></i>
-      </h3>
-      <p class="chart-description">{{ t('description') }}</p>
-    </div>
-    @if (totalRatedBooks() > 0) {
-      <div class="stats-badge">
-        <span class="badge-value">{{ totalRatedBooks() }}</span>
-        <span class="badge-label">{{ t('booksAnalyzed') }}</span>
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()"
+    [emptyMessage]="emptyMessage()">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
       </div>
+    } @else if (state() === 'ready') {
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions()"
+          [type]="chartType"></canvas>
+      </div>
+
+      <ul class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-xs text-text-secondary">
+        @for (quadrant of quadrants(); track quadrant.id) {
+          <li class="flex items-center gap-1.5">
+            <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
+              <circle cx="5" cy="5" r="5" [attr.fill]="quadrant.color"></circle>
+            </svg>
+            <span>{{ quadrant.label }}</span>
+          </li>
+        }
+      </ul>
     }
-  </div>
 
-  <div class="chart-wrapper">
-    <canvas baseChart
-            [data]="chartData()"
-            [options]="chartOptions"
-            [type]="chartType">
-    </canvas>
-    <div class="quadrant-labels">
-      <div class="quadrant-label top-left">{{ t('quadrantHiddenGems') }} 💎</div>
-      <div class="quadrant-label top-right">{{ t('quadrantPopularFavorites') }} ⭐</div>
-      <div class="quadrant-label bottom-left">{{ t('quadrantAgreedMisses') }} 👎</div>
-      <div class="quadrant-label bottom-right">{{ t('quadrantOverrated') }} 📉</div>
-    </div>
-  </div>
+    @if (state() === 'ready' && !loading()) {
+      <dl
+        statsChartSummary
+        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('booksAnalyzed') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ formatCount(stats().totalRatedBooks) }}
+          </dd>
+        </div>
 
-  @if (quadrants().length > 0) {
-    <div class="taste-insights">
-      <div class="insights-header">
-        <h4>{{ t('tasteProfile') }}</h4>
-        @if (averageDeviation() > 0) {
-          <div class="deviation-badge" [class.unique]="averageDeviation() > 1" [class.mainstream]="averageDeviation() <= 0.5">
-            <span class="deviation-label">{{ t('avgDeviation') }}</span>
-            <span class="deviation-value">{{ averageDeviation().toFixed(2) }} ★</span>
-            <span class="deviation-desc">
-              @if (averageDeviation() > 1) {
-                ({{ t('uniqueTaste') }})
-              } @else if (averageDeviation() <= 0.5) {
-                ({{ t('mainstream') }})
-              } @else {
-                ({{ t('balanced') }})
-              }
-            </span>
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('avgDeviation') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ formatDeviation(stats().averageDeviation) }}
+          </dd>
+          <dd class="text-xs tabular-nums text-text-muted">{{ deviationDescription() }}</dd>
+        </div>
+
+        @for (quadrant of quadrants(); track quadrant.id) {
+          <div class="min-w-0">
+            <dt class="text-xs font-medium text-text-secondary">{{ quadrant.label }}</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+              {{ formatCount(quadrant.bookCount) }}
+            </dd>
+            <dd class="text-xs tabular-nums text-text-muted">{{ quadrant.sharePercent }}%</dd>
           </div>
         }
-      </div>
-      <div class="quadrants-grid">
-        @for (quadrant of quadrants(); track quadrant.name) {
-          <div class="quadrant-card" [style.border-left-color]="quadrant.color">
-            <div class="quadrant-header">
-              <span class="quadrant-icon">{{ quadrant.icon }}</span>
-              <span class="quadrant-name">{{ quadrant.name }}</span>
-              <span class="quadrant-count" [style.background-color]="quadrant.color">{{ quadrant.count }}</span>
-            </div>
-            <p class="quadrant-description">{{ quadrant.description }}</p>
-            <div class="quadrant-bar">
-              <div class="bar-fill"
-                   [style.width.%]="(quadrant.count / totalRatedBooks()) * 100"
-                   [style.background-color]="quadrant.color">
-              </div>
-            </div>
-            <span class="quadrant-percentage">{{ ((quadrant.count / totalRatedBooks()) * 100).toFixed(0) }}%</span>
-          </div>
-        }
-      </div>
-    </div>
-  }
-</div>
+      </dl>
+    }
+  </app-stats-chart-card>
 </ng-container>
