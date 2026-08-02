@@ -1,6 +1,4 @@
 import {NgClass} from '@angular/common';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
 import {Component, computed, inject, input, OnInit, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -66,7 +64,6 @@ const READ_STATUS_COLORS: Record<ReadStatus, string> = {
 @Component({
   selector: 'app-top-items-chart',
   standalone: true,
-  hostDirectives: [StatsChartJsHostDirective],
   imports: [NgClass, FormsModule, BaseChartDirective, Select, TranslocoDirective],
   templateUrl: './top-items-chart.component.html',
   styleUrls: ['./top-items-chart.component.scss'],
