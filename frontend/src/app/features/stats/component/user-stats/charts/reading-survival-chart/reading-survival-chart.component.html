@@ -1,56 +1,65 @@
 <ng-container *transloco="let t; prefix: 'statsUser.readingSurvival'">
-<div class="reading-survival-container">
-  <div class="chart-header">
-    <div class="chart-title">
-      <h3>
-        <i class="pi pi-chart-line reading-survival-icon"></i>
-        {{ t('title') }}
-        <i class="pi pi-question-circle chart-info-icon"
-           [pTooltip]="t('tooltip')"
-           tooltipPosition="bottom"
-           tooltipStyleClass="chart-info-tooltip"
-           [appendTo]="'body'"></i>
-      </h3>
-      <p class="chart-description">{{ t('description') }}</p>
-    </div>
-  </div>
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()"
+    [emptyMessage]="t('noData') + ' ' + t('noDataHint')">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions()"
+          [type]="chartType"></canvas>
+      </div>
+    }
 
-  @if (totalStarted() > 0) {
-    <div class="stats-row">
-      <div class="stat-card">
-        <span class="stat-value">{{ totalStarted() }}</span>
-        <span class="stat-label">{{ t('started') }}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">{{ completionRate() }}%</span>
-        <span class="stat-label">{{ t('completionRate') }}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">{{ medianDropout() }}</span>
-        <span class="stat-label">{{ t('medianDropout') }}</span>
-      </div>
-      <div class="stat-card danger">
-        <span class="stat-value">{{ dangerZoneRange() }}</span>
-        <span class="stat-subtitle">{{ dangerZoneDrop() }}</span>
-        <span class="stat-label">{{ t('dangerZone') }}</span>
-      </div>
-    </div>
-  }
+    @if (state() === 'ready' && !loading()) {
+      <dl
+        statsChartSummary
+        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('started') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ formatCount(stats().totalStarted) }}
+          </dd>
+        </div>
 
-  <div class="chart-wrapper">
-    <canvas baseChart
-            [data]="chartData()"
-            [options]="chartOptions"
-            [type]="chartType">
-    </canvas>
-  </div>
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('completionRate') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ stats().completionRate }}%
+          </dd>
+        </div>
 
-  @if (totalStarted() === 0) {
-    <div class="no-data-message">
-      <i class="pi pi-info-circle"></i>
-      <p>{{ t('noData') }}</p>
-      <small>{{ t('noDataHint') }}</small>
-    </div>
-  }
-</div>
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('medianDropout') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ medianDropoutLabel() }}
+          </dd>
+        </div>
+
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('dangerZone') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ dangerZoneLabel() }}
+          </dd>
+          @if (dangerZoneDropLabel()) {
+            <dd class="text-xs tabular-nums text-text-muted">{{ dangerZoneDropLabel() }}</dd>
+          }
+        </div>
+      </dl>
+    }
+  </app-stats-chart-card>
 </ng-container>
