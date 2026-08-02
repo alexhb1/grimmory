@@ -8,14 +8,14 @@
       </h3>
       <p class="chart-description">{{ t('description') }}</p>
     </div>
-    @if (totalAuthors > 0) {
+    @if (!loading() && totalAuthors() > 0) {
       <div class="author-count-badge">
-        {{ t('authorsBadge', { count: totalAuthors }) }}
+        {{ t('authorsBadge', { count: totalAuthors() }) }}
       </div>
     }
   </div>
 
-  @if (totalAuthors > 0) {
+  @if (!loading() && totalAuthors() > 0) {
     <div class="chart-legend-info">
       <span class="legend-note">
         <i class="pi pi-info-circle"></i>
@@ -25,16 +25,16 @@
 
     <div class="chart-wrapper">
       <canvas baseChart
-              [data]="(chartData$ | async) ?? {labels: [], datasets: []}"
+              [data]="chartData()"
               [options]="chartOptions"
               [type]="chartType">
       </canvas>
     </div>
 
-    @if (insights.length > 0) {
+    @if (insights().length > 0) {
       <div class="insights-section">
         <div class="insights-grid">
-          @for (insight of insights; track insight) {
+          @for (insight of insights(); track insight) {
             <div class="insight-card">
               <i class="pi pi-star-fill insight-icon"></i>
               <span class="insight-text">{{ insight }}</span>
@@ -45,7 +45,7 @@
     }
   }
 
-  @if (totalAuthors === 0) {
+  @if (!loading() && totalAuthors() === 0) {
     <div class="no-data-message">
       <i class="pi pi-info-circle"></i>
       <p>{{ t('noData') }}</p>
