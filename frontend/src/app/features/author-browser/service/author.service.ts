@@ -138,11 +138,7 @@ export class AuthorService {
 
   updateAuthor(authorId: number, request: AuthorUpdateRequest): Observable<AuthorDetails> {
     return this.http.put<AuthorDetails>(`${this.baseUrl}/${authorId}`, request).pipe(
-      tap(() => {
-        if (request.name !== undefined) {
-          invalidateAllBookCaches(this.queryClient);
-        }
-      })
+      tap(() => invalidateAllBookCaches(this.queryClient))
     );
   }
 

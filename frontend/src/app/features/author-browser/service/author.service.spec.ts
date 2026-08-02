@@ -191,10 +191,11 @@ describe('AuthorService', () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: bookQueryKeys.all()});
   });
 
-  it('does not refresh books when only author-specific fields change', () => {
+  it('refreshes book caches on any author update, not just renames', () => {
     service.updateAuthor(7, {description: 'Mathematician'}).subscribe();
 
-    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: ['books'], exact: true});
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({queryKey: bookQueryKeys.all()});
   });
 
   it('refreshes the author list and book caches after deleting authors', () => {
