@@ -1,4 +1,6 @@
 import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -24,6 +26,7 @@ const SCORE_RANGE_DEFS: { key: ScoreRangeKey; min: number; max: number; color: s
 @Component({
   selector: 'app-metadata-score-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './metadata-score-chart.component.html',
   styleUrls: ['./metadata-score-chart.component.scss']

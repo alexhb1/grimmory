@@ -1,4 +1,6 @@
 import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -125,6 +127,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
 @Component({
   selector: 'app-language-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './language-chart.component.html',
   styleUrls: ['./language-chart.component.scss']

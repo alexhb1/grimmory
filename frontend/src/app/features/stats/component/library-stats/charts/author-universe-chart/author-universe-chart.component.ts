@@ -1,4 +1,6 @@
 import {Component, computed, DestroyRef, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Chart, ChartConfiguration, ChartData, TooltipModel} from 'chart.js';
 import {BaseChartDirective} from 'ng2-charts';
@@ -40,6 +42,7 @@ const COMPLETION_COLORS = {
 @Component({
   selector: 'app-author-universe-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './author-universe-chart.component.html',
   styleUrls: ['./author-universe-chart.component.scss'],

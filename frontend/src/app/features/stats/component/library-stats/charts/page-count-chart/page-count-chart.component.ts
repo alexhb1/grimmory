@@ -1,4 +1,6 @@
 import {Component, computed, inject, input} from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
@@ -13,6 +15,7 @@ const PAGE_COLORS = [
 @Component({
   selector: 'app-page-count-chart',
   standalone: true,
+  hostDirectives: [StatsChartJsHostDirective],
   imports: [BaseChartDirective, TranslocoDirective],
   templateUrl: './page-count-chart.component.html',
   styleUrls: ['./page-count-chart.component.scss']
