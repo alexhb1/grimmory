@@ -1,0 +1,33 @@
+:host {
+  --stats-chart-sky: var(--color-sky-600);
+  --stats-chart-green: var(--color-green-600);
+  --stats-chart-violet: var(--color-violet-600);
+  --stats-chart-amber: var(--color-amber-600);
+  --stats-chart-cyan: var(--color-cyan-600);
+  --stats-chart-rose: var(--color-rose-600);
+  --stats-chart-red: var(--color-red-600);
+  --stats-chart-neutral-light: var(--color-surface-500);
+  --stats-chart-neutral: var(--color-surface-600);
+  --stats-chart-neutral-strong: var(--color-surface-700);
+  --stats-chart-completion-high: var(--color-green-900);
+  --stats-chart-completion-medium: var(--color-green-800);
+  --stats-chart-completion-low: var(--color-green-700);
+  --stats-chart-completion-minimal: var(--color-green-600);
+}
+
+:host-context(.dark) {
+  --stats-chart-sky: var(--color-sky-500);
+  --stats-chart-green: var(--color-green-500);
+  --stats-chart-violet: var(--color-violet-500);
+  --stats-chart-amber: var(--color-amber-500);
+  --stats-chart-cyan: var(--color-cyan-500);
+  --stats-chart-rose: var(--color-rose-500);
+  --stats-chart-red: var(--color-red-500);
+  --stats-chart-neutral-light: var(--color-surface-500);
+  --stats-chart-neutral: var(--color-surface-400);
+  --stats-chart-neutral-strong: var(--color-surface-300);
+  --stats-chart-completion-high: var(--color-green-300);
+  --stats-chart-completion-medium: var(--color-green-400);
+  --stats-chart-completion-low: var(--color-green-500);
+  --stats-chart-completion-minimal: var(--color-green-600);
+}
