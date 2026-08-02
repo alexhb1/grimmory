@@ -7,7 +7,20 @@
     "resetLayout": "Reset Layout",
     "hideAll": "Hide All",
     "showAll": "Show All",
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading chart",
+    "dragToReorder": "drag to reorder"
+  },
+  "config": {
+    "title": "Chart Configuration",
+    "showDescriptions": "Show chart descriptions",
+    "addChart": "Add chart",
+    "edit": "Edit",
+    "moveChartEarlier": "Move {{ name }} up",
+    "moveChartLater": "Move {{ name }} down",
+    "removeChart": "Remove chart",
+    "done": "Done",
+    "resetOrder": "Reset Order"
   },
   "chartNames": {
     "heatmap": "Reading Session Heatmap",
@@ -36,13 +49,13 @@
   },
   "sessionHeatmap": {
     "title": "Reading Session Activity",
-    "tooltip": "A daily heatmap of your reading sessions for the selected year. Darker cells mean more sessions that day. Streak stats track consecutive reading days across all time. Milestones unlock as you hit streak or total-day thresholds.",
+    "tooltip": "A daily heatmap of your reading sessions for the selected year. Stronger cells mean more sessions that day. The summary shows your all-time reading streaks and reading days.",
     "description": "Daily overview of your reading sessions across the year",
     "previousYear": "Previous year",
     "nextYear": "Next year",
-    "currentStreak": "Current Streak",
-    "longestStreak": "Longest Streak",
-    "totalDays": "Total Days",
+    "currentStreak": "Current streak",
+    "longestStreak": "Longest streak",
+    "totalDays": "All-time reading days",
     "consistency": "Consistency",
     "readingSessions": "Reading Sessions",
     "readingSession": "{{ count }} reading session",
@@ -474,7 +487,10 @@
     "statusReading": "Reading",
     "statusAbandoned": "Abandoned",
     "statusOther": "Other",
-    "trend": "Trend"
+    "trend": "Trend",
+    "sweetSpotBookCount": "Based on {{ count }} books",
+    "trendDescription": "Rating change when page count doubles",
+    "axisPageCountLog": "Page Count (log scale)"
   },
   "bookFlow": {
     "title": "Book Flow",
