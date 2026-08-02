@@ -1,194 +1,165 @@
-import {Component, DestroyRef, inject, Input, OnInit} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BehaviorSubject, EMPTY, Observable} from 'rxjs';
-import {catchError} from 'rxjs/operators';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {GenreStatsResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartData, type ChartOptions } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { type GenreStats } from '../../../../data/user/genre-stats';
 
 type GenreChartData = ChartData<'bar', number[], string>;
+
+const LABEL_LIMIT = 12;
 
 @Component({
   selector: 'app-genre-stats-chart',
   standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './genre-stats-chart.component.html',
-  styleUrls: ['./genre-stats-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
-export class GenreStatsChartComponent implements OnInit {
-  @Input() maxGenres: number = 35;
+export class GenreStatsChartComponent {
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
-  public readonly chartType = 'bar' as const;
-  public readonly chartData$: Observable<GenreChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+  readonly stats = input.required<GenreStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly chartDataSubject: BehaviorSubject<GenreChartData>;
+  readonly chartType = 'bar' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().rows.length > 0 ? 'ready' : 'empty';
+  });
 
-  constructor() {
-    this.chartDataSubject = new BehaviorSubject<GenreChartData>({
-      labels: [],
-      datasets: []
-    });
-    this.chartData$ = this.chartDataSubject.asObservable();
+  readonly chartData = computed<GenreChartData>(() => {
+    this.activeLanguage();
+    const rows = this.stats().rows;
 
-    this.chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: {top: 10}
-      },
-      plugins: {
-        legend: {display: false},
-        tooltip: {
-          enabled: true,
-          borderWidth: 1,
-          cornerRadius: 6,
-          displayColors: true,
-          padding: 12,
-          titleFont: {size: 14, weight: 'bold'},
-          bodyFont: {size: 13},
-          callbacks: {
-            label: (context) => {
-              const dataIndex = context.dataIndex;
-              const dataset = context.dataset;
-              const label = context.chart.data.labels?.[dataIndex] as string;
-              const minutes = Math.floor((dataset.data[dataIndex] as number) / 60);
-              const hours = Math.floor(minutes / 60);
-              const mins = minutes % 60;
-
-              const timeStr = hours > 0
-                ? `${hours}h ${mins}m`
-                : `${mins}m`;
-
-              return `${label}: ${timeStr}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: this.t.translate('statsUser.genreStats.axisGenres'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          },
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            maxRotation: 90,
-            minRotation: 90,
-            callback: (value, index) => {
-              const label = this.chartDataSubject.value.labels?.[index] as string;
-              const maxLength = 12;
-              if (label && label.length > maxLength) {
-                return label.substring(0, maxLength) + '...';
-              }
-              return label;
-            }
-          },
-          grid: {display: false},
-          border: {display: false}
-        },
-        y: {
-          title: {
-            display: true,
-            text: this.t.translate('statsUser.genreStats.axisTimeRead'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          },
-          beginAtZero: true,
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            callback: (value) => {
-              const seconds = value as number;
-              const minutes = Math.floor(seconds / 60);
-              const hours = Math.floor(minutes / 60);
-              const days = Math.floor(hours / 24);
-
-              const dayLabel = days === 1 ? this.t.translate('statsUser.genreStats.day') : this.t.translate('statsUser.genreStats.days');
-              const hrLabel = (h: number) => h === 1 ? this.t.translate('statsUser.genreStats.hr') : this.t.translate('statsUser.genreStats.hrs');
-              const minLabel = this.t.translate('statsUser.genreStats.min');
-              const secLabel = this.t.translate('statsUser.genreStats.sec');
-
-              if (days > 0) {
-                const remainingHours = hours % 24;
-                if (remainingHours > 0) {
-                  return `${days} ${dayLabel} ${remainingHours} ${hrLabel(remainingHours)}`;
-                }
-                return `${days} ${dayLabel}`;
-              } else if (hours > 0) {
-                const remainingMinutes = minutes % 60;
-                if (remainingMinutes > 0) {
-                  return `${hours} ${hrLabel(hours)} ${remainingMinutes} ${minLabel}`;
-                }
-                return `${hours} ${hrLabel(hours)}`;
-              } else if (minutes > 0) {
-                return `${minutes} ${minLabel}`;
-              }
-              return `${seconds} ${secLabel}`;
-            },
-            stepSize: undefined,
-            maxTicksLimit: 8
-          },
-          grid: {
-          },
-          border: {display: false}
-        }
-      }
-    };
-  }
-
-  ngOnInit(): void {
-    this.loadGenreStats();
-  }
-
-  private loadGenreStats(): void {
-    this.userStatsService.getGenreStats()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError((error) => {
-          console.error('Error loading genre stats:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => {
-        this.updateChartData(data);
-      });
-  }
-
-  private updateChartData(genreStats: GenreStatsResponse[]): void {
-    const sortedStats = [...genreStats]
-      .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds)
-      .slice(0, this.maxGenres);
-
-    const labels = sortedStats.map(stat => stat.genre);
-    const durations = sortedStats.map(stat => stat.totalDurationSeconds);
-
-    this.chartDataSubject.next({
-      labels,
+    return {
+      labels: rows.map((row) => row.genre),
       datasets: [
         {
-          label: this.t.translate('statsUser.genreStats.readingTime'),
-          data: durations,
+          label: this.transloco.translate('statsUser.genreStats.readingTime'),
+          data: rows.map((row) => row.totalDurationSeconds),
           backgroundColor: 'rgba(34, 197, 94, 0.8)',
           borderColor: 'rgba(34, 197, 94, 1)',
           borderWidth: 1,
           borderRadius: 4,
           barPercentage: 0.8,
-          categoryPercentage: 0.6
-        }
-      ]
-    });
+          categoryPercentage: 0.6,
+        },
+      ],
+    };
+  });
+
+  readonly chartOptions = computed<ChartOptions<'bar'>>(() => {
+    this.activeLanguage();
+    const rows = this.stats().rows;
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 10 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          borderWidth: 1,
+          cornerRadius: 6,
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: (context) => {
+              const row = rows.at(context.dataIndex);
+              if (!row) return '';
+              return `${row.genre}: ${this.formatShortDuration(row.totalDurationSeconds)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.genreStats.axisGenres'),
+            font: { size: 12 },
+          },
+          ticks: {
+            font: { size: 11 },
+            maxRotation: 90,
+            minRotation: 90,
+            callback: (_value, index) => {
+              const genre = rows[index]?.genre ?? '';
+              return genre.length > LABEL_LIMIT ? `${genre.slice(0, LABEL_LIMIT)}…` : genre;
+            },
+          },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.genreStats.axisTimeRead'),
+            font: { size: 12 },
+          },
+          beginAtZero: true,
+          ticks: {
+            font: { size: 11 },
+            maxTicksLimit: 8,
+            callback: (value) => this.formatAxisDuration(Number(value)),
+          },
+          border: { display: false },
+        },
+      },
+    };
+  });
+
+  private formatShortDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+  }
+
+  private formatAxisDuration(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+      const remainingHours = hours % 24;
+      const dayLabel = this.label(days === 1 ? 'day' : 'days');
+      return remainingHours > 0
+        ? `${days} ${dayLabel} ${remainingHours} ${this.label(remainingHours === 1 ? 'hr' : 'hrs')}`
+        : `${days} ${dayLabel}`;
+    }
+
+    if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      const hourLabel = this.label(hours === 1 ? 'hr' : 'hrs');
+      return remainingMinutes > 0
+        ? `${hours} ${hourLabel} ${remainingMinutes} ${this.label('min')}`
+        : `${hours} ${hourLabel}`;
+    }
+
+    if (minutes > 0) return `${minutes} ${this.label('min')}`;
+    return `${seconds} ${this.label('sec')}`;
+  }
+
+  private label(key: string): string {
+    return this.transloco.translate(`statsUser.genreStats.${key}`);
   }
 }

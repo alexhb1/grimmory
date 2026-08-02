@@ -1,25 +1,27 @@
 <ng-container *transloco="let t; prefix: 'statsUser.genreStats'">
-<div class="genre-stats-container">
-  <div class="chart-header">
-    <div class="chart-title">
-      <h3>
-        <i class="pi pi-chart-bar genre-title-icon"></i>
-        {{ t('title') }}
-        <i class="pi pi-question-circle chart-info-icon"
-           [pTooltip]="t('tooltip')"
-           tooltipPosition="bottom"
-           tooltipStyleClass="chart-info-tooltip"
-           [appendTo]="'body'"></i>
-      </h3>
-      <p class="chart-description">{{ t('description') }}</p>
-    </div>
-  </div>
-  <div class="chart-wrapper">
-    <canvas baseChart
-            [data]="(chartData$ | async) ?? {labels: [], datasets: []}"
-            [options]="chartOptions"
-            [type]="chartType">
-    </canvas>
-  </div>
-</div>
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [type]="chartType"
+          [data]="chartData()"
+          [options]="chartOptions()"></canvas>
+      </div>
+    }
+  </app-stats-chart-card>
 </ng-container>
