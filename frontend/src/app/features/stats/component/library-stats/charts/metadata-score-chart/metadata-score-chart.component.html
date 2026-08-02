@@ -10,7 +10,7 @@
     </div>
   </div>
 
-  @if (totalBooks() > 0) {
+  @if (!loading() && totalBooks() > 0) {
     <div class="chart-wrapper">
       <canvas baseChart
               [data]="chartData()"
@@ -20,7 +20,7 @@
     </div>
   }
 
-  @if (totalBooks() === 0) {
+  @if (!loading() && totalBooks() === 0) {
     <div class="no-data-message">
       <i class="pi pi-info-circle"></i>
       <p>{{ t('noData') }}</p>
