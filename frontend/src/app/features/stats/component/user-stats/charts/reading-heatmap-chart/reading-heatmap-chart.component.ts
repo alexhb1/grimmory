@@ -1,208 +1,154 @@
-import {Component, effect, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
-import {readStatsChartThemeColors} from '../../../shared/stats-chart-theme.service';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface MatrixDataPoint {
-  x: number; // month (0-11)
-  y: number; // year index
-  v: number; // book count
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { Chart, type ChartConfiguration, type ChartData } from 'chart.js';
+import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { readStatsChartThemeColors } from '../../../shared/stats-chart-theme.service';
+import { type ReadingHeatmapStats } from '../../../../data/user/reading-heatmap-stats';
+
+interface HeatmapPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly v: number;
 }
 
-interface YearMonthData {
-  year: number;
-  month: number;
-  count: number;
-}
+const MONTHS_PER_YEAR = 12;
 
-interface YScaleWithMax {
-  max?: number;
-}
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-type HeatmapChartData = ChartData<'matrix', MatrixDataPoint[], string>;
+Chart.register(MatrixController, MatrixElement);
 
 @Component({
   selector: 'app-reading-heatmap-chart',
   standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './reading-heatmap-chart.component.html',
-  styleUrls: ['./reading-heatmap-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class ReadingHeatmapChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly syncChartEffect = effect(() => {
-    if (this.bookService.isBooksLoading()) {
-      return;
-    }
-
-    const stats = this.calculateHeatmapData(this.bookService.books());
-    this.updateChartData(stats);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'matrix' as const;
+  readonly stats = input.required<ReadingHeatmapStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  private yearLabels: string[] = [];
-  private maxBookCount = 1;
-
-  public readonly chartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {
-        top: 20
-      }
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderColor: '#ef476f',
-        borderWidth: 2,
-        cornerRadius: 8,
-        displayColors: false,
-        padding: 16,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13},
-        callbacks: {
-          title: (context) => {
-            const point = context[0].raw as MatrixDataPoint;
-            const year = this.yearLabels[point.y];
-            const month = MONTH_NAMES[point.x];
-            return `${month} ${year}`;
-          },
-          label: (context) => {
-            const point = context.raw as MatrixDataPoint;
-            const key = point.v === 1 ? 'statsUser.readingHeatmap.tooltipBook' : 'statsUser.readingHeatmap.tooltipBooks';
-            return this.t.translate(key, {value: point.v});
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        type: 'linear',
-        position: 'bottom',
-        ticks: {
-          stepSize: 1,
-          callback: (value) => MONTH_NAMES[value as number] || '',
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {display: false},
-      },
-      y: {
-        type: 'linear',
-        offset: true,
-        ticks: {
-          stepSize: 1,
-          callback: (value) => this.yearLabels[value as number] || '',
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {display: false},
-      }
-    }
-  };
-
-  private readonly chartDataSubject = new BehaviorSubject<HeatmapChartData>({
-    labels: [],
-    datasets: [{
-      label: this.t.translate('statsUser.readingHeatmap.booksRead'),
-      data: []
-    }]
+  readonly chartType = 'matrix' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
 
-  public readonly chartData$: Observable<HeatmapChartData> = this.chartDataSubject.asObservable();
+  private readonly monthLabels = computed(() => {
+    const locale = this.activeLanguage();
+    return Array.from({ length: MONTHS_PER_YEAR }, (_, month) =>
+      new Date(2000, month, 1).toLocaleDateString(locale, { month: 'short' }),
+    );
+  });
 
-  private updateChartData(yearMonthData: YearMonthData[]): void {
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({length: 10}, (_, i) => currentYear - 9 + i);
+  readonly chartData = computed<ChartData<'matrix', HeatmapPoint[], string>>(() => {
+    const { cells, maximumBookCount, years } = this.stats();
 
-    this.yearLabels = years.map(String);
-    this.maxBookCount = Math.max(1, ...yearMonthData.map(d => d.count));
-
-    const heatmapData: MatrixDataPoint[] = [];
-
-    years.forEach((year, yearIndex) => {
-      for (let month = 0; month <= 11; month++) {
-        const dataPoint = yearMonthData.find(d => d.year === year && d.month === month + 1);
-        heatmapData.push({
-          x: month,
-          y: yearIndex,
-          v: dataPoint?.count || 0
-        });
-      }
-    });
-
-    if (this.chartOptions?.scales?.['y']) {
-      (this.chartOptions.scales['y'] as YScaleWithMax).max = years.length - 1;
-    }
-
-    this.chartDataSubject.next({
+    return {
       labels: [],
-      datasets: [{
-        label: this.t.translate('statsUser.readingHeatmap.booksRead'),
-        data: heatmapData,
-        backgroundColor: (context) => {
-          const point = context.raw as MatrixDataPoint;
-          if (!point?.v) return readStatsChartThemeColors().grid;
+      datasets: [
+        {
+          label: this.transloco.translate('statsUser.readingHeatmap.booksRead'),
+          data: cells.map((cell) => ({
+            x: cell.monthIndex,
+            y: cell.yearIndex,
+            v: cell.bookCount,
+          })),
+          backgroundColor: (context) => {
+            const point = context.raw as HeatmapPoint | undefined;
+            if (!point?.v) return readStatsChartThemeColors().grid;
 
-          const intensity = point.v / this.maxBookCount;
-          const alpha = Math.max(0.2, Math.min(1.0, intensity * 0.8 + 0.2));
-          return `rgba(239, 71, 111, ${alpha})`;
+            const intensity = point.v / maximumBookCount;
+            return `rgba(239, 71, 111, ${Math.max(0.2, Math.min(1, intensity * 0.8 + 0.2))})`;
+          },
+          borderWidth: 1,
+          width: ({ chart }) => chart.chartArea.width / MONTHS_PER_YEAR - 1,
+          height: ({ chart }) => chart.chartArea.height / years.length - 1,
         },
-        borderWidth: 1,
-        width: ({chart}) => (chart.chartArea?.width || 0) / 12 - 1,
-        height: ({chart}) => (chart.chartArea?.height || 0) / years.length - 1
-      }]
-    });
-  }
+      ],
+    };
+  });
 
-  private calculateHeatmapData(books: Book[]): YearMonthData[] {
-    if (books.length === 0) {
-      return [];
-    }
+  readonly chartOptions = computed<ChartConfiguration<'matrix'>['options']>(() => {
+    const months = this.monthLabels();
+    const years = this.stats().years;
 
-    return this.processHeatmapData(books);
-  }
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderColor: '#ef476f',
+          borderWidth: 2,
+          cornerRadius: 8,
+          displayColors: false,
+          padding: 16,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            title: (context) => {
+              const point = context[0]?.raw as HeatmapPoint | undefined;
+              if (!point) return '';
 
-  private processHeatmapData(books: Book[]): YearMonthData[] {
-    const yearMonthMap = new Map<string, number>();
-    const currentYear = new Date().getFullYear();
-    const startYear = currentYear - 9;
-
-    books
-      .filter(book => book.dateFinished)
-      .forEach(book => {
-        const finishedDate = new Date(book.dateFinished!);
-        const year = finishedDate.getFullYear();
-
-        if (year >= startYear && year <= currentYear) {
-          const month = finishedDate.getMonth() + 1;
-          const key = `${year}-${month}`;
-          yearMonthMap.set(key, (yearMonthMap.get(key) || 0) + 1);
-        }
-      });
-
-    return Array.from(yearMonthMap.entries())
-      .map(([key, count]) => {
-        const [year, month] = key.split('-').map(Number);
-        return {year, month, count};
-      })
-      .sort((a, b) => a.year - b.year || a.month - b.month);
-  }
+              return `${months[point.x]} ${years[point.y]}`;
+            },
+            label: (context) => {
+              const point = context.raw as HeatmapPoint | undefined;
+              return this.transloco.translate(
+                point?.v === 1
+                  ? 'statsUser.readingHeatmap.tooltipBook'
+                  : 'statsUser.readingHeatmap.tooltipBooks',
+                { value: point?.v ?? 0 },
+              );
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          position: 'bottom',
+          ticks: {
+            stepSize: 1,
+            callback: (value) => months[value as number] ?? '',
+            font: { family: "'Inter', sans-serif", size: 11 },
+          },
+          grid: { display: false },
+        },
+        y: {
+          type: 'linear',
+          offset: true,
+          max: years.length - 1,
+          ticks: {
+            stepSize: 1,
+            callback: (value) => years[value as number] ?? '',
+            font: { family: "'Inter', sans-serif", size: 11 },
+          },
+          grid: { display: false },
+        },
+      },
+    };
+  });
 }
