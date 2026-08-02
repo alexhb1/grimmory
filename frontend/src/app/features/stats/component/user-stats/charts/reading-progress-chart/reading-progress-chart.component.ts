@@ -1,194 +1,158 @@
-import {Component, computed, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-interface ReadingProgressStats {
-  progressRange: string;
-  count: number;
-  description: string;
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
+import {
+  type ReadingProgressBand,
+  type ReadingProgressBandId,
+  type ReadingProgressStats,
+} from '../../../../data/user/reading-progress-stats';
+
+interface ReadingProgressLegendEntry {
+  readonly id: ReadingProgressBandId;
+  readonly label: string;
+  readonly color: string;
+  readonly bookCount: number;
 }
 
-const CHART_COLORS = [
-  '#6c757d', // Gray - Not Started (0%)
-  '#ffc107', // Yellow - Just Started (1-25%)
-  '#fd7e14', // Orange - Getting Into It (26-50%)
-  '#17a2b8', // Cyan - Halfway Through (51-75%)
-  '#6f42c1', // Purple - Almost Finished (76-99%)
-  '#28a745'  // Green - Completed (100%)
-] as const;
+type ReadingProgressChartData = ChartData<'doughnut', number[], string>;
 
-const PROGRESS_RANGES = [
-  {range: '0%', min: 0, max: 0, desc: 'Not Started'},
-  {range: '1-25%', min: 0.1, max: 25, desc: 'Just Started'},
-  {range: '26-50%', min: 26, max: 50, desc: 'Getting Into It'},
-  {range: '51-75%', min: 51, max: 75, desc: 'Halfway Through'},
-  {range: '76-99%', min: 76, max: 99, desc: 'Almost Finished'},
-  {range: '100%', min: 100, max: 100, desc: 'Completed'}
-] as const;
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
-type ProgressChartData = ChartData<'doughnut', number[], string>;
+const BAND_COLORS: Readonly<Record<ReadingProgressBandId, string>> = {
+  'not-started': '#6c757d',
+  'just-started': '#ffc107',
+  'getting-into-it': '#fd7e14',
+  'halfway-through': '#17a2b8',
+  'almost-finished': '#6f42c1',
+  completed: '#28a745',
+};
+
+const BAND_LABEL_KEYS: Readonly<Record<ReadingProgressBandId, string>> = {
+  'not-started': 'notStarted',
+  'just-started': 'justStarted',
+  'getting-into-it': 'gettingIntoIt',
+  'halfway-through': 'halfwayThrough',
+  'almost-finished': 'almostFinished',
+  completed: 'completed',
+};
 
 @Component({
   selector: 'app-reading-progress-chart',
   standalone: true,
-  imports: [BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [
+    BaseChartDirective,
+    StatsChartCardComponent,
+    StatsCircularChartLayoutComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './reading-progress-chart.component.html',
-  styleUrls: ['./reading-progress-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class ReadingProgressChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly progressStats = computed(() => {
-    if (this.bookService.isBooksLoading()) {
-      return [];
-    }
-
-    return this.calculateReadingProgressStats(this.bookService.books());
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartType = 'doughnut' as const;
+  readonly stats = input.required<ReadingProgressStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 15}
-    },
-    plugins: {
-      legend: {
-        display: true,
-        position: 'bottom',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          },
-          padding: 15,
-          usePointStyle: true,
-          pointStyle: 'circle',
-          generateLabels: (chart) => {
-            const data = chart.data;
-            if (data.labels?.length && data.datasets?.length) {
-              return data.labels.map((label, i) => {
-                const value = data.datasets[0].data[i] as number;
-                const isVisible = typeof chart.getDataVisibility === 'function'
-                  ? chart.getDataVisibility(i)
-                  : true;
+  readonly chartType = 'doughnut' as const;
+  readonly bands = computed<readonly ReadingProgressBand[]>(() => this.stats().bands);
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalBooks > 0 ? 'ready' : 'empty';
+  });
+  readonly emptyMessage = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('statsUser.bookFlow.noData');
+  });
+  readonly legend = computed<readonly ReadingProgressLegendEntry[]>(() =>
+    this.bands().map((band) => ({
+      id: band.id,
+      label: band.label,
+      color: BAND_COLORS[band.id],
+      bookCount: band.bookCount,
+    })),
+  );
 
-                return {
-                  text: `${label}: ${value}`,
-                  fillStyle: (data.datasets[0].backgroundColor as string[])[i],
-                  lineWidth: 1,
-                  hidden: !isVisible,
-                  index: i,
-                };
+  readonly chartData = computed<ReadingProgressChartData>(() => {
+    this.activeLanguage();
+    const bands = this.bands();
+
+    return {
+      labels: bands.map((band) => band.label),
+      datasets: [
+        {
+          label: this.transloco.translate('statsUser.readingProgress.booksByProgress'),
+          data: bands.map((band) => band.bookCount),
+          backgroundColor: bands.map((band) => BAND_COLORS[band.id]),
+        },
+      ],
+    };
+  });
+
+  readonly chartOptions = computed<ChartConfiguration<'doughnut'>['options']>(() => {
+    const bands = this.bands();
+    const totalBooks = this.stats().totalBooks;
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 15 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          borderWidth: 1,
+          cornerRadius: 6,
+          displayColors: true,
+          padding: 12,
+          titleFont: { family: CHART_FONT_FAMILY, size: 14, weight: 'bold' },
+          bodyFont: { family: CHART_FONT_FAMILY, size: 13 },
+          callbacks: {
+            title: (context) => context[0]?.label ?? '',
+            label: (context) => {
+              const band = bands.at(context.dataIndex);
+              if (!band || totalBooks === 0) return '';
+
+              return this.transloco.translate('statsUser.readingProgress.tooltipLabel', {
+                value: band.bookCount,
+                plural: band.bookCount === 1 ? '' : 's',
+                description: this.bandDescription(band.id),
+                percentage: ((band.bookCount / totalBooks) * 100).toFixed(1),
               });
-            }
-            return [];
-          }
-        }
+            },
+          },
+        },
       },
-      tooltip: {
-        enabled: true,
-        borderWidth: 1,
-        cornerRadius: 6,
-        displayColors: true,
-        padding: 12,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13},
-        callbacks: {
-          title: (context) => context[0].label,
-          label: (context) => {
-            const value = context.parsed;
-            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
-            const percentage = ((value / total) * 100).toFixed(1);
-            const label = context.label;
-            const rangeInfo = PROGRESS_RANGES.find(r => r.range === label);
-            const descKeys: Record<string, string> = {
-              'Not Started': 'notStarted', 'Just Started': 'justStarted',
-              'Getting Into It': 'gettingIntoIt', 'Halfway Through': 'halfwayThrough',
-              'Almost Finished': 'almostFinished', 'Completed': 'completed'
-            };
-            const description = rangeInfo ? this.t.translate(`statsUser.readingProgress.${descKeys[rangeInfo.desc] || 'notStarted'}`) : '';
-            const plural = value === 1 ? '' : 's';
-            return this.t.translate('statsUser.readingProgress.tooltipLabel', {value, plural, description, percentage});
-          }
-        }
-      }
-    },
-    interaction: {
-      intersect: false,
-      mode: 'point'
-    }
-  };
-
-  public readonly chartData = computed<ProgressChartData>(() => {
-    try {
-      const stats = this.progressStats();
-      const labels = stats.map(s => s.progressRange);
-      const dataValues = stats.map(s => s.count);
-
-      return {
-        labels,
-        datasets: [{
-          label: this.t.translate('statsUser.readingProgress.booksByProgress'),
-          data: dataValues,
-          backgroundColor: [...CHART_COLORS],
-        }]
-      };
-    } catch (error) {
-      console.error('Error updating reading progress chart data:', error);
-      return {
-        labels: [],
-        datasets: [{
-          label: this.t.translate('statsUser.readingProgress.booksByProgress'),
-          data: [],
-          backgroundColor: [...CHART_COLORS]
-        }]
-      };
-    }
+      interaction: { intersect: false, mode: 'point' },
+    };
   });
 
-  private calculateReadingProgressStats(books: Book[]): ReadingProgressStats[] {
-    if (books.length === 0) {
-      return [];
-    }
-
-    return this.processReadingProgressStats(books);
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.activeLanguage());
   }
 
-  private processReadingProgressStats(books: Book[]): ReadingProgressStats[] {
-    const rangeCounts = new Map<string, number>();
-    PROGRESS_RANGES.forEach(range => rangeCounts.set(range.range, 0));
-
-    for (const book of books) {
-      const progress = this.getBookProgress(book);
-
-      for (const range of PROGRESS_RANGES) {
-        if (progress >= range.min && progress <= range.max) {
-          rangeCounts.set(range.range, (rangeCounts.get(range.range) || 0) + 1);
-          break;
-        }
-      }
-    }
-
-    return PROGRESS_RANGES.map(range => ({
-      progressRange: range.range,
-      count: rangeCounts.get(range.range) || 0,
-      description: range.desc
-    }));
-  }
-
-  private getBookProgress(book: Book): number {
-    if (book.pdfProgress?.percentage) return book.pdfProgress.percentage;
-    if (book.epubProgress?.percentage) return book.epubProgress.percentage;
-    if (book.cbxProgress?.percentage) return book.cbxProgress.percentage;
-    if (book.koreaderProgress?.percentage) return book.koreaderProgress.percentage;
-    if (book.koboProgress?.percentage) return book.koboProgress.percentage;
-    return 0;
+  private bandDescription(id: ReadingProgressBandId): string {
+    this.activeLanguage();
+    return this.transloco.translate(`statsUser.readingProgress.${BAND_LABEL_KEYS[id]}`);
   }
 }
