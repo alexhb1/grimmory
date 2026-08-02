@@ -1,162 +1,122 @@
-import {Component, inject, OnDestroy, OnInit} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, EMPTY, Observable, Subject} from 'rxjs';
-import {catchError, takeUntil} from 'rxjs/operators';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {PeakHoursResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-type ClockChartData = ChartData<'polarArea', number[], string>;
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartData, type ChartOptions } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 
-const HOUR_LABELS = [
-  '12am', '1am', '2am', '3am', '4am', '5am',
-  '6am', '7am', '8am', '9am', '10am', '11am',
-  '12pm', '1pm', '2pm', '3pm', '4pm', '5pm',
-  '6pm', '7pm', '8pm', '9pm', '10pm', '11pm'
-];
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { type ReadingClockStats } from '../../../../data/user/reading-clock-stats';
+
+type ReadingClockChartData = ChartData<'polarArea', number[], string>;
 
 @Component({
   selector: 'app-reading-clock-chart',
   standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './reading-clock-chart.component.html',
-  styleUrls: ['./reading-clock-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
-export class ReadingClockChartComponent implements OnInit, OnDestroy {
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroy$ = new Subject<void>();
-
-  public readonly chartType = 'polarArea' as const;
-  public peakHour = '';
-  public totalHoursRead = 0;
-  public readerType = '';
-  public hasData = false;
-
-  public readonly chartOptions: ChartConfiguration<'polarArea'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 10, bottom: 10}
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderWidth: 1,
-        cornerRadius: 6,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 12},
-        callbacks: {
-          title: (context) => HOUR_LABELS[context[0].dataIndex],
-          label: (context) => {
-            const minutes = context.parsed.r;
-            if (minutes >= 60) {
-              const hrs = Math.floor(minutes / 60);
-              const mins = Math.round(minutes % 60);
-              return this.t.translate('statsUser.readingClock.tooltipReading', {time: `${hrs}h ${mins}m`});
-            }
-            return this.t.translate('statsUser.readingClock.tooltipReading', {time: `${Math.round(minutes)}m`});
-          }
-        }
-      }
-    },
-    scales: {
-      r: {
-        ticks: {display: false},
-        pointLabels: {
-          display: true,
-          font: {family: "'Inter', sans-serif", size: 10}
-        }
-      }
-    }
-  };
-
-  private readonly chartDataSubject = new BehaviorSubject<ClockChartData>({
-    labels: [],
-    datasets: []
+export class ReadingClockChartComponent {
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
 
-  public readonly chartData$: Observable<ClockChartData> = this.chartDataSubject.asObservable();
+  readonly stats = input.required<ReadingClockStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  ngOnInit(): void {
-    this.userStatsService.getPeakHours()
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError((error) => {
-          console.error('Error loading peak hours:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => this.processData(data));
-  }
+  readonly chartType = 'polarArea' as const;
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().segments.length > 0 ? 'ready' : 'empty';
+  });
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  readonly hourLabels = computed<readonly string[]>(() => {
+    const locale = this.activeLanguage();
+    return Array.from({ length: 24 }, (_, hour) => formatHour(hour, locale));
+  });
+  readonly peakHourLabel = computed(() => {
+    const peakHour = this.stats().peakHourOfDay;
+    return peakHour === null ? '—' : this.hourLabels()[peakHour];
+  });
+  readonly readerTypeLabel = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate(`statsUser.readingClock.${this.stats().readerType}`);
+  });
 
-  private processData(data: PeakHoursResponse[]): void {
-    if (!data || data.length === 0) {
-      this.hasData = false;
-      return;
-    }
+  readonly chartData = computed<ReadingClockChartData>(() => {
+    const segments = this.stats().segments;
+    const peakMinutes = Math.max(1, ...segments.map((segment) => segment.minutes));
 
-    this.hasData = true;
+    return {
+      labels: [...this.hourLabels()],
+      datasets: [
+        {
+          data: segments.map((segment) => segment.minutes),
+          backgroundColor: segments.map((segment) => segmentColor(segment.minutes / peakMinutes)),
+        },
+      ],
+    };
+  });
 
-    // Build 24-hour array
-    const hourMinutes = new Array(24).fill(0);
-    let totalSeconds = 0;
-    let peakIdx = 0;
-    let peakVal = 0;
+  readonly chartOptions = computed<ChartOptions<'polarArea'>>(() => {
+    this.activeLanguage();
+    const hourLabels = this.hourLabels();
 
-    for (const entry of data) {
-      const minutes = entry.totalDurationSeconds / 60;
-      hourMinutes[entry.hourOfDay] = minutes;
-      totalSeconds += entry.totalDurationSeconds;
-      if (minutes > peakVal) {
-        peakVal = minutes;
-        peakIdx = entry.hourOfDay;
-      }
-    }
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 10, bottom: 10 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          borderWidth: 1,
+          cornerRadius: 6,
+          padding: 12,
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
+          callbacks: {
+            title: (context) => hourLabels[context[0].dataIndex],
+            label: (context) => {
+              const minutes = context.parsed.r;
+              const time =
+                minutes >= 60
+                  ? `${Math.floor(minutes / 60)}h ${Math.round(minutes % 60)}m`
+                  : `${Math.round(minutes)}m`;
+              return this.transloco.translate('statsUser.readingClock.tooltipReading', { time });
+            },
+          },
+        },
+      },
+      scales: {
+        r: {
+          ticks: { display: false },
+          pointLabels: { display: true, font: { size: 10 } },
+        },
+      },
+    };
+  });
+}
 
-    this.peakHour = HOUR_LABELS[peakIdx];
-    this.totalHoursRead = Math.round(totalSeconds / 3600);
+function formatHour(hour: number, locale: string): string {
+  return new Date(2000, 0, 1, hour).toLocaleTimeString(locale, { hour: 'numeric' });
+}
 
-    // Night owl vs early bird
-    const nightHours = [20, 21, 22, 23, 0, 1, 2];
-    const morningHours = [5, 6, 7, 8, 9, 10, 11];
-    const nightTotal = nightHours.reduce((sum, h) => sum + hourMinutes[h], 0);
-    const morningTotal = morningHours.reduce((sum, h) => sum + hourMinutes[h], 0);
-
-    if (nightTotal > morningTotal * 1.2) {
-      this.readerType = this.t.translate('statsUser.readingClock.nightOwl');
-    } else if (morningTotal > nightTotal * 1.2) {
-      this.readerType = this.t.translate('statsUser.readingClock.earlyBird');
-    } else {
-      this.readerType = this.t.translate('statsUser.readingClock.balanced');
-    }
-
-    // Generate colors: cool blues for low, warm oranges for peak
-    const maxMinutes = Math.max(...hourMinutes, 1);
-    const colors = hourMinutes.map(minutes => {
-      const ratio = minutes / maxMinutes;
-      if (ratio >= 0.7) return 'rgba(255, 152, 0, 0.8)';   // Warm orange
-      if (ratio >= 0.4) return 'rgba(255, 193, 7, 0.7)';    // Yellow
-      if (ratio >= 0.15) return 'rgba(100, 181, 246, 0.6)';  // Light blue
-      return 'rgba(66, 133, 244, 0.35)';                      // Cool blue
-    });
-
-    this.chartDataSubject.next({
-      labels: HOUR_LABELS,
-      datasets: [{
-        data: hourMinutes,
-        backgroundColor: colors
-      }]
-    });
-  }
+function segmentColor(ratio: number): string {
+  if (ratio >= 0.7) return 'rgba(255, 152, 0, 0.8)';
+  if (ratio >= 0.4) return 'rgba(255, 193, 7, 0.7)';
+  if (ratio >= 0.15) return 'rgba(100, 181, 246, 0.6)';
+  return 'rgba(66, 133, 244, 0.35)';
 }
