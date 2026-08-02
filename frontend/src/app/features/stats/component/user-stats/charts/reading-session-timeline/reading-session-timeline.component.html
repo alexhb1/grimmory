@@ -1,111 +1,110 @@
 <ng-container *transloco="let t; prefix: 'statsUser.sessionTimeline'">
-<div class="timeline-container">
-  <div class="timeline-header">
-    <div class="header-title">
-      <h3>
-        <i class="pi pi-clock timeline-title-icon"></i>
-        {{ t('title') }}
-        <i class="pi pi-question-circle chart-info-icon"
-           [pTooltip]="t('tooltip')"
-           tooltipPosition="bottom"
-           tooltipStyleClass="chart-info-tooltip"
-           [appendTo]="'body'"></i>
-      </h3>
-      <p class="timeline-subtitle">{{ t('description') }}</p>
-    </div>
-    <div class="week-info">
-      <button type="button"
-              class="week-nav-btn"
-              (click)="changeWeek(-1)"
-              [title]="t('previousWeek')">
-        <i class="pi pi-chevron-left"></i>
-      </button>
-      <div class="week-display">
-        <span class="week-label">{{ t('week', { number: currentWeek }) }}</span>
-        <span class="week-dates">{{ getWeekDateRange() }}</span>
+  <app-stats-chart-card
+    [sectionedHeader]="true"
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()">
+    <div statsChartActions class="flex items-center gap-1">
+      <app-button
+        tone="neutral"
+        variant="ghost"
+        size="sm"
+        iconOnly
+        [ariaLabel]="t('previousWeek')"
+        [title]="t('previousWeek')"
+        (clicked)="onWeekStep(-1)">
+        <svg lucideChevronLeft aria-hidden="true"></svg>
+      </app-button>
+      <div class="flex min-w-28 flex-col items-center leading-tight">
+        <span class="text-xs font-medium whitespace-nowrap text-text-secondary">
+          {{ t('week', { number: week() }) }}
+        </span>
+        <span class="text-xs whitespace-nowrap tabular-nums text-text-muted">{{ weekRangeLabel() }}</span>
       </div>
-      <button type="button"
-              class="week-nav-btn"
-              (click)="changeWeek(1)"
-              [title]="t('nextWeek')">
-        <i class="pi pi-chevron-right"></i>
-      </button>
+      <app-button
+        tone="neutral"
+        variant="ghost"
+        size="sm"
+        iconOnly
+        [ariaLabel]="t('nextWeek')"
+        [title]="t('nextWeek')"
+        (clicked)="onWeekStep(1)">
+        <svg lucideChevronRight aria-hidden="true"></svg>
+      </app-button>
     </div>
-    <div class="filter-controls">
-      <p-select
-        [options]="yearOptions"
-        [(ngModel)]="currentYear"
-        (onChange)="onYearChange()"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="t('selectYear')"
-        [style]="{'min-width': '120px'}">
-      </p-select>
-      <p-select
-        [options]="weekOptions"
-        [(ngModel)]="currentWeek"
-        (onChange)="onWeekChange()"
-        optionLabel="label"
-        optionValue="value"
-        [placeholder]="t('selectWeek')"
-        [style]="{'min-width': '120px'}">
-      </p-select>
-    </div>
-  </div>
 
-  <div class="timeline-content">
-    <div class="hour-markers">
-      <div class="day-label-spacer"></div>
-      <div class="hour-grid">
-        @for (hour of hourLabels; track $index) {
-          <div class="hour-marker" [class.major]="$index % 3 === 0">
-            <span class="hour-label">{{ hour }}</span>
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="min-w-0 px-2">
+        <div class="flex" aria-hidden="true">
+          <div class="w-12 shrink-0 sm:w-14"></div>
+          <div class="grid flex-1 grid-cols-24">
+            @for (label of hourLabels(); track $index) {
+              <div class="relative h-5">
+                @if ($index % 3 === 0) {
+                  <span
+                    class="absolute left-0 -translate-x-1/2 text-[0.625rem] whitespace-nowrap text-text-muted">
+                    {{ label }}
+                  </span>
+                }
+              </div>
+            }
           </div>
-        }
-      </div>
-    </div>
+        </div>
 
-    <div class="timeline-rows">
-      @for (dayData of timelineData; track dayData.dayOfWeek) {
-        <div class="timeline-row">
-          <div class="day-label">{{ dayData.day }}</div>
-          <div class="timeline-track">
-            <div class="grid-lines">
-              @for (hour of hourLabels; track $index) {
-                <div class="grid-line" [class.major]="$index % 6 === 0"></div>
-              }
-            </div>
+        <div class="flex flex-col gap-2">
+          @for (day of days(); track day.dayIndex) {
+            <div class="flex items-stretch">
+              <div
+                class="flex w-12 shrink-0 items-center pr-3 text-xs font-medium text-text sm:w-14">
+                {{ day.label }}
+              </div>
+              <div class="relative min-h-9 flex-1 rounded-sm border border-border bg-text/2">
+                <div class="pointer-events-none absolute inset-0 grid grid-cols-24" aria-hidden="true">
+                  @for (label of hourLabels(); track $index) {
+                    <div class="border-r border-text/5 last:border-r-0"></div>
+                  }
+                </div>
 
-            <div class="sessions">
-              @for (session of dayData.sessions; track $index) {
-                <div class="session-block"
-                     [class]="'book-type-' + (session.bookType || 'default').toLowerCase()"
-                     [style.left.%]="session.left"
-                     [style.width.%]="session.width"
-                     [style.top]="session.totalLevels > 1 ? 'calc(' + session.level + ' / ' + session.totalLevels + ' * 100% + ' + session.level * 2 + 'px)' : '0'"
-                     [style.height]="session.totalLevels > 1 ? 'calc((1 / ' + session.totalLevels + ' * 100%) - ' + (session.totalLevels - 1) * 2 / session.totalLevels + 'px)' : '100%'"
-                     [pTooltip]="session.tooltipContent"
-                     [escape]="false"
-                     tooltipPosition="top"
-                     tooltipStyleClass="session-timeline-tooltip"
-                     [appendTo]="'body'">
-                  @if (isDurationGreaterThanOneHour(session.duration)) {
-                    <div class="session-content">
-                      <span class="session-time">
-                        {{ formatTime(session.startHour, session.startMinute) }}
-                      </span>
-                      <span class="session-duration">
-                        {{ formatDurationCompact(session.duration) }}
-                      </span>
+                <div class="absolute inset-1">
+                  @for (session of day.sessions; track session.key) {
+                    <div
+                      class="absolute overflow-hidden rounded-xs border transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+                      role="img"
+                      tabindex="0"
+                      [attr.aria-label]="session.tooltip"
+                      [appTooltip]="session.tooltip"
+                      [style.left.%]="session.leftPercent"
+                      [style.width.%]="session.widthPercent"
+                      [style.top.%]="session.topPercent"
+                      [style.height.%]="session.heightPercent"
+                      [style.backgroundColor]="session.fill"
+                      [style.borderColor]="session.border">
+                      @if (session.showLabels) {
+                        <div
+                          class="flex h-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[0.625rem] leading-none font-medium text-white">
+                          <span class="max-w-full truncate">{{ session.timeLabel }}</span>
+                          <span class="hidden opacity-90 @sm:inline">{{ session.durationLabel }}</span>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
-              }
+              </div>
             </div>
-          </div>
+          }
         </div>
-      }
-    </div>
-  </div>
-</div>
+      </div>
+    }
+  </app-stats-chart-card>
 </ng-container>
