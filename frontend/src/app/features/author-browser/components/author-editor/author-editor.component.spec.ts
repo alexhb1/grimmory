@@ -170,16 +170,6 @@ describe('AuthorEditorComponent', () => {
     });
   });
 
-  it('omits the author name when a lock toggle leaves it unchanged', () => {
-    updateAuthor.mockReturnValue(new Subject<AuthorDetails>());
-
-    const component = createComponent();
-    component.ngOnInit();
-    component.toggleLock('description');
-
-    expect(updateAuthor).toHaveBeenCalledWith(9, expect.objectContaining({name: undefined}));
-  });
-
   it('sends the author name when it has actually changed', () => {
     updateAuthor.mockReturnValue(new Subject<AuthorDetails>());
 

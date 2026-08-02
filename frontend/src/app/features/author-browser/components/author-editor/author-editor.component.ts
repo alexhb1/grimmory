@@ -181,9 +181,8 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
     this.isSaving.set(true);
 
     const formValue = this.form.getRawValue();
-    const name = formValue.name?.trim() || undefined;
     const request = {
-      name: name === this.author.name ? undefined : name,
+      name: formValue.name?.trim() || undefined,
       description: formValue.description?.trim(),
       asin: formValue.asin?.trim(),
       nameLocked: formValue.nameLocked,
