@@ -8,14 +8,14 @@
       </h3>
       <p class="chart-description">{{ t('description') }}</p>
     </div>
-    @if (totalBooks() > 0) {
+    @if (!loading() && totalBooks() > 0) {
       <div class="books-count-badge">
         {{ t('booksWithDates', { count: totalBooks() }) }}
       </div>
     }
   </div>
 
-  @if (totalBooks() > 0) {
+  @if (!loading() && totalBooks() > 0) {
     <div class="chart-wrapper">
       <canvas baseChart
               [data]="chartData()"
@@ -49,35 +49,41 @@
             </div>
           }
 
+          @if (insights.mostCommonYear) {
           <div class="insight-item common-year">
             <span class="insight-label">{{ t('insightMostCommonYear') }}</span>
             <span class="insight-value">{{ insights.mostCommonYear.year }}</span>
-            <span class="insight-detail">{{ t('insightMostCommonYearBooks', { count: insights.mostCommonYear.count }) }}</span>
+            <span class="insight-detail">{{ t('insightMostCommonYearBooks', { count: insights.mostCommonYear.bookCount }) }}</span>
           </div>
+          }
         </div>
 
         <div class="insights-row">
           <div class="insight-item timespan">
             <span class="insight-label">{{ t('insightTimeSpan') }}</span>
-            <span class="insight-value">{{ insights.timeSpan }}</span>
+            <span class="insight-value">{{ insights.yearSpan }}</span>
             <span class="insight-detail">{{ t('insightYearsOfLiterature') }}</span>
           </div>
 
+          @if (insights.peakDecade) {
           <div class="insight-item peak">
             <span class="insight-label">{{ t('insightPeakDecade') }}</span>
-            <span class="insight-value">{{ insights.peakDecade }}</span>
-            <span class="insight-detail">{{ t('insightPeakDecadeBooks', { count: insights.peakDecadeCount }) }}</span>
+            <span class="insight-value">{{ decadeLabel(insights.peakDecade.decadeStart) }}</span>
+            <span class="insight-detail">{{ t('insightPeakDecadeBooks', { count: insights.peakDecade.bookCount }) }}</span>
           </div>
+          }
 
+          @if (insights.goldenEra) {
           <div class="insight-item golden-era">
             <span class="insight-label">{{ t('insightGoldenEra') }}</span>
-            <span class="insight-value">{{ insights.goldenEra.start }}-{{ insights.goldenEra.end }}</span>
-            <span class="insight-detail">{{ t('insightGoldenEraRange', { count: insights.goldenEra.count }) }}</span>
+            <span class="insight-value">{{ insights.goldenEra.startYear }}-{{ insights.goldenEra.endYear }}</span>
+            <span class="insight-detail">{{ t('insightGoldenEraRange', { count: insights.goldenEra.bookCount }) }}</span>
           </div>
+          }
 
           <div class="insight-item rarity">
             <span class="insight-label">{{ t('insightRarityScore') }}</span>
-            <span class="insight-value">{{ insights.rarityScore }}%</span>
+            <span class="insight-value">{{ insights.rarityPercent }}%</span>
             <span class="insight-detail">{{ t('insightRarePicks') }}</span>
           </div>
         </div>
@@ -85,7 +91,7 @@
     }
   }
 
-  @if (totalBooks() === 0) {
+  @if (!loading() && totalBooks() === 0) {
     <div class="no-data-message">
       <i class="pi pi-info-circle"></i>
       <p>{{ t('noData') }}</p>
