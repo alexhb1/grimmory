@@ -1,44 +1,45 @@
 <ng-container *transloco="let t; prefix: 'statsUser.readingDna'">
-<div class="reading-dna-container">
-  <div class="chart-header">
-    <div class="chart-title">
-      <h3>
-        <i class="pi pi-chart-line reading-dna-icon"></i>
-        {{ t('title') }}
-        <i class="pi pi-question-circle chart-info-icon"
-           [pTooltip]="t('tooltip')"
-           tooltipPosition="bottom"
-           tooltipStyleClass="chart-info-tooltip"
-           [appendTo]="'body'"></i>
-      </h3>
-      <p class="chart-description">{{ t('description') }}</p>
-    </div>
-  </div>
-  <div class="chart-wrapper">
-    <canvas baseChart
-            [data]="chartData()"
-            [options]="chartOptions"
-            [type]="chartType">
-    </canvas>
-  </div>
-  @if (personalityInsights().length > 0) {
-    <div class="personality-insights">
-      <h4>{{ t('personalityTraits') }}</h4>
-      <div class="insights-grid">
-        @for (insight of personalityInsights(); track insight.trait) {
-          <div class="insight-card">
-            <div class="insight-header">
-              <span class="insight-trait">{{ insight.trait }}</span>
-              <span class="insight-score" [style.color]="insight.color">{{ insight.score.toFixed(0) }}%</span>
-            </div>
-            <div class="insight-progress">
-              <div class="progress-bar" [style.width.%]="insight.score" [style.background-color]="insight.color"></div>
-            </div>
-            <p class="insight-description">{{ insight.description }}</p>
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions()"
+          [type]="chartType"></canvas>
+      </div>
+    }
+
+    @if (state() === 'ready' && !loading()) {
+      <dl
+        statsChartSummary
+        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
+        @for (trait of traits(); track trait.id) {
+          <div class="min-w-0">
+            <dt class="text-xs font-medium text-text-secondary">{{ trait.label }}</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+              {{ formatScore(trait.score) }}
+            </dd>
+            <dd class="min-h-16 line-clamp-4 text-xs tabular-nums text-text-muted">
+              {{ trait.description }}
+            </dd>
           </div>
         }
-      </div>
-    </div>
-  }
-</div>
+      </dl>
+    }
+  </app-stats-chart-card>
 </ng-container>
