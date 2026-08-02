@@ -1,177 +1,165 @@
-import {Component, DestroyRef, inject, OnInit} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, EMPTY, Observable} from 'rxjs';
-import {catchError} from 'rxjs/operators';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {PageTurnerScoreResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe, SlicePipe} from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartData, type ChartOptions } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { type PageTurnerStats } from '../../../../data/user/page-turner-stats';
 
 type PageTurnerChartData = ChartData<'bar', number[], string>;
+
+const LABEL_LIMIT = 25;
+const CHART_LIMIT = 15;
+const HIGHLIGHT_LIMIT = 3;
 
 @Component({
   selector: 'app-page-turner-chart',
   standalone: true,
-  imports: [
-    SlicePipe,
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './page-turner-chart.component.html',
-  styleUrls: ['./page-turner-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
-export class PageTurnerChartComponent implements OnInit {
-  public readonly chartType = 'bar' as const;
-  public readonly chartData$: Observable<PageTurnerChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+export class PageTurnerChartComponent {
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
-  public stats = {mostGripping: '', avgGripScore: 0, guiltyPleasure: ''};
-  public topBooks: PageTurnerScoreResponse[] = [];
+  readonly stats = input.required<PageTurnerStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly chartDataSubject: BehaviorSubject<PageTurnerChartData>;
+  readonly chartType = 'bar' as const;
+  readonly chartRanking = computed(() => this.stats().ranking.slice(0, CHART_LIMIT));
+  readonly highlights = computed(() => this.stats().ranking.slice(0, HIGHLIGHT_LIMIT));
+  readonly mostGripping = computed(() => this.stats().ranking[0] ?? null);
+  readonly guiltyPleasure = computed(
+    () =>
+      this.stats().ranking.find(
+        (book) =>
+          book.gripScore >= 60
+          && book.personalRating !== null
+          && book.personalRating <= 3,
+      ) ?? null,
+  );
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().ranking.length > 0 ? 'ready' : 'empty';
+  });
 
-  constructor() {
-    this.chartDataSubject = new BehaviorSubject<PageTurnerChartData>({labels: [], datasets: []});
-    this.chartData$ = this.chartDataSubject.asObservable();
+  readonly chartData = computed<PageTurnerChartData>(() => {
+    this.activeLanguage();
+    const ranking = this.chartRanking();
+    const colors = ranking.map((book) => gripColor(book.gripScore));
 
-    this.chartOptions = {
+    return {
+      labels: ranking.map((book) => truncate(book.bookTitle, LABEL_LIMIT)),
+      datasets: [
+        {
+          label: this.transloco.translate('statsUser.pageTurner.gripScore'),
+          data: ranking.map((book) => book.gripScore),
+          backgroundColor: colors,
+          borderColor: colors.map((color) => color.replace('0.85', '1')),
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.8,
+          categoryPercentage: 0.7,
+        },
+      ],
+    };
+  });
+
+  readonly chartOptions = computed<ChartOptions<'bar'>>(() => {
+    this.activeLanguage();
+    const ranking = this.chartRanking();
+
+    return {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      layout: {padding: {top: 10, bottom: 10, left: 10, right: 10}},
+      layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
       plugins: {
-        legend: {display: false},
+        legend: { display: false },
         tooltip: {
-          enabled: true,
           borderColor: 'rgba(251, 146, 60, 0.8)',
           borderWidth: 2,
           cornerRadius: 8,
           displayColors: false,
           padding: 16,
-          titleFont: {size: 14, weight: 'bold'},
-          bodyFont: {size: 13},
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
           callbacks: {
-            label: () => ''
-          }
-        }
+            label: (context) => {
+              const book = ranking.at(context.dataIndex);
+              if (!book) return '';
+
+              const lines = [
+                this.transloco.translate('statsUser.pageTurner.tooltipGripScore', {
+                  score: book.gripScore,
+                }),
+                this.transloco.translate('statsUser.pageTurner.tooltipSessions', {
+                  count: book.totalSessions,
+                }),
+                this.transloco.translate('statsUser.pageTurner.tooltipAvgSession', {
+                  minutes: Math.round(book.avgSessionDurationSeconds / 60),
+                }),
+              ];
+
+              if (book.personalRating !== null) {
+                lines.push(
+                  this.transloco.translate('statsUser.pageTurner.tooltipRating', {
+                    rating: book.personalRating,
+                  }),
+                );
+              }
+
+              return lines;
+            },
+          },
+        },
       },
       scales: {
         x: {
           title: {
             display: true,
-            text: this.t.translate('statsUser.pageTurner.axisGripScore'),
-            font: {family: "'Inter', sans-serif", size: 13, weight: 'bold'}
+            text: this.transloco.translate('statsUser.pageTurner.axisGripScore'),
+            font: { size: 13, weight: 'bold' },
           },
           min: 0,
           max: 100,
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11}
-          },
-          border: {display: false}
+          ticks: { font: { size: 11 } },
+          border: { display: false },
         },
         y: {
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11}
-          },
-          grid: {display: false},
-          border: {display: false}
-        }
-      }
+          ticks: { font: { size: 11 } },
+          grid: { display: false },
+          border: { display: false },
+        },
+      },
     };
-  }
+  });
+}
 
-  ngOnInit(): void {
-    this.loadData();
-  }
+function gripColor(gripScore: number): string {
+  const ratio = gripScore / 100;
+  const red = Math.round(59 + ratio * (239 - 59));
+  const green = Math.round(130 + ratio * (68 - 130));
+  const blue = Math.round(246 + ratio * (68 - 246));
+  return `rgba(${red}, ${green}, ${blue}, 0.85)`;
+}
 
-  private loadData(): void {
-    this.userStatsService.getPageTurnerScores()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError((error) => {
-          console.error('Error loading page turner scores:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => {
-        this.updateStats(data);
-        this.updateChartData(data);
-      });
-  }
-
-  private updateStats(data: PageTurnerScoreResponse[]): void {
-    if (data.length === 0) {
-      this.stats = {mostGripping: '-', avgGripScore: 0, guiltyPleasure: '-'};
-      this.topBooks = [];
-      return;
-    }
-
-    this.stats.mostGripping = data[0].bookTitle;
-    this.stats.avgGripScore = Math.round(data.reduce((sum, d) => sum + d.gripScore, 0) / data.length);
-
-    const guiltyPleasure = data.find(d => d.gripScore >= 60 && d.personalRating != null && d.personalRating <= 3);
-    this.stats.guiltyPleasure = guiltyPleasure?.bookTitle || '-';
-
-    this.topBooks = data.slice(0, 3);
-  }
-
-  private updateChartData(data: PageTurnerScoreResponse[]): void {
-    const top15 = data.slice(0, 15);
-
-    const labels = top15.map(d => d.bookTitle.length > 25 ? d.bookTitle.substring(0, 25) + '...' : d.bookTitle);
-    const values = top15.map(d => d.gripScore);
-    const bgColors = top15.map(d => {
-      const t = d.gripScore / 100;
-      const r = Math.round(59 + t * (239 - 59));
-      const g = Math.round(130 + t * (68 - 130));
-      const b = Math.round(246 + t * (68 - 246));
-      return `rgba(${r}, ${g}, ${b}, 0.85)`;
-    });
-
-    if (this.chartOptions?.plugins?.tooltip?.callbacks) {
-      this.chartOptions.plugins.tooltip.callbacks.label = (context) => {
-        const idx = context.dataIndex;
-        const item = top15[idx];
-        if (!item) return '';
-        const lines = [
-          this.t.translate('statsUser.pageTurner.tooltipGripScore', {score: item.gripScore}),
-          this.t.translate('statsUser.pageTurner.tooltipSessions', {count: item.totalSessions}),
-          this.t.translate('statsUser.pageTurner.tooltipAvgSession', {minutes: Math.round(item.avgSessionDurationSeconds / 60)}),
-        ];
-        if (item.personalRating) {
-          lines.push(this.t.translate('statsUser.pageTurner.tooltipRating', {rating: item.personalRating}));
-        }
-        return lines;
-      };
-    }
-
-    this.chartDataSubject.next({
-      labels,
-      datasets: [{
-        label: this.t.translate('statsUser.pageTurner.gripScore'),
-        data: values,
-        backgroundColor: bgColors,
-        borderColor: bgColors.map(c => c.replace('0.85', '1')),
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.8,
-        categoryPercentage: 0.7
-      }]
-    });
-  }
-
-  getAccelerationLabel(value: number): string {
-    if (value > 5) return this.t.translate('statsUser.pageTurner.increasing');
-    if (value < -5) return this.t.translate('statsUser.pageTurner.decreasing');
-    return this.t.translate('statsUser.pageTurner.steady');
-  }
-
-  getGapLabel(value: number): string {
-    if (value < -2) return this.t.translate('statsUser.pageTurner.shrinking');
-    if (value > 2) return this.t.translate('statsUser.pageTurner.growing');
-    return this.t.translate('statsUser.pageTurner.steady');
-  }
+function truncate(value: string, maximumLength: number): string {
+  return value.length > maximumLength ? `${value.slice(0, maximumLength)}…` : value;
 }
