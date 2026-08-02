@@ -1,216 +1,133 @@
 <ng-container *transloco="let t; prefix: 'statsLibrary'">
-<div class="library-stats-container">
-  <div class="header-card">
-    <div class="filter-section">
-      <div class="library-filter">
-        <div class="select-row">
-          <label for="library-dropdown">{{ t('main.title') }}</label>
-          <div class="dropdown-row">
-            <p-select
-              fluid
-              id="library-dropdown"
-              [options]="libraryOptions()"
-              [ngModel]="selectedLibrary()"
-              optionLabel="name"
-              size="small"
-              [placeholder]="t('main.selectLibrary')"
-              (ngModelChange)="onLibraryChange($event)"
-              appendTo="body"
-              [style]="{'min-width': '200px'}"
-              class="library-dropdown">
-            </p-select>
+  <app-stats-page-shell
+    [pageHeader]="pageHeader()"
+    [controller]="chartGrid"
+    [labels]="shellLabels()"
+    [dropListDisabled]="isLoading()"
+    [noticeVisible]="isLoading() || statsError() || !hasData()"
+    [emptyNotice]="isLoading() || statsError() || !hasData()"
+    [(showDescriptions)]="showChartDescriptions">
+    @if (!chartGrid.isEditing()) {
+      <ng-container statsPageFilters>
+        <label for="library-stats-library" class="sr-only">{{ t('main.selectLibrary') }}</label>
+        <app-select
+          inputId="library-stats-library"
+          size="md"
+          styleClass="min-w-52"
+          [options]="librarySelectOptions()"
+          [value]="selectedLibrary()"
+          [placeholder]="t('main.selectLibrary')"
+          [ariaLabel]="t('main.selectLibrary')"
+          [disabled]="isLoading()"
+          (valueChange)="onLibraryChange($event)" />
+      </ng-container>
+    }
 
-            <p-button
-              outlined
-              size="small"
-              (onClick)="toggleConfigPanel()"
-              icon="pi pi-cog">
-            </p-button>
-          </div>
-        </div>
-
-        <div class="library-totals" role="status" aria-live="polite">
-          <div class="total-item total-books" [title]="t('main.totalBooks')">
-            <i class="pi pi-book"></i>
-            <span class="total-label">{{ t('main.books') }}</span>
-            <span class="total-value">{{ booksSummary().totalBooks }}</span>
-          </div>
-
-          <div class="total-item total-authors" [title]="t('main.totalAuthors')">
-            <i class="pi pi-users"></i>
-            <span class="total-label">{{ t('main.authors') }}</span>
-            <span class="total-value">{{ booksSummary().totalAuthors }}</span>
-          </div>
-
-          <div class="total-item total-series" [title]="t('main.totalSeries')">
-            <i class="pi pi-bookmark"></i>
-            <span class="total-label">{{ t('main.series') }}</span>
-            <span class="total-value">{{ booksSummary().totalSeries }}</span>
-          </div>
-
-          <div class="total-item total-publishers" [title]="t('main.totalPublishers')">
-            <i class="pi pi-building"></i>
-            <span class="total-label">{{ t('main.publishers') }}</span>
-            <span class="total-value">{{ booksSummary().totalPublishers }}</span>
-          </div>
-
-          <div class="total-item total-size" [title]="t('main.totalSize')">
-            <i class="pi pi-file"></i>
-            <span class="total-label">{{ t('main.librarySize') }}</span>
-            <span class="total-value">{{ totalSize() }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  @if (showConfigPanel) {
-    <div
-      class="config-modal-overlay"
-      role="button"
-      tabindex="0"
-      (click)="closeConfigPanel()"
-      (keydown.enter)="closeConfigPanel()">
-      <div
-        class="config-modal"
-        tabindex="0"
-        (click)="$event.stopPropagation()"
-        (keydown.enter)="$event.stopPropagation()">
-        <div class="config-modal-header">
-          <h3><i class="pi pi-cog"></i> {{ t('config.title') }}</h3>
-          <button type="button" class="close-btn" (click)="closeConfigPanel()" [title]="t('config.close')">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-
-        <div class="config-modal-actions">
-          <button type="button" class="config-action-btn enable-all" (click)="enableAllCharts()">
-            <i class="pi pi-check"></i> {{ t('config.enableAll') }}
-          </button>
-          <button type="button" class="config-action-btn disable-all" (click)="disableAllCharts()">
-            <i class="pi pi-times"></i> {{ t('config.disableAll') }}
-          </button>
-          <button type="button" class="config-action-btn reset-order" (click)="resetChartOrder()">
-            <i class="pi pi-refresh"></i> {{ t('config.resetOrder') }}
-          </button>
-        </div>
-
-        <div class="config-modal-content">
-          <div class="config-categories">
-            <div class="config-category">
-              <h4>{{ t('config.smallCharts') }}</h4>
-              <div class="chart-toggles">
-                @for (chart of getChartsByCategory('small'); track chart.id) {
-                  <div class="chart-toggle">
-                    <input
-                      type="checkbox"
-                      [id]="'chart-' + chart.id"
-                      [checked]="chart.enabled"
-                      (change)="toggleChart(chart.id)">
-                    <label [for]="'chart-' + chart.id">{{ chart.name }}</label>
-                  </div>
-                }
-              </div>
-            </div>
-
-            <div class="config-category">
-              <h4>{{ t('config.largeCharts') }}</h4>
-              <div class="chart-toggles">
-                @for (chart of getChartsByCategory('large'); track chart.id) {
-                  <div class="chart-toggle">
-                    <input
-                      type="checkbox"
-                      [id]="'chart-' + chart.id"
-                      [checked]="chart.enabled"
-                      (change)="toggleChart(chart.id)">
-                    <label [for]="'chart-' + chart.id">{{ chart.name }}</label>
-                  </div>
-                }
-              </div>
-            </div>
-
-            <div class="config-category">
-              <h4>{{ t('config.xlargeCharts') }}</h4>
-              <div class="chart-toggles">
-                @for (chart of getChartsByCategory('xlarge'); track chart.id) {
-                  <div class="chart-toggle">
-                    <input
-                      type="checkbox"
-                      [id]="'chart-' + chart.id"
-                      [checked]="chart.enabled"
-                      (change)="toggleChart(chart.id)">
-                    <label [for]="'chart-' + chart.id">{{ chart.name }}</label>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
-
-  @if (!isLoading() && hasData()) {
-    <div class="charts-grid"
-         cdkDropList
-         (cdkDropListDropped)="onChartReorder($event)"
-         [cdkDropListData]="getEnabledChartsSorted()">
-
-      @for (chartConfig of getEnabledChartsSorted(); track chartConfig.id) {
-        <div class="chart-container"
-             cdkDrag
-             [cdkDragData]="chartConfig"
-             [class]="'chart-section ' + chartConfig.category">
-
-          <div class="drag-handle" cdkDragHandle [title]="t('main.dragToReorder')">
-            <i class="pi pi-bars"></i>
-          </div>
-
-          @switch (chartConfig.id) {
-            @case ('bookFormats') {
-              <app-book-formats-chart></app-book-formats-chart>
-            }
-            @case ('languageDistribution') {
-              <app-language-chart></app-language-chart>
-            }
-            @case ('metadataScore') {
-              <app-metadata-score-chart></app-metadata-score-chart>
-            }
-            @case ('pageCountDistribution') {
-              <app-page-count-chart></app-page-count-chart>
-            }
-            @case ('publicationTimeline') {
-              <app-publication-timeline-chart></app-publication-timeline-chart>
-            }
-            @case ('publicationTrend') {
-              <app-publication-trend-chart></app-publication-trend-chart>
-            }
-            @case ('readingJourney') {
-              <app-reading-journey-chart></app-reading-journey-chart>
-            }
-            @case ('topItems') {
-              <app-top-items-chart></app-top-items-chart>
-            }
-            @case ('authorUniverse') {
-              <app-author-universe-chart></app-author-universe-chart>
-            }
-          }
-        </div>
+    <app-message
+      statsPageNotice
+      [color]="statsError() ? 'red' : 'neutral'"
+      styleClass="w-full">
+      @if (isLoading()) {
+        <span class="font-medium">{{ t('main.loading') }}</span>
+      } @else if (statsError()) {
+        <span class="font-medium">{{ 'dashboard.loadError' | transloco }}</span>
+      } @else {
+        <span class="font-medium">{{ t('main.noData') }}</span>
+        <span class="ml-1">{{ t('main.noDataHint') }}</span>
       }
-    </div>
-  }
+    </app-message>
 
-  @if (isLoading()) {
-    <div class="loading-message">
-      {{ t('main.loading') }}
-    </div>
-  }
+    @if (!isLoading() && hasData()) {
+      <dl
+        statsPageSummary
+        class="grid grid-cols-2 gap-3 rounded-xl bg-page p-4 ring-1 ring-inset ring-border sm:grid-cols-3 lg:grid-cols-5">
+        <div>
+          <dt class="text-xs font-medium text-text-secondary">{{ t('main.books') }}</dt>
+          <dd class="mt-1 text-lg font-semibold text-text-strong">
+            {{ statsData.summaryStats().totalBooks }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-text-secondary">{{ t('main.authors') }}</dt>
+          <dd class="mt-1 text-lg font-semibold text-text-strong">
+            {{ statsData.summaryStats().totalAuthors }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-text-secondary">{{ t('main.series') }}</dt>
+          <dd class="mt-1 text-lg font-semibold text-text-strong">
+            {{ statsData.summaryStats().totalSeries }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-text-secondary">{{ t('main.publishers') }}</dt>
+          <dd class="mt-1 text-lg font-semibold text-text-strong">
+            {{ statsData.summaryStats().totalPublishers }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-text-secondary">{{ t('main.librarySize') }}</dt>
+          <dd class="mt-1 text-lg font-semibold text-text-strong">
+            {{ formatSizeKb(statsData.summaryStats().totalSizeKb) }}
+          </dd>
+        </div>
+      </dl>
+    }
 
-  @if (!isLoading() && !hasData()) {
-    <div class="no-data-message">
-      {{ t('main.noData') }}
-      <small>{{ t('main.noDataHint') }}</small>
-    </div>
-  }
-</div>
+    <ng-template #chartTemplate let-chartConfig>
+      <div
+        [class]="
+          'relative h-full rounded-xl bg-page p-4 text-text tabular-nums ring-1 ring-inset ring-border md:p-5 ' +
+          (showChartDescriptions() ? '' : '[&_.chart-description]:hidden')
+        ">
+        @switch (chartConfig.id) {
+          @case ('bookFormats') {
+            <app-book-formats-chart
+              [stats]="statsData.bookFormatStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('languageDistribution') {
+            <app-language-chart
+              [stats]="statsData.languageStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('metadataScore') {
+            <app-metadata-score-chart
+              [stats]="statsData.metadataScoreStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('pageCountDistribution') {
+            <app-page-count-chart
+              [stats]="statsData.pageCountStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('publicationTimeline') {
+            <app-publication-timeline-chart
+              [stats]="statsData.publicationTimelineStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('readingJourney') {
+            <app-reading-journey-chart
+              [stats]="statsData.readingJourneyStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('topItems') {
+            <app-top-items-chart
+              [stats]="statsData.topItemsStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('authorUniverse') {
+            <app-author-universe-chart
+              [stats]="statsData.authorUniverseStats()"
+              [loading]="isLoading()" />
+          }
+          @case ('publicationTrend') {
+            <app-publication-trend-chart
+              [stats]="statsData.publicationTrendStats()"
+              [loading]="isLoading()" />
+          }
+        }
+      </div>
+    </ng-template>
+  </app-stats-page-shell>
 </ng-container>

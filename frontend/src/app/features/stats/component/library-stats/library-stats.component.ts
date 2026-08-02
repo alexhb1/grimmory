@@ -1,158 +1,144 @@
-import {Component, computed, inject, OnInit} from '@angular/core';
-import {FormsModule} from '@angular/forms';
-import {CdkDragDrop, DragDropModule, moveItemInArray} from '@angular/cdk/drag-drop';
-import {Select} from '@openng/optimus-ui/select';
-import {Button} from '@openng/optimus-ui/button';
-import {LanguageChartComponent} from './charts/language-chart/language-chart.component';
-import {BookFormatsChartComponent} from './charts/book-formats-chart/book-formats-chart.component';
-import {MetadataScoreChartComponent} from './charts/metadata-score-chart/metadata-score-chart.component';
-import {PageCountChartComponent} from './charts/page-count-chart/page-count-chart.component';
-import {TopItemsChartComponent} from './charts/top-items-chart/top-items-chart.component';
-import {AuthorUniverseChartComponent} from './charts/author-universe-chart/author-universe-chart.component';
-import {PublicationTimelineChartComponent} from './charts/publication-timeline-chart/publication-timeline-chart.component';
-import {PublicationTrendChartComponent} from './charts/publication-trend-chart/publication-trend-chart.component';
-import {ReadingJourneyChartComponent} from './charts/reading-journey-chart/reading-journey-chart.component';
-import {LibrariesSummaryService} from './service/libraries-summary.service';
-import {LibraryFilterService, LibraryOption} from './service/library-filter.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {BookService} from '../../../book/service/book.service';
-import {LibraryService} from '../../../book/service/library.service';
-import {StatsChartThemeService} from '../shared/stats-chart-theme.service';
-import {PageTitleService} from '../../../../shared/service/page-title.service';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { type PageHeader } from '../../../../shared/layout/page-header/page-header.service';
+import { PageTitleService } from '../../../../shared/service/page-title.service';
+import { AppMessageComponent } from '../../../../shared/ui/message/app-message.component';
+import { AppSelectComponent } from '../../../../shared/ui/select/app-select.component';
+import { type SelectOption } from '../../../../shared/ui/select/app-select.options';
+import {
+  StatsChartGridController,
+  type StatsPageChartConfig,
+} from '../shared/stats-chart-grid.controller';
+import {
+  StatsPageShellComponent,
+  type StatsPageShellLabels,
+} from '../shared/stats-page-shell.component';
+import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+import { AuthorUniverseChartComponent } from './charts/author-universe-chart/author-universe-chart.component';
+import { BookFormatsChartComponent } from './charts/book-formats-chart/book-formats-chart.component';
+import { LanguageChartComponent } from './charts/language-chart/language-chart.component';
+import { MetadataScoreChartComponent } from './charts/metadata-score-chart/metadata-score-chart.component';
+import { PageCountChartComponent } from './charts/page-count-chart/page-count-chart.component';
+import { PublicationTimelineChartComponent } from './charts/publication-timeline-chart/publication-timeline-chart.component';
+import { PublicationTrendChartComponent } from './charts/publication-trend-chart/publication-trend-chart.component';
+import { ReadingJourneyChartComponent } from './charts/reading-journey-chart/reading-journey-chart.component';
+import { TopItemsChartComponent } from './charts/top-items-chart/top-items-chart.component';
+import {
+  type LibraryOption,
+  LibraryStatsDataService,
+} from './library-stats-data.service';
 
-interface ChartConfig {
-  id: string;
-  name: string;
-  enabled: boolean;
-  category: string;
-}
-
-import {provideCharts, withDefaultRegisterables} from 'ng2-charts';
+const DEFAULT_CHARTS: readonly StatsPageChartConfig[] = [
+  { id: 'bookFormats', nameKey: 'chartNames.bookFormats', size: 'small' },
+  { id: 'languageDistribution', nameKey: 'chartNames.languages', size: 'small' },
+  { id: 'metadataScore', nameKey: 'chartNames.metadataScore', size: 'small' },
+  { id: 'pageCountDistribution', nameKey: 'chartNames.pageCount', size: 'medium' },
+  { id: 'publicationTimeline', nameKey: 'chartNames.publicationTimeline', size: 'medium' },
+  { id: 'readingJourney', nameKey: 'chartNames.readingJourney', size: 'wide' },
+  { id: 'authorUniverse', nameKey: 'chartNames.authorUniverse', size: 'wide' },
+  { id: 'topItems', nameKey: 'chartNames.topItems', size: 'full' },
+  { id: 'publicationTrend', nameKey: 'chartNames.publicationTrend', size: 'full' },
+];
 
 @Component({
   selector: 'app-library-stats',
   standalone: true,
   imports: [
-    FormsModule,
-    Select,
-    DragDropModule,
-    Button,
+    AppMessageComponent,
+    AppSelectComponent,
+    AuthorUniverseChartComponent,
     BookFormatsChartComponent,
     LanguageChartComponent,
     MetadataScoreChartComponent,
     PageCountChartComponent,
-    TopItemsChartComponent,
-    AuthorUniverseChartComponent,
     PublicationTimelineChartComponent,
     PublicationTrendChartComponent,
     ReadingJourneyChartComponent,
-    TranslocoDirective
+    StatsPageShellComponent,
+    TopItemsChartComponent,
+    TranslocoDirective,
+    TranslocoPipe,
   ],
-  providers: [provideCharts(withDefaultRegisterables())],
+  providers: [
+    AllBooksStatsSourceService,
+    LibraryStatsDataService,
+  ],
   templateUrl: './library-stats.component.html',
-  styleUrls: ['./library-stats.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'contents' },
 })
 export class LibraryStatsComponent implements OnInit {
-  private readonly libraryFilterService = inject(LibraryFilterService);
-  private readonly librariesSummaryService = inject(LibrariesSummaryService);
-  private readonly bookService = inject(BookService);
-  private readonly libraryService = inject(LibraryService);
-  private readonly t = inject(TranslocoService);
-  private readonly chartTheme = inject(StatsChartThemeService);
+  private readonly transloco = inject(TranslocoService);
   private readonly pageTitle = inject(PageTitleService);
-
-  public readonly isLoading = computed(() =>
-    this.bookService.isBooksLoading() || this.libraryService.isLibrariesLoading()
-  );
-  public readonly hasData = computed(() => this.booksSummary().totalBooks > 0);
-  public readonly libraryOptions = this.libraryFilterService.libraryOptions;
-  public readonly booksSummary = this.librariesSummaryService.booksSummary;
-  public readonly totalSize = this.librariesSummaryService.formattedSize;
-  public readonly selectedLibrary = computed<LibraryOption | null>(() => {
-    const options = this.libraryOptions();
-
-    if (options.length === 0) {
-      return null;
-    }
-
-    return options.find(option => option.id === this.libraryFilterService.selectedLibrary()) ?? options[0];
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
   });
-  public showConfigPanel = false;
 
-  public chartsConfig: ChartConfig[] = this.buildChartsConfig();
+  readonly statsData = inject(LibraryStatsDataService);
+  readonly isLoading = this.statsData.statsLoading;
+  readonly statsError = this.statsData.statsError;
+  readonly hasData = computed(() => this.statsData.summaryStats().totalBooks > 0);
+  readonly libraryOptions = this.statsData.libraryOptions;
+  readonly librarySelectOptions = computed<readonly SelectOption<LibraryOption>[]>(() =>
+    this.libraryOptions().map((option) => ({ label: option.name, value: option })),
+  );
+  readonly selectedLibrary = computed<LibraryOption | null>(() => {
+    const options = this.libraryOptions();
+    if (options.length === 0) return null;
 
-  constructor() {
-    this.chartTheme.activate();
-  }
+    const selectedId = this.statsData.selectedLibrary();
+    return options.find((option) => option.id === selectedId) ?? options[0];
+  });
+  readonly pageHeader = computed<PageHeader>(() => {
+    this.activeLanguage();
+    return { title: this.transloco.translate('statsLibrary.main.title') };
+  });
+
+  readonly chartGrid = new StatsChartGridController({
+    storageKey: 'libraryStatsChartConfigV3',
+    defaults: DEFAULT_CHARTS,
+    label: (chart) => this.transloco.translate(`statsLibrary.${chart.nameKey}`),
+  });
+  readonly showChartDescriptions = signal(true);
+  readonly shellLabels = computed<StatsPageShellLabels>(() => {
+    this.activeLanguage();
+    const chartName = (chart: StatsPageChartConfig) =>
+      this.transloco.translate(`statsLibrary.${chart.nameKey}`);
+    return {
+      menu: this.transloco.translate('statsLibrary.config.title'),
+      showDescriptions: this.transloco.translate('statsLibrary.config.showDescriptions'),
+      edit: this.transloco.translate('statsLibrary.config.edit'),
+      resetOrder: this.transloco.translate('statsLibrary.config.resetOrder'),
+      addChart: this.transloco.translate('statsLibrary.config.addChart'),
+      done: this.transloco.translate('statsLibrary.config.done'),
+      chartName,
+      reorderChart: (chart) =>
+        `${chartName(chart)}: ${this.transloco.translate('statsLibrary.main.dragToReorder')}`,
+      removeChart: (chart) =>
+        `${this.transloco.translate('statsLibrary.config.removeChart')}: ${chartName(chart)}`,
+      moveChartEarlier: (chart) => this.transloco.translate(
+        'statsLibrary.config.moveChartEarlier',
+        { name: chartName(chart) },
+      ),
+      moveChartLater: (chart) => this.transloco.translate(
+        'statsLibrary.config.moveChartLater',
+        { name: chartName(chart) },
+      ),
+    };
+  });
 
   ngOnInit(): void {
-    this.pageTitle.setPageTitle(this.t.translate('statsLibrary.main.title'));
+    this.pageTitle.setPageTitle(this.transloco.translate('statsLibrary.main.title'));
   }
 
   onLibraryChange(selectedLibrary: LibraryOption | null): void {
-    if (!selectedLibrary) {
-      return;
-    }
-
-    this.libraryFilterService.setSelectedLibrary(selectedLibrary.id);
+    if (selectedLibrary) this.statsData.setSelectedLibrary(selectedLibrary.id);
   }
 
-  public toggleConfigPanel(): void {
-    this.showConfigPanel = !this.showConfigPanel;
-  }
-
-  public closeConfigPanel(): void {
-    this.showConfigPanel = false;
-  }
-
-  public toggleChart(chartId: string): void {
-    const chart = this.chartsConfig.find(c => c.id === chartId);
-    if (chart) {
-      chart.enabled = !chart.enabled;
-    }
-  }
-
-  public isChartEnabled(chartId: string): boolean {
-    return this.chartsConfig.find(c => c.id === chartId)?.enabled ?? false;
-  }
-
-  public enableAllCharts(): void {
-    this.chartsConfig.forEach(chart => chart.enabled = true);
-  }
-
-  public disableAllCharts(): void {
-    this.chartsConfig.forEach(chart => chart.enabled = false);
-  }
-
-  public getChartsByCategory(category: string): ChartConfig[] {
-    return this.chartsConfig.filter(chart => chart.category === category);
-  }
-
-  public getEnabledChartsSorted(): ChartConfig[] {
-    return this.chartsConfig.filter(chart => chart.enabled);
-  }
-
-  public onChartReorder(event: CdkDragDrop<ChartConfig[]>): void {
-    if (event.previousIndex !== event.currentIndex) {
-      moveItemInArray(this.chartsConfig, event.previousIndex, event.currentIndex);
-    }
-  }
-
-  public resetChartOrder(): void {
-    this.chartsConfig = this.buildChartsConfig();
-  }
-
-  private buildChartsConfig(): ChartConfig[] {
-    return [
-      {id: 'bookFormats', name: this.t.translate('statsLibrary.chartNames.bookFormats'), enabled: true, category: 'small'},
-      {id: 'languageDistribution', name: this.t.translate('statsLibrary.chartNames.languages'), enabled: true, category: 'small'},
-      {id: 'metadataScore', name: this.t.translate('statsLibrary.chartNames.metadataScore'), enabled: true, category: 'small'},
-      {id: 'pageCountDistribution', name: this.t.translate('statsLibrary.chartNames.pageCount'), enabled: true, category: 'small'},
-      {id: 'publicationTimeline', name: this.t.translate('statsLibrary.chartNames.publicationTimeline'), enabled: true, category: 'large'},
-      {id: 'readingJourney', name: this.t.translate('statsLibrary.chartNames.readingJourney'), enabled: true, category: 'large'},
-      {id: 'topItems', name: this.t.translate('statsLibrary.chartNames.topItems'), enabled: true, category: 'large'},
-      {id: 'authorUniverse', name: this.t.translate('statsLibrary.chartNames.authorUniverse'), enabled: true, category: 'large'},
-      {id: 'publicationTrend', name: this.t.translate('statsLibrary.chartNames.publicationTrend'), enabled: true, category: 'xlarge'}
-    ];
+  protected formatSizeKb(sizeKb: number): string {
+    if (sizeKb >= 1024 * 1024) return `${(sizeKb / (1024 * 1024)).toFixed(2)} GB`;
+    if (sizeKb >= 1024) return `${(sizeKb / 1024).toFixed(2)} MB`;
+    return `${sizeKb} KB`;
   }
 }
