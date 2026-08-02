@@ -156,7 +156,7 @@ const RESPONSIVE_COLUMN_CLASSES: Readonly<Record<StatsChartColumnSpan, string>> 
         </app-menu>
       </app-page-header>
 
-      @if (emptyNotice()) {
+      @if (noticeVisible()) {
         <ng-content select="[statsPageNotice]" />
       }
 
@@ -263,6 +263,7 @@ export class StatsPageShellComponent {
   readonly controller = input.required<StatsChartGridController>();
   readonly labels = input.required<StatsPageShellLabels>();
   readonly dropListDisabled = input(false);
+  readonly noticeVisible = input(false);
   readonly emptyNotice = input(false);
   readonly showDescriptions = model(true);
 
