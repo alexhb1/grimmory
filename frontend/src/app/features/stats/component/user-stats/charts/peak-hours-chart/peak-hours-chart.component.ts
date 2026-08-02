@@ -1,259 +1,233 @@
-import {Component, DestroyRef, inject, OnInit} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BehaviorSubject, EMPTY, Observable} from 'rxjs';
-import {catchError} from 'rxjs/operators';
-import {Select} from '@openng/optimus-ui/select';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {FormsModule} from '@angular/forms';
-import {PeakHoursResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-type PeakHoursChartData = ChartData<'line', number[], string>;
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
+import { type SelectOption } from '../../../../../../shared/ui/select/app-select.options';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { type PeakHoursStats } from '../../../../data/user/peak-hours-stats';
+
+interface PeakHoursLegendEntry {
+  readonly id: 'sessions' | 'duration';
+  readonly label: string;
+  readonly color: string;
+}
+
+const SESSIONS_COLOR = 'rgba(34, 197, 94, 0.9)';
+const SESSIONS_FILL = 'rgba(34, 197, 94, 0.1)';
+const DURATION_COLOR = 'rgba(251, 191, 36, 0.9)';
+const DURATION_FILL = 'rgba(251, 191, 36, 0.1)';
+
+const MONTH_KEYS = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
 
 @Component({
   selector: 'app-peak-hours-chart',
   standalone: true,
-  imports: [
-    AsyncPipe, BaseChartDirective, Select, FormsModule, Tooltip, TranslocoDirective],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './peak-hours-chart.component.html',
-  styleUrls: ['./peak-hours-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
-export class PeakHoursChartComponent implements OnInit {
-  public readonly chartType = 'line' as const;
-  public readonly chartData$: Observable<PeakHoursChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+export class PeakHoursChartComponent {
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
 
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly chartDataSubject: BehaviorSubject<PeakHoursChartData>;
+  readonly stats = input.required<PeakHoursStats>();
+  readonly loading = input(false);
+  readonly error = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
+  readonly year = input<number | null>(null);
+  readonly month = input<number | null>(null);
+  readonly yearOptions = input<readonly number[]>([]);
+  readonly paramsChange = output<{ year: number | null; month: number | null }>();
 
-  public selectedYear: number | null = null;
-  public selectedMonth: number | null = null;
-  public yearOptions: { label: string; value: number | null }[] = [];
-  public monthOptions: { label: string; value: number | null }[] = [];
+  protected readonly chartType = 'line' as const;
 
-  constructor() {
-    this.chartDataSubject = new BehaviorSubject<PeakHoursChartData>({
-      labels: [],
-      datasets: []
-    });
-    this.chartData$ = this.chartDataSubject.asObservable();
+  protected readonly yearSelectOptions = computed<readonly SelectOption<number>[]>(() =>
+    this.yearOptions().map((year) => ({ value: year, label: year.toString() })),
+  );
+  protected readonly monthSelectOptions = computed<readonly SelectOption<number>[]>(() => {
+    this.activeLanguage();
+    return MONTH_KEYS.map((key, index) => ({
+      value: index + 1,
+      label: this.transloco.translate(`statsUser.peakHours.${key}`),
+    }));
+  });
+  protected readonly legend = computed<readonly PeakHoursLegendEntry[]>(() => {
+    this.activeLanguage();
+    return [
+      {
+        id: 'sessions',
+        label: this.transloco.translate('statsUser.peakHours.sessions'),
+        color: SESSIONS_COLOR,
+      },
+      {
+        id: 'duration',
+        label: this.transloco.translate('statsUser.peakHours.avgDurationMin'),
+        color: DURATION_COLOR,
+      },
+    ];
+  });
+  readonly state = computed<StatsChartState>(() => {
+    if (this.error()) return 'error';
+    if (this.loading()) return 'ready';
+    return this.stats().totalSessions > 0 ? 'ready' : 'empty';
+  });
 
-    this.chartOptions = {
+  protected readonly chartData = computed<ChartData<'line', number[], string>>(() => {
+    this.activeLanguage();
+    const hours = this.stats().hours;
+
+    return {
+      labels: hours.map((entry) => this.hourLabel(entry.hour)),
+      datasets: [
+        {
+          label: this.transloco.translate('statsUser.peakHours.sessions'),
+          data: hours.map((entry) => entry.sessionCount),
+          borderColor: SESSIONS_COLOR,
+          backgroundColor: SESSIONS_FILL,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: SESSIONS_COLOR,
+          pointBorderWidth: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: this.transloco.translate('statsUser.peakHours.avgDurationMin'),
+          data: hours.map((entry) => entry.averageDurationMinutes),
+          borderColor: DURATION_COLOR,
+          backgroundColor: DURATION_FILL,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: DURATION_COLOR,
+          pointBorderWidth: 2,
+          yAxisID: 'y1',
+        },
+      ],
+    };
+  });
+
+  protected readonly chartOptions = computed<ChartConfiguration<'line'>['options']>(() => {
+    this.activeLanguage();
+
+    return {
       responsive: true,
       maintainAspectRatio: false,
-      layout: {
-        padding: {top: 10, bottom: 10, left: 10, right: 10}
-      },
+      layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            boxWidth: 12,
-            padding: 10
-          }
-        },
+        legend: { display: false },
         tooltip: {
           enabled: true,
           borderWidth: 1,
           cornerRadius: 6,
           displayColors: true,
           padding: 12,
-          titleFont: {size: 14, weight: 'bold'},
-          bodyFont: {size: 13},
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
           callbacks: {
             label: (context) => {
-              const label = context.dataset.label || '';
+              const label = context.dataset.label ?? '';
               const value = context.parsed.y;
-              const sessionsLabel = this.t.translate('statsUser.peakHours.sessions');
-              if (label === sessionsLabel) {
-                const key = value !== 1 ? 'statsUser.peakHours.tooltipSessionsPlural' : 'statsUser.peakHours.tooltipSessions';
-                return this.t.translate(key, {label, value});
-              } else {
-                return this.t.translate('statsUser.peakHours.tooltipMin', {label, value});
+              if (context.dataset.yAxisID === 'y1') {
+                return this.transloco.translate('statsUser.peakHours.tooltipMin', { label, value });
               }
-            }
-          }
-        }
+              return this.transloco.translate(
+                value === 1
+                  ? 'statsUser.peakHours.tooltipSessions'
+                  : 'statsUser.peakHours.tooltipSessionsPlural',
+                { label, value },
+              );
+            },
+          },
+        },
       },
       scales: {
         x: {
           title: {
             display: true,
-            text: this.t.translate('statsUser.peakHours.axisHourOfDay'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 13,
-              weight: 'bold'
-            }
+            text: this.transloco.translate('statsUser.peakHours.axisHourOfDay'),
+            font: { size: 13, weight: 'bold' },
           },
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11}
-          },
-          grid: {
-          },
-          border: {display: false}
+          ticks: { font: { size: 11 }, maxRotation: 0, autoSkipPadding: 12 },
+          border: { display: false },
         },
         y: {
           type: 'linear',
-          display: true,
           position: 'left',
+          beginAtZero: true,
           title: {
             display: true,
-            text: this.t.translate('statsUser.peakHours.axisNumberOfSessions'),
-            color: 'rgba(34, 197, 94, 0.9)',
-            font: {
-              family: "'Inter', sans-serif",
-              size: 13,
-              weight: 'bold'
-            }
+            text: this.transloco.translate('statsUser.peakHours.axisNumberOfSessions'),
+            color: SESSIONS_COLOR,
+            font: { size: 13, weight: 'bold' },
           },
-          beginAtZero: true,
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            stepSize: 1
-          },
-          grid: {
-          },
-          border: {display: false}
+          ticks: { font: { size: 11 }, stepSize: 1 },
+          border: { display: false },
         },
         y1: {
           type: 'linear',
-          display: true,
           position: 'right',
+          beginAtZero: true,
           title: {
             display: true,
-            text: this.t.translate('statsUser.peakHours.axisAvgDuration'),
-            color: 'rgba(251, 191, 36, 0.9)',
-            font: {
-              family: "'Inter', sans-serif",
-              size: 13,
-              weight: 'bold'
-            }
+            text: this.transloco.translate('statsUser.peakHours.axisAvgDuration'),
+            color: DURATION_COLOR,
+            font: { size: 13, weight: 'bold' },
           },
-          beginAtZero: true,
           ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            callback: function (value) {
-              return (typeof value === 'number' ? Math.round(value) : '0') + 'm';
-            }
+            font: { size: 11 },
+            callback: (value) => `${typeof value === 'number' ? Math.round(value) : 0}m`,
           },
-          grid: {
-            drawOnChartArea: false
-          },
-          border: {display: false}
-        }
-      }
-    };
-    this.initializeYearOptions();
-  }
-
-  ngOnInit(): void {
-    this.loadPeakHours();
-  }
-
-  private initializeYearOptions(): void {
-    const currentYear = new Date().getFullYear();
-    this.yearOptions = [{label: this.t.translate('statsUser.peakHours.allYears'), value: null}];
-    for (let year = currentYear; year >= currentYear - 10; year--) {
-      this.yearOptions.push({label: year.toString(), value: year});
-    }
-    const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-    this.monthOptions = [
-      {label: this.t.translate('statsUser.peakHours.allMonths'), value: null},
-      ...monthKeys.map((key, i) => ({label: this.t.translate(`statsUser.peakHours.${key}`), value: i + 1}))
-    ];
-  }
-
-  public onFilterChange(): void {
-    this.loadPeakHours();
-  }
-
-  private loadPeakHours(): void {
-    const year = this.selectedYear ?? undefined;
-    const month = this.selectedMonth ?? undefined;
-
-    this.userStatsService.getPeakHours(year, month)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError((error) => {
-          console.error('Error loading peak hours:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => {
-        this.updateChartData(data);
-      });
-  }
-
-  private updateChartData(peakHours: PeakHoursResponse[]): void {
-    const hourMap = new Map<number, PeakHoursResponse>();
-    peakHours.forEach(item => {
-      hourMap.set(item.hourOfDay, item);
-    });
-
-    const allHours = Array.from({length: 24}, (_, i) => i);
-    const labels = allHours.map(h => this.formatHour(h));
-
-    const sessionCounts = allHours.map(hour => {
-      const hourData = hourMap.get(hour);
-      return hourData?.sessionCount || 0;
-    });
-
-    // Calculate average duration per session (in minutes) for each hour
-    const avgDurations = allHours.map(hour => {
-      const hourData = hourMap.get(hour);
-      if (hourData && hourData.sessionCount > 0) {
-        return Math.round(hourData.totalDurationSeconds / 60 / hourData.sessionCount);
-      }
-      return 0;
-    });
-
-    this.chartDataSubject.next({
-      labels,
-      datasets: [
-        {
-          label: this.t.translate('statsUser.peakHours.sessions'),
-          data: sessionCounts,
-          borderColor: 'rgba(34, 197, 94, 0.9)',
-          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-          borderWidth: 2,
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: 'rgba(34, 197, 94, 0.9)',
-          pointBorderWidth: 2,
-          yAxisID: 'y'
+          grid: { drawOnChartArea: false },
+          border: { display: false },
         },
-        {
-          label: this.t.translate('statsUser.peakHours.avgDurationMin'),
-          data: avgDurations,
-          borderColor: 'rgba(251, 191, 36, 0.9)',
-          backgroundColor: 'rgba(251, 191, 36, 0.1)',
-          borderWidth: 2,
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: 'rgba(251, 191, 36, 0.9)',
-          pointBorderWidth: 2,
-          yAxisID: 'y1'
-        }
-      ]
-    });
+      },
+    };
+  });
+
+  protected onYearChange(year: number | null): void {
+    this.paramsChange.emit({ year, month: this.month() });
   }
 
-  private formatHour(hour: number): string {
-    if (hour === 0) return '12 AM';
-    if (hour === 12) return '12 PM';
-    if (hour < 12) return `${hour} AM`;
-    return `${hour - 12} PM`;
+  protected onMonthChange(month: number | null): void {
+    this.paramsChange.emit({ year: this.year(), month });
+  }
+
+  private hourLabel(hour: number): string {
+    return new Intl.DateTimeFormat(this.activeLanguage(), {
+      hour: 'numeric',
+      timeZone: 'UTC',
+    }).format(Date.UTC(2023, 0, 1, hour));
   }
 }
