@@ -1,4 +1,4 @@
-import {Injector, effect, signal} from '@angular/core';
+import {effect, signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 

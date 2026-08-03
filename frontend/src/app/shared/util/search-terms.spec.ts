@@ -1,8 +1,7 @@
-import {effect, signal} from '@angular/core';
-import {TestBed} from '@angular/core/testing';
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {describe, expect, it} from 'vitest';
 
-import {normalizeLocalSearchTerm, normalizeRemoteSearchTerm, SEARCH_DEBOUNCE_MS} from './search-terms';
+
+import {normalizeLocalSearchTerm, normalizeRemoteSearchTerm} from './search-terms';
 
 describe('normalizeRemoteSearchTerm', () => {
   it('strips punctuation and collapses whitespace without changing letters', () => {
