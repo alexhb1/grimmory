@@ -50,7 +50,7 @@ import {
 } from '../../data/book-read-action';
 import {ShelfDefinitionQueryService} from '../../data/shelf-definition-query.service';
 import {legacyBookCachePatches, withLegacyBookCache} from '../../service/book-command-legacy-adapter';
-import {BookDialogHelperService} from '../book-browser/book-dialog-helper.service';
+import {BookDialogHelperService} from '../../service/book-dialog-helper.service';
 import {FileDownloadService} from '../../../../shared/service/file-download.service';
 import {BookReadService} from '../../service/book-read.service';
 import {
