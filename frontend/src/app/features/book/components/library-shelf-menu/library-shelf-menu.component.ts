@@ -1,11 +1,9 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, output, viewChild} from '@angular/core';
-import {LucidePencil, LucideTrash2} from '@lucide/angular';
 import {TranslocoPipe} from '@jsverse/transloco';
 
 import {AppMenuComponent} from '../../../../shared/ui/menu/app-menu.component';
 import {AppMenuContentDirective} from '../../../../shared/ui/menu/app-menu-content.directive';
 import {AppMenuItemComponent} from '../../../../shared/ui/menu/app-menu-item.component';
-import {AppMenuSectionComponent} from '../../../../shared/ui/menu/app-menu-section.component';
 import {AppMenuSeparatorComponent} from '../../../../shared/ui/menu/app-menu-separator.component';
 import {MagicShelf} from '../../../magic-shelf/service/magic-shelf.service';
 import {UserService} from '../../../settings/user-management/user.service';
@@ -20,6 +18,39 @@ export type LibraryShelfMenuTarget =
   | {type: 'shelf'; entity: Persisted<Shelf>}
   | {type: 'magicShelf'; entity: Persisted<MagicShelf>};
 
+export interface LibraryShelfMenuUser {
+  readonly id: number;
+  readonly permissions: {
+    readonly admin: boolean;
+    readonly canManageLibrary: boolean;
+  };
+}
+
+export function canManageMagicShelfTarget(
+  target: LibraryShelfMenuTarget,
+  user: LibraryShelfMenuUser | null,
+): boolean {
+  return target.type === 'magicShelf'
+    && (!target.entity.isPublic || !!user?.permissions.admin);
+}
+
+export function libraryShelfMenuAvailable(
+  target: LibraryShelfMenuTarget,
+  user: LibraryShelfMenuUser | null,
+): boolean {
+  if (!user) {
+    return false;
+  }
+  switch (target.type) {
+    case 'library':
+      return user.permissions.admin || user.permissions.canManageLibrary;
+    case 'shelf':
+      return target.entity.userId === user.id;
+    case 'magicShelf':
+      return true;
+  }
+}
+
 @Component({
   selector: 'app-library-shelf-menu',
   standalone: true,
@@ -30,7 +61,6 @@ export type LibraryShelfMenuTarget =
     AppMenuComponent,
     AppMenuContentDirective,
     AppMenuItemComponent,
-    AppMenuSectionComponent,
     AppMenuSeparatorComponent,
   ],
   template: `
@@ -49,76 +79,69 @@ export type LibraryShelfMenuTarget =
               <app-menu-item (selected)="actions.importIsbns(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.library.bulkIsbnImport' | transloco }}
               </app-menu-item>
-              <app-menu-separator />
-              <app-menu-item
-                [icon]="pencilIcon"
-                (selected)="actions.editLibrary(currentTarget.entity.id)">
-                {{ 'book.shelfMenuService.library.editLibrary' | transloco }}
-              </app-menu-item>
               <app-menu-item (selected)="actions.rescanLibrary(currentTarget.entity)">
                 {{ 'book.shelfMenuService.library.rescanLibrary' | transloco }}
               </app-menu-item>
-              <app-menu-item (selected)="actions.customFetchLibraryMetadata(currentTarget.entity.id)">
-                {{ 'book.shelfMenuService.library.customFetchMetadata' | transloco }}
-              </app-menu-item>
-              <app-menu-item (selected)="actions.autoFetchLibraryMetadata(currentTarget.entity.id)">
-                {{ 'book.shelfMenuService.library.autoFetchMetadata' | transloco }}
-              </app-menu-item>
-              <app-menu-item (selected)="actions.findLibraryDuplicates(currentTarget.entity.id)">
-                {{ 'book.shelfMenuService.library.findDuplicates' | transloco }}
-              </app-menu-item>
               <app-menu-separator />
-              <app-menu-item
-                [icon]="trashIcon"
-                variant="destructive"
-                (selected)="actions.deleteLibrary(currentTarget.entity)">
-                {{ 'book.shelfMenuService.library.deleteLibrary' | transloco }}
+              <app-menu-item [submenu]="manageLibraryMenu">
+                {{ 'book.shelfMenuService.library.manageLibrary' | transloco }}
               </app-menu-item>
+
+              <app-menu
+                #manageLibraryMenu="ngMenu"
+                [ariaLabel]="'book.shelfMenuService.library.manageLibrary' | transloco">
+                <app-menu-item
+                  (selected)="actions.editLibrary(currentTarget.entity.id)">
+                  {{ 'book.shelfMenuService.library.editLibrary' | transloco }}
+                </app-menu-item>
+                <app-menu-item (selected)="actions.customFetchLibraryMetadata(currentTarget.entity.id)">
+                  {{ 'book.shelfMenuService.library.customFetchMetadata' | transloco }}
+                </app-menu-item>
+                <app-menu-item (selected)="actions.autoFetchLibraryMetadata(currentTarget.entity.id)">
+                  {{ 'book.shelfMenuService.library.autoFetchMetadata' | transloco }}
+                </app-menu-item>
+                <app-menu-item (selected)="actions.findLibraryDuplicates(currentTarget.entity.id)">
+                  {{ 'book.shelfMenuService.library.findDuplicates' | transloco }}
+                </app-menu-item>
+                <app-menu-separator />
+                <app-menu-item
+                  variant="destructive"
+                  (selected)="actions.deleteLibrary(currentTarget.entity)">
+                  {{ 'book.shelfMenuService.library.deleteLibrary' | transloco }}
+                </app-menu-item>
+              </app-menu>
             }
             @case ('shelf') {
-              @if (currentTarget.entity.publicShelf || !canManageShelf()) {
-                <app-menu-section>
-                  @if (currentTarget.entity.publicShelf) {
-                    {{ 'book.shelfMenuService.shelf.publicShelfPrefix' | transloco }}
-                  }
-                  {{ (canManageShelf()
-                    ? 'book.shelfMenuService.shelf.optionsLabel'
-                    : 'book.shelfMenuService.shelf.readOnly') | transloco }}
-                </app-menu-section>
-              }
               <app-menu-item
-                [icon]="pencilIcon"
-                [disabled]="!canManageShelf()"
                 (selected)="actions.editShelf(currentTarget.entity.id)">
                 {{ 'book.shelfMenuService.shelf.editShelf' | transloco }}
               </app-menu-item>
               <app-menu-separator />
               <app-menu-item
-                [icon]="trashIcon"
-                [disabled]="!canManageShelf()"
                 variant="destructive"
                 (selected)="actions.deleteShelf(currentTarget.entity)">
                 {{ 'book.shelfMenuService.shelf.deleteShelf' | transloco }}
               </app-menu-item>
             }
             @case ('magicShelf') {
+              @if (canManageMagicShelf()) {
+                <app-menu-item
+                  (selected)="actions.editMagicShelf(currentTarget.entity.id)">
+                  {{ 'book.shelfMenuService.magicShelf.editMagicShelf' | transloco }}
+                </app-menu-item>
+              }
               <app-menu-item
-                [icon]="pencilIcon"
-                [disabled]="!canManageMagicShelf()"
-                (selected)="actions.editMagicShelf(currentTarget.entity.id)">
-                {{ 'book.shelfMenuService.magicShelf.editMagicShelf' | transloco }}
-              </app-menu-item>
-              <app-menu-item (selected)="actions.copyMagicShelfJson(currentTarget.entity.filterJson)">
+                (selected)="actions.copyMagicShelfJson(currentTarget.entity.filterJson)">
                 {{ 'book.shelfMenuService.magicShelf.exportJson' | transloco }}
               </app-menu-item>
-              <app-menu-separator />
-              <app-menu-item
-                [icon]="trashIcon"
-                [disabled]="!canManageMagicShelf()"
-                variant="destructive"
-                (selected)="actions.deleteMagicShelf(currentTarget.entity)">
-                {{ 'book.shelfMenuService.magicShelf.deleteMagicShelf' | transloco }}
-              </app-menu-item>
+              @if (canManageMagicShelf()) {
+                <app-menu-separator />
+                <app-menu-item
+                  variant="destructive"
+                  (selected)="actions.deleteMagicShelf(currentTarget.entity)">
+                  {{ 'book.shelfMenuService.magicShelf.deleteMagicShelf' | transloco }}
+                </app-menu-item>
+              }
             }
           }
         }
@@ -136,25 +159,11 @@ export class LibraryShelfMenuComponent {
 
   private readonly currentUser = inject(UserService).currentUser;
   protected readonly actions = inject(LibraryShelfMenuService);
-  protected readonly pencilIcon = LucidePencil.icon;
-  protected readonly trashIcon = LucideTrash2.icon;
 
-  readonly available = computed(() => {
-    const user = this.currentUser();
-    if (!user) return false;
-    return this.target().type !== 'library'
-      || user.permissions.admin
-      || user.permissions.canManageLibrary;
-  });
-
-  protected readonly canManageShelf = computed(() => {
-    const target = this.target();
-    return target.type === 'shelf' && target.entity.userId === this.currentUser()?.id;
-  });
-
-  protected readonly canManageMagicShelf = computed(() => {
-    const target = this.target();
-    return target.type === 'magicShelf'
-      && (!target.entity.isPublic || !!this.currentUser()?.permissions.admin);
-  });
+  readonly available = computed(
+    () => libraryShelfMenuAvailable(this.target(), this.currentUser()),
+  );
+  protected readonly canManageMagicShelf = computed(
+    () => canManageMagicShelfTarget(this.target(), this.currentUser()),
+  );
 }

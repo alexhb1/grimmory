@@ -34,8 +34,9 @@ describe('LibraryShelfMenuComponent', () => {
       name: 'library manager',
       user: {id: 3, permissions: {admin: false, canManageLibrary: true}},
       target: {type: 'library', entity: {id: 7, name: 'Library', watch: true, paths: []}},
-      labels: ['Add Physical Book', 'Import ISBNs from File', 'Edit Library', 'Re-scan Library',
-        'Custom Fetch Metadata', 'Auto Fetch Metadata', 'Find Duplicates', 'Delete Library'],
+      labels: ['Add Physical Book', 'Import ISBNs', 'Scan Library Files', 'Manage Library',
+        'Edit Library', 'Custom Fetch Metadata', 'Auto Fetch Metadata', 'Find Duplicates',
+        'Delete Library'],
       disabled: 0,
       available: true,
     },
@@ -51,16 +52,16 @@ describe('LibraryShelfMenuComponent', () => {
       name: 'public shelf reader',
       user: {id: 3, permissions: {admin: false, canManageLibrary: false}},
       target: {type: 'shelf', entity: {id: 11, name: 'Shelf', userId: 99, publicShelf: true}},
-      labels: ['Edit Shelf', 'Delete Shelf'],
-      disabled: 2,
-      available: true,
+      labels: [],
+      disabled: 0,
+      available: false,
     },
     {
       name: 'public magic-shelf reader',
       user: {id: 3, permissions: {admin: false, canManageLibrary: false}},
       target: {type: 'magicShelf', entity: {id: 13, name: 'Magic', filterJson: '{}', isPublic: true}},
-      labels: ['Edit Magic Shelf', 'Copy JSON', 'Delete Magic Shelf'],
-      disabled: 2,
+      labels: ['Copy JSON'],
+      disabled: 0,
       available: true,
     },
   ])('renders the $name state', async ({user, target, labels, disabled, available}) => {
@@ -74,7 +75,7 @@ describe('LibraryShelfMenuComponent', () => {
 
     const menu = document.querySelector('app-menu[aria-label="Actions"]') as HTMLElement;
     const renderedLabels = Array.from(menu.querySelectorAll('app-menu-item'))
-      .map(item => item.textContent?.trim());
+      .map(item => item.textContent!.trim());
     expect(fixture.componentInstance.available()).toBe(available);
     expect(renderedLabels).toEqual(labels);
     expect(menu.querySelectorAll('app-menu-item[aria-disabled="true"]')).toHaveLength(disabled);

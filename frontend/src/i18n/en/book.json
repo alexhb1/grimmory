@@ -296,25 +296,21 @@
   },
   "shelfMenuService": {
     "library": {
-      "optionsLabel": "Options",
       "addPhysicalBook": "Add Physical Book",
-      "bulkIsbnImport": "Import ISBNs from File",
+      "bulkIsbnImport": "Import ISBNs",
+      "rescanLibrary": "Scan Library Files",
+      "manageLibrary": "Manage Library",
       "editLibrary": "Edit Library",
-      "rescanLibrary": "Re-scan Library",
       "customFetchMetadata": "Custom Fetch Metadata",
       "autoFetchMetadata": "Auto Fetch Metadata",
       "findDuplicates": "Find Duplicates",
       "deleteLibrary": "Delete Library"
     },
     "shelf": {
-      "publicShelfPrefix": "Public Shelf - ",
-      "readOnly": "Read only",
-      "optionsLabel": "Options",
       "editShelf": "Edit Shelf",
       "deleteShelf": "Delete Shelf"
     },
     "magicShelf": {
-      "optionsLabel": "Options",
       "editMagicShelf": "Edit Magic Shelf",
       "exportJson": "Copy JSON",
       "deleteMagicShelf": "Delete Magic Shelf"
