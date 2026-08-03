@@ -15,10 +15,10 @@ import {UserService} from '../../../../settings/user-management/user.service';
 import {EmailService} from '../../../../settings/email-v2/email.service';
 import {TieredMenu} from '@openng/optimus-ui/tieredmenu';
 import {Router, RouterLink} from '@angular/router';
-import {readStatusLabels} from '../book-filter/book-filter.config';
+import {READ_STATUS_LABELS} from '../../../model/book-filter.config';
 import {ResetProgressTypes} from '../../../../../shared/constants/reset-progress-type';
 import {ReadStatusHelper} from '../../../helpers/read-status.helper';
-import {BookDialogHelperService} from '../book-dialog-helper.service';
+import {BookDialogHelperService} from '../../../service/book-dialog-helper.service';
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
 import {BookNavigationService} from '../../../service/book-navigation.service';
 import {BookCardOverlayPreferenceService} from '../book-card-overlay-preference.service';
@@ -180,7 +180,7 @@ export class BookCardComponent {
   readonly readingUrl = computed(() => this.urlHelper.getBookPrimaryReadingUrl(this.book()));
 
   private buildReadStatusMenuItems(): void {
-    this.readStatusMenuItems.set(Object.entries(readStatusLabels).map(([status, label]) => ({
+    this.readStatusMenuItems.set(Object.entries(READ_STATUS_LABELS).map(([status, label]) => ({
       label,
       command: () => {
         this.bookService.updateBookReadStatus(this.book().id, status as ReadStatus).subscribe({
@@ -513,7 +513,7 @@ export class BookCardComponent {
       {
         label: this.t.translate('book.card.menu.readStatus'),
         icon: 'pi pi-book',
-        items: Object.entries(readStatusLabels).map(([status, label]) => ({
+        items: Object.entries(READ_STATUS_LABELS).map(([status, label]) => ({
           label,
           command: () => {
             this.bookService.updateBookReadStatus(this.book().id, status as ReadStatus).subscribe({
