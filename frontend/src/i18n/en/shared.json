@@ -162,6 +162,9 @@
       "noResults": "No results",
       "loadFailed": "Couldn't load results"
     },
+    "bulkActions": {
+      "selectAll": "Select all"
+    },
     "datePicker": {
       "previousMonth": "Previous month",
       "nextMonth": "Next month"
