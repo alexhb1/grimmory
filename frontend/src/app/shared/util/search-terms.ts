@@ -8,7 +8,7 @@ export function normalizeRemoteSearchTerm(str: string): string {
 }
 
 export function normalizeLocalSearchTerm(str: string): string {
-  const folded = str.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const folded = str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/ø/gi, 'o')
     .replace(/ł/gi, 'l')
     .replace(/æ/gi, 'ae')

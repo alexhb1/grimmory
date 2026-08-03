@@ -195,6 +195,7 @@ describe('CommandPaletteService', () => {
     TestBed.flushEffects();
 
     http.expectNone(request => request.url.endsWith('/api/v1/books/page'));
+    expect(service.groups().find((group) => group.kind === 'book')).toBeUndefined();
   });
 
   it('cancels an in-flight book search when debounced text changes', async () => {
