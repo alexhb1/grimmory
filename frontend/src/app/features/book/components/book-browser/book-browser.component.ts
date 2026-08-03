@@ -297,11 +297,8 @@ export class BookBrowserComponent implements AfterViewInit {
     minItemWidth: this.minCardWidth,
     gap: this.gridDensity.gap,
     columns: this.gridDensity.columns,
-    count: this.virtualRowCount,
     minimumCount: metrics => this.minimumLoadingGridItemCount(metrics),
     initialOffset: this.initialScrollOffset,
-    fillItemWidth: true,
-    deferViewportUpdates: this.layoutService.sidebarTransitioning,
     estimateItemHeight: itemWidth => this.isMobile()
       ? this.mobileCardSizeForWidth(itemWidth).height
       : this.cardSizeForWidth(itemWidth).height,

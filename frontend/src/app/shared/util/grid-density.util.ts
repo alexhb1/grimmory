@@ -61,6 +61,7 @@ export function createGridDensity(localStorageService: LocalStorageService, opti
 
   return {
     gap: computed(() => options.useFixedColumns() ? FIXED_COLUMN_GAP : options.gap),
+    rowGap: computed(() => options.gap),
     columns: computed(() => options.useFixedColumns() ? fixedColumns() : undefined),
     smallerDisabled: computed(() => options.useFixedColumns()
       ? fixedColumns() >= options.maxColumns

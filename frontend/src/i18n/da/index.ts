@@ -36,6 +36,7 @@ import magicShelf from './magic-shelf.json';
 import seriesBrowser from './series-browser.json';
 import authorBrowser from './author-browser.json';
 import cards from './cards.json';
+import browse from './browse.json';
 
-const translations: Translation = {common, auth, nav, dashboard, settings, settingsEmail, settingsReader, settingsView, settingsMeta, settingsLibMeta, settingsApp, settingsUsers, settingsNaming, settingsOpds, settingsTasks, settingsAuditLogs, settingsAuth, settingsDevice, settingsProfile, app, shared, layout, libraryCreator, bookdrop, metadata, notebook, book, readerAudiobook, readerCbx, readerEbook, readerPdf, statsLibrary, statsUser, magicShelf, seriesBrowser, authorBrowser, cards};
+const translations: Translation = {common, auth, nav, dashboard, settings, settingsEmail, settingsReader, settingsView, settingsMeta, settingsLibMeta, settingsApp, settingsUsers, settingsNaming, settingsOpds, settingsTasks, settingsAuditLogs, settingsAuth, settingsDevice, settingsProfile, app, shared, layout, libraryCreator, bookdrop, metadata, notebook, book, readerAudiobook, readerCbx, readerEbook, readerPdf, statsLibrary, statsUser, magicShelf, seriesBrowser, authorBrowser, cards, browse};
 export default translations;
