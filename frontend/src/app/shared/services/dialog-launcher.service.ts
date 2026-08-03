@@ -4,6 +4,7 @@ import {TranslocoService} from '@jsverse/transloco';
 import {MessageService} from '@openng/optimus-ui/api';
 import {MetadataRefreshType} from '../../features/metadata/model/request/metadata-refresh-type.enum';
 import {BookdropFinalizeResult} from '../../features/bookdrop/service/bookdrop.service';
+import type {MultiSortDialogData} from '../../features/book/browse/multi-sort-dialog.component';
 
 /**
  * Dialog size classes - use these to control dialog dimensions
@@ -230,6 +231,17 @@ export class DialogLauncherService {
         data: {
           taskId,
         },
+      });
+    });
+  }
+
+  async openMultiSortDialog(data: MultiSortDialogData): Promise<DynamicDialogRef | null> {
+    return this.launchLazyDialog(async () => {
+      const {MultiSortDialogComponent} = await import('../../features/book/browse/multi-sort-dialog.component');
+      return this.openDialog(MultiSortDialogComponent, {
+        showHeader: false,
+        styleClass: `${DialogSize.SM} ${DialogStyle.MINIMAL}`,
+        data,
       });
     });
   }

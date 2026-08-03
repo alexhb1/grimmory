@@ -13,6 +13,7 @@ type LoginAndBooksScenario = {
   shelves: Array<Record<string, unknown>>;
   magicShelves: Array<Record<string, unknown>>;
   books: Array<Record<string, unknown>>;
+  bookPageSize: number;
 };
 
 function createJwt(expSeconds = 4_102_444_800): string {
@@ -93,6 +94,7 @@ export function createLoginAndBooksScenario(): LoginAndBooksScenario {
     libraries: [],
     shelves: [],
     magicShelves: [],
+    bookPageSize: 1,
     books: [
       {
         id: 1,
@@ -102,6 +104,8 @@ export function createLoginAndBooksScenario(): LoginAndBooksScenario {
         primaryFile: {
           id: 11,
           bookId: 1,
+          book: true,
+          folderBased: false,
           bookType: 'EPUB',
           fileName: 'the-mock-epub.epub',
           filePath: '/books/the-mock-epub.epub',
@@ -113,8 +117,9 @@ export function createLoginAndBooksScenario(): LoginAndBooksScenario {
           seriesName: 'Smoke Series',
           seriesNumber: 1,
           language: 'en',
+          allMetadataLocked: false,
         },
-        shelves: [{id: 101, name: 'Featured'}],
+        shelves: [{id: 101, name: 'Featured', publicShelf: false, bookCount: 1}],
         readStatus: 'UNREAD',
         addedOn: '2025-01-01T00:00:00Z',
       },
@@ -126,6 +131,8 @@ export function createLoginAndBooksScenario(): LoginAndBooksScenario {
         primaryFile: {
           id: 21,
           bookId: 2,
+          book: true,
+          folderBased: false,
           bookType: 'CBX',
           fileName: 'the-mock-comic.cbz',
           filePath: '/books/the-mock-comic.cbz',
@@ -137,6 +144,7 @@ export function createLoginAndBooksScenario(): LoginAndBooksScenario {
           seriesName: 'Comic Smoke Series',
           seriesNumber: 7,
           language: 'en',
+          allMetadataLocked: false,
         },
         shelves: [],
         readStatus: 'READING',
@@ -226,8 +234,99 @@ export async function installLoginAndBooksRoutes(
       return;
     }
 
+    if (pathname === '/api/v1/books/page' && method === 'GET') {
+      const cursor = url.searchParams.get('cursor');
+      const numberedCursor = cursor?.match(/^smoke-page-(\d+)$/)?.[1];
+      const pageIndex = cursor === null || cursor === 'smoke-self'
+        ? 0
+        : cursor === 'smoke-next'
+          ? 1
+          : numberedCursor === undefined
+            ? NaN
+            : Number(numberedCursor);
+      if (!Number.isInteger(pageIndex)) {
+        throw new Error(`Unhandled book-page cursor: ${cursor}`);
+      }
+      const pageStart = pageIndex * scenario.bookPageSize;
+      const content = scenario.books.slice(pageStart, pageStart + scenario.bookPageSize);
+      const pageHref = (nextCursor: string): string => {
+        const params = new URLSearchParams(url.searchParams);
+        params.set('cursor', nextCursor);
+        return `${pathname}?${params.toString()}`;
+      };
+      const links = [{
+        rel: ['self'],
+        href: pageHref(pageIndex === 0 ? 'smoke-self' : `smoke-page-${pageIndex}`),
+        type: 'application/json',
+      }];
+      if (pageIndex > 0) {
+        links.push({
+          rel: ['previous'],
+          href: pageHref(pageIndex === 1 ? 'smoke-self' : `smoke-page-${pageIndex - 1}`),
+          type: 'application/json',
+        });
+      }
+      if (pageStart + scenario.bookPageSize < scenario.books.length) {
+        links.push({
+          rel: ['next'],
+          href: pageHref(pageIndex === 0 ? 'smoke-next' : `smoke-page-${pageIndex + 1}`),
+          type: 'application/json',
+        });
+      }
+      await asJson(route, {
+        content,
+        page: {
+          number: pageIndex,
+          size: scenario.bookPageSize,
+          totalElements: scenario.books.length,
+          totalPages: Math.ceil(scenario.books.length / scenario.bookPageSize),
+        },
+        links,
+      });
+      return;
+    }
+
+    if (pathname === '/api/v1/books/facets' && method === 'GET') {
+      await asJson(route, {
+        facets: [{
+          metadata: {rel: 'sort', key: 'sort', title: 'Sort'},
+          links: [
+            {rel: 'sort', href: '/api/v1/books/page?sort=title', type: 'application/json', title: 'Title ascending', value: 'title'},
+            {rel: 'sort', href: '/api/v1/books/page?sort=-title', type: 'application/json', title: 'Title descending', value: '-title'},
+            {rel: 'sort', href: '/api/v1/books/page?sort=pageCount', type: 'application/json', title: 'Page count', value: 'pageCount'},
+          ],
+        }],
+      });
+      return;
+    }
+
     if (pathname === '/api/v1/books' && method === 'GET') {
       await asJson(route, scenario.books);
+      return;
+    }
+
+    if (pathname === '/api/v1/authors' && method === 'GET') {
+      await asJson(route, []);
+      return;
+    }
+
+    if (pathname === '/api/metadata/tasks/active' && method === 'GET') {
+      await asJson(route, []);
+      return;
+    }
+
+    if (pathname === '/api/v1/bookdrop/notification' && method === 'GET') {
+      await asJson(route, {pendingCount: 0, totalCount: 0, lastUpdatedAt: null});
+      return;
+    }
+
+    if (pathname === '/api/v1/libraries/health' && method === 'GET') {
+      await asJson(route, {});
+      return;
+    }
+
+    if (pathname === '/api/v1/version' && method === 'GET') {
+      await asJson(route, {current: 'test', latest: 'test'});
       return;
     }
 

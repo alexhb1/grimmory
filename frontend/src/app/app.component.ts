@@ -109,18 +109,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private setupWebSocketSubscriptions(): void {
-    let hasConnected = false;
+    let hasConnectedWebSocket = false;
     this.subscriptions.push(
       this.rxStompService.connectionState$.subscribe(state => {
         if (state !== RxStompState.OPEN) {
           return;
         }
-        if (hasConnected) {
+        if (hasConnectedWebSocket) {
           this.bookService.handleReconnect();
           this.authorService.invalidateAuthors();
-          return;
+        } else {
+          hasConnectedWebSocket = true;
         }
-        hasConnected = true;
       })
     );
     this.subscriptions.push(

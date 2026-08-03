@@ -11,16 +11,27 @@
     "selectAll": "Select all books",
     "moreValues": "Show {{count}} more {{column}}"
   },
-  "rail": {
-    "showAll": "Show all",
-    "showFewer": "Show fewer",
-    "searchValues": "Search…",
-    "search": "Search {{scope}}",
-    "noMatches": "No matches"
-  },
-  "chips": {
-    "clearAll": "Clear all",
-    "removeSearch": "Remove search filter {{query}}"
+  "toolbar": {
+    "columnGroups": {
+      "reading": "Reading",
+      "publishing": "Publishing",
+      "file": "File",
+      "categorization": "Categorization",
+      "ratings": "Ratings"
+    },
+    "sort": "Sort",
+    "sortAria": "Sort by {{field}}",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
+    "more": "More options",
+    "viewMode": "View",
+    "grid": "Grid",
+    "table": "Table",
+    "density": "Size",
+    "smallerCards": "Smaller cards",
+    "largerCards": "Larger cards",
+    "columns": "Columns",
+    "filter": "Filter"
   },
   "sort": {
     "multiSort": "Multi-Sort",
@@ -29,6 +40,32 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "flipDirection": "Flip direction",
-    "removeCriterion": "Remove"
+    "removeCriterion": "Remove",
+    "showAll": "Show All",
+    "showFewer": "Show Fewer"
+  },
+  "filterPage": {
+    "title": "Filter",
+    "show": "Show {{count}} books",
+    "clear": "Clear"
+  },
+  "bulk": {
+    "markAsMessage": "Mark {{count}} books as {{status}}?",
+    "editAll": "Edit All",
+    "editOneByOne": "Edit One by One",
+    "customCovers": "Custom Covers",
+    "selectionEmpty": "That selection no longer matches any books.",
+    "selectionLoadError": "Couldn't load the selection. Please try again."
+  },
+  "chips": {
+    "clearAll": "Clear all",
+    "removeSearch": "Remove search filter {{query}}"
+  },
+  "rail": {
+    "showAll": "Show all",
+    "showFewer": "Show fewer",
+    "searchValues": "Search…",
+    "search": "Search {{scope}}",
+    "noMatches": "No matches"
   }
 }
