@@ -1,11 +1,12 @@
-import {Component, DestroyRef, effect, ElementRef, inject, Injector, OnInit, viewChild} from '@angular/core';
+import {Component, computed, DestroyRef, effect, inject, Injector, OnInit} from '@angular/core';
+import {injectQuery} from '@tanstack/angular-query-experimental';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Button} from '@openng/optimus-ui/button';
 
 import {MessageService} from '@openng/optimus-ui/api';
 import {Select} from '@openng/optimus-ui/select';
 import {TableModule} from '@openng/optimus-ui/table';
-import {DEFAULT_VISIBLE_SORT_FIELDS, SortCriterion, User, UserService} from '../../user-management/user.service';
+import {SortCriterion, User, UserService} from '../../user-management/user.service';
 import {LibraryService} from '../../../book/service/library.service';
 import {ShelfService} from '../../../book/service/shelf.service';
 import {MagicShelfService} from '../../../magic-shelf/service/magic-shelf.service';
@@ -14,10 +15,18 @@ import {FormsModule} from '@angular/forms';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {ToggleSwitch} from '@openng/optimus-ui/toggleswitch';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {SortDirection, SortOption} from '../../../book/model/sort.model';
-import {MultiSortPopoverComponent} from '../../../book/components/book-browser/sorting/multi-sort-popover/multi-sort-popover.component';
-import {Popover} from '@openng/optimus-ui/popover';
-import {CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray} from '@angular/cdk/drag-drop';
+import {take} from 'rxjs/operators';
+
+import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
+import {
+  EMPTY_FACET_SELECTION,
+  isBookQuerySortKey,
+  type BookSortTerm,
+} from '../../../book/data/book-query-params';
+import {BookQueryService} from '../../../book/data/book-query.service';
+import {buildSortOptions} from '../../../book/browse/book-browse-fields';
+import {type MultiSortDialogResult} from '../../../book/browse/multi-sort-dialog.component';
+import {MultiSortEditorComponent} from '../../../book/browse/multi-sort-editor.component';
 
 @Component({
   selector: 'app-view-preferences',
@@ -30,50 +39,13 @@ import {CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray} from 
     Tooltip,
     ToggleSwitch,
     TranslocoDirective,
-    MultiSortPopoverComponent,
-    Popover,
-    CdkDropList,
-    CdkDrag,
-    CdkDragHandle
+    MultiSortEditorComponent
   ],
   templateUrl: './view-preferences.component.html',
   styleUrl: './view-preferences.component.scss'
 })
 export class ViewPreferencesComponent implements OnInit {
   private t = inject(TranslocoService);
-
-  private readonly sortOptionDefs: {field: string; translationKey: string}[] = [
-    {field: 'title', translationKey: 'sortTitle'},
-    {field: 'fileName', translationKey: 'sortFileName'},
-    {field: 'filePath', translationKey: 'sortFilePath'},
-    {field: 'author', translationKey: 'sortAuthor'},
-    {field: 'authorSurnameVorname', translationKey: 'sortAuthorSurname'},
-    {field: 'seriesName', translationKey: 'sortSeriesName'},
-    {field: 'seriesNumber', translationKey: 'sortSeriesNumber'},
-    {field: 'lastReadTime', translationKey: 'sortLastRead'},
-    {field: 'personalRating', translationKey: 'sortPersonalRating'},
-    {field: 'addedOn', translationKey: 'sortAddedOn'},
-    {field: 'fileSizeKb', translationKey: 'sortFileSize'},
-    {field: 'locked', translationKey: 'sortLocked'},
-    {field: 'publisher', translationKey: 'sortPublisher'},
-    {field: 'publishedDate', translationKey: 'sortPublishedDate'},
-    {field: 'readStatus', translationKey: 'sortReadStatus'},
-    {field: 'dateFinished', translationKey: 'sortDateFinished'},
-    {field: 'readingProgress', translationKey: 'sortReadingProgress'},
-    {field: 'bookType', translationKey: 'sortBookType'},
-    {field: 'amazonRating', translationKey: 'sortAmazonRating'},
-    {field: 'amazonReviewCount', translationKey: 'sortAmazonCount'},
-    {field: 'goodreadsRating', translationKey: 'sortGoodreadsRating'},
-    {field: 'goodreadsReviewCount', translationKey: 'sortGoodreadsCount'},
-    {field: 'hardcoverRating', translationKey: 'sortHardcoverRating'},
-    {field: 'hardcoverReviewCount', translationKey: 'sortHardcoverCount'},
-    {field: 'ranobedbRating', translationKey: 'sortRanobedbRating'},
-    {field: 'narrator', translationKey: 'sortNarrator'},
-    {field: 'pageCount', translationKey: 'sortPages'},
-    {field: 'random', translationKey: 'sortRandom'},
-  ];
-
-  sortOptions: {label: string; field: string; translationKey: string}[] = [];
 
   entityTypeOptions: {label: string; value: string; translationKey: string}[] = [];
 
@@ -98,20 +70,16 @@ export class ViewPreferencesComponent implements OnInit {
   selectedSort: string = 'title';
   selectedSortDir: 'ASC' | 'DESC' = 'ASC';
   selectedView: 'GRID' | 'TABLE' = 'GRID';
+  overlayBookType: boolean = true;
   autoSaveMetadata: boolean = false;
   sortCriteria: SortCriterion[] = [];
+  globalSortTerms: readonly BookSortTerm[] = [];
 
-  // SortOption[] versions for the multi-sort-popover component
-  globalSortAsOptions: SortOption[] = [];
-  allSortAsOptions: SortOption[] = [];
-
-  // Visible sort fields configuration
-  visibleSortFields: string[] = [];
-  selectedAddSortField: string | null = null;
-  readonly minSortFields = 3;
-  readonly maxSortFields = 27;
-
-  private readonly sortFieldList = viewChild<ElementRef<HTMLElement>>('sortFieldList');
+  private readonly bookQuery = inject(BookQueryService);
+  private readonly sortVocabularyQuery = injectQuery(() =>
+    this.bookQuery.facets({facets: EMPTY_FACET_SELECTION, facetLogic: 'or'}));
+  readonly editorSortOptions = computed(() =>
+    buildSortOptions(this.sortVocabularyQuery.data()?.sortTokens ?? []));
 
   overrides: {
     entityType: 'LIBRARY' | 'SHELF' | 'MAGIC_SHELF';
@@ -119,7 +87,6 @@ export class ViewPreferencesComponent implements OnInit {
     sort: string;
     sortDir: 'ASC' | 'DESC';
     sortCriteria: SortCriterion[];
-    sortCriteriaAsOptions: SortOption[];
     view: 'GRID' | 'TABLE';
   }[] = [];
 
@@ -132,6 +99,7 @@ export class ViewPreferencesComponent implements OnInit {
   private magicShelfService = inject(MagicShelfService);
   private userService = inject(UserService);
   private messageService = inject(MessageService);
+  private readonly dialogLauncher = inject(DialogLauncherService);
   private readonly currentUser = this.userService.currentUser;
   private hasInitializedPreferences = false;
 
@@ -139,15 +107,6 @@ export class ViewPreferencesComponent implements OnInit {
     this.rebuildTranslatedLabels();
     this.t.langChanges$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.rebuildTranslatedLabels();
-      this.allSortAsOptions = this.sortOptions.map(o => ({
-        label: this.t.translate('settingsView.librarySort.' + o.translationKey),
-        field: o.field,
-        direction: SortDirection.ASCENDING
-      }));
-      this.globalSortAsOptions = this.toSortOptions(this.sortCriteria);
-      this.overrides.forEach(o => {
-        o.sortCriteriaAsOptions = this.toSortOptions(o.sortCriteria);
-      });
     });
 
     effect(() => {
@@ -163,6 +122,7 @@ export class ViewPreferencesComponent implements OnInit {
       this.selectedSort = global?.sortKey ?? 'title';
       this.selectedSortDir = global?.sortDir ?? 'ASC';
       this.selectedView = global?.view ?? 'GRID';
+      this.overlayBookType = global?.overlayBookType ?? true;
       this.autoSaveMetadata = user.userSettings?.autoSaveMetadata ?? false;
 
       if (global?.sortCriteria && global.sortCriteria.length > 0) {
@@ -170,17 +130,7 @@ export class ViewPreferencesComponent implements OnInit {
       } else {
         this.sortCriteria = [{field: this.selectedSort, direction: this.selectedSortDir}];
       }
-
-      this.allSortAsOptions = this.sortOptions.map(option => ({
-        label: this.t.translate('settingsView.librarySort.' + option.translationKey),
-        field: option.field,
-        direction: SortDirection.ASCENDING
-      }));
-      this.globalSortAsOptions = this.toSortOptions(this.sortCriteria);
-
-      this.visibleSortFields = user.userSettings?.visibleSortFields
-        ? [...user.userSettings.visibleSortFields]
-        : [...DEFAULT_VISIBLE_SORT_FIELDS];
+      this.globalSortTerms = this.toTerms(this.sortCriteria);
 
       this.overrides = (prefs?.overrides ?? []).map(override => {
         const sortCriteria = override.preferences.sortCriteria?.length
@@ -192,19 +142,13 @@ export class ViewPreferencesComponent implements OnInit {
           sort: override.preferences.sortKey,
           sortDir: override.preferences.sortDir ?? 'ASC',
           sortCriteria,
-          sortCriteriaAsOptions: this.toSortOptions(sortCriteria),
-          view: override.preferences.view ?? 'GRID'
+          view: override.preferences.view ?? 'GRID',
         };
       });
     }, {injector: this.injector});
   }
 
   private rebuildTranslatedLabels(): void {
-    this.sortOptions = this.sortOptionDefs.map(o => ({
-      label: this.t.translate('settingsView.librarySort.' + o.translationKey),
-      field: o.field,
-      translationKey: o.translationKey
-    }));
     this.entityTypeOptions = [
       {label: this.t.translate('settingsView.librarySort.entityLibrary'), value: 'LIBRARY', translationKey: 'entityLibrary'},
       {label: this.t.translate('settingsView.librarySort.entityShelf'), value: 'SHELF', translationKey: 'entityShelf'},
@@ -250,15 +194,13 @@ export class ViewPreferencesComponent implements OnInit {
   addOverride(): void {
     const next = this.availableLibraries[0];
     if (next) {
-      const defaultCriteria: SortCriterion[] = [{field: 'title', direction: 'ASC'}];
       this.overrides.push({
         entityType: next.entityType,
         library: next.value,
         sort: 'title',
         sortDir: 'ASC',
-        sortCriteria: defaultCriteria,
-        sortCriteriaAsOptions: this.toSortOptions(defaultCriteria),
-        view: 'GRID'
+        sortCriteria: [{field: 'title', direction: 'ASC'}],
+        view: 'GRID',
       });
     }
   }
@@ -268,32 +210,43 @@ export class ViewPreferencesComponent implements OnInit {
   }
 
   // Conversion helpers
-  private toSortOptions(criteria: SortCriterion[]): SortOption[] {
-    return criteria.map(c => ({
-      label: this.t.translate('settingsView.librarySort.' + (this.sortOptions.find(o => o.field === c.field)?.translationKey ?? c.field)),
-      field: c.field,
-      direction: c.direction === 'ASC' ? SortDirection.ASCENDING : SortDirection.DESCENDING
+  private toTerms(criteria: SortCriterion[]): BookSortTerm[] {
+    return criteria.flatMap((criterion): BookSortTerm[] => isBookQuerySortKey(criterion.field)
+      ? [{
+          key: criterion.field,
+          direction: criterion.direction === 'ASC' ? 'asc' : 'desc',
+        }]
+      : []);
+  }
+
+  private fromTerms(terms: readonly BookSortTerm[]): SortCriterion[] {
+    return terms.map(term => ({
+      field: term.key,
+      direction: term.direction === 'asc' ? 'ASC' as const : 'DESC' as const,
     }));
   }
 
-  private toSortCriteria(options: SortOption[]): SortCriterion[] {
-    return options.map(o => ({
-      field: o.field,
-      direction: o.direction === SortDirection.ASCENDING ? 'ASC' as const : 'DESC' as const
-    }));
-  }
-
-  onGlobalSortCriteriaChange(criteria: SortOption[]): void {
-    this.globalSortAsOptions = criteria;
-    this.sortCriteria = this.toSortCriteria(criteria);
+  onGlobalSortTermsChange(terms: readonly BookSortTerm[]): void {
+    this.globalSortTerms = terms;
+    this.sortCriteria = this.fromTerms(terms);
     this.syncLegacySort();
   }
 
-  onOverrideSortCriteriaChange(index: number, criteria: SortOption[]): void {
-    this.overrides[index].sortCriteriaAsOptions = criteria;
-    this.overrides[index].sortCriteria = this.toSortCriteria(criteria);
-    this.overrides[index].sort = criteria[0]?.field ?? 'title';
-    this.overrides[index].sortDir = criteria[0]?.direction === SortDirection.ASCENDING ? 'ASC' : 'DESC';
+  async editOverrideSort(index: number): Promise<void> {
+    const override = this.overrides[index];
+    const ref = await this.dialogLauncher.openMultiSortDialog({
+      terms: this.toTerms(override.sortCriteria),
+      options: this.editorSortOptions(),
+    });
+    ref?.onClose.pipe(take(1)).subscribe((result?: MultiSortDialogResult) => {
+      if (!result) {
+        return;
+      }
+      const criteria = this.fromTerms(result.terms);
+      override.sortCriteria = criteria;
+      override.sort = criteria[0]?.field ?? 'title';
+      override.sortDir = criteria[0]?.direction ?? 'ASC';
+    });
   }
 
   private syncLegacySort(): void {
@@ -301,51 +254,6 @@ export class ViewPreferencesComponent implements OnInit {
       this.selectedSort = this.sortCriteria[0].field;
       this.selectedSortDir = this.sortCriteria[0].direction;
     }
-  }
-
-  // Visible sort fields management
-  getSortFieldLabel(field: string): string {
-    const key = this.sortOptions.find(opt => opt.field === field)?.translationKey;
-    return key ? this.t.translate('settingsView.librarySort.' + key) : field;
-  }
-
-  get availableSortFieldsToAdd(): {label: string; value: string}[] {
-    const used = new Set(this.visibleSortFields);
-    return this.sortOptions
-      .filter(opt => !used.has(opt.field))
-      .map(opt => ({label: this.t.translate('settingsView.librarySort.' + opt.translationKey), value: opt.field}));
-  }
-
-  get sortFieldSelectionCountText(): string {
-    return this.t.translate('settingsView.librarySort.sortFieldCount', {
-      count: this.visibleSortFields.length,
-      total: this.sortOptions.length
-    });
-  }
-
-  onSortFieldDrop(event: CdkDragDrop<string[]>): void {
-    moveItemInArray(this.visibleSortFields, event.previousIndex, event.currentIndex);
-  }
-
-  addSortField(): void {
-    if (this.selectedAddSortField) {
-      this.visibleSortFields.push(this.selectedAddSortField);
-      this.selectedAddSortField = null;
-      requestAnimationFrame(() => {
-        const el = this.sortFieldList()?.nativeElement;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
-    }
-  }
-
-  removeSortField(index: number): void {
-    if (this.visibleSortFields.length > this.minSortFields) {
-      this.visibleSortFields.splice(index, 1);
-    }
-  }
-
-  resetSortFieldsToDefaults(): void {
-    this.visibleSortFields = [...DEFAULT_VISIBLE_SORT_FIELDS];
   }
 
   saveSettings(): void {
@@ -358,7 +266,8 @@ export class ViewPreferencesComponent implements OnInit {
       sortKey: this.selectedSort,
       sortDir: this.selectedSortDir,
       sortCriteria: [...this.sortCriteria],
-      view: this.selectedView
+      view: this.selectedView,
+      overlayBookType: this.overlayBookType,
     };
 
     prefs.overrides = this.overrides.map(o => {
@@ -383,7 +292,6 @@ export class ViewPreferencesComponent implements OnInit {
 
     this.userService.updateUserSetting(this.user.id, 'entityViewPreferences', prefs);
     this.userService.updateUserSetting(this.user.id, 'autoSaveMetadata', this.autoSaveMetadata);
-    this.userService.updateUserSetting(this.user.id, 'visibleSortFields', this.visibleSortFields);
 
     this.messageService.add({
       severity: 'success',
