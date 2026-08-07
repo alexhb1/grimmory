@@ -72,7 +72,7 @@ export function createBookBrowseSelection(deps: BookBrowseSelectionDeps): BookBr
       : !current.excludedIds.has(id);
   }
 
-  function selectLoadedRange(start: number, end: number): void {
+  function selectLoadedRange(start: number, end: number, selected: boolean): void {
     const books = deps.books();
     const rangeIds: number[] = [];
     for (let index = start; index <= end; index++) {
@@ -82,15 +82,27 @@ export function createBookBrowseSelection(deps: BookBrowseSelectionDeps): BookBr
     if (current.mode === 'explicit') {
       const ids = new Set(current.ids);
       for (const id of rangeIds) {
-        ids.add(id);
+        if (selected) {
+          ids.add(id);
+        } else {
+          ids.delete(id);
+        }
       }
       state.set({mode: 'explicit', ids});
     } else {
       const excludedIds = new Set(current.excludedIds);
       for (const id of rangeIds) {
-        excludedIds.delete(id);
+        if (selected) {
+          excludedIds.delete(id);
+        } else {
+          excludedIds.add(id);
+        }
       }
-      state.set({mode: 'allMatching', excludedIds});
+      if (Math.max(0, (deps.totalElements() ?? 0) - excludedIds.size) === 0) {
+        state.set({mode: 'explicit', ids: new Set<number>()});
+      } else {
+        state.set({mode: 'allMatching', excludedIds});
+      }
     }
   }
 
@@ -99,7 +111,11 @@ export function createBookBrowseSelection(deps: BookBrowseSelectionDeps): BookBr
     if (shiftKey && anchorId !== null) {
       const anchorIndex = deps.books().findIndex(candidate => candidate.id === anchorId);
       if (anchorIndex >= 0) {
-        selectLoadedRange(Math.min(anchorIndex, index), Math.max(anchorIndex, index));
+        selectLoadedRange(
+          Math.min(anchorIndex, index),
+          Math.max(anchorIndex, index),
+          !isSelected(book.id),
+        );
         return;
       }
     }

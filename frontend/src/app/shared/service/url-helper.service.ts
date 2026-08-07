@@ -114,13 +114,25 @@ export class UrlHelperService {
       return this.router.createUrlTree(['/series', filterValue])
     }
 
+    const facetKey = {
+      category: 'genre',
+      bookType: 'file_type',
+      readStatus: 'read_status',
+      publishedDate: 'published_year',
+      pageCount: 'page_count',
+      fileSize: 'file_size',
+      matchScore: 'match_score',
+      ageRating: 'age_rating',
+      contentRating: 'content_rating',
+      comicCharacter: 'comic_character',
+      comicTeam: 'comic_team',
+      comicLocation: 'comic_location',
+      comicCreator: 'comic_creator',
+    }[filterKey] ?? filterKey;
+
     return this.router.createUrlTree(['/all-books'], {
       queryParams: {
-        view: 'grid',
-        sort: 'title',
-        direction: 'asc',
-        sidebar: true,
-        filter: `${filterKey}:${encodeURIComponent(filterValue)}`
+        facet: `${facetKey}:${filterValue}`,
       }
     });
   }

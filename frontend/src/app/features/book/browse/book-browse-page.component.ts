@@ -15,12 +15,17 @@ import {
   BrowseGridItemDef,
   BrowseGridSkeletonDef,
 } from '../../../shared/components/browse/browse-grid/browse-grid.directives';
-import {type BrowseGridVisibleRange} from '../../../shared/components/browse/browse-grid/browse-grid-viewport.component';
-import {bookCardHeightForWidth} from '../../../shared/components/cards/book-card/book-card.layout';
-import {BookCardComponent, bookCardCoverSrc} from '../../../shared/components/cards/book-card/book-card.component';
+import {type BrowseGridRenderedRange} from '../../../shared/components/browse/browse-grid/browse-grid-viewport.component';
+import {bookCardHeightForWidth} from '../components/cards/book-card.layout';
+import {
+  BookCardComponent,
+  bookCardCoverSrc,
+  bookCardSelection,
+  type BookCardSelection,
+} from '../components/cards/book-card.component';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
 import {BookMenuHostComponent} from '../components/book-menu-host/book-menu-host.component';
-import {BookCardSkeletonComponent} from '../../../shared/components/cards/book-card/book-card-skeleton.component';
+import {BookCardSkeletonComponent} from '../components/cards/book-card-skeleton.component';
 import {ArtworkRevealGroupDirective} from '../../../shared/components/cover/artwork-reveal-group.directive';
 import {AppPageHeaderComponent} from '../../../shared/layout/page-header/app.page-header.component';
 import {type PageHeader} from '../../../shared/layout/page-header/page-header.service';
@@ -36,7 +41,9 @@ import {CoverScalePreferenceService} from '../../../shared/service/cover-scale-p
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
 import {MagicShelfService} from '../../magic-shelf/service/magic-shelf.service';
 import {LibraryService} from '../service/library.service';
-import {BookService} from '../service/book.service';
+import {BookReadService} from '../service/book-read.service';
+import {BookNavigationService} from '../service/book-navigation.service';
+import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {
   type EntityViewPreference,
   type EntityViewPreferenceOverride,
@@ -66,7 +73,7 @@ import {
 } from '../data/book-query-params';
 import {findBrowsePageLink} from '../../../core/data/browse.models';
 import {bookBrowseCollection} from './book-browse-collection';
-import {bookBrowseScope, scopedFacetSelection} from './book-browse-scope';
+import {bookBrowseScope, bookBrowseScopeTitle, scopedFacetSelection} from './book-browse-scope';
 import {type BookFacetResult, type BookPage, flattenBookPages} from '../data/book-query.models';
 import {
   bookBrowseColumnOptions,
@@ -108,7 +115,11 @@ import {
   type PendingBookOverlay,
 } from '../data/book-command-pending-state';
 import {createBookBrowseSelection} from './book-browse-selection';
-import {BookBrowseTableComponent, type BookBrowseTableFacetRequest} from './book-browse-table.component';
+import {
+  BookBrowseTableComponent,
+  type BookBrowseTableFacetRequest,
+  type BookBrowseTableSelection,
+} from './book-browse-table.component';
 import {type BookBrowseViewMode} from './book-browse.models';
 import {type LibraryShelfMenuTarget} from '../components/library-shelf-menu/library-shelf-menu.component';
 
@@ -224,15 +235,19 @@ export class BookBrowsePageComponent {
   private readonly shelfDefinitionQuery = inject(ShelfDefinitionQueryService);
   private readonly magicShelfService = inject(MagicShelfService);
   private readonly libraryService = inject(LibraryService);
-  private readonly bookService = inject(BookService);
+  private readonly bookRead = inject(BookReadService);
+  private readonly bookNavigation = inject(BookNavigationService);
+  private readonly bookDialogHelper = inject(BookDialogHelperService);
   private readonly userService = inject(UserService);
   private readonly urlHelper = inject(UrlHelperService);
   private readonly dialogLauncher = inject(DialogLauncherService);
   private readonly pendingReadStatuses = injectPendingBookReadStatuses();
   private readonly pendingProgressResets = injectPendingBookProgressResets();
   protected readonly pendingDeletions = injectPendingBookDeletions();
-  private readonly tableColumnPreferences = signal<TableColumnPreference[]>(
-    normalizeBookBrowseColumnPreferences(undefined),
+  private readonly tableColumnPreferences = linkedSignal<TableColumnPreference[]>(() =>
+    normalizeBookBrowseColumnPreferences(
+      this.userService.currentUser()?.userSettings.tableColumnPreference,
+    ),
   );
 
   private readonly shelfDefinitionsQuery = injectQuery(() => this.shelfDefinitionQuery.definitions());
@@ -269,22 +284,14 @@ export class BookBrowsePageComponent {
   protected readonly minCardWidth = computed(() =>
     this.isMobile() ? 1 : Math.round(CARD_BASE_WIDTH * this.coverScale.scaleFactor()),
   );
+  private readonly metadataCenterViewMode = computed(() =>
+    this.userService.currentUser()?.userSettings.metadataCenterViewMode ?? 'route');
   protected readonly formatPill = computed(() =>
     this.userService.currentUser()?.userSettings.entityViewPreferences?.global?.overlayBookType ?? true);
 
   private readonly railOpen = signal(this.localStorage.get<boolean>(RAIL_OPEN_STORAGE_KEY) === true);
   protected readonly railVisible = computed(() => !this.isMobile() && this.railOpen());
   protected readonly filtersOpen = this.railOpen.asReadonly();
-  private readonly facetsQuery = injectQuery(() => ({
-    ...this.bookQuery.facets({
-      facets: this.requestFacets(),
-      facetLogic: 'or',
-      query: normalizeRemoteSearchTerm(this.queryText()) || undefined,
-    }),
-    enabled: this.railVisible(),
-    placeholderData: (previous: BookFacetResult | undefined) => previous,
-  }));
-  protected readonly railReady = computed(() => this.railVisible() && !this.facetsQuery.isPending());
   private readonly unfilteredFacetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({facets: this.scopeOnlyFacets(), facetLogic: 'or'}),
   }));
@@ -509,6 +516,12 @@ export class BookBrowsePageComponent {
     query: normalizeRemoteSearchTerm(this.queryText()) || undefined,
   }));
   private readonly collection = computed(() => bookBrowseCollection(this.bookQuery, this.params()));
+  private readonly facetsQuery = injectQuery(() => ({
+    ...this.collection().facets(),
+    enabled: this.railVisible(),
+    placeholderData: (previous: BookFacetResult | undefined) => previous,
+  }));
+  protected readonly railReady = computed(() => this.railVisible() && !this.facetsQuery.isPending());
   private readonly membershipIdentity = computed(() => this.collection().membershipIdentity);
   private readonly orderingIdentity = computed(() => this.collection().orderingIdentity);
   private readonly booksQuery = injectInfiniteQuery(() => ({
@@ -571,6 +584,17 @@ export class BookBrowsePageComponent {
   protected readonly someBooksSelected = computed(() =>
     this.selection.count() > 0 && !this.allBooksSelected(),
   );
+  protected readonly tableSelection = computed<BookBrowseTableSelection>(() => {
+    if (!this.selectionEnabled()) {
+      return {mode: 'none'};
+    }
+    return {
+      mode: this.selection.active() || this.mobileSelectMode() ? 'active' : 'available',
+      allSelected: this.allBooksSelected(),
+      someSelected: this.someBooksSelected(),
+      isSelected: book => this.selection.isSelected(book.id),
+    };
+  });
   protected readonly resolveSelectedIds = (): Promise<readonly number[]> =>
     this.queryClient.fetchQuery(this.collection().ids());
 
@@ -614,30 +638,28 @@ export class BookBrowsePageComponent {
       && books.every(book => book.primaryFile?.bookType === 'AUDIOBOOK');
   }
 
+  protected readonly metaLines = computed<2 | 3>(() => this.detailLineKey() === null ? 2 : 3);
+
   protected readonly estimateItemHeight = (width: number): number =>
-    bookCardHeightForWidth(width, {
-      square: this.squareCovers(),
-      metaLines: this.detailLineKey() === null ? 2 : 3,
-    });
+    bookCardHeightForWidth(width, {square: this.squareCovers(), metaLines: this.metaLines()});
   protected readonly bookItemKey = (book: BookSummary): number => book.id;
+
+  protected readonly cardSelection = (book: BookSummary): BookCardSelection =>
+    bookCardSelection({
+      enabled: this.selectionEnabled(),
+      active: this.selection.active() || this.mobileSelectMode(),
+      selected: this.selection.isSelected(book.id),
+    });
 
   private readonly scopeTitle = computed<string | null>(() => {
     this.activeLang();
-    const scope = this.scope();
-    switch (scope?.kind) {
-      case 'library':
-        return this.libraryService.libraries().find(library => library.id === scope.entityId)?.name ?? null;
-      case 'shelf':
-        return (this.shelfDefinitionsQuery.data() ?? [])
-          .find(shelf => shelf.id === scope.entityId)?.name ?? null;
-      case 'magicShelf':
-        return this.magicShelfService.shelves()
-          .find(shelf => shelf.id === scope.entityId)?.name ?? null;
-      case 'unshelved':
-        return this.transloco.translate('book.browser.labels.unshelvedBooks');
-      case undefined:
-        return null;
-    }
+    return bookBrowseScopeTitle(
+      this.scope(),
+      this.libraryService.libraries(),
+      this.shelfDefinitionsQuery.data() ?? [],
+      this.magicShelfService.shelves(),
+      this.transloco.translate('book.browser.labels.unshelvedBooks'),
+    );
   });
 
   protected readonly pageHeader = computed<PageHeader>(() => {
@@ -657,12 +679,6 @@ export class BookBrowsePageComponent {
   );
 
   constructor() {
-    effect(() => {
-      const preferences = this.userService.currentUser()?.userSettings.tableColumnPreference;
-      untracked(() =>
-        this.tableColumnPreferences.set(normalizeBookBrowseColumnPreferences(preferences)));
-    });
-
     effect(() => {
       if (!this.isMobile() && untracked(this.mobileSelectMode)) {
         untracked(() => this.mobileSelectMode.set(false));
@@ -756,7 +772,7 @@ export class BookBrowsePageComponent {
     });
   }
 
-  protected onVisibleRange(range: BrowseGridVisibleRange): void {
+  protected onRenderedRange(range: BrowseGridRenderedRange): void {
     this.lastVisibleEnd.set(range.end);
     if (
       range.end >= this.books().length - PAGE_PREFETCH_THRESHOLD &&
@@ -810,15 +826,25 @@ export class BookBrowsePageComponent {
   }
 
   protected onCardAction(book: BookSummary): void {
-    this.bookService.readBook(book.id);
+    this.bookRead.readBook(book);
+  }
+
+  protected onBookDetailRequested(book: BookSummary): void {
+    const bookIds = this.books().map(presented => presented.id);
+    if (bookIds.length > 0) {
+      this.bookNavigation.setNavigationContext(bookIds, book.id);
+    }
+
+    if (this.metadataCenterViewMode() === 'route') {
+      void this.router.navigate(['/book', book.id], {queryParams: {tab: 'view'}});
+      return;
+    }
+    void this.bookDialogHelper.openBookDetailsDialog(book.id).catch(() => undefined);
   }
 
   protected onToggleSelect(book: BookSummary, index: number, shiftKey: boolean): void {
     this.selection.toggle(book, index, shiftKey);
   }
-
-  protected isTableRowSelected = (book: BookSummary): boolean =>
-    this.selection.isSelected(book.id);
 
   protected onTableSelectionChange(change: {
     book: BookSummary;
@@ -980,7 +1006,7 @@ export class BookBrowsePageComponent {
       } else {
         prefs.overrides.push({
           ...context,
-          preferences: {...sortFields, view: 'GRID', coverSize: 1.0, seriesCollapsed: false, overlayBookType: true},
+          preferences: {...prefs.global, ...sortFields},
         });
       }
     }

@@ -7,7 +7,6 @@ import {injectMutation, injectQuery} from '@tanstack/angular-query-experimental'
 import {BookMenuComponent} from '../../../../shared/components/book-menu/book-menu.component';
 import {
   type BookMenuCapabilities,
-  type ReadStatusTarget,
 } from '../../../../shared/components/book-menu/book-menu';
 import {type ShelfMembershipItem} from '../../../../shared/components/shelf-menu/shelf-membership-menu.component';
 import {type ContextMenuRequest} from '../../../../shared/ui/menu/app-menu.component';
@@ -17,7 +16,7 @@ import {BookBackgroundSubmissionService} from '../../data/book-background-submis
 import {BookCommandService} from '../../data/book-command.service';
 import {BookShelfCommandService} from '../../data/book-shelf-command.service';
 import {ShelfDefinitionQueryService} from '../../data/shelf-definition-query.service';
-import {type BookSummary} from '../../data/book-response.models';
+import {type BookSummary, type KnownBookReadStatus} from '../../data/book-response.models';
 import {
   injectPendingBookShelfMembership,
   overlayShelfIds,
@@ -40,6 +39,7 @@ import {BookFileService} from '../../service/book-file.service';
       [shelves]="shelves()"
       [readStatus]="readStatus()"
       (toggleShelf)="onToggleShelf($event.shelfId, $event.checked)"
+      (removeFromAllShelves)="onRemoveFromAllShelves()"
       (setReadStatus)="onSetReadStatus($event)"
       (fetchMetadata)="onFetchMetadata()"
       (fetchMetadataWithOptions)="onFetchMetadataWithOptions()"
@@ -142,7 +142,19 @@ export class BookMenuHostComponent {
     });
   }
 
-  protected onSetReadStatus(status: ReadStatusTarget): void {
+  protected onRemoveFromAllShelves(): void {
+    const shelfIds = this.shelves().filter(shelf => shelf.checked).map(shelf => shelf.id);
+    if (shelfIds.length === 0) {
+      return;
+    }
+    this.shelfMembershipMutation.mutate({
+      bookIds: [this.menuBook()!.id],
+      assignShelfIds: [],
+      unassignShelfIds: shelfIds,
+    });
+  }
+
+  protected onSetReadStatus(status: KnownBookReadStatus): void {
     const book = this.menuBook()!;
     this.readStatusMutation.mutate({bookIds: [book.id], status});
   }

@@ -86,6 +86,22 @@ describe('shift ranges over loaded rows', () => {
     }
   });
 
+  it('deselects a shift range from a selected target in both selection modes', () => {
+    const explicit = harness(10, allIds(10));
+    explicit.selection.toggle(explicit.books()[2], 2, false);
+    explicit.selection.toggle(explicit.books()[6], 6, true);
+    explicit.selection.toggle(explicit.books()[6], 6, true);
+    expect([3, 4, 5, 6, 7].map(id => explicit.selection.isSelected(id)))
+      .toEqual([false, false, false, false, false]);
+
+    const allMatching = harness(10, allIds(10));
+    allMatching.selection.selectAll();
+    allMatching.selection.toggle(allMatching.books()[2], 2, false);
+    allMatching.selection.toggle(allMatching.books()[6], 6, true);
+    expect([3, 4, 5, 6, 7].map(id => allMatching.selection.isSelected(id)))
+      .toEqual([false, false, false, false, false]);
+  });
+
   it('falls back to a plain toggle when the anchor has left the loaded window', () => {
     const h = harness(100, [1, 2, 3, 4]);
     h.selection.toggle(h.books()[1], 1, false);
@@ -120,7 +136,7 @@ describe('select all', () => {
     expect(h.selection.state()).toEqual({mode: 'explicit', ids: new Set()});
   });
 
-  it('excludes on toggle, re-includes via toggle or shift-range, resets on repeat select-all', () => {
+  it('excludes on toggle, re-includes via toggle, and resets on repeat select-all', () => {
     const h = harness(50, allIds(10));
     h.selection.selectAll();
 
@@ -134,8 +150,8 @@ describe('select all', () => {
 
     h.selection.toggle(h.books()[2], 2, false);
     h.selection.toggle(h.books()[5], 5, true);
-    expect(h.selection.isSelected(3)).toBe(true);
-    expect(h.selection.isSelected(6)).toBe(true);
+    expect(h.selection.isSelected(3)).toBe(false);
+    expect(h.selection.isSelected(6)).toBe(false);
 
     h.selection.toggle(h.books()[7], 7, false);
     h.selection.selectAll();

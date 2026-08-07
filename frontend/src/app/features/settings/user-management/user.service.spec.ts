@@ -238,6 +238,22 @@ describe('UserService', () => {
     );
   });
 
+  it('normalizes null entity view overrides from the backend default settings', async () => {
+    const settings = buildUserSettings();
+    httpTestingController.expectOne(req => req.url.endsWith('/api/v1/users/me')).flush(buildUser({
+      userSettings: {
+        ...settings,
+        entityViewPreferences: {
+          global: settings.entityViewPreferences.global,
+          overrides: null,
+        } as unknown as UserSettings['entityViewPreferences'],
+      },
+    }));
+    await flushCurrentUserQuery();
+
+    expect(service.currentUser()?.userSettings.entityViewPreferences.overrides).toEqual([]);
+  });
+
   it('updates the current-user profile through the profile endpoint', async () => {
     httpTestingController.expectOne(req => req.url.endsWith('/api/v1/users/me')).flush(buildUser());
     await flushCurrentUserQuery();

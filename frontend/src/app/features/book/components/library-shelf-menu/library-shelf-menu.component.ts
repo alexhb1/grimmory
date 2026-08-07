@@ -5,18 +5,11 @@ import {AppMenuComponent} from '../../../../shared/ui/menu/app-menu.component';
 import {AppMenuContentDirective} from '../../../../shared/ui/menu/app-menu-content.directive';
 import {AppMenuItemComponent} from '../../../../shared/ui/menu/app-menu-item.component';
 import {AppMenuSeparatorComponent} from '../../../../shared/ui/menu/app-menu-separator.component';
-import {MagicShelf} from '../../../magic-shelf/service/magic-shelf.service';
 import {UserService} from '../../../settings/user-management/user.service';
-import {Library} from '../../model/library.model';
-import {Shelf} from '../../model/shelf.model';
 import {LibraryShelfMenuService} from '../../service/library-shelf-menu.service';
+import {type LibraryShelfMenuTarget} from '../../../../shared/layout/navigation/library-shelf-menu-target.model';
 
-type Persisted<T extends {id?: number | null}> = Omit<T, 'id'> & {id: number};
-
-export type LibraryShelfMenuTarget =
-  | {type: 'library'; entity: Persisted<Library>}
-  | {type: 'shelf'; entity: Persisted<Shelf>}
-  | {type: 'magicShelf'; entity: Persisted<MagicShelf>};
+export type {LibraryShelfMenuTarget} from '../../../../shared/layout/navigation/library-shelf-menu-target.model';
 
 export interface LibraryShelfMenuUser {
   readonly id: number;

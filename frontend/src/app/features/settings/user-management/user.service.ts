@@ -27,7 +27,7 @@ export interface EntityViewPreference {
   sortCriteria?: SortCriterion[];
   view: 'GRID' | 'TABLE';
   coverSize: number;
-  seriesCollapsed: boolean;
+  seriesCollapsed?: boolean;
   overlayBookType: boolean;
 }
 
@@ -532,6 +532,7 @@ export class UserService {
   private normalizeUser(user: User): User {
     const permissions = user.permissions;
     const theme = user.theme ?? 'grimmory';
+    const entityViewPreferences = user.userSettings?.entityViewPreferences;
     return {
       ...user,
       locale: user.locale ?? 'en',
@@ -539,6 +540,15 @@ export class UserService {
       themeAccent: theme === 'custom' ? user.themeAccent ?? 'orange' : null,
       themeSyncEnabled: user.themeSyncEnabled ?? true,
       uiFont: normalizeUiFont(user.uiFont ?? DEFAULT_UI_FONT),
+      userSettings: entityViewPreferences
+        ? {
+            ...user.userSettings,
+            entityViewPreferences: {
+              ...entityViewPreferences,
+              overrides: entityViewPreferences.overrides ?? [],
+            },
+          }
+        : user.userSettings,
       permissions: {
         ...permissions,
         canBulkResetGrimmoryReadProgress: permissions.canBulkResetGrimmoryReadProgress ?? permissions.canBulkResetBookloreReadProgress,

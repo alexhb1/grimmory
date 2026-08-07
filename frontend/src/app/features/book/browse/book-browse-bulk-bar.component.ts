@@ -1,11 +1,11 @@
-import {ChangeDetectionStrategy, Component, computed, inject, input, signal, viewChild} from '@angular/core';
-import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
-import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
-import {injectMutation, injectQuery} from '@tanstack/angular-query-experimental';
+import {ChangeDetectionStrategy, Component, computed, inject, input, viewChild} from '@angular/core';
+import {TranslocoPipe} from '@jsverse/transloco';
+import {injectQuery} from '@tanstack/angular-query-experimental';
 import {LucideBookmark, LucideCheck, LucideDatabase, LucideEllipsis, LucidePenLine} from '@lucide/angular';
-import {take} from 'rxjs/operators';
 
 import {
+  CLEAR_READ_STATUS,
+  CLEAR_READ_STATUS_LABEL_KEY,
   READ_STATUS_TARGET_LABEL_KEYS,
   READ_STATUS_TARGETS,
   type BookMenuCapabilities,
@@ -23,7 +23,6 @@ import {AppMenuSeparatorComponent} from '../../../shared/ui/menu/app-menu-separa
 import {AppMenuTriggerDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
 import {LayoutService} from '../../../shared/layout/layout.service';
 import {AppSettingsService} from '../../../shared/service/app-settings.service';
-import {DeleteBooksPartialError, type BookProgressSource} from '../data/book-command.models';
 import {
   injectPendingBookDeletions,
   injectPendingBookShelfMembership,
@@ -31,15 +30,9 @@ import {
 } from '../data/book-command-pending-state';
 import {type BookSummary} from '../data/book-response.models';
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
-import {BookBackgroundSubmissionService} from '../data/book-background-submission.service';
-import {BookCommandService} from '../data/book-command.service';
-import {BookShelfCommandService} from '../data/book-shelf-command.service';
-import {MetadataRefreshSubmissionService} from '../../metadata/data/metadata-refresh-submission.service';
 import {UserService} from '../../settings/user-management/user.service';
-import {type BookFileAttacherSourceBook} from '../components/book-file-attacher/book-file-attacher.component';
-import {BookDialogHelperService} from '../service/book-dialog-helper.service';
-import {legacyBookCachePatches, withLegacyBookCache} from '../service/book-command-legacy-adapter';
-import {resolveSelectedBookIds, type BookBrowseSelection} from './book-browse-selection';
+import {type BookBrowseSelection} from './book-browse-selection';
+import {BookBulkCommandsService} from './book-bulk-commands.service';
 
 const BULK_BAR_WIDTHS = {
   frame: 46,
@@ -57,6 +50,7 @@ const BULK_BAR_WIDTHS = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {class: 'contents'},
+  providers: [BookBulkCommandsService],
   imports: [
     TranslocoPipe,
     AppButtonComponent,
@@ -141,44 +135,49 @@ const BULK_BAR_WIDTHS = {
             [label]="'common.delete' | transloco"
             [loading]="bulkDeleting()"
             [disabled]="isResolving()"
-            (clicked)="onBulkDelete()" />
+            (clicked)="commands.delete(selection(), resolveIds())" />
         }
       </app-bulk-actions-bar>
 
       <app-shelf-membership-menu
         #bulkShelfMenuHost
         [shelves]="bulkShelves()"
-        (toggleShelf)="onBulkToggleShelf($event.shelfId, $event.checked)"
-        (createShelf)="onCreateShelf()" />
+        (toggleShelf)="commands.toggleShelf(selection(), resolveIds(), $event.shelfId, $event.checked)"
+        (createShelf)="commands.createShelf()"
+        (removeFromAllShelves)="commands.removeFromAllShelves(selection(), resolveIds(), bulkShelfIds())" />
 
       <app-menu #bulkMarkAsMenu #bulkMarkAsAria="ngMenu" [ariaLabel]="'shared.ui.bookMenu.markAs' | transloco">
         @for (status of readStatusTargets; track status) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkMarkAs(status)">{{ statusLabelKey(status) | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.markAs(selection(), resolveIds(), status)">{{ statusLabelKey(status) | transloco }}</app-menu-item>
         }
+        <app-menu-separator />
+        <app-menu-item [disabled]="isResolving()" (selected)="commands.markAs(selection(), resolveIds(), clearReadStatus)">
+          {{ clearReadStatusLabelKey | transloco }}
+        </app-menu-item>
       </app-menu>
 
       <app-menu #bulkEditMenu #bulkEditAria="ngMenu" [ariaLabel]="'common.edit' | transloco">
-        <app-menu-item [disabled]="isResolving()" (selected)="onBulkEditAll()">{{ 'browse.bulk.editAll' | transloco }}</app-menu-item>
-        <app-menu-item [disabled]="isResolving()" (selected)="onBulkEditOneByOne()">{{ 'browse.bulk.editOneByOne' | transloco }}</app-menu-item>
+        <app-menu-item [disabled]="isResolving()" (selected)="commands.editAll(selection(), resolveIds())">{{ 'browse.bulk.editAll' | transloco }}</app-menu-item>
+        <app-menu-item [disabled]="isResolving()" (selected)="commands.editOneByOne(selection(), resolveIds())">{{ 'browse.bulk.editOneByOne' | transloco }}</app-menu-item>
       </app-menu>
 
       <app-menu #bulkMetadataMenu #bulkMetadataAria="ngMenu" [ariaLabel]="'book.card.menu.metadata' | transloco">
         @if (menuCapabilities().canEditMetadata) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkFetchMetadata()">{{ 'metadata.viewer.fetchMetadataBtn' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkFetchMetadataWithOptions()">{{ 'shared.ui.bookMenu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadata(selection(), resolveIds())">{{ 'metadata.viewer.fetchMetadataBtn' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadataWithOptions(selection(), resolveIds())">{{ 'shared.ui.bookMenu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
         }
         @if (menuCapabilities().canEditMetadata && canBulkLockUnlockMetadata()) {
           <app-menu-separator />
         }
         @if (canBulkLockUnlockMetadata()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkSetMetadataLocks(true)">{{ 'metadata.editor.lockAllBtn' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkSetMetadataLocks(false)">{{ 'metadata.editor.unlockAllBtn' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkLockUnlockMetadata()">{{ 'book.browser.tooltip.lockUnlockMetadata' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), true)">{{ 'metadata.editor.lockAllBtn' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), false)">{{ 'metadata.editor.unlockAllBtn' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.lockUnlockMetadata(selection(), resolveIds())">{{ 'book.browser.tooltip.lockUnlockMetadata' | transloco }}</app-menu-item>
         }
         @if (menuCapabilities().canEditMetadata) {
           <app-menu-separator />
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkChangeCovers('regenerate')">{{ 'book.menuService.menu.regenerateCovers' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkChangeCovers('generate')">{{ 'browse.bulk.customCovers' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'regenerate')">{{ 'book.menuService.menu.regenerateCovers' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'generate')">{{ 'browse.bulk.customCovers' | transloco }}</app-menu-item>
         }
       </app-menu>
 
@@ -205,10 +204,10 @@ const BULK_BAR_WIDTHS = {
           }
         }
         @if (canBulkResetGrimmory()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkResetProgress('GRIMMORY')">{{ 'book.menuService.menu.resetGrimmoryProgress' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'GRIMMORY')">{{ 'book.menuService.menu.resetGrimmoryProgress' | transloco }}</app-menu-item>
         }
         @if (canBulkResetKoreader()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkResetProgress('KOREADER')">{{ 'book.menuService.menu.resetKOReaderProgress' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'KOREADER')">{{ 'book.menuService.menu.resetKOReaderProgress' | transloco }}</app-menu-item>
         }
         @if ((canBulkResetGrimmory() || canBulkResetKoreader())
           && (canBulkOrganizeFiles()
@@ -217,10 +216,10 @@ const BULK_BAR_WIDTHS = {
           <app-menu-separator />
         }
         @if (canBulkOrganizeFiles()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="onBulkOrganizeFiles()">{{ 'book.browser.tooltip.organizeFiles' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.organizeFiles(selection(), resolveIds())">{{ 'book.browser.tooltip.organizeFiles' | transloco }}</app-menu-item>
         }
         @if (canBulkAttachFiles()) {
-          <app-menu-item [disabled]="!bulkAttachEligible() || isResolving()" (selected)="onBulkAttachFiles()">
+          <app-menu-item [disabled]="!bulkAttachEligible() || isResolving()" (selected)="commands.attachFiles(selection(), books())">
             {{ 'book.fileAttacher.attachFilesBulk' | transloco }}
           </app-menu-item>
         }
@@ -230,7 +229,7 @@ const BULK_BAR_WIDTHS = {
           <app-menu-separator />
         }
         @if (menuCapabilities().canDeleteBook && !bulkBarShowsDelete()) {
-          <app-menu-item variant="destructive" [loading]="bulkDeleting()" [disabled]="isResolving()" (selected)="onBulkDelete()">
+          <app-menu-item variant="destructive" [loading]="bulkDeleting()" [disabled]="isResolving()" (selected)="commands.delete(selection(), resolveIds())">
             {{ 'common.delete' | transloco }}
           </app-menu-item>
         }
@@ -245,40 +244,21 @@ export class BookBrowseBulkBarComponent {
   readonly resolveIds = input.required<() => Promise<readonly number[]>>();
 
   private readonly layout = inject(LayoutService);
-  private readonly transloco = inject(TranslocoService);
   private readonly userService = inject(UserService);
   private readonly appSettingsService = inject(AppSettingsService);
   private readonly shelfDefinitionQuery = inject(ShelfDefinitionQueryService);
-  private readonly dialogHelper = inject(BookDialogHelperService);
-  private readonly metadataRefresh = inject(MetadataRefreshSubmissionService);
-  private readonly backgroundSubmission = inject(BookBackgroundSubmissionService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly messageService = inject(MessageService);
-  private readonly bookCommands = inject(BookCommandService);
-  private readonly shelfCommands = inject(BookShelfCommandService);
+  protected readonly commands = inject(BookBulkCommandsService);
 
   private readonly shelfDefinitionsQuery = injectQuery(() => this.shelfDefinitionQuery.definitions());
   private readonly pendingShelfMembership = injectPendingBookShelfMembership();
   private readonly pendingDeletions = injectPendingBookDeletions();
-  private readonly shelfMembershipMutation = injectMutation(() => withLegacyBookCache(
-    this.shelfCommands.updateMembership(), legacyBookCachePatches.shelfMembership));
-  private readonly readStatusMutation = injectMutation(() => withLegacyBookCache(
-    this.bookCommands.setReadStatus(), legacyBookCachePatches.readStatus));
-  private readonly refreshMetadataMutation = injectMutation(() =>
-    this.metadataRefresh.refreshMetadata()
-  );
-  private readonly deleteBooksMutation = injectMutation(() => withLegacyBookCache(
-    this.bookCommands.deleteBooks(), legacyBookCachePatches.deleteBooks));
-  private readonly resetProgressMutation = injectMutation(() => withLegacyBookCache(
-    this.bookCommands.resetProgress(), legacyBookCachePatches.resetProgress));
-  private readonly metadataLocksMutation = injectMutation(() => withLegacyBookCache(
-    this.bookCommands.setAllMetadataLocks(), legacyBookCachePatches.metadataAllLocks));
-  private readonly changeCoversMutation = injectMutation(() => this.backgroundSubmission.changeCovers());
 
   private readonly bulkBar = viewChild(BulkActionsBarComponent);
   private readonly isMobile = computed(() => !this.layout.isDesktop());
-  protected readonly isResolving = signal(false);
+  protected readonly isResolving = this.commands.isResolving;
   protected readonly readStatusTargets = READ_STATUS_TARGETS;
+  protected readonly clearReadStatus = CLEAR_READ_STATUS;
+  protected readonly clearReadStatusLabelKey = CLEAR_READ_STATUS_LABEL_KEY;
 
   protected readonly menuCapabilities = computed<BookMenuCapabilities>(() => {
     const permissions = this.userService.currentUser()?.permissions;
@@ -357,6 +337,7 @@ export class BookBrowseBulkBarComponent {
       };
       });
   });
+  protected readonly bulkShelfIds = computed(() => this.bulkShelves().map(shelf => shelf.id));
 
   protected readonly canBulkResetGrimmory = computed(() =>
     !!this.userService.currentUser()?.permissions.canBulkResetGrimmoryReadProgress,
@@ -398,159 +379,5 @@ export class BookBrowseBulkBarComponent {
 
   protected statusLabelKey(status: ReadStatusTarget): string {
     return READ_STATUS_TARGET_LABEL_KEYS[status];
-  }
-
-  private async withSelectedBookIds(run: (bookIds: readonly number[]) => void): Promise<void> {
-    if (this.isResolving()) {
-      return;
-    }
-    this.isResolving.set(true);
-    let bookIds: readonly number[];
-    try {
-      bookIds = await resolveSelectedBookIds(this.selection().state(), this.resolveIds());
-    } catch {
-      this.messageService.add({
-        severity: 'error',
-        summary: this.transloco.translate('browse.bulk.selectionLoadError'),
-      });
-      return;
-    } finally {
-      this.isResolving.set(false);
-    }
-    if (bookIds.length === 0) {
-      this.selection().clear();
-      this.messageService.add({
-        severity: 'info',
-        summary: this.transloco.translate('browse.bulk.selectionEmpty'),
-      });
-      return;
-    }
-    run(bookIds);
-  }
-
-  protected onBulkToggleShelf(shelfId: number, checked: boolean): void {
-    void this.withSelectedBookIds(bookIds => this.shelfMembershipMutation.mutate({
-      bookIds: [...bookIds],
-      assignShelfIds: checked ? [shelfId] : [],
-      unassignShelfIds: checked ? [] : [shelfId],
-    }));
-  }
-
-  protected onBulkEditAll(): void {
-    void this.withSelectedBookIds(bookIds => void this.dialogHelper
-      .openBulkMetadataEditDialog(new Set(bookIds))
-      .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => this.selection().clear())));
-  }
-
-  protected onBulkEditOneByOne(): void {
-    void this.withSelectedBookIds(bookIds => void this.dialogHelper
-      .openMultibookMetadataEditorDialog(new Set(bookIds))
-      .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => this.selection().clear())));
-  }
-
-  protected onBulkLockUnlockMetadata(): void {
-    void this.withSelectedBookIds(bookIds => void this.dialogHelper
-      .openLockUnlockMetadataDialog(new Set(bookIds))
-      .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => this.selection().clear())));
-  }
-
-  protected onBulkOrganizeFiles(): void {
-    void this.withSelectedBookIds(bookIds => void this.dialogHelper
-      .openFileMoverDialog(new Set(bookIds)));
-  }
-
-  protected onCreateShelf(): void {
-    void this.dialogHelper.openShelfCreatorDialog();
-  }
-
-  protected onBulkAttachFiles(): void {
-    const sourceBooks: BookFileAttacherSourceBook[] = [];
-    for (const book of this.books()) {
-      if (this.selection().isSelected(book.id)) {
-        sourceBooks.push(book);
-      }
-    }
-    void this.dialogHelper.openBulkBookFileAttacherDialog(sourceBooks)
-      .then(ref => ref?.onClose.pipe(take(1)).subscribe((result: {success?: boolean} | undefined) => {
-        if (result?.success) {
-          this.selection().clear();
-        }
-      }));
-  }
-
-  protected onBulkResetProgress(source: BookProgressSource): void {
-    void this.withSelectedBookIds(bookIds => this.resetProgressMutation.mutate({bookIds: [...bookIds], source}));
-  }
-
-  protected onBulkSetMetadataLocks(locked: boolean): void {
-    void this.withSelectedBookIds(bookIds => this.metadataLocksMutation.mutate({bookIds: [...bookIds], locked}));
-  }
-
-  protected onBulkChangeCovers(kind: 'regenerate' | 'generate'): void {
-    const regenerate = kind === 'regenerate';
-    this.confirmationService.confirm({
-      message: this.transloco.translate(
-        regenerate ? 'book.browser.confirm.regenCoverMessage' : 'book.browser.confirm.customCoverMessage',
-        {count: this.selection().count().toLocaleString()},
-      ),
-      header: this.transloco.translate(
-        regenerate ? 'book.browser.confirm.regenCoverHeader' : 'book.browser.confirm.customCoverHeader',
-      ),
-      acceptLabel: this.transloco.translate('common.confirm'),
-      rejectLabel: this.transloco.translate('common.cancel'),
-      accept: () => {
-        void this.withSelectedBookIds(bookIds => this.changeCoversMutation.mutate({kind, bookIds: [...bookIds]}));
-      },
-    });
-  }
-
-  protected onBulkFetchMetadata(): void {
-    void this.withSelectedBookIds(bookIds => this.refreshMetadataMutation.mutate({bookIds: [...bookIds]}));
-  }
-
-  protected onBulkFetchMetadataWithOptions(): void {
-    void this.withSelectedBookIds(bookIds => void this.dialogHelper
-      .openMetadataRefreshDialog(new Set(bookIds)));
-  }
-
-  protected onBulkDelete(): void {
-    this.confirmationService.confirm({
-      message: this.transloco.translate('book.browser.confirm.deleteMessage', {
-        count: this.selection().count().toLocaleString(),
-      }),
-      header: this.transloco.translate('book.browser.confirm.deleteHeader'),
-      acceptLabel: this.transloco.translate('common.delete'),
-      rejectLabel: this.transloco.translate('common.cancel'),
-      acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-outlined',
-      accept: () => {
-        void this.withSelectedBookIds(bookIds => this.deleteBooksMutation.mutate({bookIds: [...bookIds]}, {
-          onSuccess: result => {
-            this.selection().pruneDeleted(result.removedBookIds);
-          },
-          onError: error => {
-            if (error instanceof DeleteBooksPartialError) {
-              this.selection().pruneDeleted(error.completed.removedBookIds);
-            }
-          },
-        }));
-      },
-    });
-  }
-
-  protected onBulkMarkAs(status: ReadStatusTarget): void {
-    const statusLabel: string = this.transloco.translate(READ_STATUS_TARGET_LABEL_KEYS[status]);
-    this.confirmationService.confirm({
-      header: this.transloco.translate('book.menuService.menu.updateReadStatus'),
-      message: this.transloco.translate('browse.bulk.markAsMessage', {
-        count: this.selection().count().toLocaleString(),
-        status: statusLabel,
-      }),
-      acceptLabel: this.transloco.translate('common.confirm'),
-      rejectLabel: this.transloco.translate('common.cancel'),
-      accept: () => {
-        void this.withSelectedBookIds(bookIds => this.readStatusMutation.mutate({bookIds: [...bookIds], status}));
-      },
-    });
   }
 }

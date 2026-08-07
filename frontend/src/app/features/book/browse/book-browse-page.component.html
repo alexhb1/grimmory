@@ -114,19 +114,16 @@
             [sorting]="tableSorting()"
             [sortableFields]="sortableFields()"
             [mobile]="mobileTableLayout()"
-            [selectionEnabled]="selectionEnabled()"
-            [selectionMode]="mobileSelectMode()"
-            [allSelected]="allBooksSelected()"
-            [someSelected]="someBooksSelected()"
-            [isSelected]="isTableRowSelected"
+            [selection]="tableSelection()"
             [openMenuBookId]="menuOpenBookId()"
-            (visibleRange)="onVisibleRange($event)"
+            (renderedRange)="onRenderedRange($event)"
             (sortingChange)="onTableSortingChange($event)"
             (selectionChange)="onTableSelectionChange($event)"
             (selectAllRequested)="selection.selectAll()"
             (clearSelectionRequested)="selection.clear()"
             (facetRequested)="onTableFacetRequested($event)"
             (menuRequested)="onMenuRequested($event.book, $event.request)"
+            (detailRequested)="onBookDetailRequested($event)"
             (retryNextPage)="onRetryNextPage()" />
         }
       } @else {
@@ -141,7 +138,9 @@
         [gap]="gridGap()"
         [rowGap]="gridRowGap()"
         [estimateItemHeight]="estimateItemHeight"
-        (visibleRange)="onVisibleRange($event)"
+        [initialErrorMessage]="'browse.book.loadError' | transloco"
+        [nextPageErrorMessage]="'browse.book.pageError' | transloco"
+        (renderedRange)="onRenderedRange($event)"
         (retryInitial)="onRetryInitial()"
         (retryNextPage)="onRetryNextPage()">
         <ng-template [appBrowseGridItemOf]="books()" let-book let-index="index">
@@ -150,17 +149,17 @@
             [book]="book"
             [showFormatPill]="formatPill()"
             [squareCovers]="squareCovers()"
-            [whenLine]="detailLineFor(book)"
-            [selectable]="selectionEnabled()"
-            [selected]="selection.isSelected(book.id)"
-            [selectionActive]="selection.active() || mobileSelectMode()"
+            [detailLine]="detailLineFor(book)"
+            [selection]="cardSelection(book)"
+            [detailMode]="'request'"
             [menuOpen]="menuOpenBookId() === book.id"
             (toggleSelect)="onToggleSelect(book, index, $event.shiftKey)"
             (action)="onCardAction(book)"
+            (detailRequested)="onBookDetailRequested(book)"
             (menuRequested)="onMenuRequested(book, $event)" />
         </ng-template>
         <ng-template appBrowseGridSkeleton>
-          <app-book-card-skeleton [squareCovers]="squareCovers()" />
+          <app-book-card-skeleton [squareCovers]="squareCovers()" [metaLines]="metaLines()" />
         </ng-template>
         <ng-template appBrowseGridEmpty>
           @if (activeFilterCount() > 0) {

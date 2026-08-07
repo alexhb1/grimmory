@@ -5,7 +5,7 @@ import {TranslocoService} from '@jsverse/transloco';
 
 import {type BookQuerySortKey} from '../data/book-query-params';
 import {type BookSummary} from '../data/book-response.models';
-import {bookReadStatusLabelKey} from './book-browse-fields';
+import {bookBrowseColumnValue, bookReadStatusLabelKey} from './book-browse-fields';
 
 const EMPTY_VALUE = '—';
 
@@ -20,60 +20,58 @@ export class BookBrowseSortLineService {
   lineFor(key: BookQuerySortKey, book: BookSummary): string {
     this.activeLang();
     const metadata = book.metadata;
+    const columnValue = bookBrowseColumnValue(book, key);
     switch (key) {
       case 'addedOn':
-        return this.date(book.addedOn);
       case 'lastReadTime':
-        return this.date(book.lastReadTime);
+      case 'publishedDate':
+        return this.date(columnValue);
       case 'dateFinished':
         return this.date(book.dateFinished);
-      case 'publishedDate':
-        return this.date(metadata?.publishedDate);
       case 'publisher':
-        return this.text(metadata?.publisher);
       case 'seriesName':
-        return this.text(metadata?.seriesName);
+      case 'language':
+        return this.text(columnValue);
       case 'narrator':
         return this.text(metadata?.narrator);
-      case 'language':
-        return this.text(metadata?.language);
       case 'pageCount':
-        return this.number(metadata?.pageCount);
+      case 'amazonReviewCount':
+      case 'goodreadsReviewCount':
+      case 'hardcoverReviewCount':
+        return this.number(columnValue);
       case 'personalRating':
         return this.rating(book.personalRating);
       case 'amazonRating':
       case 'goodreadsRating':
       case 'hardcoverRating':
       case 'ranobedbRating':
-        return this.rating(metadata?.[key]);
-      case 'amazonReviewCount':
-      case 'goodreadsReviewCount':
-      case 'hardcoverReviewCount':
-        return this.number(metadata?.[key]);
+        return this.rating(columnValue);
       case 'readingProgress':
         return this.progress(book);
       case 'readStatus':
-        return this.readStatus(book.readStatus);
+        return this.readStatus(columnValue);
       case 'title':
       case 'seriesNumber':
         return EMPTY_VALUE;
     }
   }
 
-  private date(value: string | undefined): string {
-    return value ? formatDate(value, 'mediumDate', this.locale) : EMPTY_VALUE;
+  private date(value: unknown): string {
+    return typeof value === 'string' && value
+      ? formatDate(value, 'mediumDate', this.locale)
+      : EMPTY_VALUE;
   }
 
-  private text(value: string | undefined): string {
-    return value || EMPTY_VALUE;
+  private text(value: unknown): string {
+    return typeof value === 'string' && value ? value : EMPTY_VALUE;
   }
 
-  private number(value: number | undefined): string {
-    return value == null ? EMPTY_VALUE : new Intl.NumberFormat().format(value);
+  private number(value: unknown): string {
+    return typeof value === 'number' ? new Intl.NumberFormat().format(value) : EMPTY_VALUE;
   }
 
-  private rating(value: number | undefined): string {
-    return value == null ? EMPTY_VALUE : value.toFixed(1);
+  private rating(value: unknown): string {
+    return typeof value === 'number' ? value.toFixed(1) : EMPTY_VALUE;
   }
 
   private progress(book: BookSummary): string {
@@ -88,8 +86,8 @@ export class BookBrowseSortLineService {
     return percentage == null ? EMPTY_VALUE : `${Math.round(percentage)}%`;
   }
 
-  private readStatus(status: BookSummary['readStatus']): string {
-    const labelKey = bookReadStatusLabelKey(status);
+  private readStatus(value: unknown): string {
+    const labelKey = typeof value === 'string' ? bookReadStatusLabelKey(value) : null;
     return labelKey ? this.transloco.translate(labelKey) : EMPTY_VALUE;
   }
 }
