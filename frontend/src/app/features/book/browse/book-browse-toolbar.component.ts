@@ -21,7 +21,7 @@ import {
 } from '@lucide/angular';
 
 import {type GridDensityDirection} from '../../../shared/util/grid-density.util';
-import {DEFAULT_BOOK_SORT_TERMS, type BookSortTerm, type SortDirection} from '../data/book-query-params';
+import {DEFAULT_BOOK_SORT_TERMS, type BookQuerySortKey, type BookSortTerm, type SortDirection} from '../data/book-query-params';
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
 import {connectedGroupClass, connectedItemClass} from '../../../shared/ui/connected-group';
 import {AppRadioGroupComponent} from '../../../shared/ui/radio-group/app-radio-group.component';
@@ -39,7 +39,12 @@ import {
   type BookColumnOption,
   type BookColumnSection,
 } from './book-browse-columns';
-import {bookSortDirectionIcon, bookSortField, type BookSortOption} from './book-browse-sort';
+import {
+  BOOK_CARD_DETAIL_OPTIONS,
+  bookSortDirectionIcon,
+  bookSortField,
+  type BookSortOption,
+} from './book-browse-sort';
 import {type BookBrowseViewMode} from './book-browse-url-state';
 import {type LibraryShelfMenuTarget} from '../../../shared/layout/navigation/library-shelf-menu-target.model';
 import {LibraryShelfMenuItemsComponent} from '../components/library-shelf-menu/library-shelf-menu-items.component';
@@ -71,6 +76,7 @@ export class BookBrowseToolbarComponent {
   readonly sortTerms = input.required<readonly BookSortTerm[]>();
   readonly viewMode = input.required<BookBrowseViewMode>();
   readonly columnOptions = input.required<readonly BookColumnOption[]>();
+  readonly cardDetail = input.required<BookQuerySortKey | null>();
   readonly densitySmallerDisabled = input.required<boolean>();
   readonly densityLargerDisabled = input.required<boolean>();
   readonly filtersOpen = input.required<boolean>();
@@ -83,9 +89,12 @@ export class BookBrowseToolbarComponent {
   readonly viewModeChange = output<BookBrowseViewMode>();
   readonly columnVisibilityChange = output<BookBrowseColumnVisibilityChange>();
   readonly columnsReset = output();
+  readonly cardDetailChange = output<BookQuerySortKey | null>();
   readonly densityChange = output<GridDensityDirection>();
   readonly filtersToggle = output();
   readonly mobileSelectToggle = output();
+
+  protected readonly cardDetailOptions = BOOK_CARD_DETAIL_OPTIONS;
 
   protected readonly stepperItemClass =
     'w-10! flex-none justify-center px-0! text-text-muted pointer-coarse:w-12! [&_[data-menu-label]]:hidden';
@@ -150,6 +159,11 @@ export class BookBrowseToolbarComponent {
 
   protected onViewModeValue(viewMode: string | null): void {
     if (viewMode === 'grid' || viewMode === 'table') this.selectView(viewMode);
+  }
+
+  protected setCardDetail(value: string): void {
+    const option = this.cardDetailOptions.find(candidate => candidate.id === value);
+    this.cardDetailChange.emit(option?.id ?? null);
   }
 
   protected sortRankFor(option: BookSortOption): string {

@@ -25,7 +25,7 @@ import {
   type BookSortTerm,
 } from '../../../book/data/book-query-params';
 import {BookQueryService} from '../../../book/data/book-query.service';
-import {bookSortOptions, bookSortTermsFromCriteria} from '../../../book/browse/book-browse-sort';
+import {BOOK_CARD_DETAIL_OPTIONS, bookSortOptions, bookSortTermsFromCriteria} from '../../../book/browse/book-browse-sort';
 import {entityViewSortCriteria, entityViewSortPatch} from '../../user-management/entity-view-preferences';
 import {type BookBrowseMultiSortDialogResult} from '../../../book/browse/book-browse-multi-sort-dialog.component';
 import {BookBrowseMultiSortEditorComponent} from '../../../book/browse/book-browse-multi-sort-editor.component';
@@ -53,6 +53,8 @@ export class ViewPreferencesComponent implements OnInit {
 
   viewModeOptions: {label: string; value: string; translationKey: string}[] = [];
 
+  cardDetailOptions: {label: string; value: string | null}[] = [];
+
   get libraryOptions(): { label: string; value: number }[] {
     return this.libraryService.libraries()
       .filter(library => library.id !== undefined)
@@ -70,6 +72,7 @@ export class ViewPreferencesComponent implements OnInit {
   }
 
   selectedView: 'GRID' | 'TABLE' = 'GRID';
+  selectedCardDetail: string | null = null;
   overlayBookType: boolean = true;
   autoSaveMetadata: boolean = false;
   globalSortTerms: readonly BookSortTerm[] = [];
@@ -85,6 +88,7 @@ export class ViewPreferencesComponent implements OnInit {
     library: number;
     sortTerms: readonly BookSortTerm[];
     view: 'GRID' | 'TABLE';
+    cardDetail: string | null;
   }[] = [];
 
   private user: User | null = null;
@@ -117,6 +121,7 @@ export class ViewPreferencesComponent implements OnInit {
       const prefs = user.userSettings?.entityViewPreferences;
       const global = prefs?.global;
       this.selectedView = global?.view ?? 'GRID';
+      this.selectedCardDetail = global?.cardDetail ?? null;
       this.overlayBookType = global.overlayBookType ?? true;
       this.autoSaveMetadata = user.userSettings?.autoSaveMetadata ?? false;
 
@@ -127,7 +132,8 @@ export class ViewPreferencesComponent implements OnInit {
         entityType: override.entityType,
         library: override.entityId,
         sortTerms: bookSortTermsFromCriteria(entityViewSortCriteria(override.preferences)),
-        view: override.preferences.view
+        view: override.preferences.view,
+        cardDetail: override.preferences.cardDetail ?? null
       }));
     }, {injector: this.injector});
   }
@@ -141,6 +147,10 @@ export class ViewPreferencesComponent implements OnInit {
     this.viewModeOptions = [
       {label: this.t.translate('settingsView.librarySort.viewGrid'), value: 'GRID', translationKey: 'viewGrid'},
       {label: this.t.translate('settingsView.librarySort.viewTable'), value: 'TABLE', translationKey: 'viewTable'}
+    ];
+    this.cardDetailOptions = [
+      {label: this.t.translate('settingsView.librarySort.cardDetailNone'), value: null},
+      ...BOOK_CARD_DETAIL_OPTIONS.map(option => ({label: this.t.translate(option.labelKey), value: option.id}))
     ];
   }
 
@@ -182,7 +192,8 @@ export class ViewPreferencesComponent implements OnInit {
         entityType: next.entityType,
         library: next.value,
         sortTerms: DEFAULT_BOOK_SORT_TERMS,
-        view: 'GRID'
+        view: 'GRID',
+        cardDetail: null
       });
     }
   }
@@ -220,6 +231,7 @@ export class ViewPreferencesComponent implements OnInit {
       ...prefs.global,
       ...sortPatch(this.globalSortTerms),
       view: this.selectedView,
+      cardDetail: this.selectedCardDetail,
       overlayBookType: this.overlayBookType
     };
 
@@ -234,7 +246,8 @@ export class ViewPreferencesComponent implements OnInit {
         preferences: {
           ...(existing ?? prefs.global),
           ...sortPatch(o.sortTerms),
-          view: o.view
+          view: o.view,
+          cardDetail: o.cardDetail
         }
       };
     });

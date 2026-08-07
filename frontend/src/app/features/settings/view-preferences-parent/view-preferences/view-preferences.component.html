@@ -32,6 +32,16 @@
             [options]="editorSortOptions()"
             (termsChange)="onGlobalSortTermsChange($event)" />
         </div>
+        <div class="card-detail-editor">
+          <span class="multi-sort-label">{{ t('cardDetail') }}</span>
+          <p-select
+            size="small"
+            [options]="cardDetailOptions"
+            [(ngModel)]="selectedCardDetail"
+            optionLabel="label"
+            optionValue="value"
+            [placeholder]="t('cardDetail')" />
+        </div>
         <div class="format-overlay-editor">
           <p-toggleswitch [(ngModel)]="overlayBookType"></p-toggleswitch>
           <span class="setting-label">{{ t('formatOverlay') }}</span>
@@ -64,6 +74,7 @@
                 <th style="min-width: 150px; max-width: 220px;">{{ t('tableType') }}</th>
                 <th style="min-width: 220px; max-width: 280px;">{{ t('tableName') }}</th>
                 <th style="min-width: 160px;">{{ t('tableSortConfig') }}</th>
+                <th style="min-width: 180px;">{{ t('cardDetail') }}</th>
                 <th style="min-width: 125px;">{{ t('tableViewMode') }}</th>
                 <th style="width: 75px; text-align: center;">{{ t('tableActions') }}</th>
               </tr>
@@ -92,6 +103,16 @@
                     [outlined]="true"
                     (onClick)="editOverrideSort(rowIndex)">
                   </p-button>
+                </td>
+                <td>
+                  <p-select
+                    size="small"
+                    [options]="cardDetailOptions"
+                    [(ngModel)]="override.cardDetail"
+                    optionLabel="label"
+                    optionValue="value"
+                    [style]="{'width': '100%'}"
+                    appendTo="body" />
                 </td>
                 <td>
                   <p-select size="small" [options]="viewModeOptions" [(ngModel)]="override.view"

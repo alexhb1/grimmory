@@ -65,3 +65,16 @@ export function bookSortHasDetailLine(key: BookQuerySortKey): key is BookDetailL
   const field = SORT_FIELDS.get(key);
   return field !== undefined && field.sort.detailLine !== false;
 }
+
+interface BookCardDetailOption {
+  readonly id: BookQuerySortKey;
+  readonly labelKey: string;
+}
+
+export const BOOK_CARD_DETAIL_OPTIONS: readonly BookCardDetailOption[] =
+  BOOK_QUERY_SORT_KEYS.flatMap(id => {
+    const field = SORT_FIELDS.get(id);
+    return !field || field.sort.detailLine === false
+      ? []
+      : [{id, labelKey: field.labelKey}];
+  });

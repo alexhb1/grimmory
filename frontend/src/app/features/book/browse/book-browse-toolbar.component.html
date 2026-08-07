@@ -127,22 +127,40 @@
         [attr.aria-label]="'browse.toolbar.largerCards' | transloco"
         (selected)="densityChange.emit('larger')" />
     </div>
-    <app-menu-separator class="sm:hidden" />
+    <app-menu-separator />
   }
   <div class="contents sm:hidden">
     <app-menu-radio-group [value]="viewMode()" (valueSelected)="selectView($event)">
       <app-menu-radio value="grid">{{ 'book.viewMode.grid' | transloco }}</app-menu-radio>
       <app-menu-radio value="table">{{ 'book.viewMode.table' | transloco }}</app-menu-radio>
     </app-menu-radio-group>
+    <app-menu-separator />
   </div>
-  @if (viewMode() !== 'grid') {
-    <app-menu-separator class="sm:hidden" />
+  @if (viewMode() === 'grid') {
+    <app-menu-item value="card-detail" [submenu]="cardDetailMenu">
+      {{ 'browse.toolbar.cardDetail' | transloco }}
+    </app-menu-item>
+  } @else {
     <app-menu-item value="columns" [submenu]="columnsMenu">{{ 'browse.toolbar.columns' | transloco }}</app-menu-item>
   }
   @if (actionTarget(); as target) {
     <app-menu-separator />
     <app-library-shelf-menu-items [target]="target" />
   }
+</app-menu>
+
+<app-menu
+  #cardDetailMenu="ngMenu"
+  menuClass="w-60 max-h-[min(32rem,calc(100vh-2rem))] overflow-y-auto"
+  [ariaLabel]="'browse.toolbar.cardDetail' | transloco">
+  <app-menu-radio-group
+    [value]="cardDetail() ?? ''"
+    (valueSelected)="setCardDetail($event)">
+    <app-menu-radio value="">{{ 'browse.toolbar.noCardDetail' | transloco }}</app-menu-radio>
+    @for (option of cardDetailOptions; track option.id) {
+      <app-menu-radio [value]="option.id">{{ option.labelKey | transloco }}</app-menu-radio>
+    }
+  </app-menu-radio-group>
 </app-menu>
 
 <app-menu

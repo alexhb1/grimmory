@@ -131,6 +131,10 @@ export function createBookBrowsePreferences({context, availableSortKeys, urlStat
       persistColumnPreferences();
     },
 
+    setCardDetail(cardDetail: BookQuerySortKey | null): void {
+      updateViewPreference({cardDetail});
+    },
+
     saveSortDefault(terms: readonly BookSortTerm[]): void {
       updateViewPreference(entityViewSortPatch(
         browseSortCriteria(terms.length > 0 ? terms : DEFAULT_BOOK_SORT_TERMS),

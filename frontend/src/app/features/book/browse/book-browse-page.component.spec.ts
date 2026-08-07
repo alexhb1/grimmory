@@ -46,6 +46,14 @@ function bookPage(ids: number[], totalElements = ids.length, links: BrowseLink[]
   };
 }
 
+function book(id: number): BookSummary {
+  return {id, libraryId: 1, libraryName: 'Library'};
+}
+
+function summaryPage(books: BookSummary[]) {
+  return {...bookPage([], books.length), content: books};
+}
+
 interface PageHarness {
   detailLineFor(book: BookSummary): string | null;
   selection: {
@@ -303,6 +311,24 @@ describe('BookBrowsePageComponent', () => {
       request.url === PAGE_URL && request.params.get('sort') === '-title',
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
+  });
+
+  it('renders the configured card detail line and persists a toolbar change to it', async () => {
+    currentUser.set(userFixture({}, 5, {cardDetail: 'addedOn'}));
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(summaryPage([{...book(1), addedOn: '2026-02-14T10:00:00Z'}]));
+    await flushQueryAsync();
+    fixture.detectChanges();
+
+    const detailLine = page().detailLineFor({...book(1), addedOn: '2026-02-14T10:00:00Z'});
+    expect(detailLine).toContain('Feb');
+    expect(detailLine).toContain('2026');
+
+    fixture.debugElement.query(By.css('app-book-browse-toolbar')).componentInstance.cardDetailChange.emit('publishedDate');
+
+    expect(updateUserSetting).toHaveBeenCalledWith(5, 'entityViewPreferences', expect.objectContaining({
+      global: expect.objectContaining({cardDetail: 'publishedDate'}),
+    }));
   });
 
   it('ignores reselecting the active sort and flips only the primary term on a direction toggle', async () => {

@@ -27,6 +27,7 @@ describe('BookBrowseToolbarComponent', () => {
     fixture.componentRef.setInput('sortTerms', [{key: 'title', direction: 'asc'}]);
     fixture.componentRef.setInput('viewMode', 'grid');
     fixture.componentRef.setInput('columnOptions', []);
+    fixture.componentRef.setInput('cardDetail', null);
     fixture.componentRef.setInput('densitySmallerDisabled', false);
     fixture.componentRef.setInput('densityLargerDisabled', false);
     fixture.componentRef.setInput('filtersOpen', false);
@@ -65,6 +66,26 @@ describe('BookBrowseToolbarComponent', () => {
 
     titleItem.click();
     expect(changes).toEqual([{key: 'title', direction: 'asc'}]);
+  });
+
+  it('offers card detail choices in grid view and maps the None radio to null', async () => {
+    const changes: (string | null)[] = [];
+    fixture.componentInstance.cardDetailChange.subscribe(value => changes.push(value));
+    fixture.componentRef.setInput('cardDetail', 'addedOn');
+    await fixture.whenStable();
+
+    buttonByLabel('More options').click();
+    fixture.detectChanges();
+
+    const menu = document.querySelector('app-menu[aria-label="Card Detail"]') as HTMLElement;
+    const radios = Array.from(menu.querySelectorAll('app-menu-radio')) as HTMLElement[];
+    expect(radios[0].textContent.trim()).toBe('None');
+    const addedOn = radios.find(radio => radio.textContent.trim() === 'Date added');
+    expect(addedOn?.getAttribute('aria-checked')).toBe('true');
+
+    addedOn?.click();
+    radios[0].click();
+    expect(changes).toEqual(['addedOn', null]);
   });
 
   function optionalButtonByLabel(label: string): HTMLButtonElement | null {

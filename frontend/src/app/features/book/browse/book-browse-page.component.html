@@ -12,6 +12,7 @@
         [sortTerms]="sortTerms()"
         [viewMode]="preferences.viewMode()"
         [columnOptions]="preferences.columnOptions()"
+        [cardDetail]="cardDetail()"
         [densitySmallerDisabled]="densitySmallerDisabled()"
         [densityLargerDisabled]="densityLargerDisabled()"
         [filtersOpen]="railVisible()"
@@ -23,6 +24,7 @@
         (viewModeChange)="urlState.setView($event)"
         (columnVisibilityChange)="preferences.setColumnVisibility($event)"
         (columnsReset)="preferences.resetColumns()"
+        (cardDetailChange)="preferences.setCardDetail($event)"
         (densityChange)="onDensityChange($event)"
         (filtersToggle)="onFiltersToggle()"
         (mobileSelectToggle)="onMobileSelectToggle()" />

@@ -520,9 +520,9 @@
     },
     "librarySort": {
       "sectionTitle": "Library and Shelf View & Sort Preferences",
-      "sectionDesc": "Configure default and per-library/shelf preferences for sorting and view mode (grid or table) in the browser.",
+      "sectionDesc": "Configure default and per-library/shelf preferences for sorting, card detail, and view mode in the browser.",
       "defaultPreferences": "Default Preferences",
-      "defaultPreferencesDesc": "Configure the default view mode and multi-field sorting for all libraries and shelves.",
+      "defaultPreferencesDesc": "Configure the default view mode, card detail, and multi-field sorting for all libraries and shelves.",
       "sortOrderLabel": "Sort Order (drag to reorder)",
       "formatOverlay": "File Format Overlay",
       "ascending": "Ascending",
@@ -551,7 +551,9 @@
       "sortSaved": "Sort Saved",
       "sortSavedDetail": "Sort configuration saved for this {{entityType}}.",
       "editSort": "Edit Sort",
-      "tableSortConfig": "Sort Config"
+      "tableSortConfig": "Sort Config",
+      "cardDetailNone": "None",
+      "cardDetail": "Card Detail"
     },
     "sidebarSort": {
       "sectionTitle": "Sidebar Library and Shelf Sorting Preference",
@@ -5356,7 +5358,9 @@
       "smallerCards": "Smaller Cards",
       "largerCards": "Larger Cards",
       "columns": "Columns",
-      "resetColumns": "Reset to Default"
+      "resetColumns": "Reset to Default",
+      "cardDetail": "Card Detail",
+      "noCardDetail": "None"
     },
     "bulk": {
       "markAsMessage": "Mark {{count}} books as {{status}}?",
