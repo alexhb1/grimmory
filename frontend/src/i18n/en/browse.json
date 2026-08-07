@@ -1,7 +1,4 @@
 {
-  "grid": {
-    "pageError": "Couldn't load more books."
-  },
   "book": {
     "empty": "No books here yet.",
     "filteredEmpty": "No books match these filters.",
@@ -12,7 +9,8 @@
     "showAll": "Show all",
     "showFewer": "Show fewer",
     "searchValues": "Search…",
-    "search": "Search {{scope}}"
+    "search": "Search {{scope}}",
+    "noMatches": "No matches"
   },
   "chips": {
     "clearAll": "Clear all",

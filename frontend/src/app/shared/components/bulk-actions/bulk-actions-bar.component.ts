@@ -84,17 +84,6 @@ export class BulkActionsBarComponent {
     });
   }
 
-  protected readonly stripClass = computed(() =>
-    this.mobileShell()
-      ? 'pointer-events-none fixed inset-x-0 bottom-0 z-30'
-      : 'pointer-events-none fixed inset-x-0 bottom-5 z-30 flex justify-center pl-[calc(var(--sidebar-width,0px)*(1-var(--mobile-shell-active,0)))]',
-  );
-  protected readonly barClass = computed(() =>
-    this.mobileShell()
-      ? 'pointer-events-auto flex items-center justify-between gap-2 overflow-x-auto whitespace-nowrap border-t border-border bg-card px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] text-sm shadow-[0_-8px_24px_rgb(0_0_0/0.12)] animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none'
-      : 'pointer-events-auto flex h-12 max-w-[calc(100%-2rem)] items-center gap-1 overflow-x-auto whitespace-nowrap rounded-xl border border-border bg-card pl-3.5 pr-2 text-sm shadow-float animate-in fade-in-0 slide-in-from-bottom-1 motion-reduce:animate-none',
-  );
-
   protected readonly countLabel = computed(() => this.count().toLocaleString());
   protected readonly showSelectAll = computed(() => {
     const total = this.total();

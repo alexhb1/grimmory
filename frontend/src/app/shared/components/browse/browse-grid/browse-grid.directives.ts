@@ -13,7 +13,7 @@ export class BrowseGridItemDef<T> {
   readonly templateRef = inject(TemplateRef) as TemplateRef<BrowseGridItemContext<T>>;
   readonly items = input.required<readonly T[]>({alias: 'appBrowseGridItemOf'});
 
-  static ngTemplateContextGuard<T>(dir: BrowseGridItemDef<T>, ctx: unknown): ctx is BrowseGridItemContext<NonNullable<T>> {
+  static ngTemplateContextGuard<T>(dir: BrowseGridItemDef<T>, ctx: unknown): ctx is BrowseGridItemContext<T> {
     void dir;
     void ctx;
     return true;
