@@ -10,6 +10,7 @@
       [sortTerms]="activeSortTerms()"
       [viewMode]="viewMode()"
       [columnOptions]="tableColumnOptions()"
+      [cardDetail]="cardDetail()"
       [densitySmallerDisabled]="densitySmallerDisabled()"
       [densityLargerDisabled]="densityLargerDisabled()"
       [filtersOpen]="filtersOpen()"
@@ -24,6 +25,7 @@
       (viewModeChange)="onViewModeChange($event)"
       (columnVisibilityChange)="onTableColumnVisibilityChange($event)"
       (columnsReset)="onTableColumnsReset()"
+      (cardDetailChange)="onCardDetailChange($event)"
       (densityChange)="onDensityChange($event)"
       (filtersToggle)="onFiltersToggle()"
       (mobileSelectToggle)="onMobileSelectToggle()" />

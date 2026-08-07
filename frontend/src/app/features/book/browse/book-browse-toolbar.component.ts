@@ -25,7 +25,7 @@ import {
 
 import {type GridDensityDirection} from '../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 import {SelectModeControlsComponent} from '../../../shared/components/bulk-actions/select-mode-controls.component';
-import {type BookSortTerm} from '../data/book-query-params';
+import {type BookQuerySortKey, type BookSortTerm} from '../data/book-query-params';
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
 import {connectedGroupClass, connectedItemClass} from '../../../shared/ui/connected-group';
 import {AppRadioGroupComponent} from '../../../shared/ui/radio-group/app-radio-group.component';
@@ -38,6 +38,7 @@ import {AppMenuSectionComponent} from '../../../shared/ui/menu/app-menu-section.
 import {AppMenuSeparatorComponent} from '../../../shared/ui/menu/app-menu-separator.component';
 import {AppMenuTriggerDirective} from '../../../shared/ui/menu/app-menu-trigger.directive';
 import {
+  BOOK_BROWSE_CARD_DETAIL_OPTIONS,
   bookBrowseColumnSections,
   sortDirectionIcon,
   type BookBrowseColumnOption,
@@ -196,17 +197,10 @@ export interface BookBrowseColumnVisibilityChange {
       <svg lucideEllipsis aria-hidden="true"></svg>
     </app-button>
     <app-menu #moreMenu [ariaLabel]="'browse.toolbar.more' | transloco">
-      <div class="contents sm:hidden">
-        <app-menu-radio-group [value]="viewMode()" (valueSelected)="selectView($event)">
-          <app-menu-radio value="grid">{{ 'browse.toolbar.grid' | transloco }}</app-menu-radio>
-          <app-menu-radio value="table">{{ 'browse.toolbar.table' | transloco }}</app-menu-radio>
-        </app-menu-radio-group>
-        <app-menu-separator />
-      </div>
       @if (viewMode() === 'grid') {
-        <div class="flex min-h-7 w-full select-none items-center gap-2 pt-1 pl-2 pr-0 text-sm leading-5 text-text pointer-coarse:min-h-11 pointer-coarse:pl-3">
+        <div class="flex min-h-8 w-full select-none items-center gap-2 pl-2 pr-0 text-sm leading-5 text-text pointer-coarse:min-h-11 pointer-coarse:pl-3">
           <span class="min-w-0 flex-1 truncate">{{ 'browse.toolbar.density' | transloco }}</span>
-          <span class="flex items-center gap-0.5 self-stretch">
+          <span class="flex items-center gap-0.5">
             <button type="button" [class]="stepperClass" [disabled]="densitySmallerDisabled()"
               [attr.aria-label]="'browse.toolbar.smallerCards' | transloco"
               (click)="densityChange.emit('smaller')">
@@ -219,6 +213,19 @@ export interface BookBrowseColumnVisibilityChange {
             </button>
           </span>
         </div>
+        <app-menu-separator />
+      }
+      <div class="contents sm:hidden">
+        <app-menu-radio-group [value]="viewMode()" (valueSelected)="selectView($event)">
+          <app-menu-radio value="grid">{{ 'browse.toolbar.grid' | transloco }}</app-menu-radio>
+          <app-menu-radio value="table">{{ 'browse.toolbar.table' | transloco }}</app-menu-radio>
+        </app-menu-radio-group>
+        <app-menu-separator />
+      </div>
+      @if (viewMode() === 'grid') {
+        <app-menu-item [submenu]="cardDetailMenu">
+          {{ 'browse.toolbar.cardDetail' | transloco }}
+        </app-menu-item>
       } @else {
         <app-menu-item [submenu]="columnsMenu">{{ 'browse.toolbar.columns' | transloco }}</app-menu-item>
       }
@@ -303,6 +310,20 @@ export interface BookBrowseColumnVisibilityChange {
     </app-menu>
 
     <app-menu
+      #cardDetailMenu="ngMenu"
+      menuClass="w-60 max-h-[min(32rem,calc(100vh-2rem))] overflow-y-auto"
+      [ariaLabel]="'browse.toolbar.cardDetail' | transloco">
+      <app-menu-radio-group
+        [value]="cardDetail() ?? ''"
+        (valueSelected)="setCardDetail($event)">
+        <app-menu-radio value="">{{ 'browse.toolbar.noCardDetail' | transloco }}</app-menu-radio>
+        @for (option of cardDetailOptions; track option.id) {
+          <app-menu-radio [value]="option.id">{{ option.labelKey | transloco }}</app-menu-radio>
+        }
+      </app-menu-radio-group>
+    </app-menu>
+
+    <app-menu
       #columnsMenu="ngMenu"
       menuClass="w-[34rem] max-w-[calc(100vw-1rem)]"
       [ariaLabel]="'browse.toolbar.columns' | transloco">
@@ -339,6 +360,7 @@ export class BookBrowseToolbarComponent {
   readonly sortTerms = input<readonly BookSortTerm[]>([]);
   readonly viewMode = input<BookBrowseViewMode>('grid');
   readonly columnOptions = input<readonly BookBrowseColumnOption[]>([]);
+  readonly cardDetail = input<BookQuerySortKey | null>(null);
   readonly densitySmallerDisabled = input(false, {transform: booleanAttribute});
   readonly densityLargerDisabled = input(false, {transform: booleanAttribute});
   readonly filtersOpen = input(false, {transform: booleanAttribute});
@@ -353,11 +375,13 @@ export class BookBrowseToolbarComponent {
   readonly viewModeChange = output<BookBrowseViewMode>();
   readonly columnVisibilityChange = output<BookBrowseColumnVisibilityChange>();
   readonly columnsReset = output();
+  readonly cardDetailChange = output<BookQuerySortKey | null>();
   readonly densityChange = output<GridDensityDirection>();
   readonly filtersToggle = output();
   readonly mobileSelectToggle = output();
   readonly selectAllRequested = output();
 
+  protected readonly cardDetailOptions = BOOK_BROWSE_CARD_DETAIL_OPTIONS;
   protected readonly actionAvailable = computed(() => {
     const target = this.actionTarget();
     return target !== null && libraryShelfMenuAvailable(target, this.currentUser());
@@ -368,10 +392,10 @@ export class BookBrowseToolbarComponent {
   });
 
   protected readonly stepperClass =
-    'flex h-full min-h-7 w-10 items-center justify-center rounded-sm text-text-muted ' +
+    'flex h-7 w-10 items-center justify-center rounded-sm text-text-muted ' +
     'hover:bg-surface-hover hover:text-text disabled:pointer-events-none disabled:opacity-40 ' +
     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary ' +
-    'pointer-coarse:min-h-11 pointer-coarse:w-12 [&>svg]:size-4';
+    'pointer-coarse:h-10 pointer-coarse:w-12 [&>svg]:size-4';
   protected readonly sortGroupClass = connectedGroupClass;
   protected readonly sortFieldButtonClass = connectedItemClass({first: true, last: false});
   protected readonly sortDirectionButtonClass = connectedItemClass({first: false, last: true});
@@ -424,6 +448,11 @@ export class BookBrowseToolbarComponent {
     if (this.columnOptions().find(column => column.field === field)?.hideable) {
       this.columnVisibilityChange.emit({field, visible});
     }
+  }
+
+  protected setCardDetail(value: string): void {
+    const option = this.cardDetailOptions.find(candidate => candidate.id === value);
+    this.cardDetailChange.emit(option?.id ?? null);
   }
 
   protected sortRankFor(option: BookSortOption): string {

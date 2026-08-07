@@ -25,6 +25,8 @@
     "density": "Size",
     "smallerCards": "Smaller cards",
     "largerCards": "Larger cards",
+    "cardDetail": "Card Detail",
+    "noCardDetail": "None",
     "columns": "Columns",
     "resetColumns": "Reset to Default",
     "filter": "Filter"

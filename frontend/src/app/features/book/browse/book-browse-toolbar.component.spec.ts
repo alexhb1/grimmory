@@ -113,13 +113,15 @@ describe('BookBrowseToolbarComponent', () => {
     expect(overflowButton?.classList).toContain('sm:ml-0');
   });
 
-  it('shows grid density controls only in grid view', async () => {
+  it('shows grid density and card detail controls only in grid view', async () => {
     expect(buttonByLabel('Smaller cards')).toBeTruthy();
+    expect(host().textContent).toContain('Card Detail');
 
     fixture.componentRef.setInput('viewMode', 'table');
     await fixture.whenStable();
 
     expect(optionalButtonByLabel('Smaller cards')).toBeNull();
+    expect(host().textContent).not.toContain('Card Detail');
   });
 
   it.each([
@@ -229,6 +231,26 @@ describe('BookBrowseToolbarComponent', () => {
     await fixture.whenStable();
 
     expect(changes).toEqual([{field: 'authors', visible: false}]);
+  });
+
+  it('offers card detail choices in grid view and maps the None radio to null', async () => {
+    const changes: (string | null)[] = [];
+    fixture.componentInstance.cardDetailChange.subscribe(value => changes.push(value));
+    fixture.componentRef.setInput('cardDetail', 'addedOn');
+    await fixture.whenStable();
+
+    buttonByLabel('More options').click();
+    fixture.detectChanges();
+
+    const menu = document.querySelector('app-menu[aria-label="Card Detail"]') as HTMLElement;
+    const radios = Array.from(menu.querySelectorAll('app-menu-radio')) as HTMLElement[];
+    expect(radios[0].textContent.trim()).toBe('None');
+    const addedOn = radios.find(radio => radio.textContent.trim() === 'Date added');
+    expect(addedOn?.getAttribute('aria-checked')).toBe('true');
+
+    addedOn?.click();
+    radios[0].click();
+    expect(changes).toEqual(['addedOn', null]);
   });
 
   function optionalButtonByLabel(label: string): HTMLButtonElement | null {

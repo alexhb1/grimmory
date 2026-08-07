@@ -294,6 +294,12 @@ export class BookBrowsePageComponent {
       this.userService.currentUser()?.userSettings.entityViewPreferences,
       entityViewPreferenceContext(this.routeParamMap()),
     ));
+  protected readonly cardDetail = computed<BookQuerySortKey | null>(() => {
+    const key = this.activeViewPreference()?.cardDetail;
+    return key && isBookQuerySortKey(key) && bookBrowseSortLineAvailable(key)
+      ? key
+      : null;
+  });
   private readonly defaultSortTerms = computed<readonly BookSortTerm[]>(() => {
     const preferences = this.userService.currentUser()?.userSettings.entityViewPreferences;
     const available = this.availableSortKeys();
@@ -518,7 +524,7 @@ export class BookBrowsePageComponent {
         return key;
       }
     }
-    return null;
+    return this.cardDetail();
   });
 
   private readonly detailLineKey = heldSignal<BookQuerySortKey | null>(
@@ -613,6 +619,19 @@ export class BookBrowsePageComponent {
 
   protected onRenderedRange(range: BrowseGridRenderedRange): void {
     this.presentation.onRenderedRange(range);
+  }
+
+  protected onCardDetailChange(cardDetail: BookQuerySortKey | null): void {
+    const user = this.userService.getCurrentUser();
+    if (!user) {
+      return;
+    }
+    const preferences = upsertEntityViewPreference(
+      user.userSettings.entityViewPreferences,
+      entityViewPreferenceContext(this.routeParamMap()),
+      {cardDetail},
+    );
+    this.userService.updateUserSetting(user.id, 'entityViewPreferences', preferences);
   }
 
   protected onViewModeChange(view: BookBrowseViewMode): void {

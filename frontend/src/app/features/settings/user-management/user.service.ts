@@ -26,6 +26,7 @@ export interface EntityViewPreference {
   sortDir: 'ASC' | 'DESC';
   sortCriteria?: SortCriterion[];
   view: 'GRID' | 'TABLE';
+  cardDetail?: string | null;
   coverSize: number;
   seriesCollapsed?: boolean;
   overlayBookType: boolean;

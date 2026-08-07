@@ -73,6 +73,7 @@ function summaryPage(
 interface PageHarness {
   books(): readonly BookSummary[];
   status(): string;
+  detailLineFor(book: BookSummary): string | null;
   booksQuery: {isPlaceholderData(): boolean};
   selection: {
     count(): number;
@@ -168,7 +169,8 @@ describe('BookBrowsePageComponent', () => {
     const menu = root.querySelector('app-menu[aria-label="More options"]');
     return Array.from(menu?.querySelectorAll('app-menu-item') ?? [])
       .filter(item => item.closest('app-menu') === menu)
-      .map(item => item.textContent.trim());
+      .map(item => item.textContent.trim())
+      .filter(label => label !== 'Columns' && label !== 'Card Detail');
   }
 
   async function loadAndSelect(books: BookSummary[]): Promise<PageHarness> {
@@ -666,6 +668,49 @@ describe('BookBrowsePageComponent', () => {
       !request.params.has('cursor'),
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
+  });
+
+  it('shows the configured card detail line while the sort stays at the default', async () => {
+    currentUser.set({
+      permissions: {},
+      userSettings: {
+        entityViewPreferences: {
+          global: {
+            sortKey: 'title',
+            sortDir: 'ASC',
+            view: 'GRID',
+            cardDetail: 'addedOn',
+            coverSize: 1,
+            seriesCollapsed: false,
+            overlayBookType: true,
+          },
+          overrides: [],
+        },
+      },
+    });
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(summaryPage([{...book(1), addedOn: '2026-02-14T10:00:00Z'}]));
+    await flushQueryAsync();
+    fixture.detectChanges();
+
+    const detailLine = page().detailLineFor({...book(1), addedOn: '2026-02-14T10:00:00Z'});
+    expect(detailLine).toContain('Feb');
+    expect(detailLine).toContain('2026');
+  });
+
+  it('persists a toolbar card detail choice into the global view preference', async () => {
+    currentUser.set(userFixture({}, 5));
+    fixture.detectChanges();
+    expectInitialPageRequest().flush(summaryPage([book(1)]));
+    await flushQueryAsync();
+    fixture.detectChanges();
+
+    const toolbar = fixture.debugElement.query(By.css('app-book-browse-toolbar'));
+    toolbar.componentInstance.cardDetailChange.emit('addedOn');
+
+    expect(updateUserSetting).toHaveBeenCalledWith(5, 'entityViewPreferences', expect.objectContaining({
+      global: expect.objectContaining({cardDetail: 'addedOn'}),
+    }));
   });
 
   it('seeds a new scoped sort default from the effective global view preference', async () => {
