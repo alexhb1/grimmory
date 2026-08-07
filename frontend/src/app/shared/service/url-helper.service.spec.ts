@@ -116,13 +116,14 @@ describe('UrlHelperService', () => {
       commands: ['/all-books'],
       extras: {
         queryParams: {
-          view: 'grid',
-          sort: 'title',
-          direction: 'asc',
-          sidebar: true,
-          filter: 'author:Ursula%20K.%20Le%20Guin',
+          facet: 'author:Ursula K. Le Guin',
         },
       },
+    });
+
+    expect(service.filterBooksBy('category', 'Science Fiction')).toEqual({
+      commands: ['/all-books'],
+      extras: {queryParams: {facet: 'genre:Science Fiction'}},
     });
   });
 });

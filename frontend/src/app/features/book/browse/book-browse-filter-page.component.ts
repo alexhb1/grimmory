@@ -27,6 +27,9 @@ import {
 } from '../data/book-query-params';
 import {type BookFacetResult, type BookPage} from '../data/book-query.models';
 import {BookQueryService} from '../data/book-query.service';
+import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
+import {LibraryService} from '../service/library.service';
+import {MagicShelfService} from '../../magic-shelf/service/magic-shelf.service';
 import {
   buildRailGroups,
   DEFAULT_BOOK_SORT,
@@ -35,7 +38,7 @@ import {
   sortTerms,
   type FrozenFacetOrders,
 } from './book-browse-fields';
-import {bookBrowseScope, scopedFacetSelection} from './book-browse-scope';
+import {bookBrowseScope, bookBrowseScopeTitle, scopedFacetSelection} from './book-browse-scope';
 
 @Component({
   selector: 'app-book-browse-filter-page',
@@ -96,6 +99,9 @@ export class BookBrowseFilterPageComponent {
   private readonly router = inject(Router);
   private readonly bookQuery = inject(BookQueryService);
   private readonly transloco = inject(TranslocoService);
+  private readonly shelfDefinitionQuery = inject(ShelfDefinitionQueryService);
+  private readonly libraryService = inject(LibraryService);
+  private readonly magicShelfService = inject(MagicShelfService);
   private readonly queryParamMap = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
@@ -116,6 +122,7 @@ export class BookBrowseFilterPageComponent {
   private readonly scope = computed(() =>
     bookBrowseScope(this.route.snapshot.paramMap, this.route.snapshot.data),
   );
+  private readonly shelfDefinitionsQuery = injectQuery(() => this.shelfDefinitionQuery.definitions());
   private readonly facetsQuery = injectQuery(() => ({
     ...this.bookQuery.facets({
       facets: scopedFacetSelection(this.staged(), this.scope()),
@@ -157,13 +164,26 @@ export class BookBrowseFilterPageComponent {
   private readonly activeLang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
+  private readonly scopeTitle = computed(() => {
+    this.activeLang();
+    return bookBrowseScopeTitle(
+      this.scope(),
+      this.libraryService.libraries(),
+      this.shelfDefinitionsQuery.data() ?? [],
+      this.magicShelfService.shelves(),
+      this.transloco.translate('book.browser.labels.unshelvedBooks'),
+    );
+  });
+  private readonly browseTitle = computed(() => this.scope()
+    ? this.scopeTitle() ?? ''
+    : this.transloco.translate('book.browser.labels.allBooks'));
   protected readonly pageHeader = computed<PageHeader>(() => {
     this.activeLang();
     return {
       title: this.transloco.translate('browse.filterPage.title'),
       breadcrumbs: [
         {
-          label: this.transloco.translate('book.browser.labels.allBooks'),
+          label: this.browseTitle(),
           commands: ['/', ...this.route.parent!.snapshot.url.map(segment => segment.path)],
           queryParamsHandling: 'preserve',
         },
@@ -174,8 +194,7 @@ export class BookBrowseFilterPageComponent {
 
   protected readonly searchHint = computed(() => {
     this.activeLang();
-    const scope: string = this.transloco.translate('book.browser.labels.allBooks');
-    return this.transloco.translate('browse.rail.search', {scope});
+    return this.transloco.translate('browse.rail.search', {scope: this.browseTitle()});
   });
 
   protected onToggle(toggle: FilterRailToggle<BookQueryFacetKey>): void {

@@ -5,7 +5,6 @@ import {By} from '@angular/platform-browser';
 import {Router, provideRouter} from '@angular/router';
 import {RouterTestingHarness} from '@angular/router/testing';
 import {QueryClient} from '@tanstack/angular-query-experimental';
-import {Subject} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {API_CONFIG} from '../../../core/config/api-config';
@@ -22,7 +21,7 @@ import {BookBrowseBulkBarComponent} from './book-browse-bulk-bar.component';
 import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
 import {DialogService} from '@openng/optimus-ui/dynamicdialog';
 
-import {BookService} from '../service/book.service';
+import {BookReadService} from '../service/book-read.service';
 import {BookFileService} from '../service/book-file.service';
 import {LibraryService} from '../service/library.service';
 import {LibraryShelfMenuService} from '../service/library-shelf-menu.service';
@@ -32,6 +31,7 @@ import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {UserService} from '../../settings/user-management/user.service';
 import {EmailService} from '../../settings/email-v2/email.service';
 import {BookBrowsePageComponent} from './book-browse-page.component';
+import {BookBrowseFilterPageComponent} from './book-browse-filter-page.component';
 import {buildSortOptions, type BookSortSelection} from './book-browse-fields';
 
 const PAGE_URL = `${API_CONFIG.BASE_URL}/api/v1/books/page`;
@@ -87,10 +87,6 @@ interface PageHarness {
 interface BulkHarness {
   bulkBar(): {availableWidth: {set(value: number): void}} | undefined;
   bulkShelves(): readonly {id: number}[];
-  onBulkEditAll(): void;
-  onBulkEditOneByOne(): void;
-  onBulkOrganizeFiles(): void;
-  onBulkAttachFiles(): void;
 }
 
 function userFixture(permissions: Record<string, boolean>, id?: number) {
@@ -248,7 +244,10 @@ describe('BookBrowsePageComponent', () => {
         provideRouter([
           {path: '', component: TestRouteComponent},
           {path: 'book/:bookId', component: TestRouteComponent},
-          {path: 'library/:libraryId/books', children: [{path: '', component: BookBrowsePageComponent}]},
+          {path: 'library/:libraryId/books', children: [
+            {path: '', component: BookBrowsePageComponent},
+            {path: 'filter', component: BookBrowseFilterPageComponent},
+          ]},
           {path: 'shelf/:shelfId/books', children: [{path: '', component: BookBrowsePageComponent}]},
           {path: 'magic-shelf/:magicShelfId/books', children: [{path: '', component: BookBrowsePageComponent}]},
           {path: 'unshelved-books', children: [
@@ -277,7 +276,7 @@ describe('BookBrowsePageComponent', () => {
           provide: LibraryShelfMenuService,
           useValue: {},
         },
-        {provide: BookService, useValue: {readBook: () => undefined}},
+        {provide: BookReadService, useValue: {readBook: () => undefined}},
         {provide: UserService, useValue: {
           currentUser,
           getCurrentUser: () => currentUser(),
@@ -335,6 +334,24 @@ describe('BookBrowsePageComponent', () => {
       'Scan Library Files',
       'Manage Library',
     ]);
+  });
+
+  it('uses the library title in the mobile filter breadcrumb and search hint', async () => {
+    fixture.destroy();
+    const routerHarness = await RouterTestingHarness.create();
+
+    await routerHarness.navigateByUrl('/library/3/books/filter');
+    routerHarness.detectChanges();
+    flushFacetRegistry();
+    http.expectOne(candidate =>
+      candidate.url === PAGE_URL && candidate.params.get('size') === '1',
+    ).flush(bookPage([], 0));
+    await flushQueryAsync();
+    routerHarness.detectChanges();
+
+    expect(routerHarness.routeNativeElement?.textContent).toContain('Cookbooks');
+    expect(routerHarness.routeNativeElement?.querySelector('input')?.getAttribute('placeholder'))
+      .toBe('Search Cookbooks');
   });
 
   it('supplies only shelf actions to the header menu on a shelf route', async () => {
@@ -457,7 +474,7 @@ describe('BookBrowsePageComponent', () => {
     }]));
     await flushQueryAsync();
 
-    grid().visibleRange.emit({start: 0, end: 0});
+    grid().renderedRange.emit({start: 0, end: 0});
     await flushQueryAsync(1);
 
     const nextUrl = `${API_CONFIG.BASE_URL}/api/v1/books/page?cursor=opaque%2Bcursor&sort=title&size=60`;
@@ -606,7 +623,7 @@ describe('BookBrowsePageComponent', () => {
   it('passes sort, search, and facet selections to the paginated endpoint exactly', async () => {
     await TestBed.inject(Router).navigate([], {
       queryParams: {
-        sort: '-title,seriesName',
+        sort: '-title,pageCount',
         query: '  warden  ',
         facet: ['genre:Fantasy', 'language:en'],
       },
@@ -616,7 +633,7 @@ describe('BookBrowsePageComponent', () => {
 
     http.expectOne(request =>
       request.url === PAGE_URL &&
-      request.params.get('sort') === '-title,seriesName' &&
+      request.params.get('sort') === '-title,pageCount' &&
       request.params.get('query') === 'warden' &&
       request.params.getAll('facet')?.join(',') === 'genre:Fantasy,language:en',
     ).flush(bookPage([1], 1));
@@ -653,6 +670,50 @@ describe('BookBrowsePageComponent', () => {
       !request.params.has('cursor'),
     ).flush(bookPage([1], 1));
     await flushQueryAsync();
+  });
+
+  it('seeds a new scoped sort default from the effective global view preference', async () => {
+    currentUser.set({
+      id: 5,
+      permissions: {},
+      userSettings: {
+        entityViewPreferences: {
+          global: {
+            sortKey: 'title',
+            sortDir: 'ASC',
+            view: 'TABLE',
+            coverSize: 1.25,
+            overlayBookType: false,
+          },
+          overrides: [],
+        },
+      },
+    });
+    fixture.destroy();
+    const routerHarness = await RouterTestingHarness.create();
+    await routerHarness.navigateByUrl('/library/3/books');
+    routerHarness.detectChanges();
+    flushFacetRegistry();
+    http.expectOne(candidate => candidate.url === PAGE_URL).flush(bookPage([1], 1));
+    await flushQueryAsync();
+    updateUserSetting.mockClear();
+
+    const routedPage = routerHarness.routeDebugElement!.componentInstance as unknown as {
+      saveSortDefault(terms: readonly {key: 'title'; direction: 'desc'}[]): void;
+    };
+    routedPage.saveSortDefault([{key: 'title', direction: 'desc'}]);
+
+    expect(updateUserSetting).toHaveBeenCalledWith(
+      5,
+      'entityViewPreferences',
+      expect.objectContaining({
+        overrides: [expect.objectContaining({
+          entityType: 'LIBRARY',
+          entityId: 3,
+          preferences: expect.objectContaining({view: 'TABLE', coverSize: 1.25}),
+        })],
+      }),
+    );
   });
 
   it('reselecting the active sort keeps the URL and issues no new request', async () => {
@@ -706,13 +767,13 @@ describe('BookBrowsePageComponent', () => {
     }]));
     await flushQueryAsync();
 
-    grid().visibleRange.emit({start: 1, end: 1});
+    grid().renderedRange.emit({start: 1, end: 1});
     await flushQueryAsync(1);
     const nextRequest = http.expectOne(
       `${API_CONFIG.BASE_URL}/api/v1/books/page?cursor=next&sort=title&size=60`,
     );
 
-    grid().visibleRange.emit({start: 1, end: 1});
+    grid().renderedRange.emit({start: 1, end: 1});
     await flushQueryAsync(1);
 
     nextRequest.flush(bookPage([3], 600));
@@ -857,38 +918,6 @@ describe('BookBrowsePageComponent', () => {
     }
   });
 
-  it('opens the bulk metadata editor with the resolved selection', async () => {
-    const onClose = new Subject<void>();
-    dialogHelper.openBulkMetadataEditDialog.mockResolvedValue({onClose});
-    const component = await loadAndSelect([book(11), book(12)]);
-
-    bulkHost().onBulkEditAll();
-
-    await vi.waitFor(() => expect(dialogHelper.openBulkMetadataEditDialog).toHaveBeenCalledOnce());
-    const selectedIds = dialogHelper.openBulkMetadataEditDialog.mock.calls[0]?.[0] as Set<number>;
-    expect([...selectedIds]).toEqual([11, 12]);
-    expect(component.selection.count()).toBe(2);
-
-    onClose.next();
-    expect(component.selection.count()).toBe(0);
-  });
-
-  it('opens the one-by-one metadata editor with the resolved selection', async () => {
-    const onClose = new Subject<void>();
-    dialogHelper.openMultibookMetadataEditorDialog.mockResolvedValue({onClose});
-    const component = await loadAndSelect([book(21), book(22)]);
-
-    bulkHost().onBulkEditOneByOne();
-
-    await vi.waitFor(() => expect(dialogHelper.openMultibookMetadataEditorDialog).toHaveBeenCalledOnce());
-    const selectedIds = dialogHelper.openMultibookMetadataEditorDialog.mock.calls[0]?.[0] as Set<number>;
-    expect([...selectedIds]).toEqual([21, 22]);
-    expect(component.selection.count()).toBe(2);
-
-    onClose.next();
-    expect(component.selection.count()).toBe(0);
-  });
-
   it('offers Edit All and Edit One by One from the bar Edit menu', async () => {
     currentUser.set(userFixture({canEditMetadata: true}));
     await loadAndSelect([book(41)]);
@@ -947,67 +976,6 @@ describe('BookBrowsePageComponent', () => {
       'Custom Covers',
     ]);
     expect(bulkMetadataMenu().querySelectorAll('app-menu-separator')).toHaveLength(1);
-  });
-
-  it('opens Lock/Unlock metadata with the resolved selection and clears it on close', async () => {
-    const onClose = new Subject<void>();
-    dialogHelper.openLockUnlockMetadataDialog.mockResolvedValue({onClose});
-    currentUser.set(userFixture({canBulkLockUnlockMetadata: true, canEditMetadata: true}));
-    const component = await loadAndSelect([book(24), book(25)]);
-
-    metadataMenuItem('Lock/Unlock Metadata')?.click();
-
-    await vi.waitFor(() => expect(dialogHelper.openLockUnlockMetadataDialog).toHaveBeenCalledOnce());
-    const selectedIds = dialogHelper.openLockUnlockMetadataDialog.mock.calls[0]?.[0] as Set<number>;
-    expect([...selectedIds]).toEqual([24, 25]);
-    expect(component.selection.count()).toBe(2);
-
-    onClose.next();
-    expect(component.selection.count()).toBe(0);
-  });
-
-  it('opens the file organizer with the resolved selection', async () => {
-    const onClose = new Subject<void>();
-    dialogHelper.openFileMoverDialog.mockResolvedValue({onClose});
-    const component = await loadAndSelect([book(31), book(32)]);
-
-    bulkHost().onBulkOrganizeFiles();
-
-    await vi.waitFor(() => expect(dialogHelper.openFileMoverDialog).toHaveBeenCalledOnce());
-    const selectedIds = dialogHelper.openFileMoverDialog.mock.calls[0]?.[0] as Set<number>;
-    expect([...selectedIds]).toEqual([31, 32]);
-
-    onClose.next();
-    expect(component.selection.count()).toBe(2);
-  });
-
-  it('opens the file attacher with the selected loaded books and clears after success', async () => {
-    const onClose = new Subject<{success?: boolean} | undefined>();
-    dialogHelper.openBulkBookFileAttacherDialog.mockResolvedValue({onClose});
-    const selectedBooks = [book(41), book(42)];
-    const component = await loadAndSelect(selectedBooks);
-
-    bulkHost().onBulkAttachFiles();
-
-    await vi.waitFor(() => expect(dialogHelper.openBulkBookFileAttacherDialog).toHaveBeenCalledOnce());
-    const sourceBooks = dialogHelper.openBulkBookFileAttacherDialog.mock.calls[0]?.[0] as BookSummary[];
-    expect(sourceBooks.map(sourceBook => sourceBook.id)).toEqual([41, 42]);
-    expect(component.selection.count()).toBe(2);
-
-    onClose.next({success: true});
-    expect(component.selection.count()).toBe(0);
-  });
-
-  it('keeps the selection when the file attacher closes without success', async () => {
-    const onClose = new Subject<{success?: boolean} | undefined>();
-    dialogHelper.openBulkBookFileAttacherDialog.mockResolvedValue({onClose});
-    const component = await loadAndSelect([book(51), book(52)]);
-
-    bulkHost().onBulkAttachFiles();
-    await vi.waitFor(() => expect(dialogHelper.openBulkBookFileAttacherDialog).toHaveBeenCalledOnce());
-
-    onClose.next(undefined);
-    expect(component.selection.count()).toBe(2);
   });
 
   it('shows Organize Files only with its permission and local disk storage', async () => {

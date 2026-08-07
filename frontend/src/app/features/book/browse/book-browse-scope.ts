@@ -53,6 +53,27 @@ export function scopedFacetSelection(
   return {...omitKey(selection, scope.facetKey), [scope.facetKey]: [scope.facetValue]};
 }
 
+export function bookBrowseScopeTitle(
+  scope: BookBrowseScope | null,
+  libraries: readonly {id?: number | null; name: string}[],
+  shelves: readonly {id?: number | null; name: string}[],
+  magicShelves: readonly {id?: number | null; name: string}[],
+  unshelvedLabel: string,
+): string | null {
+  switch (scope?.kind) {
+    case 'library':
+      return libraries.find(library => library.id === scope.entityId)?.name ?? null;
+    case 'shelf':
+      return shelves.find(shelf => shelf.id === scope.entityId)?.name ?? null;
+    case 'magicShelf':
+      return magicShelves.find(shelf => shelf.id === scope.entityId)?.name ?? null;
+    case 'unshelved':
+      return unshelvedLabel;
+    case undefined:
+      return null;
+  }
+}
+
 function positiveId(raw: string | null): number | null {
   const id = Number(raw);
   return raw !== null && Number.isSafeInteger(id) && id > 0 ? id : null;
