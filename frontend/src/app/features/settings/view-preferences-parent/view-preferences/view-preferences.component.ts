@@ -24,7 +24,10 @@ import {
   type BookSortTerm,
 } from '../../../book/data/book-query-params';
 import {BookQueryService} from '../../../book/data/book-query.service';
-import {buildSortOptions} from '../../../book/browse/book-browse-fields';
+import {
+  BOOK_BROWSE_CARD_DETAIL_OPTIONS,
+  buildSortOptions,
+} from '../../../book/browse/book-browse-fields';
 import {type MultiSortDialogResult} from '../../../book/browse/multi-sort-dialog.component';
 import {MultiSortEditorComponent} from '../../../book/browse/multi-sort-editor.component';
 
@@ -70,10 +73,12 @@ export class ViewPreferencesComponent implements OnInit {
   selectedSort: string = 'title';
   selectedSortDir: 'ASC' | 'DESC' = 'ASC';
   selectedView: 'GRID' | 'TABLE' = 'GRID';
+  selectedCardDetail: string | null = null;
   overlayBookType: boolean = true;
   autoSaveMetadata: boolean = false;
   sortCriteria: SortCriterion[] = [];
   globalSortTerms: readonly BookSortTerm[] = [];
+  cardDetailOptions: {label: string; value: string | null}[] = [];
 
   private readonly bookQuery = inject(BookQueryService);
   private readonly sortVocabularyQuery = injectQuery(() =>
@@ -88,6 +93,7 @@ export class ViewPreferencesComponent implements OnInit {
     sortDir: 'ASC' | 'DESC';
     sortCriteria: SortCriterion[];
     view: 'GRID' | 'TABLE';
+    cardDetail: string | null;
   }[] = [];
 
   private user: User | null = null;
@@ -122,6 +128,7 @@ export class ViewPreferencesComponent implements OnInit {
       this.selectedSort = global?.sortKey ?? 'title';
       this.selectedSortDir = global?.sortDir ?? 'ASC';
       this.selectedView = global?.view ?? 'GRID';
+      this.selectedCardDetail = global?.cardDetail ?? null;
       this.overlayBookType = global?.overlayBookType ?? true;
       this.autoSaveMetadata = user.userSettings?.autoSaveMetadata ?? false;
 
@@ -143,6 +150,7 @@ export class ViewPreferencesComponent implements OnInit {
           sortDir: override.preferences.sortDir ?? 'ASC',
           sortCriteria,
           view: override.preferences.view ?? 'GRID',
+          cardDetail: override.preferences.cardDetail ?? null,
         };
       });
     }, {injector: this.injector});
@@ -157,6 +165,13 @@ export class ViewPreferencesComponent implements OnInit {
     this.viewModeOptions = [
       {label: this.t.translate('settingsView.librarySort.viewGrid'), value: 'GRID', translationKey: 'viewGrid'},
       {label: this.t.translate('settingsView.librarySort.viewTable'), value: 'TABLE', translationKey: 'viewTable'}
+    ];
+    this.cardDetailOptions = [
+      {label: this.t.translate('settingsView.librarySort.cardDetailNone'), value: null},
+      ...BOOK_BROWSE_CARD_DETAIL_OPTIONS.map(option => ({
+        label: this.t.translate(option.labelKey),
+        value: option.id
+      }))
     ];
   }
 
@@ -201,6 +216,7 @@ export class ViewPreferencesComponent implements OnInit {
         sortDir: 'ASC',
         sortCriteria: [{field: 'title', direction: 'ASC'}],
         view: 'GRID',
+        cardDetail: null,
       });
     }
   }
@@ -267,6 +283,7 @@ export class ViewPreferencesComponent implements OnInit {
       sortDir: this.selectedSortDir,
       sortCriteria: [...this.sortCriteria],
       view: this.selectedView,
+      cardDetail: this.selectedCardDetail,
       overlayBookType: this.overlayBookType,
     };
 
@@ -283,6 +300,7 @@ export class ViewPreferencesComponent implements OnInit {
           sortDir: o.sortCriteria[0]?.direction ?? o.sortDir,
           sortCriteria: [...o.sortCriteria],
           view: o.view,
+          cardDetail: o.cardDetail,
           coverSize: existing?.coverSize ?? 1.0,
           overlayBookType: existing?.overlayBookType ?? true
         }

@@ -371,6 +371,12 @@ export class BookBrowsePageComponent {
         )?.preferences ?? preferences?.global
       : preferences?.global;
   });
+  protected readonly cardDetail = computed<BookQuerySortKey | null>(() => {
+    const key = this.activeViewPreference()?.cardDetail;
+    return key && isBookQuerySortKey(key) && bookBrowseSortLineAvailable(key)
+      ? key
+      : null;
+  });
   private readonly defaultSortTerms = computed<readonly BookSortTerm[]>(() => {
     const preferences = this.userService.currentUser()?.userSettings.entityViewPreferences;
     const available = this.availableSortKeys();
@@ -598,7 +604,7 @@ export class BookBrowsePageComponent {
         return key;
       }
     }
-    return null;
+    return this.cardDetail();
   });
 
   private readonly detailLineKey = linkedSignal<
@@ -765,6 +771,30 @@ export class BookBrowsePageComponent {
     ) {
       void this.booksQuery.fetchNextPage({cancelRefetch: false});
     }
+  }
+
+  protected onCardDetailChange(cardDetail: BookQuerySortKey | null): void {
+    const user = this.userService.getCurrentUser();
+    if (!user) {
+      return;
+    }
+    const preferences = structuredClone(user.userSettings.entityViewPreferences);
+    const context = entityViewPreferenceContext(this.routeParamMap());
+    if (context === null) {
+      preferences.global = {...preferences.global, cardDetail};
+    } else {
+      const override = preferences.overrides.find(candidate =>
+        candidate.entityType === context.entityType && candidate.entityId === context.entityId);
+      if (override) {
+        override.preferences = {...override.preferences, cardDetail};
+      } else {
+        preferences.overrides.push({
+          ...context,
+          preferences: {...preferences.global, cardDetail},
+        });
+      }
+    }
+    this.userService.updateUserSetting(user.id, 'entityViewPreferences', preferences);
   }
 
   protected onViewModeChange(view: BookBrowseViewMode): void {

@@ -37,6 +37,11 @@ export interface BookSortSelection {
   readonly direction: SortDirection;
 }
 
+export interface BookBrowseCardDetailOption {
+  readonly id: BookQuerySortKey;
+  readonly labelKey: string;
+}
+
 type BookBrowseColumnGroupId =
   'reading' | 'publishing' | 'file' | 'categorization' | 'ratings';
 
@@ -407,6 +412,14 @@ const FIELDS_BY_COLUMN = new Map<string, BookBrowseField>(
   FIELDS.flatMap((field: BookBrowseField) =>
     field.column ? [[field.column.key, field] as const] : []),
 );
+
+export const BOOK_BROWSE_CARD_DETAIL_OPTIONS: readonly BookBrowseCardDetailOption[] =
+  SORT_ORDER.flatMap(id => {
+    const field = FIELDS_BY_SORT.get(id);
+    return !field?.sort || field.sort.showOnCard === false
+      ? []
+      : [{id, labelKey: field.labelKey}];
+  });
 
 function sortOption(
   key: BookQuerySortKey,
