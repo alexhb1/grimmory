@@ -288,12 +288,12 @@ export class CommandPaletteService {
   );
 
   private toPaletteBookItem(book: BookSummary): PaletteItem {
-    const metadata = book.metadata!;
-    const title = metadata.title ?? book.primaryFile?.fileName ?? '';
-    const authors = metadata.authors!;
-    const publishedDate = metadata.publishedDate ?? '';
+    const metadata = book.metadata;
+    const title = metadata?.title || book.primaryFile?.fileName || '';
+    const authors = metadata?.authors ?? [];
+    const publishedDate = metadata?.publishedDate ?? '';
     const year = publishedDate && /^\d{4}/.test(publishedDate) ? publishedDate.slice(0, 4) : null;
-    const haystack = [title, metadata.seriesName ?? '', ...authors].filter(Boolean).join(' ');
+    const haystack = [title, metadata?.seriesName ?? '', ...authors].filter(Boolean).join(' ');
     const isAudiobook = book.primaryFile?.bookType === 'AUDIOBOOK';
 
     return {
@@ -306,11 +306,11 @@ export class CommandPaletteService {
       queryParams: { tab: 'view' },
       bookMeta: {
         thumbnailUrl: isAudiobook
-          ? this.urlHelper.getAudiobookThumbnailUrl(book.id, metadata.audiobookCoverUpdatedOn)
-          : this.urlHelper.getThumbnailUrl(book.id, metadata.coverUpdatedOn),
+          ? this.urlHelper.getAudiobookThumbnailUrl(book.id, metadata?.audiobookCoverUpdatedOn)
+          : this.urlHelper.getThumbnailUrl(book.id, metadata?.coverUpdatedOn),
         authors,
-        seriesName: metadata.seriesName ?? null,
-        seriesNumber: metadata.seriesNumber ?? null,
+        seriesName: metadata?.seriesName ?? null,
+        seriesNumber: metadata?.seriesNumber ?? null,
         year,
         isAudiobook,
       },
