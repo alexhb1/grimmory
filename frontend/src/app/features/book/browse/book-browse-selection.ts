@@ -98,11 +98,7 @@ export function createBookBrowseSelection(deps: BookBrowseSelectionDeps): BookBr
           excludedIds.add(id);
         }
       }
-      if (Math.max(0, (deps.totalElements() ?? 0) - excludedIds.size) === 0) {
-        state.set({mode: 'explicit', ids: new Set<number>()});
-      } else {
-        state.set({mode: 'allMatching', excludedIds});
-      }
+      state.set({mode: 'allMatching', excludedIds});
     }
   }
 
@@ -136,11 +132,7 @@ export function createBookBrowseSelection(deps: BookBrowseSelectionDeps): BookBr
     } else {
       const excludedIds = new Set(current.excludedIds);
       excludedIds.add(book.id);
-      if (Math.max(0, (deps.totalElements() ?? 0) - excludedIds.size) === 0) {
-        state.set({mode: 'explicit', ids: new Set<number>()});
-      } else {
-        state.set({mode: 'allMatching', excludedIds});
-      }
+      state.set({mode: 'allMatching', excludedIds});
     }
     anchor.set(book.id);
   }
