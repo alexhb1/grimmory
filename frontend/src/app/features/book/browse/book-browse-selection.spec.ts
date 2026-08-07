@@ -158,13 +158,14 @@ describe('select all', () => {
     expect(h.selection.count()).toBe(50);
   });
 
-  it('collapses to empty explicit when the last matching book is deselected', () => {
+  it('keeps allMatching with its exclusions when every book is deselected', () => {
     const h = harness(2, [1, 2]);
     h.selection.selectAll();
     h.selection.toggle(h.books()[0], 0, false);
     h.selection.toggle(h.books()[1], 1, false);
 
-    expect(h.selection.state()).toEqual({mode: 'explicit', ids: new Set()});
+    expect(h.selection.state()).toEqual({mode: 'allMatching', excludedIds: new Set([1, 2])});
+    expect(h.selection.count()).toBe(0);
     expect(h.selection.active()).toBe(false);
   });
 

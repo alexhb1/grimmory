@@ -836,10 +836,10 @@ export class BookBrowsePageComponent {
     }
 
     if (this.metadataCenterViewMode() === 'route') {
-      void this.router.navigate(['/book', book.id], {queryParams: {tab: 'view'}});
+      void this.router.navigate(['/book', book.id]);
       return;
     }
-    void this.bookDialogHelper.openBookDetailsDialog(book.id).catch(() => undefined);
+    void this.bookDialogHelper.openBookDetailsDialog(book.id);
   }
 
   protected onToggleSelect(book: BookSummary, index: number, shiftKey: boolean): void {
