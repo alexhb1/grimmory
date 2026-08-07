@@ -20,7 +20,7 @@ import {AppButtonComponent} from '../../../ui/button/app-button.component';
 import {
   BrowseGridViewportComponent,
   type BrowseGridDensityFacade,
-  type BrowseGridVisibleRange,
+  type BrowseGridRenderedRange,
 } from './browse-grid-viewport.component';
 import {BrowseGridEmptyDef, BrowseGridItemDef, BrowseGridSkeletonDef} from './browse-grid.directives';
 import {SKELETON_DELAY_MS} from './browse-grid.util';
@@ -39,7 +39,7 @@ type BrowseGridViewState = 'idle' | 'skeleton' | 'empty' | 'initial-error' | 'gr
       <ng-container [ngTemplateOutlet]="emptyDef().templateRef" />
     } @else if (viewState() === 'initial-error') {
       <div class="flex flex-col items-center gap-3 py-16 text-center">
-        <p class="m-0 text-sm text-text-muted">{{ 'browse.book.loadError' | transloco }}</p>
+        <p class="m-0 text-sm text-text-muted">{{ initialErrorMessage() }}</p>
         <app-button
           variant="soft"
           size="sm"
@@ -51,7 +51,7 @@ type BrowseGridViewState = 'idle' | 'skeleton' | 'empty' | 'initial-error' | 'gr
         <app-browse-grid-viewport
           scrollMode="element"
           [items]="items()"
-          [itemKey]="viewportItemKey"
+          [itemKey]="itemKey()"
           [hasNextPage]="hasNextPage()"
           [fixedColumns]="fixedColumns()"
           [minItemWidth]="minItemWidth()"
@@ -61,12 +61,12 @@ type BrowseGridViewState = 'idle' | 'skeleton' | 'empty' | 'initial-error' | 'gr
           [itemTemplate]="itemDef().templateRef"
           [skeletonTemplate]="skeletonDef().templateRef"
           [skeletonFill]="viewState() === 'skeleton'"
-          (visibleRange)="visibleRange.emit($event)" />
+          (renderedRange)="renderedRange.emit($event)" />
       } @else {
         <app-browse-grid-viewport
           scrollMode="window"
           [items]="items()"
-          [itemKey]="viewportItemKey"
+          [itemKey]="itemKey()"
           [hasNextPage]="hasNextPage()"
           [fixedColumns]="fixedColumns()"
           [minItemWidth]="minItemWidth()"
@@ -76,13 +76,13 @@ type BrowseGridViewState = 'idle' | 'skeleton' | 'empty' | 'initial-error' | 'gr
           [itemTemplate]="itemDef().templateRef"
           [skeletonTemplate]="skeletonDef().templateRef"
           [skeletonFill]="viewState() === 'skeleton'"
-          (visibleRange)="visibleRange.emit($event)" />
+          (renderedRange)="renderedRange.emit($event)" />
       }
 
       @if (viewState() === 'grid' && nextPageError()) {
         <div class="sticky bottom-4 z-10 mt-4 flex justify-center">
           <div class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2 shadow-pop">
-            <span class="text-sm text-text-muted">{{ 'browse.grid.pageError' | transloco }}</span>
+            <span class="text-sm text-text-muted">{{ nextPageErrorMessage() }}</span>
             <app-button
               variant="ghost"
               size="sm"
@@ -107,12 +107,14 @@ export class BrowseGridComponent<T> {
   readonly gap = input.required<number>();
   readonly rowGap = input.required<number | undefined>();
   readonly estimateItemHeight = input.required<(itemWidth: number) => number>();
+  readonly initialErrorMessage = input.required<string>();
+  readonly nextPageErrorMessage = input.required<string>();
 
-  readonly visibleRange = output<BrowseGridVisibleRange>();
+  readonly renderedRange = output<BrowseGridRenderedRange>();
   readonly retryInitial = output<void>();
   readonly retryNextPage = output<void>();
 
-  readonly itemDef = contentChild.required(BrowseGridItemDef);
+  readonly itemDef = contentChild.required<BrowseGridItemDef<T>>(BrowseGridItemDef);
   readonly skeletonDef = contentChild.required(BrowseGridSkeletonDef);
   readonly emptyDef = contentChild.required(BrowseGridEmptyDef);
 
@@ -127,7 +129,6 @@ export class BrowseGridComponent<T> {
   }
 
   protected readonly isDesktop = computed(() => this.layout.isDesktop());
-  protected readonly viewportItemKey = (item: unknown): VirtualItem['key'] => this.itemKey()(item as T);
   private readonly hasLoadedItems = computed(() => this.items().length > 0);
   private readonly skeletonDelayElapsed = signal(false);
 

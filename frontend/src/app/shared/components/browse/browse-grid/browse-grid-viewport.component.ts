@@ -24,7 +24,7 @@ import {createVirtualGrid, type VirtualGridScrollMode} from '../../../util/virtu
 import {type BrowseGridItemContext} from './browse-grid.directives';
 import {skeletonFillCount} from './browse-grid.util';
 
-export interface BrowseGridVisibleRange {
+export interface BrowseGridRenderedRange {
   start: number;
   end: number;
 }
@@ -64,34 +64,34 @@ type VirtualGrid = ReturnType<typeof createVirtualGrid>;
     }
   `,
 })
-export class BrowseGridViewportComponent implements OnInit {
+export class BrowseGridViewportComponent<T> implements OnInit {
   private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly scrollPosition = inject(RouteScrollPositionService);
 
-  readonly items = input.required<readonly unknown[]>();
-  readonly itemKey = input.required<(item: unknown) => VirtualItem['key']>();
+  readonly items = input.required<readonly T[]>();
+  readonly itemKey = input.required<(item: T) => VirtualItem['key']>();
   readonly hasNextPage = input.required<boolean>();
   readonly fixedColumns = input.required<number | undefined>();
   readonly minItemWidth = input.required<number>();
   readonly gap = input.required<number>();
   readonly rowGap = input.required<number | undefined>();
   readonly estimateItemHeight = input.required<(itemWidth: number) => number>();
-  readonly itemTemplate = input.required<TemplateRef<BrowseGridItemContext<unknown>>>();
+  readonly itemTemplate = input.required<TemplateRef<BrowseGridItemContext<T>>>();
   readonly skeletonTemplate = input.required<TemplateRef<unknown>>();
   readonly skeletonFill = input.required<boolean>();
   readonly scrollMode = input.required<VirtualGridScrollMode>();
 
-  readonly visibleRange = output<BrowseGridVisibleRange>();
+  readonly renderedRange = output<BrowseGridRenderedRange>();
 
   protected readonly grid = signal<VirtualGrid | null>(null);
   private readonly scrollElementRef = signal<ElementRef<HTMLElement> | undefined>(undefined);
   private readonly scrollMargin = signal(0);
   private readonly initialScrollOffset = () =>
     this.scrollPosition.getPosition(this.scrollPosition.keyFor(this.route, 'grid')) ?? 0;
-  private lastVisibleRange: BrowseGridVisibleRange | null = null;
+  private lastRenderedRange: BrowseGridRenderedRange | null = null;
   private scrollRestored = false;
 
   constructor() {
@@ -122,12 +122,12 @@ export class BrowseGridViewportComponent implements OnInit {
 
     effect(() => {
       const g = this.grid();
+      const items = this.items();
       if (!g || this.skeletonFill()) {
         return;
       }
       const rendered = g.virtualizer.getVirtualItems();
-      const length = this.items().length;
-      if (rendered.length === 0 || length === 0) {
+      if (rendered.length === 0 || items.length === 0) {
         return;
       }
       const range = {
@@ -135,11 +135,11 @@ export class BrowseGridViewportComponent implements OnInit {
         end: rendered[rendered.length - 1].index,
       };
       if (
-        this.lastVisibleRange?.start !== range.start ||
-        this.lastVisibleRange.end !== range.end
+        this.lastRenderedRange?.start !== range.start ||
+        this.lastRenderedRange.end !== range.end
       ) {
-        this.lastVisibleRange = range;
-        this.visibleRange.emit(range);
+        this.lastRenderedRange = range;
+        this.renderedRange.emit(range);
       }
     });
   }
@@ -155,7 +155,7 @@ export class BrowseGridViewportComponent implements OnInit {
       this.grid.set(
         createVirtualGrid({
           items: this.items,
-          itemKey: item => this.itemKey()(item),
+          itemKey: item => this.itemKey()(item as T),
           scrollElement: this.scrollElementRef,
           minItemWidth: computed(() => this.minItemWidth()),
           gap: computed(() => this.gap()),
@@ -177,7 +177,7 @@ export class BrowseGridViewportComponent implements OnInit {
     });
   }
 
-  protected itemContext(index: number): BrowseGridItemContext<unknown> {
+  protected itemContext(index: number): BrowseGridItemContext<T> {
     return {$implicit: this.items()[index], index};
   }
 

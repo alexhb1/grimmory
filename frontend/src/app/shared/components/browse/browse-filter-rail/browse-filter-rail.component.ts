@@ -50,7 +50,7 @@ const COLLAPSED_VALUE_COUNT = 8;
         <div class="group/ghead relative mb-1 flex items-center rounded-md px-1.5 hover:bg-surface-hover pointer-coarse:px-2">
           <button
             type="button"
-            class="flex min-h-8 flex-1 cursor-pointer items-center gap-1.5 pr-8 text-left pointer-coarse:min-h-11 pointer-coarse:pr-12"
+            class="flex min-h-8 flex-1 cursor-pointer items-center gap-1.5 pr-8 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary pointer-coarse:min-h-11 pointer-coarse:pr-12"
             [attr.aria-expanded]="isOpen(group)"
             (click)="toggleOpen(group.key)">
             <h3 class="m-0 text-[13px] font-semibold text-text-secondary group-hover/ghead:text-text pointer-coarse:text-sm">{{ group.labelKey | transloco }}</h3>
@@ -83,7 +83,7 @@ const COLLAPSED_VALUE_COUNT = 8;
           }
         </div>
 
-        <div [class]="groupBodyClass(group)">
+        <div [class]="groupBodyClass(group)" [attr.inert]="isOpen(group) ? null : ''">
           <div class="min-h-0 overflow-hidden">
         <div [class]="searchWrapClass(group.key)" [attr.inert]="isSearching(group.key) ? null : ''" data-search-wrap>
           <div class="min-h-0 overflow-hidden pt-px">
@@ -104,6 +104,10 @@ const COLLAPSED_VALUE_COUNT = 8;
           <ul class="m-0 flex min-h-56 list-none flex-col p-0 pointer-coarse:min-h-[22rem]">
             @for (item of matches(group, query); track item.value) {
               <li><ng-container *ngTemplateOutlet="row; context: {item, group}" /></li>
+            } @empty {
+              <li class="px-1.5 py-1.5 text-xs text-text-muted pointer-coarse:px-2 pointer-coarse:text-[13px]">
+                {{ 'browse.rail.noMatches' | transloco }}
+              </li>
             }
           </ul>
         } @else {
@@ -112,7 +116,7 @@ const COLLAPSED_VALUE_COUNT = 8;
               <li><ng-container *ngTemplateOutlet="row; context: {item, group}" /></li>
             }
           </ul>
-          <div [class]="extrasWrapClass(group.key)">
+          <div [class]="extrasWrapClass(group.key)" [attr.inert]="isExpanded(group.key) ? null : ''">
             <ul class="m-0 flex min-h-0 list-none flex-col overflow-hidden">
               @for (item of extraValues(group); track item.value) {
                 <li><ng-container *ngTemplateOutlet="row; context: {item, group}" /></li>
@@ -161,7 +165,9 @@ export class BrowseFilterRailComponent<K extends string = string> {
   protected readonly collapsedCount = COLLAPSED_VALUE_COUNT;
   protected readonly expandRowClass =
     'mt-0.5 flex min-h-7 w-full cursor-pointer items-center rounded-md px-1.5 py-1 pl-7 ' +
-    'text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text pointer-coarse:min-h-11 pointer-coarse:text-[13px] pointer-coarse:pl-9';
+    'text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text ' +
+    'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary ' +
+    'pointer-coarse:min-h-11 pointer-coarse:text-[13px] pointer-coarse:pl-9';
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
   private readonly searchingKeys = signal<ReadonlySet<string>>(new Set());
   private readonly searches = signal<Readonly<Record<string, string>>>({});
@@ -283,9 +289,7 @@ export class BrowseFilterRailComponent<K extends string = string> {
 
   protected matches(group: FilterRailGroup, query: string): FilterRailValue[] {
     const needle = normalizeLocalSearchTerm(query);
-    return group.values
-      .filter(item => normalizeLocalSearchTerm(item.label).includes(needle))
-      .slice(0, COLLAPSED_VALUE_COUNT);
+    return group.values.filter(item => normalizeLocalSearchTerm(item.label).includes(needle));
   }
 
   protected foldValues(group: FilterRailGroup): FilterRailValue[] {
@@ -324,6 +328,7 @@ export class BrowseFilterRailComponent<K extends string = string> {
     return cn(
       'group/frow flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-text-secondary pointer-coarse:min-h-11 pointer-coarse:gap-2.5 pointer-coarse:px-2',
       'hover:bg-surface-hover hover:text-text',
+      'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
       this.isZero(item) && 'opacity-45',
     );
   }

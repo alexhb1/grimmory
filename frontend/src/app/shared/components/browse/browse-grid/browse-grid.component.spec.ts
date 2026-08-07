@@ -7,7 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {getTranslocoModule} from '../../../../core/testing/transloco-testing';
 import {AppButtonComponent} from '../../../ui/button/app-button.component';
 import {BrowseGridComponent, type BrowseGridStatus} from './browse-grid.component';
-import {BrowseGridViewportComponent, type BrowseGridVisibleRange} from './browse-grid-viewport.component';
+import {BrowseGridViewportComponent, type BrowseGridRenderedRange} from './browse-grid-viewport.component';
 import {BrowseGridEmptyDef, BrowseGridItemDef, BrowseGridSkeletonDef} from './browse-grid.directives';
 import {skeletonFillCount} from './browse-grid.util';
 
@@ -27,7 +27,9 @@ import {skeletonFillCount} from './browse-grid.util';
         [gap]="16"
         [rowGap]="undefined"
         [estimateItemHeight]="estimate"
-        (visibleRange)="visibleRange = $event"
+        [initialErrorMessage]="initialErrorMessage"
+        [nextPageErrorMessage]="nextPageErrorMessage"
+        (renderedRange)="renderedRange = $event"
         (retryInitial)="retryInitial = retryInitial + 1"
         (retryNextPage)="retryNextPage = retryNextPage + 1">
         <ng-template [appBrowseGridItemOf]="items()" let-item>
@@ -49,9 +51,11 @@ class HostComponent {
   readonly nextPageError = signal(false);
   readonly estimate = (): number => 100;
   readonly itemKey = (item: number): number => item;
+  readonly initialErrorMessage = 'Could not load these things.';
+  readonly nextPageErrorMessage = 'Could not load more things.';
   retryInitial = 0;
   retryNextPage = 0;
-  visibleRange: BrowseGridVisibleRange | null = null;
+  renderedRange: BrowseGridRenderedRange | null = null;
 }
 
 describe('BrowseGridComponent', () => {
@@ -140,14 +144,14 @@ describe('BrowseGridComponent', () => {
     expect(grid().items()).toEqual([1, 2, 3]);
   });
 
-  it('shows the shared book error state and emits retryInitial', () => {
+  it('shows the caller-supplied initial error copy and emits retryInitial', () => {
     host.status.set('error');
     host.items.set([]);
     fixture.detectChanges();
 
     expect(viewState()).toBe('initial-error');
     expect((fixture.nativeElement as HTMLElement).textContent)
-      .toContain("We couldn't load these books.");
+      .toContain('Could not load these things.');
     const appButton = fixture.debugElement.query(By.directive(AppButtonComponent));
     expect(appButton).not.toBeNull();
     (appButton.nativeElement as HTMLElement).querySelector('button')!.click();
@@ -161,22 +165,24 @@ describe('BrowseGridComponent', () => {
     fixture.detectChanges();
 
     expect(viewState()).toBe('grid');
+    expect((fixture.nativeElement as HTMLElement).textContent)
+      .toContain('Could not load more things.');
     const appButton = fixture.debugElement.query(By.directive(AppButtonComponent));
     expect(appButton).not.toBeNull();
     (appButton.nativeElement as HTMLElement).querySelector('button')!.click();
     expect(host.retryNextPage).toBe(1);
   });
 
-  it('forwards the viewport visible range', () => {
+  it('forwards the viewport rendered range', () => {
     host.items.set([1, 2, 3]);
     host.status.set('success');
     fixture.detectChanges();
 
     const viewport = fixture.debugElement.query(By.directive(BrowseGridViewportComponent))
-      .componentInstance as BrowseGridViewportComponent;
-    viewport.visibleRange.emit({start: 0, end: 2});
+      .componentInstance as BrowseGridViewportComponent<number>;
+    viewport.renderedRange.emit({start: 0, end: 2});
 
-    expect(host.visibleRange).toEqual({start: 0, end: 2});
+    expect(host.renderedRange).toEqual({start: 0, end: 2});
   });
 
   it('gives TanStack Virtual the item identity instead of the loaded-window index', async () => {
@@ -185,7 +191,7 @@ describe('BrowseGridComponent', () => {
     await fixture.whenStable();
 
     const viewport = fixture.debugElement.query(By.directive(BrowseGridViewportComponent))
-      .componentInstance as BrowseGridViewportComponent;
+      .componentInstance as BrowseGridViewportComponent<number>;
     const virtualGrid = Reflect.get(viewport, 'grid')() as {
       virtualizer: {options(): {getItemKey(index: number): unknown}};
     };
