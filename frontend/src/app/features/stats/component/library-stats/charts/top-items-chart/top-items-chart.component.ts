@@ -1,19 +1,20 @@
-import {NgClass} from '@angular/common';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData, type TooltipItem } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 
-import {Component, computed, inject, input, OnInit, signal} from '@angular/core';
-import {FormsModule} from '@angular/forms';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {Select} from '@openng/optimus-ui/select';
-import {ChartConfiguration, ChartData, TooltipItem} from 'chart.js';
-import {BaseChartDirective} from 'ng2-charts';
-
-import {ReadStatus} from '../../../../../book/model/book.model';
+import { ReadStatus } from '../../../../../book/model/book.model';
+import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
 import {
   TopItemsKind,
   TopItemsKindStats,
   TopItemsStats,
 } from '../../../../data/library/top-items-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 interface ItemStats {
   name: string;
@@ -21,11 +22,10 @@ interface ItemStats {
   statusBreakdown: Record<ReadStatus, number>;
 }
 
-interface DataTypeOption {
-  label: string;
-  value: TopItemsKind;
-  icon: string;
-  color: string;
+interface TopItemsLegendEntry {
+  readonly status: ReadStatus;
+  readonly label: string;
+  readonly color: string;
 }
 
 type ItemChartData = ChartData<'bar', number[], string>;
@@ -67,15 +67,19 @@ const READ_STATUS_COLORS: Record<ReadStatus, string> = {
   selector: 'app-top-items-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [NgClass, FormsModule, BaseChartDirective, Select, TranslocoDirective],
+  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './top-items-chart.component.html',
-  styleUrls: ['./top-items-chart.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class TopItemsChartComponent implements OnInit {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<TopItemsStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
   readonly initialDataType = input<TopItemsKind | null>(null);
 
   readonly chartType = 'bar' as const;
@@ -101,6 +105,17 @@ export class TopItemsChartComponent implements OnInit {
   })));
   readonly totalItems = computed(() => this.itemStats().length);
   readonly insights = computed(() => this.buildInsights(this.kindStats()));
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.totalItems() > 0 ? 'ready' : 'empty';
+  });
+  readonly legend = computed<readonly TopItemsLegendEntry[]>(() =>
+    this.kindStats().statuses.map(status => ({
+      status,
+      label: this.t.translate(`statsLibrary.topItems.readStatus.${READ_STATUS_KEYS[status]}`),
+      color: READ_STATUS_COLORS[status],
+    })),
+  );
 
   readonly chartData = computed<ItemChartData>(() => {
     const stats = this.itemStats();
@@ -146,14 +161,7 @@ export class TopItemsChartComponent implements OnInit {
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'bottom',
-        labels: {
-          font: {family: "'Inter', sans-serif", size: 11},
-          padding: 15,
-          usePointStyle: true,
-          pointStyle: 'rectRounded',
-        },
+        display: false,
       },
       tooltip: {
         enabled: true,
@@ -178,8 +186,9 @@ export class TopItemsChartComponent implements OnInit {
     if (initialOption) this.selectedDataType.set(initialOption);
   }
 
-  onDataTypeChange(option: DataTypeOption): void {
-    this.selectedDataType.set(option);
+  onDataTypeChange(kind: TopItemsKind | null): void {
+    const option = this.dataTypeOptions.find(candidate => candidate.value === kind);
+    if (option) this.selectedDataType.set(option);
   }
 
   private buildInsights(stats: TopItemsKindStats): {icon: string; label: string; value: string}[] {

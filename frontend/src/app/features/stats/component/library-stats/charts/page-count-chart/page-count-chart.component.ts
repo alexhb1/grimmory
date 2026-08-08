@@ -1,10 +1,14 @@
-import {Component, computed, inject, input} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {PageCountStats} from '../../../../data/library/page-count-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
 
 type PageChartData = ChartData<'bar', number[], string>;
 
@@ -16,18 +20,25 @@ const PAGE_COLORS = [
   selector: 'app-page-count-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './page-count-chart.component.html',
-  styleUrls: ['./page-count-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class PageCountChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<PageCountStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
   public readonly chartType = 'bar' as const;
-  public readonly totalBooks = computed(() => this.stats().totalBooks);
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.stats().totalBooks > 0 ? 'ready' : 'empty';
+  });
 
   public readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,

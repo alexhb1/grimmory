@@ -12,7 +12,7 @@ const BUCKETS: PageCountStats['buckets'] = [
   {id: '301-to-500', label: '301-500', minimum: 301, maximum: 500, bookCount: 2},
   {id: '501-to-750', label: '501-750', minimum: 501, maximum: 750, bookCount: 2},
   {id: '751-to-1000', label: '751-1000', minimum: 751, maximum: 1000, bookCount: 2},
-  {id: 'over-1000', label: '1000+', minimum: 1001, maximum: null, bookCount: 1},
+  {id: 'over-1000', label: '1001+', minimum: 1001, maximum: null, bookCount: 1},
 ];
 
 describe('PageCountChartComponent', () => {

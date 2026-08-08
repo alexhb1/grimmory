@@ -1,15 +1,22 @@
-import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {MetadataScoreStats} from '../../../../data/library/metadata-score-stats';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { type MetadataScoreStats } from '../../../../data/library/metadata-score-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 
 interface ScoreStats {
-  range: string;
-  count: number;
-  color: string;
+  readonly id: ScoreRangeKey;
+  readonly range: string;
+  readonly count: number;
+  readonly color: string;
 }
 
 type ScoreChartData = ChartData<'doughnut', number[], string>;
@@ -27,26 +34,43 @@ const SCORE_RANGE_DEFS: { key: ScoreRangeKey; min: number; max: number; color: s
   selector: 'app-metadata-score-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [
+    BaseChartDirective,
+    StatsChartCardComponent,
+    StatsCircularChartLayoutComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './metadata-score-chart.component.html',
-  styleUrls: ['./metadata-score-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class MetadataScoreChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<MetadataScoreStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
   public readonly chartType = 'doughnut' as const;
   public readonly scoreStats = computed<ScoreStats[]>(() => this.stats().buckets
     .filter(bucket => bucket.bookCount > 0)
     .map(bucket => ({
+      id: bucket.id,
       range: this.t.translate(`statsLibrary.metadataScore.${bucket.id}`),
       count: bucket.bookCount,
       color: SCORE_RANGE_DEFS.find(range => range.key === bucket.id)?.color ?? '#6B7280',
     })));
   public readonly totalBooks = computed(() => this.stats().totalBooks);
   public readonly averageScore = computed(() => this.stats().averageScore ?? 0);
+  readonly averageValue = computed(() => {
+    const averageScore = this.stats().averageScore;
+    return averageScore == null ? '—' : `${averageScore}%`;
+  });
+  readonly state = computed<StatsChartState>(() =>
+    this.loading() || this.totalBooks() > 0 ? 'ready' : 'empty',
+  );
 
   public readonly chartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
@@ -57,18 +81,7 @@ export class MetadataScoreChartComponent {
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'right',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          },
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 12,
-          boxWidth: 8
-        }
+        display: false,
       },
       tooltip: {
         enabled: true,
@@ -109,4 +122,7 @@ export class MetadataScoreChartComponent {
     };
   });
 
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.t.getActiveLang());
+  }
 }

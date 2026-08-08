@@ -1,30 +1,19 @@
-import {Component, computed, inject, input} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {ReadingJourneyStats} from '../../../../data/library/reading-journey-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
 
 interface MonthlyData {
   label: string;
   cumulativeAdded: number;
   cumulativeFinished: number;
-}
-
-interface JourneyInsights {
-  totalAdded: number;
-  totalFinished: number;
-  currentBacklog: number;
-  backlogPercent: number;
-  avgTimeToFinishDays: number;
-  mostProductiveMonth: string;
-  mostProductiveCount: number;
-  busiestAcquisitionMonth: string;
-  busiestAcquisitionCount: number;
-  finishRate: number;
-  recentActivity: string;
-  longestStreak: number;
 }
 
 type JourneyChartData = ChartData<'line', number[], string>;
@@ -33,15 +22,19 @@ type JourneyChartData = ChartData<'line', number[], string>;
   selector: 'app-reading-journey-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './reading-journey-chart.component.html',
-  styleUrls: ['./reading-journey-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class ReadingJourneyChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<ReadingJourneyStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
   private readonly monthlyData = computed<MonthlyData[]>(() => this.stats().months.map(month => ({
     label: this.formatMonthLabel(month.month),
     cumulativeAdded: month.cumulativeAdded,
@@ -50,34 +43,11 @@ export class ReadingJourneyChartComponent {
 
   public readonly chartType = 'line' as const;
   public chartOptions: ChartConfiguration<'line'>['options'];
-  public readonly insights = computed(() => {
-    const insights = this.stats().insights;
-    if (!insights) return null;
-
-    return {
-      totalAdded: insights.totalAdded,
-      totalFinished: insights.totalFinished,
-      currentBacklog: insights.currentBacklog,
-      backlogPercent: insights.backlogPercent,
-      avgTimeToFinishDays: insights.averageDaysToFinish ?? 0,
-      mostProductiveMonth: insights.bestReadingMonth
-        ? this.formatMonthLabel(insights.bestReadingMonth.month)
-        : 'N/A',
-      mostProductiveCount: insights.bestReadingMonth?.count ?? 0,
-      busiestAcquisitionMonth: insights.peakAcquisitionMonth
-        ? this.formatMonthLabel(insights.peakAcquisitionMonth.month)
-        : 'N/A',
-      busiestAcquisitionCount: insights.peakAcquisitionMonth?.count ?? 0,
-      finishRate: insights.finishRate,
-      recentActivity: insights.recentFinishedCount > 0
-        ? this.t.translate('statsLibrary.readingJourney.recentActivityBooks', {
-          count: insights.recentFinishedCount,
-        })
-        : this.t.translate('statsLibrary.readingJourney.recentActivityNone'),
-      longestStreak: insights.longestReadingStreak,
-    } satisfies JourneyInsights;
-  });
   public readonly hasData = computed(() => this.monthlyData().length > 0);
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.hasData() ? 'ready' : 'empty';
+  });
   public readonly dateRange = computed(() => {
     const monthlyData = this.monthlyData();
     if (monthlyData.length === 0) {
@@ -182,17 +152,7 @@ export class ReadingJourneyChartComponent {
       },
       plugins: {
         legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            },
-            padding: 20,
-            usePointStyle: true,
-            pointStyle: 'circle'
-          }
+          display: false
         },
         tooltip: {
           enabled: true,
@@ -236,6 +196,19 @@ export class ReadingJourneyChartComponent {
     const [year, month] = monthKey.split('-');
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
+  }
+
+  protected formatMonth(month: string, width: 'short' | 'long'): string {
+    const [year, monthNumber] = month.split('-').map(Number);
+    return new Intl.DateTimeFormat(this.t.getActiveLang(), {
+      month: width,
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+  }
+
+  protected formatNumber(value: number): string {
+    return value.toLocaleString(this.t.getActiveLang());
   }
 
 }

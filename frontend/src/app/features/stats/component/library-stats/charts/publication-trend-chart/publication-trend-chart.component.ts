@@ -1,10 +1,15 @@
-import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {PublicationTrendStats} from '../../../../data/library/publication-trend-stats';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { type PublicationTrendStats } from '../../../../data/library/publication-trend-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 interface TrendInsights {
   peakYear: number;
@@ -30,15 +35,19 @@ type TrendChartData = ChartData<'line', number[], string>;
   selector: 'app-publication-trend-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './publication-trend-chart.component.html',
-  styleUrls: ['./publication-trend-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class PublicationTrendChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<PublicationTrendStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
   public readonly chartType = 'line' as const;
   public chartOptions: ChartConfiguration<'line'>['options'];
@@ -67,6 +76,10 @@ export class PublicationTrendChartComponent {
     } satisfies TrendInsights;
   });
   public readonly totalBooks = computed(() => this.stats().totalBooks);
+  public readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.totalBooks() > 0 ? 'ready' : 'empty';
+  });
   public readonly yearRange = computed(() => this.stats().firstYear == null
     ? ''
     : `${this.stats().firstYear} - ${this.stats().lastYear}`);

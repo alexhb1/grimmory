@@ -1,15 +1,22 @@
-import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {LanguageStats} from '../../../../data/library/language-stats';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { type LanguageStats } from '../../../../data/library/language-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 
 interface LanguageChartStat {
-  language: string;
-  displayName: string;
-  count: number;
+  readonly language: string;
+  readonly displayName: string;
+  readonly count: number;
+  readonly color: string;
 }
 
 type LanguageChartData = ChartData<'pie', number[], string>;
@@ -128,26 +135,39 @@ const LANGUAGE_NAMES: Record<string, string> = {
   selector: 'app-language-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [
+    BaseChartDirective,
+    StatsChartCardComponent,
+    StatsCircularChartLayoutComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './language-chart.component.html',
-  styleUrls: ['./language-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class LanguageChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<LanguageStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartType = 'pie' as const;
-  public readonly languageStats = computed<LanguageChartStat[]>(() => this.stats().languages.map(language => ({
+  readonly chartType = 'pie' as const;
+  readonly languageStats = computed<LanguageChartStat[]>(() => this.stats().languages.map((language, index) => ({
     language: language.languageId,
     displayName: this.getDisplayName(language.languageId),
     count: language.bookCount,
+    color: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
   })));
-  public readonly totalBooks = computed(() => this.stats().totalBooks);
-  public readonly booksWithLanguage = computed(() => this.languageStats().reduce((sum, s) => sum + s.count, 0));
+  readonly totalBooks = computed(() => this.stats().totalBooks);
+  readonly booksWithLanguage = computed(() => this.languageStats().reduce((sum, s) => sum + s.count, 0));
+  readonly state = computed<StatsChartState>(() =>
+    this.loading() || this.booksWithLanguage() > 0 ? 'ready' : 'empty',
+  );
 
-  public readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
+  readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -155,17 +175,7 @@ export class LanguageChartComponent {
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'right',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          },
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 15
-        }
+        display: false,
       },
       tooltip: {
         enabled: true,
@@ -187,7 +197,7 @@ export class LanguageChartComponent {
     }
   };
 
-  public readonly chartData = computed<LanguageChartData>(() => {
+  readonly chartData = computed<LanguageChartData>(() => {
     const stats = this.languageStats();
     if (stats.length === 0) {
       return {labels: [], datasets: []};
@@ -195,7 +205,7 @@ export class LanguageChartComponent {
 
     const labels = stats.map(s => s.displayName);
     const data = stats.map(s => s.count);
-    const colors = stats.map((_, index) => LANGUAGE_COLORS[index % LANGUAGE_COLORS.length]);
+    const colors = stats.map(s => s.color);
 
     return {
       labels,
@@ -205,6 +215,10 @@ export class LanguageChartComponent {
       }]
     };
   });
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.t.getActiveLang());
+  }
 
   private getDisplayName(language: string): string {
     const lower = language.toLowerCase();

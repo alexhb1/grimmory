@@ -75,59 +75,80 @@
     }
 
     <ng-template #chartTemplate let-chartConfig>
-      <div
-        [class]="
-          'relative h-full rounded-xl bg-page p-4 text-text tabular-nums ring-1 ring-inset ring-border md:p-5 ' +
-          (showChartDescriptions() ? '' : '[&_.chart-description]:hidden')
-        ">
-        @switch (chartConfig.id) {
-          @case ('bookFormats') {
-            <app-book-formats-chart
-              [stats]="statsData.bookFormatStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('languageDistribution') {
-            <app-language-chart
-              [stats]="statsData.languageStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('metadataScore') {
-            <app-metadata-score-chart
-              [stats]="statsData.metadataScoreStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('pageCountDistribution') {
-            <app-page-count-chart
-              [stats]="statsData.pageCountStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('publicationTimeline') {
-            <app-publication-timeline-chart
-              [stats]="statsData.publicationTimelineStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('readingJourney') {
-            <app-reading-journey-chart
-              [stats]="statsData.readingJourneyStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('topItems') {
-            <app-top-items-chart
-              [stats]="statsData.topItemsStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('authorUniverse') {
-            <app-author-universe-chart
-              [stats]="statsData.authorUniverseStats()"
-              [loading]="isLoading()" />
-          }
-          @case ('publicationTrend') {
-            <app-publication-trend-chart
-              [stats]="statsData.publicationTrendStats()"
-              [loading]="isLoading()" />
-          }
+      @switch (chartConfig.id) {
+        @case ('bookFormats') {
+          <app-book-formats-chart
+            [stats]="statsData.bookFormatStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
         }
-      </div>
+        @case ('languageDistribution') {
+          <app-language-chart
+            [stats]="statsData.languageStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('metadataScore') {
+          <app-metadata-score-chart
+            [stats]="statsData.metadataScoreStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('pageCountDistribution') {
+          <app-page-count-chart
+            [stats]="statsData.pageCountStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('publicationTimeline') {
+          <app-publication-timeline-chart
+            [stats]="statsData.publicationTimelineStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('readingJourney') {
+          <app-reading-journey-chart
+            [stats]="statsData.readingJourneyStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('topItems') {
+          <app-top-items-chart
+            [stats]="statsData.topItemsStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('authorUniverse') {
+          <app-author-universe-chart
+            [stats]="statsData.authorUniverseStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+        @case ('publicationTrend') {
+          <app-publication-trend-chart
+            [stats]="statsData.publicationTrendStats()"
+            [loading]="isLoading()"
+            [loadingMessage]="t('main.loading')"
+            [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
+            [showDescription]="showChartDescriptions()" />
+        }
+      }
     </ng-template>
   </app-stats-page-shell>
 </ng-container>

@@ -1,4 +1,4 @@
-import {Component, computed, inject, input} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 import {BaseChartDirective} from 'ng2-charts';
@@ -8,6 +8,10 @@ import {
   PRE_1900_DECADE_START,
   PublicationTimelineStats,
 } from '../../../../data/library/publication-timeline-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
 
 type TimelineChartData = ChartData<'bar', number[], string>;
 
@@ -33,20 +37,26 @@ const DECADE_COLORS: Record<string, string> = {
   selector: 'app-publication-timeline-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './publication-timeline-chart.component.html',
-  styleUrls: ['./publication-timeline-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class PublicationTimelineChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<PublicationTimelineStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
   public readonly chartType = 'bar' as const;
   public chartOptions: ChartConfiguration<'bar'>['options'];
-  public readonly insights = computed(() => this.stats().insights);
-  public readonly totalBooks = computed(() => this.stats().totalBooks);
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.stats().totalBooks > 0 ? 'ready' : 'empty';
+  });
   public readonly chartData = computed<TimelineChartData>(() => {
     const stats = this.stats().decades;
     if (stats.length === 0) {
@@ -153,5 +163,13 @@ export class PublicationTimelineChartComponent {
 
   protected decadeLabel(decadeStart: number): string {
     return decadeStart === PRE_1900_DECADE_START ? 'Pre-1900' : `${decadeStart}s`;
+  }
+
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.t.getActiveLang());
+  }
+
+  protected formatPercent(value: number): string {
+    return new Intl.NumberFormat(this.t.getActiveLang(), { style: 'percent' }).format(value / 100);
   }
 }

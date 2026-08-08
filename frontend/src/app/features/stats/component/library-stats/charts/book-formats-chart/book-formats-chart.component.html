@@ -1,30 +1,43 @@
 <ng-container *transloco="let t; prefix: 'statsLibrary.bookFormats'">
-<div class="book-formats-container">
-  <div class="chart-header">
-    <div class="chart-title">
-      <h3>
-        <i class="pi pi-file formats-title-icon"></i>
-        {{ t('title') }}
-      </h3>
-      <p class="chart-description">{{ t('description') }}</p>
-    </div>
-  </div>
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()"
+    [emptyMessage]="t('noData')">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <app-stats-circular-chart-layout [plotHeight]="plotHeight()">
+        <canvas
+          statsCircularChartPlot
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions"
+          [type]="chartType"></canvas>
 
-  @if (!loading() && totalBooks() > 0) {
-    <div class="chart-wrapper">
-      <canvas baseChart
-              [data]="chartData()"
-              [options]="chartOptions"
-              [type]="chartType">
-      </canvas>
-    </div>
-  }
-
-  @if (!loading() && totalBooks() === 0) {
-    <div class="no-data-message">
-      <i class="pi pi-info-circle"></i>
-      <p>{{ t('noData') }}</p>
-    </div>
-  }
-</div>
+        <ul statsCircularChartLegend class="min-w-0 space-y-1.5 text-xs text-text-secondary">
+          @for (row of rows(); track row.format) {
+            <li class="flex min-w-0 items-center gap-2">
+              <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
+                <circle cx="5" cy="5" r="5" [attr.fill]="row.color"></circle>
+              </svg>
+              <span class="min-w-0 flex-1 truncate" [title]="row.label">{{ row.label }}</span>
+              <span class="shrink-0 pl-5 font-medium tabular-nums text-text-strong">
+                {{ formatCount(row.bookCount) }}
+              </span>
+            </li>
+          }
+        </ul>
+      </app-stats-circular-chart-layout>
+    }
+  </app-stats-chart-card>
 </ng-container>

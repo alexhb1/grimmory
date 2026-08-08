@@ -1,12 +1,16 @@
-import {Component, computed, DestroyRef, inject, input} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input } from '@angular/core';
+
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { Chart, type ChartConfiguration, type ChartData, type TooltipModel } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { type AuthorUniverseStats } from '../../../../data/library/author-universe-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {Chart, ChartConfiguration, ChartData, TooltipModel} from 'chart.js';
-import {BaseChartDirective} from 'ng2-charts';
-
-import {AuthorUniverseStats} from '../../../../data/library/author-universe-stats';
-import {StatsChartThemeService} from '../../../shared/stats-chart-theme.service';
+import { StatsChartThemeService } from '../../../shared/stats-chart-theme.service';
 
 interface AuthorStats {
   name: string;
@@ -25,6 +29,17 @@ interface BubbleDataPoint {
   authorStats: AuthorStats;
 }
 
+interface CompletionLegendEntry {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+}
+
+interface AuthorUniverseInsightTile {
+  readonly label: string;
+  readonly value: string;
+}
+
 type AuthorUniverseChartData = ChartData<'bubble', BubbleDataPoint[], string>;
 type AuthorUniverseAuthor = AuthorUniverseStats['authors'][number];
 type AuthorUniverseInsights = NonNullable<AuthorUniverseStats['insights']>;
@@ -37,13 +52,16 @@ const COMPLETION_COLORS = {
   unread: '#6b7280',
 };
 
+const INSIGHT_LABEL_SEPARATOR = /[:：]\s*/;
+
 @Component({
   selector: 'app-author-universe-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './author-universe-chart.component.html',
-  styleUrls: ['./author-universe-chart.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class AuthorUniverseChartComponent {
   private readonly t = inject(TranslocoService);
@@ -52,12 +70,29 @@ export class AuthorUniverseChartComponent {
 
   readonly stats = input.required<AuthorUniverseStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
   readonly chartType = 'bubble' as const;
   readonly authors = computed<AuthorStats[]>(() => this.stats().authors.map(this.toChartAuthor));
   readonly totalAuthors = computed(() => this.authors().length);
   readonly insights = computed(() => this.buildInsights(this.stats().insights));
+  readonly insightTiles = computed<readonly AuthorUniverseInsightTile[]>(() =>
+    this.insights().map(toInsightTile),
+  );
   readonly chartData = computed<AuthorUniverseChartData>(() => this.buildChartData(this.authors()));
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'ready';
+    return this.totalAuthors() > 0 ? 'ready' : 'empty';
+  });
+  readonly legend = computed<readonly CompletionLegendEntry[]>(() =>
+    this.chartData().datasets.map((dataset, index) => ({
+      id: `${dataset.label ?? 'completion'}-${index}`,
+      label: dataset.label ?? '',
+      color: typeof dataset.borderColor === 'string' ? dataset.borderColor : '#6b7280',
+    })),
+  );
 
   readonly chartOptions: ChartConfiguration<'bubble'>['options'] = {
     responsive: true,
@@ -92,14 +127,7 @@ export class AuthorUniverseChartComponent {
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'bottom',
-        labels: {
-          font: {family: "'Inter', sans-serif", size: 11},
-          padding: 15,
-          usePointStyle: true,
-          pointStyle: 'circle',
-        },
+        display: false,
       },
       tooltip: {
         enabled: false,
@@ -314,4 +342,14 @@ export class AuthorUniverseChartComponent {
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
+}
+
+function toInsightTile(line: string): AuthorUniverseInsightTile {
+  const separator = INSIGHT_LABEL_SEPARATOR.exec(line);
+  if (!separator) return { label: line, value: '' };
+
+  return {
+    label: line.slice(0, separator.index),
+    value: line.slice(separator.index + separator[0].length),
+  };
 }

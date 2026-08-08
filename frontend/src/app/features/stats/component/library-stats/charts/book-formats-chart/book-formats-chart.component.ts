@@ -1,10 +1,23 @@
-import {Component, computed, inject, input} from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {BookFormatStats} from '../../../../data/library/book-format-stats';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
+
+import { type BookFormatStats } from '../../../../data/library/book-format-stats';
+import {
+  StatsChartCardComponent,
+  type StatsChartState,
+} from '../../../shared/stats-chart-card.component';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
+
+interface BookFormatLegendEntry {
+  readonly format: string;
+  readonly label: string;
+  readonly bookCount: number;
+  readonly color: string;
+}
 
 type FormatChartData = ChartData<'pie', number[], string>;
 
@@ -21,20 +34,40 @@ const FORMAT_COLORS: Record<string, string> = {
   selector: 'app-book-formats-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, TranslocoDirective],
+  imports: [
+    BaseChartDirective,
+    StatsChartCardComponent,
+    StatsCircularChartLayoutComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './book-formats-chart.component.html',
-  styleUrls: ['./book-formats-chart.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block h-full min-w-0' },
 })
 export class BookFormatsChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<BookFormatStats>();
   readonly loading = input(false);
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(260);
+  readonly showDescription = input(true);
 
-  public readonly chartType = 'pie' as const;
-  public readonly totalBooks = computed(() => this.stats().totalBooks);
+  readonly chartType = 'pie' as const;
+  readonly totalBooks = computed(() => this.stats().totalBooks);
+  readonly state = computed<StatsChartState>(() =>
+    this.loading() || this.totalBooks() > 0 ? 'ready' : 'empty',
+  );
+  readonly rows = computed<readonly BookFormatLegendEntry[]>(() =>
+    this.stats().formats.map(({ format, bookCount }) => ({
+      format,
+      label: format,
+      bookCount,
+      color: FORMAT_COLORS[format] || '#6B7280',
+    })),
+  );
 
-  public readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
+  readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -42,17 +75,7 @@ export class BookFormatsChartComponent {
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'right',
-        labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          },
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 15
-        }
+        display: false,
       },
       tooltip: {
         enabled: true,
@@ -74,15 +97,15 @@ export class BookFormatsChartComponent {
     }
   };
 
-  public readonly chartData = computed<FormatChartData>(() => {
-    const stats = this.stats().formats;
-    if (stats.length === 0) {
+  readonly chartData = computed<FormatChartData>(() => {
+    const rows = this.rows();
+    if (rows.length === 0) {
       return {labels: [], datasets: []};
     }
 
-    const labels = stats.map(s => s.format);
-    const data = stats.map(s => s.bookCount);
-    const colors = stats.map(s => FORMAT_COLORS[s.format] || '#6B7280');
+    const labels = rows.map(row => row.label);
+    const data = rows.map(row => row.bookCount);
+    const colors = rows.map(row => row.color);
 
     return {
       labels,
@@ -93,4 +116,7 @@ export class BookFormatsChartComponent {
     };
   });
 
+  protected formatCount(value: number): string {
+    return value.toLocaleString(this.t.getActiveLang());
+  }
 }

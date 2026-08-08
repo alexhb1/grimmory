@@ -62,6 +62,7 @@
     "description": "Quality of book metadata in your library",
     "noData": "No metadata score data available.",
     "tooltipLabel": "{{ value }} books ({{ percentage }}%)",
+    "averageLabel": "Average",
     "excellent": "Excellent (90-100%)",
     "good": "Good (70-89%)",
     "fair": "Fair (50-69%)",
