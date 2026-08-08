@@ -1,10 +1,25 @@
+import {TestBed} from '@angular/core/testing';
+import {Router} from '@angular/router';
 import {describe, expect, it} from 'vitest';
 
+import {UserService} from '../../settings/user-management/user.service';
+import {BookDialogHelperService} from './book-dialog-helper.service';
 import {BookNavigationService} from './book-navigation.service';
+
+function createService(): BookNavigationService {
+  TestBed.configureTestingModule({
+    providers: [
+      {provide: Router, useValue: {navigate: () => Promise.resolve(true)}},
+      {provide: UserService, useValue: {currentUser: () => null}},
+      {provide: BookDialogHelperService, useValue: {openBookDetailsDialog: () => Promise.resolve()}},
+    ],
+  });
+  return TestBed.inject(BookNavigationService);
+}
 
 describe('BookNavigationService', () => {
   it('tracks navigation context and derived positions', () => {
-    const service = new BookNavigationService();
+    const service = createService();
 
     expect(service.navigationState()).toBeNull();
     expect(service.canNavigatePrevious()).toBe(false);
@@ -36,7 +51,7 @@ describe('BookNavigationService', () => {
   });
 
   it('clears invalid navigation context and ignores unknown book ids', () => {
-    const service = new BookNavigationService();
+    const service = createService();
 
     service.setNavigationContext([1, 2, 3], 99);
     expect(service.navigationState()).toBeNull();
