@@ -24,9 +24,13 @@ import {
   type Header,
   type Row,
   type SortingState,
-  createAngularTable,
+  columnPinningFeature,
+  columnResizingFeature,
+  columnSizingFeature,
   functionalUpdate,
-  getCoreRowModel,
+  injectTable,
+  rowSortingFeature,
+  tableFeatures,
 } from '@tanstack/angular-table';
 import {injectVirtualizer} from '@tanstack/angular-virtual';
 import {LucideEllipsisVertical} from '@lucide/angular';
@@ -94,6 +98,13 @@ const ROW_HEIGHT = 54;
 const RENDER_OVERSCAN = 10;
 const SELECT_COLUMN_WIDTH = 44;
 const MENU_COLUMN_WIDTH = 44;
+
+const features = tableFeatures({
+  rowSortingFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+  columnPinningFeature,
+});
 
 const HEADER_CELL_CLASS =
   'relative box-border h-[42px] min-w-0 flex-none overflow-hidden bg-page px-3 text-left ' +
@@ -172,11 +183,11 @@ export class BookBrowseTableComponent {
   private readonly columnSizing = signal<ColumnSizingState>(this.columnWidthPreference.load());
   private lastPersistedWidths = this.columnSizing();
   private readonly columnPinning = computed<ColumnPinningState>(() => ({
-    left: [
+    start: [
       ...(this.selection().mode !== 'none' ? ['select'] : []),
       ...(!this.mobile() ? ['title'] : []),
     ],
-    right: [],
+    end: [],
   }));
   private readonly hasHorizontalOverlap = signal(false);
   protected readonly overflowLinks = signal<readonly BookBrowseTableFacetRequest[]>([]);
@@ -212,7 +223,7 @@ export class BookBrowseTableComponent {
     ];
   });
 
-  private readonly columnDefs = computed<ColumnDef<BookSummary, BookBrowseColumnValue>[]>(() => {
+  private readonly columnDefs = computed<ColumnDef<typeof features, BookSummary>[]>(() => {
     this.activeLang();
     return [
     ...(this.selection().mode !== 'none'
@@ -225,7 +236,7 @@ export class BookBrowseTableComponent {
           enableResizing: false,
           enableSorting: false,
           accessorFn: () => undefined,
-        } satisfies ColumnDef<BookSummary, BookBrowseColumnValue>]
+        } satisfies ColumnDef<typeof features, BookSummary, BookBrowseColumnValue>]
       : []),
     ...this.renderedColumns().map(column => ({
       id: column.field,
@@ -236,7 +247,7 @@ export class BookBrowseTableComponent {
       enableSorting: this.sortableFields().has(column.field),
       sortDescFirst: this.sortDescFirst(column.field),
       accessorFn: book => bookBrowseColumnValue(book, column.field),
-    } satisfies ColumnDef<BookSummary, BookBrowseColumnValue>)),
+    } satisfies ColumnDef<typeof features, BookSummary, BookBrowseColumnValue>)),
     {
       id: 'menu',
       header: '',
@@ -246,14 +257,14 @@ export class BookBrowseTableComponent {
       enableResizing: false,
       enableSorting: false,
       accessorFn: () => undefined,
-    } satisfies ColumnDef<BookSummary, BookBrowseColumnValue>,
+    } satisfies ColumnDef<typeof features, BookSummary, BookBrowseColumnValue>,
     ];
   });
 
-  protected readonly table = createAngularTable(() => ({
-    data: [...this.books()],
+  protected readonly table = injectTable(() => ({
+    features,
+    data: this.books(),
     columns: this.columnDefs(),
-    getCoreRowModel: getCoreRowModel(),
     getRowId: book => String(book.id),
     manualSorting: true,
     enableSortingRemoval: false,
@@ -272,8 +283,8 @@ export class BookBrowseTableComponent {
   }));
 
   protected readonly headers = computed(() => this.table.getFlatHeaders());
-  protected readonly rowsByBookId = computed<ReadonlyMap<number, Row<BookSummary>>>(() =>
-    new Map(this.table.getRowModel().rows.map(row => [row.original.id, row])),
+  protected readonly rowsByBookId = computed<ReadonlyMap<number, Row<typeof features, BookSummary>>>(
+    () => new Map(this.table.getRowModel().rows.map(row => [row.original.id, row])),
   );
   private readonly skeletonDelayElapsed = signal(false);
   protected readonly rowCount = computed(() => {
@@ -287,27 +298,19 @@ export class BookBrowseTableComponent {
   });
   protected readonly ariaRowCount = computed(() => this.rowCount() + 1);
   protected readonly ariaColumnCount = computed(() => this.headers().length);
-  protected readonly tableWidth = computed(() => {
-    this.columnSizing();
-    this.columnDefs();
-    return this.table.getTotalSize();
-  });
-  protected readonly isColumnResizing = computed(() => {
-    this.columnSizing();
-    return Boolean(this.table.getState().columnSizingInfo.isResizingColumn);
-  });
-  protected readonly columnSizeVars = computed<Record<string, string>>(() => {
-    this.columnSizing();
-    this.columnDefs();
-
-    return this.table.getVisibleFlatColumns().reduce<Record<string, string>>((styles, column) => {
+  protected readonly tableWidth = computed(() => this.table.getTotalSize());
+  protected readonly isColumnResizing = computed(() =>
+    Boolean(this.table.atoms.columnResizing.get().isResizingColumn),
+  );
+  protected readonly columnSizeVars = computed<Record<string, string>>(() =>
+    this.table.getAllLeafColumns().reduce<Record<string, string>>((styles, column) => {
       styles[`--book-browse-col-${column.id}-size`] = `${column.getSize()}px`;
-      if (column.getIsPinned() === 'left') {
-        styles[`--book-browse-col-${column.id}-left`] = `${column.getStart('left')}px`;
+      if (column.getIsPinned() === 'start') {
+        styles[`--book-browse-col-${column.id}-left`] = `${column.getStart('start')}px`;
       }
       return styles;
-    }, {});
-  });
+    }, {}),
+  );
 
   protected readonly rowVirtualizer = injectVirtualizer<HTMLElement, HTMLTableRowElement>(() => ({
     scrollElement: this.scrollElement(),
@@ -411,24 +414,22 @@ export class BookBrowseTableComponent {
   }
 
   protected pinnedOffset(field: string): string | null {
-    const column = this.table.getColumn(field)!;
-    return column.getIsPinned() === 'left' ? `var(--book-browse-col-${field}-left)` : null;
+    return this.isPinned(field) ? `var(--book-browse-col-${field}-left)` : null;
   }
 
   protected isPinned(field: string): boolean {
-    return this.table.getColumn(field)!.getIsPinned() === 'left';
+    return this.columnPinning().start.includes(field);
   }
 
-  protected isLastLeftPinned(field: string): boolean {
-    const column = this.table.getColumn(field)!;
-    return column.getIsPinned() === 'left' && column.getIsLastColumn('left');
+  protected isLastPinned(field: string): boolean {
+    return this.columnPinning().start.at(-1) === field;
   }
 
   protected headerCellClass(field: string): string {
     return cn(
       HEADER_CELL_CLASS,
       this.isPinned(field) && 'sticky z-[5]',
-      this.isLastLeftPinned(field) && this.hasHorizontalOverlap() && 'border-r border-border/70',
+      this.isLastPinned(field) && this.hasHorizontalOverlap() && 'border-r border-border/70',
       this.isNumeric(field) && 'text-right tabular-nums',
     );
   }
@@ -437,7 +438,7 @@ export class BookBrowseTableComponent {
     return cn(
       BODY_CELL_CLASS,
       this.isPinned(field) && 'sticky z-[2]',
-      this.isLastLeftPinned(field) && this.hasHorizontalOverlap() && 'border-r border-border/70',
+      this.isLastPinned(field) && this.hasHorizontalOverlap() && 'border-r border-border/70',
       this.isNumeric(field) && 'justify-end text-right tabular-nums',
       empty && 'text-text-secondary',
     );
@@ -452,7 +453,7 @@ export class BookBrowseTableComponent {
     return kind === 'number' || kind === 'rating' || kind === 'fileSize';
   }
 
-  protected primaryAriaSort(header: Header<BookSummary, unknown>): 'ascending' | 'descending' | null {
+  protected primaryAriaSort(header: Header<typeof features, BookSummary, unknown>): 'ascending' | 'descending' | null {
     if (header.column.getSortIndex() !== 0) {
       return null;
     }
@@ -463,16 +464,16 @@ export class BookBrowseTableComponent {
     return sorted === 'asc' ? 'ascending' : 'descending';
   }
 
-  protected toggleSort(header: Header<BookSummary, unknown>, event: MouseEvent): void {
+  protected toggleSort(header: Header<typeof features, BookSummary, unknown>, event: MouseEvent): void {
     header.column.getToggleSortingHandler()!(event);
   }
 
-  protected startResize(header: Header<BookSummary, unknown>, event: MouseEvent | TouchEvent): void {
+  protected startResize(header: Header<typeof features, BookSummary, unknown>, event: MouseEvent | TouchEvent): void {
     event.stopPropagation();
     header.getResizeHandler()(event);
   }
 
-  protected resetWidth(header: Header<BookSummary, unknown>, event: MouseEvent): void {
+  protected resetWidth(header: Header<typeof features, BookSummary, unknown>, event: MouseEvent): void {
     event.stopPropagation();
     header.column.resetSize();
   }
@@ -559,7 +560,7 @@ export class BookBrowseTableComponent {
     return this.useSquareCovers() || book.primaryFile?.bookType === 'AUDIOBOOK';
   }
 
-  protected cellValue(cell: Cell<BookSummary, BookBrowseColumnValue>): string {
+  protected cellValue(cell: Cell<typeof features, BookSummary>): string {
     const value = cell.getValue();
     if (value == null || value === '') {
       return '—';

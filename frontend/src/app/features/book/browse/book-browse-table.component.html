@@ -78,7 +78,7 @@
           [style.height.px]="virtualRow.size"
           [style.transform]="'translateY(' + virtualRow.start + 'px)'"
           [attr.aria-rowindex]="virtualRow.index + 2">
-          @for (cell of tableRow?.getVisibleCells() ?? []; track cell.id) {
+          @for (cell of tableRow?.getAllCells() ?? []; track cell.id) {
             <td
               [class]="bodyCellClass(cell.column.id, cellValue(cell) === '—')"
               [style.width]="columnWidth(cell.column.id)"
