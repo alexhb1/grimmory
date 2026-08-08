@@ -21,15 +21,19 @@ export interface BrowsePage<T> {
 export interface BrowseFacetValue {
   value: string;
   title: string;
-  count?: number;
+  count: number;
   selected: boolean;
 }
 
 export interface BrowseFacetGroup {
-  rel: string;
   key: string;
   title: string;
   values: BrowseFacetValue[];
+}
+
+export interface BrowseFacetResult {
+  facets: BrowseFacetGroup[];
+  sortTokens: string[];
 }
 
 export type BrowseFacetLogic = 'and' | 'or' | 'not';
