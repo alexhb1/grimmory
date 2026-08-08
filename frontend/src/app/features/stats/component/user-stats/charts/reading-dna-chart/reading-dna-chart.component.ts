@@ -60,12 +60,12 @@ export class ReadingDNAChartComponent {
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'ready';
-    return this.stats().traits.length > 0 ? 'ready' : 'empty';
+    return this.stats().length > 0 ? 'ready' : 'empty';
   });
 
   readonly traits = computed<readonly ReadingDnaTraitView[]>(() => {
     this.activeLanguage();
-    return this.stats().traits.map((trait) => ({
+    return this.stats().map((trait) => ({
       id: trait.id,
       label: this.transloco.translate(`statsUser.readingDna.traits.${trait.id}`),
       score: trait.score,

@@ -14,7 +14,7 @@ import {
   StatsPageShellComponent,
   type StatsPageShellLabels,
 } from '../shared/stats-page-shell.component';
-import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { UserStatsDataService } from './user-stats-data.service';
 import { BookFlowChartComponent } from './charts/book-flow-chart/book-flow-chart.component';
 import { BookLengthChartComponent } from './charts/book-length-chart/book-length-chart.component';

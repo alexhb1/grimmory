@@ -11,7 +11,6 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
-  type RatingTasteQuadrant,
   type RatingTasteQuadrantId,
   type RatingTasteStats,
 } from '../../../../data/user/rating-taste-stats';
@@ -33,6 +32,7 @@ interface RatingTasteQuadrantView {
 }
 
 type RatingTasteChartData = ChartData<'scatter', RatingTasteDatum[], string>;
+type RatingTasteQuadrant = RatingTasteStats['quadrants'][number];
 
 const CHART_FONT_FAMILY = "'Inter', sans-serif";
 

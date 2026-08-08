@@ -12,7 +12,6 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 import {
-  type ReadingProgressBand,
   type ReadingProgressBandId,
   type ReadingProgressStats,
 } from '../../../../data/user/reading-progress-stats';
@@ -25,6 +24,7 @@ interface ReadingProgressLegendEntry {
 }
 
 type ReadingProgressChartData = ChartData<'doughnut', number[], string>;
+type ReadingProgressBand = ReadingProgressStats['bands'][number];
 
 const CHART_FONT_FAMILY = "'Inter', sans-serif";
 

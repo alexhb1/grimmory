@@ -5,11 +5,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Chart, ChartConfiguration, ChartData, TooltipModel} from 'chart.js';
 import {BaseChartDirective} from 'ng2-charts';
 
-import {
-  AuthorUniverseAuthor,
-  AuthorUniverseInsights,
-  AuthorUniverseStats,
-} from '../../../../data/library/author-universe-stats';
+import {AuthorUniverseStats} from '../../../../data/library/author-universe-stats';
 import {StatsChartThemeService} from '../../../shared/stats-chart-theme.service';
 
 interface AuthorStats {
@@ -30,6 +26,8 @@ interface BubbleDataPoint {
 }
 
 type AuthorUniverseChartData = ChartData<'bubble', BubbleDataPoint[], string>;
+type AuthorUniverseAuthor = AuthorUniverseStats['authors'][number];
+type AuthorUniverseInsights = NonNullable<AuthorUniverseStats['insights']>;
 
 const COMPLETION_COLORS = {
   high: '#22c55e',

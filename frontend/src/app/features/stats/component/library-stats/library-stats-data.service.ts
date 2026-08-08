@@ -12,7 +12,7 @@ import { calculatePublicationTimelineStats } from '../../data/library/publicatio
 import { calculatePublicationTrendStats } from '../../data/library/publication-trend-stats';
 import { calculateReadingJourneyStats } from '../../data/library/reading-journey-stats';
 import { calculateTopItemsStats } from '../../data/library/top-items-stats';
-import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 
 export interface LibraryOption {
   readonly id: number | null;

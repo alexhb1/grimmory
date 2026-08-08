@@ -60,12 +60,12 @@ export class ReadingHabitsChartComponent {
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'ready';
-    return this.stats().habits.length > 0 ? 'ready' : 'empty';
+    return this.stats().length > 0 ? 'ready' : 'empty';
   });
 
   readonly habits = computed<readonly ReadingHabitView[]>(() => {
     this.activeLanguage();
-    return this.stats().habits.map((habit) => ({
+    return this.stats().map((habit) => ({
       id: habit.id,
       label: this.transloco.translate(`statsUser.readingHabits.habits.${habit.id}`),
       score: habit.score,

@@ -16,12 +16,12 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
-  type SeriesProgressSeries,
   type SeriesProgressStats,
   type SeriesProgressStatus,
 } from '../../../../data/user/series-progress-stats';
 
 type SeriesProgressFilter = 'all' | SeriesProgressStatus;
+type SeriesProgressSeries = SeriesProgressStats['series'][number];
 
 type SeriesProgressSort = 'progress' | 'rating' | 'books' | 'name';
 

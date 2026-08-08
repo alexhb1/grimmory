@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReadStatus } from '../../../book/model/book.model';
 import { type BookSummary } from '../../../book/data/book-response.models';
-import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { LibraryStatsDataService } from './library-stats-data.service';
 
 describe('LibraryStatsDataService', () => {

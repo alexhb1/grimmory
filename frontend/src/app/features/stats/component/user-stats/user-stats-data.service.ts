@@ -5,11 +5,11 @@ import { getISOWeek, getISOWeekYear } from 'date-fns';
 
 import { calculateBookFlowStats } from '../../data/user/book-flow-stats';
 import { calculateBookLengthStats } from '../../data/user/book-length-stats';
-import { completionRaceQuery, emptyCompletionRaceStats } from '../../data/user/completion-race-stats';
+import { completionRaceQuery, EMPTY_COMPLETION_RACE_STATS } from '../../data/user/completion-race-stats';
 import {
   completionTimelineYears,
   completionTimelineQuery,
-  emptyCompletionTimelineStats,
+  EMPTY_COMPLETION_TIMELINE_STATS,
 } from '../../data/user/completion-timeline-stats';
 import { EMPTY_FAVORITE_DAYS_STATS, favoriteDaysQuery } from '../../data/user/favorite-days-stats';
 import { EMPTY_GENRE_STATS, genreStatsQuery } from '../../data/user/genre-stats';
@@ -38,14 +38,14 @@ import { calculateReadingSurvivalStats } from '../../data/user/reading-survival-
 import { calculateReadStatusStats } from '../../data/user/read-status-stats';
 import { calculateSeriesProgressStats } from '../../data/user/series-progress-stats';
 import {
-  emptySessionArchetypeStats,
+  EMPTY_SESSION_ARCHETYPE_STATS,
   sessionArchetypesQuery,
 } from '../../data/user/session-archetypes-stats';
 import {
   type UserStatsMonthFilter,
   UserStatsQueryCache,
 } from '../../data/user/user-stats-transport';
-import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 
 @Injectable()
 export class UserStatsDataService {
@@ -152,20 +152,19 @@ export class UserStatsDataService {
   readonly peakHoursError = computed(() => this.peakHoursResult.isError());
 
   readonly completionTimelineStats = computed(
-    () =>
-      this.completionTimelineResult.data() ?? emptyCompletionTimelineStats(this.completionTimelineYear()),
+    () => this.completionTimelineResult.data() ?? EMPTY_COMPLETION_TIMELINE_STATS,
   );
   readonly completionTimelineLoading = computed(() => this.completionTimelineResult.isPending());
   readonly completionTimelineError = computed(() => this.completionTimelineResult.isError());
 
   readonly completionRaceStats = computed(
-    () => this.completionRaceResult.data() ?? emptyCompletionRaceStats(this.completionRaceYear()),
+    () => this.completionRaceResult.data() ?? EMPTY_COMPLETION_RACE_STATS,
   );
   readonly completionRaceLoading = computed(() => this.completionRaceResult.isPending());
   readonly completionRaceError = computed(() => this.completionRaceResult.isError());
 
   readonly sessionArchetypesStats = computed(
-    () => this.sessionArchetypesResult.data() ?? emptySessionArchetypeStats(this.sessionArchetypesYear()),
+    () => this.sessionArchetypesResult.data() ?? EMPTY_SESSION_ARCHETYPE_STATS,
   );
   readonly sessionArchetypesLoading = computed(() => this.sessionArchetypesResult.isPending());
   readonly sessionArchetypesError = computed(() => this.sessionArchetypesResult.isError());
