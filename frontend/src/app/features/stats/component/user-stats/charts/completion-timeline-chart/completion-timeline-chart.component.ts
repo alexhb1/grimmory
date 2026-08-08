@@ -1,36 +1,50 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { type ChartData, type ChartOptions } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 
 import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
 import { type SelectOption } from '../../../../../../shared/ui/select/app-select.options';
-import { type CompletionTimelineStats } from '../../../../data/user/completion-timeline-stats';
-import {
-  StatsCategoricalBarComponent,
-  type StatsCategoricalBarPlot,
-} from '../../../shared/stats-categorical-bar.component';
 import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
-  StatsChartLegendComponent,
-  type StatsChartLegendItem,
-} from '../../../shared/stats-chart-legend.component';
+  type CompletionTimelineStats,
+} from '../../../../data/user/completion-timeline-stats';
 
-type SeriesId = Exclude<keyof CompletionTimelineStats['months'][number], 'month'>;
+type CompletionTimelineChartData = ChartData<'bar', number[], string>;
+type CompletionTimelineSeriesId = Exclude<
+  keyof CompletionTimelineStats['months'][number],
+  'month'
+>;
 
-const SERIES: readonly SeriesId[] = [
-  'completed', 'partiallyRead', 'activeReading', 'paused', 'discontinued',
+const COMPLETION_TIMELINE_SERIES: readonly CompletionTimelineSeriesId[] = [
+  'completed',
+  'partiallyRead',
+  'activeReading',
+  'paused',
+  'discontinued',
 ];
-const COLORS: Readonly<Record<SeriesId, string>> = {
+
+interface CompletionTimelineLegendEntry {
+  readonly id: CompletionTimelineSeriesId;
+  readonly label: string;
+  readonly color: string;
+}
+
+const SERIES_COLORS: Readonly<Record<CompletionTimelineSeriesId, string>> = {
   completed: 'rgba(106, 176, 76, 0.8)',
   partiallyRead: 'rgba(20, 184, 166, 0.8)',
   activeReading: 'rgba(59, 130, 246, 0.8)',
   paused: 'rgba(255, 193, 7, 0.8)',
   discontinued: 'rgba(239, 68, 68, 0.8)',
 };
-const LABEL_KEYS: Readonly<Record<SeriesId, string>> = {
+
+const SERIES_LABEL_KEYS: Readonly<Record<CompletionTimelineSeriesId, string>> = {
   completed: 'statsUser.completionTimeline.completed',
   partiallyRead: 'statsUser.readStatus.partiallyRead',
   activeReading: 'statsUser.completionTimeline.activeReading',
@@ -41,13 +55,8 @@ const LABEL_KEYS: Readonly<Record<SeriesId, string>> = {
 @Component({
   selector: 'app-completion-timeline-chart',
   standalone: true,
-  imports: [
-    AppSelectComponent,
-    StatsCategoricalBarComponent,
-    StatsChartCardComponent,
-    StatsChartLegendComponent,
-    TranslocoDirective,
-  ],
+  hostDirectives: [StatsChartJsHostDirective],
+  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './completion-timeline-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -68,57 +77,104 @@ export class CompletionTimelineChartComponent {
   readonly showDescription = input(true);
   readonly yearChange = output<number>();
 
+  readonly chartType = 'bar' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'loading';
+    if (this.loading()) return 'ready';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
-  readonly yearSelectOptions = computed<readonly SelectOption<number>[]>(() =>
-    this.yearOptions().map((year) => ({ value: year, label: String(year) })),
-  );
+
+  readonly yearSelectOptions = computed<readonly SelectOption<number>[]>(() => {
+    return this.yearOptions().map((year) => ({ value: year, label: String(year) }));
+  });
   readonly yearSelectorLabel = computed(() => {
     this.activeLanguage();
     return this.transloco.translate('statsUser.peakHours.selectYear');
   });
-  readonly legend = computed<readonly (StatsChartLegendItem & { id: SeriesId })[]>(() => {
+  readonly legend = computed<readonly CompletionTimelineLegendEntry[]>(() => {
     this.activeLanguage();
-    return SERIES.map((id) => ({
+    return COMPLETION_TIMELINE_SERIES.map((id) => ({
       id,
-      label: this.transloco.translate(LABEL_KEYS[id]),
-      color: COLORS[id],
+      label: this.transloco.translate(SERIES_LABEL_KEYS[id]),
+      color: SERIES_COLORS[id],
     }));
   });
-  readonly plot = computed<StatsCategoricalBarPlot>(() => {
+  readonly monthLabels = computed<readonly string[]>(() => {
     const locale = this.activeLanguage();
+    return Array.from({ length: 12 }, (_, index) =>
+      new Date(2000, index, 1).toLocaleDateString(locale, { month: 'short' }),
+    );
+  });
+
+  readonly chartData = computed<CompletionTimelineChartData>(() => {
     const months = this.stats().months;
     const legend = this.legend();
+
     return {
-      categories: Array.from({ length: 12 }, (_, index) => ({
-        label: new Date(2000, index, 1).toLocaleDateString(locale, { month: 'short' }),
-      })),
-      series: legend.map((entry) => ({
+      labels: [...this.monthLabels()],
+      datasets: legend.map((entry) => ({
         label: entry.label,
-        color: entry.color,
+        data: months.map((month) => month[entry.id]),
+        backgroundColor: entry.color,
         borderColor: entry.color.replace('0.8)', '1)'),
-        values: months.map((month) => {
-          const value = month[entry.id];
-          return {
-            value,
-            tooltipLines: [this.transloco.translate(
-              value === 1
-                ? 'statsUser.completionTimeline.tooltipBook'
-                : 'statsUser.completionTimeline.tooltipBooks',
-              { label: entry.label, value },
-            )],
-          };
-        }),
+        borderWidth: 1,
+        borderRadius: 4,
+        barPercentage: 0.8,
+        categoryPercentage: 0.6,
       })),
-      categoryAxisTitle: this.transloco.translate('statsUser.completionTimeline.axisMonth'),
-      primaryAxis: {
-        title: this.transloco.translate('statsUser.completionTimeline.axisNumberOfBooks'),
-        stepSize: 1,
+    };
+  });
+
+  readonly chartOptions = computed<ChartOptions<'bar'>>(() => {
+    this.activeLanguage();
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          borderWidth: 1,
+          cornerRadius: 6,
+          padding: 12,
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: (context) => {
+              const value = context.parsed.y;
+              return this.transloco.translate(
+                value === 1
+                  ? 'statsUser.completionTimeline.tooltipBook'
+                  : 'statsUser.completionTimeline.tooltipBooks',
+                { label: context.dataset.label ?? '', value },
+              );
+            },
+          },
+        },
       },
-      axisStyle: 'strong',
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.completionTimeline.axisMonth'),
+            font: { size: 13, weight: 'bold' },
+          },
+          ticks: { font: { size: 11 } },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          title: {
+            display: true,
+            text: this.transloco.translate('statsUser.completionTimeline.axisNumberOfBooks'),
+            font: { size: 13, weight: 'bold' },
+          },
+          beginAtZero: true,
+          ticks: { font: { size: 11 }, stepSize: 1 },
+          border: { display: false },
+        },
+      },
     };
   });
 

@@ -1,0 +1,80 @@
+<ng-container *transloco="let t; prefix: 'statsUser.bookLength'">
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()"
+    [emptyMessage]="emptyMessage()">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions()"
+          [type]="chartType"></canvas>
+      </div>
+
+      <ul class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-xs text-text-secondary">
+        @for (entry of legend(); track entry.group) {
+          <li class="flex items-center gap-1.5">
+            <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
+              <circle cx="5" cy="5" r="5" [attr.fill]="entry.color"></circle>
+            </svg>
+            <span>{{ entry.label }}</span>
+            <span class="font-medium tabular-nums text-text-strong">{{ formatCount(entry.bookCount) }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (state() === 'ready' && !loading()) {
+      <dl
+        statsChartSummary
+        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-3">
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('booksAnalyzed') }}</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+            {{ formatCount(stats().totalRatedBooks) }}
+          </dd>
+        </div>
+
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('sweetSpot') }}</dt>
+          @if (stats().sweetSpot; as sweetSpot) {
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+              {{ sweetSpot.label }}
+            </dd>
+            <dd class="text-xs tabular-nums text-text-muted">
+              {{ t('tooltipRating', { rating: formatRating(sweetSpot.averageRating) }) }} ·
+              {{ t('sweetSpotBookCount', { count: formatCount(sweetSpot.bookCount) }) }}
+            </dd>
+          } @else {
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">—</dd>
+          }
+        </div>
+
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ t('trend') }}</dt>
+          @if (stats().trend; as trend) {
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+              {{ formatTrend(trend.ratingChangePerDoubling) }}
+            </dd>
+            <dd class="text-xs text-text-muted">{{ t('trendDescription') }}</dd>
+          } @else {
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">—</dd>
+          }
+        </div>
+      </dl>
+    }
+  </app-stats-chart-card>
+</ng-container>

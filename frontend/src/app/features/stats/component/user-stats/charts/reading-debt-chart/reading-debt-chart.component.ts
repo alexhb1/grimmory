@@ -10,11 +10,13 @@ import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
-import {
-  StatsChartLegendComponent,
-  type StatsChartLegendItem,
-} from '../../../shared/stats-chart-legend.component';
 import { type ReadingDebtStats } from '../../../../data/user/reading-debt-stats';
+
+interface ReadingDebtLegendEntry {
+  readonly key: string;
+  readonly label: string;
+  readonly color: string;
+}
 
 const SERIES_COLORS = {
   added: '#ef5350',
@@ -26,7 +28,7 @@ const SERIES_COLORS = {
   selector: 'app-reading-debt-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, StatsChartCardComponent, StatsChartLegendComponent, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './reading-debt-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -47,7 +49,7 @@ export class ReadingDebtChartComponent {
   readonly chartType = 'bar' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'loading';
+    if (this.loading()) return 'ready';
     return this.stats().months.length > 0 ? 'ready' : 'empty';
   });
 
@@ -56,18 +58,21 @@ export class ReadingDebtChartComponent {
     return this.transloco.translate(`statsUser.readingDebt.${this.stats().trend}`);
   });
 
-  readonly legend = computed<readonly StatsChartLegendItem[]>(() => {
+  readonly legend = computed<readonly ReadingDebtLegendEntry[]>(() => {
     this.activeLanguage();
     return [
       {
+        key: 'added',
         label: this.transloco.translate('statsUser.readingDebt.booksAdded'),
         color: SERIES_COLORS.added,
       },
       {
+        key: 'finished',
         label: this.transloco.translate('statsUser.readingDebt.booksFinished'),
         color: SERIES_COLORS.finished,
       },
       {
+        key: 'backlog',
         label: this.transloco.translate('statsUser.readingDebt.backlog'),
         color: SERIES_COLORS.backlog,
       },
@@ -119,18 +124,21 @@ export class ReadingDebtChartComponent {
   });
 
   readonly chartOptions = computed<ChartConfiguration<'bar' | 'line'>['options']>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
     animation: { duration: 400 },
     layout: { padding: { top: 10 } },
     plugins: {
-      tooltip: { padding: 10 },
+      legend: { display: false },
+      tooltip: { enabled: true, borderWidth: 1, cornerRadius: 6, padding: 10 },
     },
     scales: {
       x: { ticks: { font: { size: 10 } } },
-      y: {},
+      y: { ticks: { font: { size: 11 } } },
       y1: {
         position: 'right',
         grid: { drawOnChartArea: false },
-        ticks: { color: 'rgba(255, 193, 7, 0.8)' },
+        ticks: { color: 'rgba(255, 193, 7, 0.8)', font: { size: 11 } },
       },
     },
   }));

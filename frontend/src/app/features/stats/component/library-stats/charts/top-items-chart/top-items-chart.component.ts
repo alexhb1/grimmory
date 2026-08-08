@@ -15,19 +15,17 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-import {
-  StatsChartLegendComponent,
-  type StatsChartLegendItem,
-} from '../../../shared/stats-chart-legend.component';
-import {
-  StatsChartSummaryComponent,
-  type StatsChartSummaryItem,
-} from '../../../shared/stats-chart-summary.component';
 
 interface ItemStats {
   name: string;
   count: number;
   statusBreakdown: Record<ReadStatus, number>;
+}
+
+interface TopItemsLegendEntry {
+  readonly status: ReadStatus;
+  readonly label: string;
+  readonly color: string;
 }
 
 type ItemChartData = ChartData<'bar', number[], string>;
@@ -69,14 +67,7 @@ const READ_STATUS_COLORS: Record<ReadStatus, string> = {
   selector: 'app-top-items-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [
-    AppSelectComponent,
-    BaseChartDirective,
-    StatsChartCardComponent,
-    StatsChartLegendComponent,
-    StatsChartSummaryComponent,
-    TranslocoDirective,
-  ],
+  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './top-items-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -115,11 +106,12 @@ export class TopItemsChartComponent implements OnInit {
   readonly totalItems = computed(() => this.itemStats().length);
   readonly insights = computed(() => this.buildInsights(this.kindStats()));
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'loading';
+    if (this.loading()) return 'ready';
     return this.totalItems() > 0 ? 'ready' : 'empty';
   });
-  readonly legend = computed<readonly StatsChartLegendItem[]>(() =>
+  readonly legend = computed<readonly TopItemsLegendEntry[]>(() =>
     this.kindStats().statuses.map(status => ({
+      status,
       label: this.t.translate(`statsLibrary.topItems.readStatus.${READ_STATUS_KEYS[status]}`),
       color: READ_STATUS_COLORS[status],
     })),
@@ -144,6 +136,8 @@ export class TopItemsChartComponent implements OnInit {
   });
 
   readonly chartOptions = computed<ChartConfiguration<'bar'>['options']>(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
     indexAxis: 'y',
     layout: {padding: {top: 10, right: 20, bottom: 10, left: 10}},
     scales: {
@@ -166,10 +160,16 @@ export class TopItemsChartComponent implements OnInit {
       },
     },
     plugins: {
+      legend: {
+        display: false,
+      },
       tooltip: {
+        enabled: true,
         borderColor: this.selectedDataType().color,
         borderWidth: 2,
         cornerRadius: 8,
+        displayColors: true,
+        padding: 12,
         titleFont: {size: 14, weight: 'bold'},
         bodyFont: {size: 12},
         callbacks: {
@@ -191,45 +191,45 @@ export class TopItemsChartComponent implements OnInit {
     if (option) this.selectedDataType.set(option);
   }
 
-  private buildInsights(stats: TopItemsKindStats): StatsChartSummaryItem[] {
+  private buildInsights(stats: TopItemsKindStats): {icon: string; label: string; value: string}[] {
     const top = stats.items[0];
     if (!top) return [];
 
     const typeName = this.selectedDataType().label.toLowerCase().slice(0, -1);
-    const insights: StatsChartSummaryItem[] = [{
+    const insights = [{
+      icon: 'pi-trophy',
       label: this.t.translate('statsLibrary.topItems.insightTop', {type: typeName}),
       value: this.t.translate('statsLibrary.topItems.insightTopValue', {
         name: top.name,
         count: top.bookCount,
       }),
-      truncateValue: true,
     }];
 
     if (stats.mostCompleted && stats.mostCompleted.readPercent > 0) {
       insights.push({
+        icon: 'pi-check-circle',
         label: this.t.translate('statsLibrary.topItems.insightMostCompleted'),
         value: this.t.translate('statsLibrary.topItems.insightMostCompletedValue', {
           name: stats.mostCompleted.name,
           percent: stats.mostCompleted.readPercent,
         }),
-        truncateValue: true,
       });
     }
     if (stats.topFiveSharePercent !== null) {
       insights.push({
+        icon: 'pi-chart-pie',
         label: this.t.translate('statsLibrary.topItems.insightTop5Coverage'),
         value: this.t.translate('statsLibrary.topItems.insightTop5CoverageValue', {
           percent: stats.topFiveSharePercent,
         }),
-        truncateValue: true,
       });
     }
     insights.push({
+      icon: 'pi-book',
       label: this.t.translate('statsLibrary.topItems.insightAvgPer', {type: typeName}),
       value: this.t.translate('statsLibrary.topItems.insightAvgPerValue', {
         avg: stats.averageBooksPerItem.toFixed(1),
       }),
-      truncateValue: true,
     });
 
     return insights;

@@ -1,0 +1,45 @@
+<ng-container *transloco="let t; prefix: 'statsUser.readingDna'">
+  <app-stats-chart-card
+    [heading]="t('title')"
+    [description]="t('description')"
+    [showDescription]="showDescription()"
+    [state]="state()">
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [data]="chartData()"
+          [options]="chartOptions()"
+          [type]="chartType"></canvas>
+      </div>
+    }
+
+    @if (state() === 'ready' && !loading()) {
+      <dl
+        statsChartSummary
+        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
+        @for (trait of traits(); track trait.id) {
+          <div class="min-w-0">
+            <dt class="text-xs font-medium text-text-secondary">{{ trait.label }}</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
+              {{ formatScore(trait.score) }}
+            </dd>
+            <dd class="min-h-16 line-clamp-4 text-xs tabular-nums text-text-muted">
+              {{ trait.description }}
+            </dd>
+          </div>
+        }
+      </dl>
+    }
+  </app-stats-chart-card>
+</ng-container>

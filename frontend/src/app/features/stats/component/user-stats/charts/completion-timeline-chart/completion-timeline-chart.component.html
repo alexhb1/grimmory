@@ -4,8 +4,6 @@
     [heading]="t('title')"
     [description]="t('description')"
     [showDescription]="showDescription()"
-    [loadingMessage]="loadingMessage()"
-    [plotHeight]="plotHeight()"
     [state]="state()">
     <div statsChartActions class="flex items-center gap-3">
       <app-select
@@ -16,10 +14,36 @@
         [ariaLabel]="yearSelectorLabel()"
         (valueChange)="onYearChange($event)" />
     </div>
-    @if (state() === 'ready') {
-      <app-stats-categorical-bar [plot]="plot()" [height]="plotHeight()" />
 
-      <app-stats-chart-legend [items]="legend()" styleClass="mt-2" />
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
+        <canvas
+          baseChart
+          [type]="chartType"
+          [data]="chartData()"
+          [options]="chartOptions()"></canvas>
+      </div>
+
+      <ul class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-xs text-text-secondary">
+        @for (entry of legend(); track entry.id) {
+          <li class="flex items-center gap-1.5">
+            <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
+              <circle cx="5" cy="5" r="5" [attr.fill]="entry.color"></circle>
+            </svg>
+            <span>{{ entry.label }}</span>
+          </li>
+        }
+      </ul>
     }
   </app-stats-chart-card>
 </ng-container>

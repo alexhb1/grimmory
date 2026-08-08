@@ -14,16 +14,15 @@ import {
   StatsPageShellComponent,
   type StatsPageShellLabels,
 } from '../shared/stats-page-shell.component';
-import {
-  StatsCircularDistributionChartComponent,
-  type StatsCircularDistribution,
-} from '../shared/stats-circular-distribution-chart.component';
-import { StatsLineFamilyChartComponent } from '../shared/line-family/stats-line-family-chart.component';
-import { type StatsLineFamilyChart } from '../shared/line-family/stats-line-family-chart.types';
 import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { AuthorUniverseChartComponent } from './charts/author-universe-chart/author-universe-chart.component';
+import { BookFormatsChartComponent } from './charts/book-formats-chart/book-formats-chart.component';
+import { LanguageChartComponent } from './charts/language-chart/language-chart.component';
+import { MetadataScoreChartComponent } from './charts/metadata-score-chart/metadata-score-chart.component';
 import { PageCountChartComponent } from './charts/page-count-chart/page-count-chart.component';
 import { PublicationTimelineChartComponent } from './charts/publication-timeline-chart/publication-timeline-chart.component';
+import { PublicationTrendChartComponent } from './charts/publication-trend-chart/publication-trend-chart.component';
+import { ReadingJourneyChartComponent } from './charts/reading-journey-chart/reading-journey-chart.component';
 import { TopItemsChartComponent } from './charts/top-items-chart/top-items-chart.component';
 import {
   type LibraryOption,
@@ -49,10 +48,13 @@ const DEFAULT_CHARTS: readonly StatsPageChartConfig[] = [
     AppMessageComponent,
     AppSelectComponent,
     AuthorUniverseChartComponent,
+    BookFormatsChartComponent,
+    LanguageChartComponent,
+    MetadataScoreChartComponent,
     PageCountChartComponent,
     PublicationTimelineChartComponent,
-    StatsCircularDistributionChartComponent,
-    StatsLineFamilyChartComponent,
+    PublicationTrendChartComponent,
+    ReadingJourneyChartComponent,
     StatsPageShellComponent,
     TopItemsChartComponent,
     TranslocoDirective,
@@ -74,21 +76,6 @@ export class LibraryStatsComponent implements OnInit {
   });
 
   readonly statsData = inject(LibraryStatsDataService);
-  readonly readingJourneyLineChart = computed<StatsLineFamilyChart>(() => ({
-    kind: 'reading-journey', stats: this.statsData.readingJourneyStats(),
-  }));
-  readonly publicationTrendLineChart = computed<StatsLineFamilyChart>(() => ({
-    kind: 'publication-trend', stats: this.statsData.publicationTrendStats(),
-  }));
-  readonly bookFormatsChart = computed<StatsCircularDistribution>(() => ({
-    kind: 'book-formats', stats: this.statsData.bookFormatStats(),
-  }));
-  readonly languagesChart = computed<StatsCircularDistribution>(() => ({
-    kind: 'languages', stats: this.statsData.languageStats(),
-  }));
-  readonly metadataScoreChart = computed<StatsCircularDistribution>(() => ({
-    kind: 'metadata-score', stats: this.statsData.metadataScoreStats(),
-  }));
   readonly isLoading = this.statsData.statsLoading;
   readonly statsError = this.statsData.statsError;
   readonly hasData = computed(() => this.statsData.summaryStats().totalBooks > 0);

@@ -77,24 +77,24 @@
     <ng-template #chartTemplate let-chartConfig>
       @switch (chartConfig.id) {
         @case ('bookFormats') {
-          <app-stats-circular-distribution-chart
-            [chart]="bookFormatsChart()"
+          <app-book-formats-chart
+            [stats]="statsData.bookFormatStats()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
             [showDescription]="showChartDescriptions()" />
         }
         @case ('languageDistribution') {
-          <app-stats-circular-distribution-chart
-            [chart]="languagesChart()"
+          <app-language-chart
+            [stats]="statsData.languageStats()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
             [showDescription]="showChartDescriptions()" />
         }
         @case ('metadataScore') {
-          <app-stats-circular-distribution-chart
-            [chart]="metadataScoreChart()"
+          <app-metadata-score-chart
+            [stats]="statsData.metadataScoreStats()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -117,8 +117,8 @@
             [showDescription]="showChartDescriptions()" />
         }
         @case ('readingJourney') {
-          <app-stats-line-family-chart
-            [chart]="readingJourneyLineChart()"
+          <app-reading-journey-chart
+            [stats]="statsData.readingJourneyStats()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -141,8 +141,8 @@
             [showDescription]="showChartDescriptions()" />
         }
         @case ('publicationTrend') {
-          <app-stats-line-family-chart
-            [chart]="publicationTrendLineChart()"
+          <app-publication-trend-chart
+            [stats]="statsData.publicationTrendStats()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"

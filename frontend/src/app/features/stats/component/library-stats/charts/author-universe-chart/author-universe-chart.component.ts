@@ -10,14 +10,6 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-import {
-  StatsChartLegendComponent,
-  type StatsChartLegendItem,
-} from '../../../shared/stats-chart-legend.component';
-import {
-  StatsChartSummaryComponent,
-  type StatsChartSummaryItem,
-} from '../../../shared/stats-chart-summary.component';
 import { StatsChartThemeService } from '../../../shared/stats-chart-theme.service';
 
 interface AuthorStats {
@@ -35,6 +27,17 @@ interface BubbleDataPoint {
   y: number;
   r: number;
   authorStats: AuthorStats;
+}
+
+interface CompletionLegendEntry {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+}
+
+interface AuthorUniverseInsightTile {
+  readonly label: string;
+  readonly value: string;
 }
 
 type AuthorUniverseChartData = ChartData<'bubble', BubbleDataPoint[], string>;
@@ -55,13 +58,7 @@ const INSIGHT_LABEL_SEPARATOR = /[:：]\s*/;
   selector: 'app-author-universe-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [
-    BaseChartDirective,
-    StatsChartCardComponent,
-    StatsChartLegendComponent,
-    StatsChartSummaryComponent,
-    TranslocoDirective,
-  ],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './author-universe-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -81,22 +78,25 @@ export class AuthorUniverseChartComponent {
   readonly authors = computed<AuthorStats[]>(() => this.stats().authors.map(this.toChartAuthor));
   readonly totalAuthors = computed(() => this.authors().length);
   readonly insights = computed(() => this.buildInsights(this.stats().insights));
-  readonly insightTiles = computed<readonly StatsChartSummaryItem[]>(() =>
+  readonly insightTiles = computed<readonly AuthorUniverseInsightTile[]>(() =>
     this.insights().map(toInsightTile),
   );
   readonly chartData = computed<AuthorUniverseChartData>(() => this.buildChartData(this.authors()));
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'loading';
+    if (this.loading()) return 'ready';
     return this.totalAuthors() > 0 ? 'ready' : 'empty';
   });
-  readonly legend = computed<readonly StatsChartLegendItem[]>(() =>
-    this.chartData().datasets.map(dataset => ({
+  readonly legend = computed<readonly CompletionLegendEntry[]>(() =>
+    this.chartData().datasets.map((dataset, index) => ({
+      id: `${dataset.label ?? 'completion'}-${index}`,
       label: dataset.label ?? '',
       color: typeof dataset.borderColor === 'string' ? dataset.borderColor : '#6b7280',
     })),
   );
 
   readonly chartOptions: ChartConfiguration<'bubble'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
     layout: {padding: {top: 20, right: 20, bottom: 20, left: 20}},
     scales: {
       x: {
@@ -126,6 +126,9 @@ export class AuthorUniverseChartComponent {
       },
     },
     plugins: {
+      legend: {
+        display: false,
+      },
       tooltip: {
         enabled: false,
         external: context => this.handleExternalTooltip(context),
@@ -341,14 +344,12 @@ export class AuthorUniverseChartComponent {
   }
 }
 
-function toInsightTile(line: string): StatsChartSummaryItem {
+function toInsightTile(line: string): AuthorUniverseInsightTile {
   const separator = INSIGHT_LABEL_SEPARATOR.exec(line);
-  if (!separator) return { label: line, value: '', truncateValue: true };
+  if (!separator) return { label: line, value: '' };
 
   return {
     label: line.slice(0, separator.index),
     value: line.slice(separator.index + separator[0].length),
-    valueTitle: line.slice(separator.index + separator[0].length),
-    truncateValue: true,
   };
 }

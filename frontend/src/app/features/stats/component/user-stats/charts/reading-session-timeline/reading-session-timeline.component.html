@@ -4,8 +4,6 @@
     [heading]="t('title')"
     [description]="t('description')"
     [showDescription]="showDescription()"
-    [loadingMessage]="loadingMessage()"
-    [plotHeight]="plotHeight()"
     [state]="state()">
     <div statsChartActions class="flex items-center gap-1">
       <app-button
@@ -35,7 +33,18 @@
         <svg lucideChevronRight aria-hidden="true"></svg>
       </app-button>
     </div>
-    @if (state() === 'ready') {
+
+    @if (loading()) {
+      <div
+        class="relative overflow-hidden rounded-lg bg-text/4"
+        [style.height.px]="plotHeight()"
+        role="status"
+        [attr.aria-label]="loadingMessage()">
+        <div
+          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+          aria-hidden="true"></div>
+      </div>
+    } @else if (state() === 'ready') {
       <div class="min-w-0 px-2">
         <div class="flex" aria-hidden="true">
           <div class="w-12 shrink-0 sm:w-14"></div>

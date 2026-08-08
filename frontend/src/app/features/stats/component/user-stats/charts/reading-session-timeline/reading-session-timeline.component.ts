@@ -139,7 +139,7 @@ export class ReadingSessionTimelineComponent {
   );
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'loading';
+    if (this.loading()) return 'ready';
     return this.stats().sessionCount > 0 ? 'ready' : 'empty';
   });
 
