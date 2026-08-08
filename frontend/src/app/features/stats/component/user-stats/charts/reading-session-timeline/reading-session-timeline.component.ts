@@ -2,6 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
+import {
+  addWeeks,
+  endOfISOWeek,
+  getISOWeek,
+  getISOWeekYear,
+  setISOWeek,
+  setISOWeekYear,
+  startOfISOWeek,
+} from 'date-fns';
 
 import { type BookType } from '../../../../../book/model/book.model';
 import { AppButtonComponent } from '../../../../../../shared/ui/button/app-button.component';
@@ -11,12 +20,14 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
-  readingWeekRange,
-  shiftReadingWeek,
-  type ReadingWeekRange,
   type SessionTimelineStats,
   type TimelineSession,
 } from '../../../../data/user/reading-session-timeline-stats';
+
+interface ReadingWeekRange {
+  readonly start: Date;
+  readonly end: Date;
+}
 
 interface TimelineSessionSegment {
   readonly key: string;
@@ -207,6 +218,20 @@ export class ReadingSessionTimelineComponent {
     if (remainingMinutes > 0) return `${remainingMinutes}m${seconds > 0 ? `${seconds}s` : ''}`;
     return `${seconds}s`;
   }
+}
+
+function readingWeekRange(year: number, week: number): ReadingWeekRange {
+  const date = setISOWeek(setISOWeekYear(new Date(), year), week);
+  return { start: startOfISOWeek(date), end: endOfISOWeek(date) };
+}
+
+function shiftReadingWeek(
+  year: number,
+  week: number,
+  delta: number,
+): { year: number; week: number } {
+  const shifted = addWeeks(readingWeekRange(year, week).start, delta);
+  return { year: getISOWeekYear(shifted), week: getISOWeek(shifted) };
 }
 
 function splitSessionsAcrossWeek(

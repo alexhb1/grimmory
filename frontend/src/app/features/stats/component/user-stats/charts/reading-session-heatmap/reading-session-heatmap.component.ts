@@ -16,8 +16,14 @@ import {
 import { readStatsChartThemeColors } from '../../../shared/stats-chart-theme.service';
 import {
   type ReadingMilestoneId,
-  type SessionHeatmapStats,
+  type ReadingStreaks,
+  type SessionHeatmapCalendar,
 } from '../../../../data/user/reading-session-heatmap-stats';
+
+interface SessionHeatmapStats {
+  readonly calendar: SessionHeatmapCalendar;
+  readonly streaks: ReadingStreaks;
+}
 
 interface MatrixDataPoint {
   x: number;

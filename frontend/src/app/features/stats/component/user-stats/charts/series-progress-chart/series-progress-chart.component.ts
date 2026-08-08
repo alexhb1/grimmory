@@ -104,6 +104,8 @@ const FILTER_OPTIONS: readonly { value: SeriesProgressFilter; labelKey: string }
   { value: 'in-progress', labelKey: 'inProgress' },
   { value: 'completed', labelKey: 'completed' },
   { value: 'not-started', labelKey: 'notStarted' },
+  { value: 'paused', labelKey: 'paused' },
+  { value: 'abandoned', labelKey: 'abandoned' },
 ];
 
 const SORT_OPTIONS: readonly { value: SeriesProgressSort; labelKey: string }[] = [

@@ -3,11 +3,11 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { getISOWeek, getISOWeekYear } from 'date-fns';
 
+import { type BookSummary } from '../../../book/data/book-response.models';
 import { calculateBookFlowStats } from '../../data/user/book-flow-stats';
 import { calculateBookLengthStats } from '../../data/user/book-length-stats';
 import { completionRaceQuery, EMPTY_COMPLETION_RACE_STATS } from '../../data/user/completion-race-stats';
 import {
-  completionTimelineYears,
   completionTimelineQuery,
   EMPTY_COMPLETION_TIMELINE_STATS,
 } from '../../data/user/completion-timeline-stats';
@@ -25,10 +25,11 @@ import { calculateReadingHabitsStats } from '../../data/user/reading-habits-stat
 import { calculateReadingHeatmapStats } from '../../data/user/reading-heatmap-stats';
 import { calculateReadingProgressStats } from '../../data/user/reading-progress-stats';
 import {
-  EMPTY_SESSION_HEATMAP_STATS,
+  EMPTY_READING_STREAKS,
+  EMPTY_SESSION_HEATMAP_CALENDAR,
+  mapReadingStreaks,
   readingDatesQuery,
   sessionHeatmapQuery,
-  type SessionHeatmapStats,
 } from '../../data/user/reading-session-heatmap-stats';
 import {
   EMPTY_SESSION_TIMELINE_STATS,
@@ -124,9 +125,13 @@ export class UserStatsDataService {
   readonly readingClockLoading = computed(() => this.readingClockResult.isPending());
   readonly readingClockError = computed(() => this.readingClockResult.isError());
 
-  readonly sessionHeatmapStats = computed<SessionHeatmapStats>(() => ({
-    calendar: this.sessionHeatmapResult.data() ?? EMPTY_SESSION_HEATMAP_STATS.calendar,
-    streaks: this.readingDatesResult.data() ?? EMPTY_SESSION_HEATMAP_STATS.streaks,
+  private readonly readingStreaks = computed(() => {
+    const dates = this.readingDatesResult.data();
+    return dates ? mapReadingStreaks(dates) : EMPTY_READING_STREAKS;
+  });
+  readonly sessionHeatmapStats = computed(() => ({
+    calendar: this.sessionHeatmapResult.data() ?? EMPTY_SESSION_HEATMAP_CALENDAR,
+    streaks: this.readingStreaks(),
   }));
   readonly sessionHeatmapLoading = computed(
     () => this.sessionHeatmapResult.isPending() || this.readingDatesResult.isPending(),
@@ -170,7 +175,11 @@ export class UserStatsDataService {
   readonly sessionArchetypesError = computed(() => this.sessionArchetypesResult.isError());
 
   readonly readingYears = computed<readonly number[]>(() => {
-    const years = this.readingDatesResult.data()?.years ?? [];
+    const years = Array.from(new Set(
+      (this.readingDatesResult.data() ?? [])
+        .map(({ date }) => Number(date.slice(0, 4)))
+        .filter(Number.isFinite),
+    )).sort((left, right) => right - left);
     return years.length > 0 ? years : [this.currentYear];
   });
   readonly completionTimelineYears = computed(() => completionTimelineYears(
@@ -179,4 +188,26 @@ export class UserStatsDataService {
     this.currentYear,
     this.completionTimelineYear(),
   ));
+}
+
+function completionTimelineYears(
+  books: readonly BookSummary[],
+  sessionYears: readonly number[],
+  currentYear: number,
+  selectedYear: number,
+): readonly number[] {
+  const knownYears = new Set([currentYear, selectedYear, ...sessionYears]);
+
+  for (const book of books) {
+    if (!book.dateFinished) continue;
+
+    const year = new Date(book.dateFinished).getFullYear();
+    if (Number.isFinite(year) && year <= currentYear) knownYears.add(year);
+  }
+
+  const firstYear = Math.min(...knownYears);
+  return Array.from(
+    { length: currentYear - firstYear + 1 },
+    (_, index) => currentYear - index,
+  );
 }

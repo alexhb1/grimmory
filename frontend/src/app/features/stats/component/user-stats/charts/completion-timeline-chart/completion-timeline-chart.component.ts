@@ -13,12 +13,22 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
-  COMPLETION_TIMELINE_SERIES,
-  type CompletionTimelineSeriesId,
   type CompletionTimelineStats,
 } from '../../../../data/user/completion-timeline-stats';
 
 type CompletionTimelineChartData = ChartData<'bar', number[], string>;
+type CompletionTimelineSeriesId = Exclude<
+  keyof CompletionTimelineStats['months'][number],
+  'month'
+>;
+
+const COMPLETION_TIMELINE_SERIES: readonly CompletionTimelineSeriesId[] = [
+  'completed',
+  'partiallyRead',
+  'activeReading',
+  'paused',
+  'discontinued',
+];
 
 interface CompletionTimelineLegendEntry {
   readonly id: CompletionTimelineSeriesId;
