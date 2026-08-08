@@ -1,6 +1,7 @@
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoService } from '@jsverse/transloco';
 
-import { BookService } from '../../../book/service/book.service';
 import { calculateAuthorUniverseStats } from '../../data/library/author-universe-stats';
 import { calculateBookFormatStats } from '../../data/library/book-format-stats';
 import { calculateLanguageStats } from '../../data/library/language-stats';
@@ -11,20 +12,64 @@ import { calculatePublicationTimelineStats } from '../../data/library/publicatio
 import { calculatePublicationTrendStats } from '../../data/library/publication-trend-stats';
 import { calculateReadingJourneyStats } from '../../data/library/reading-journey-stats';
 import { calculateTopItemsStats } from '../../data/library/top-items-stats';
-import { LibraryFilterService } from './service/library-filter.service';
+import { AllBooksStatsSourceService } from '../shared/all-books-stats-source.service';
+
+export interface LibraryOption {
+  readonly id: number | null;
+  readonly name: string;
+}
 
 @Injectable()
 export class LibraryStatsDataService {
-  private readonly bookService = inject(BookService);
-  private readonly libraryFilter = inject(LibraryFilterService);
+  private readonly bookSource = inject(AllBooksStatsSourceService);
+  private readonly transloco = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
+    initialValue: this.transloco.getActiveLang(),
+  });
+  private readonly selectedLibraryId = signal<number | null>(null);
+
+  readonly libraryOptions = computed<readonly LibraryOption[]>(() => {
+    this.activeLanguage();
+    const libraries = new Map<number, string>();
+
+    for (const book of this.bookSource.books()) {
+      if (libraries.has(book.libraryId)) continue;
+
+      const fallbackName = this.transloco.translate(
+        'statsLibrary.libraryFilter.libraryFallback',
+        { id: book.libraryId },
+      );
+      libraries.set(book.libraryId, book.libraryName.trim() || fallbackName);
+    }
+
+    const availableLibraries = [...libraries]
+      .map(([id, name]) => ({ id, name }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    return [
+      {
+        id: null,
+        name: this.transloco.translate('statsLibrary.libraryFilter.allLibraries'),
+      },
+      ...availableLibraries,
+    ];
+  });
+
+  readonly selectedLibrary = computed(() => {
+    const selectedLibraryId = this.selectedLibraryId();
+    return this.libraryOptions().some((option) => option.id === selectedLibraryId)
+      ? selectedLibraryId
+      : null;
+  });
 
   private readonly filteredBooks = computed(() => {
-    if (this.bookService.isBooksLoading()) return [];
-
-    const books = this.bookService.books();
-    const libraryId = this.libraryFilter.selectedLibrary();
+    const books = this.bookSource.books();
+    const libraryId = this.selectedLibrary();
     return libraryId == null ? books : books.filter((book) => book.libraryId === libraryId);
   });
+
+  readonly statsLoading = this.bookSource.isLoading;
+  readonly statsError = this.bookSource.isError;
 
   readonly bookFormatStats = computed(() => calculateBookFormatStats(this.filteredBooks()));
   readonly languageStats = computed(() => calculateLanguageStats(this.filteredBooks()));
@@ -40,4 +85,8 @@ export class LibraryStatsDataService {
   readonly topItemsStats = computed(() => calculateTopItemsStats(this.filteredBooks()));
   readonly authorUniverseStats = computed(() => calculateAuthorUniverseStats(this.filteredBooks()));
   readonly summaryStats = computed(() => calculateLibrarySummaryStats(this.filteredBooks()));
+
+  setSelectedLibrary(libraryId: number | null): void {
+    this.selectedLibraryId.set(libraryId);
+  }
 }
