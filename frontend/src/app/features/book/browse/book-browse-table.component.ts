@@ -180,11 +180,12 @@ export class BookBrowseTableComponent {
   private readonly initialHorizontalScrollOffset =
     this.scrollPosition.getPosition(this.scrollPosition.keyFor(this.route, 'table-x')) ?? 0;
   private readonly columnWidthPreference = inject(BookBrowseColumnWidthPreferenceService);
-  private readonly columnSizing = signal<ColumnSizingState>(this.columnWidthPreference.load());
-  private lastPersistedWidths = this.columnSizing();
+  private readonly initialColumnSizing: ColumnSizingState = this.columnWidthPreference.load();
+  private lastPersistedWidths: ColumnSizingState | null = null;
+  private readonly hasSelectionColumn = computed(() => this.selection().mode !== 'none');
   private readonly columnPinning = computed<ColumnPinningState>(() => ({
     start: [
-      ...(this.selection().mode !== 'none' ? ['select'] : []),
+      ...(this.hasSelectionColumn() ? ['select'] : []),
       ...(!this.mobile() ? ['title'] : []),
     ],
     end: [],
@@ -269,23 +270,21 @@ export class BookBrowseTableComponent {
     manualSorting: true,
     enableSortingRemoval: false,
     columnResizeMode: 'onChange',
+    initialState: {columnSizing: this.initialColumnSizing},
     state: {
       sorting: this.sorting(),
-      columnSizing: this.columnSizing(),
       columnPinning: this.columnPinning(),
     },
     onSortingChange: updater => {
       this.sortingChange.emit(functionalUpdate(updater, this.sorting()));
     },
-    onColumnSizingChange: updater => {
-      this.columnSizing.update(current => functionalUpdate(updater, current));
-    },
   }));
 
   protected readonly headers = computed(() => this.table.getFlatHeaders());
-  protected readonly rowsByBookId = computed<ReadonlyMap<number, Row<typeof features, BookSummary>>>(
-    () => new Map(this.table.getRowModel().rows.map(row => [row.original.id, row])),
-  );
+
+  protected rowFor(book: BookSummary): Row<typeof features, BookSummary> | undefined {
+    return this.table.getRowModel().rowsById[String(book.id)];
+  }
   private readonly skeletonDelayElapsed = signal(false);
   protected readonly rowCount = computed(() => {
     if (this.books().length > 0) {
@@ -338,7 +337,11 @@ export class BookBrowseTableComponent {
     });
 
     effect(() => {
-      const widths = this.columnSizing();
+      const widths = this.table.atoms.columnSizing.get();
+      if (this.lastPersistedWidths === null) {
+        this.lastPersistedWidths = widths;
+        return;
+      }
       if (this.isColumnResizing() || widths === this.lastPersistedWidths) {
         return;
       }
@@ -418,11 +421,11 @@ export class BookBrowseTableComponent {
   }
 
   protected isPinned(field: string): boolean {
-    return this.columnPinning().start.includes(field);
+    return this.table.getColumn(field)?.getIsPinned() === 'start';
   }
 
   protected isLastPinned(field: string): boolean {
-    return this.columnPinning().start.at(-1) === field;
+    return this.table.getStartVisibleLeafColumns().at(-1)?.id === field;
   }
 
   protected headerCellClass(field: string): string {
