@@ -65,7 +65,7 @@
     <tbody class="relative grid" [style.height.px]="rowVirtualizer.getTotalSize()">
       @for (virtualRow of rowVirtualizer.getVirtualItems(); track virtualRow.key) {
         @let book = books()[virtualRow.index];
-        @let tableRow = book ? rowsByBookId().get(book.id) : undefined;
+        @let tableRow = book ? rowFor(book) : undefined;
         <tr
           class="group/row absolute left-0 top-0 flex cursor-default"
           [class.is-loading]="!book"
