@@ -467,10 +467,6 @@ export class BookBrowseTableComponent {
     return sorted === 'asc' ? 'ascending' : 'descending';
   }
 
-  protected toggleSort(header: Header<typeof features, BookSummary, unknown>, event: MouseEvent): void {
-    header.column.getToggleSortingHandler()!(event);
-  }
-
   protected startResize(header: Header<typeof features, BookSummary, unknown>, event: MouseEvent | TouchEvent): void {
     event.stopPropagation();
     header.getResizeHandler()(event);

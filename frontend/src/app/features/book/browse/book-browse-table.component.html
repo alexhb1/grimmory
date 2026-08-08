@@ -31,7 +31,7 @@
               <button
                 type="button"
                 class="sort-button -mx-3 flex min-h-[42px] w-[calc(100%+1.5rem)] cursor-pointer items-center gap-[0.3rem] border-0 bg-transparent px-3 text-left font-[inherit] text-[inherit] hover:bg-[color-mix(in_srgb,currentColor_5%,transparent)] hover:text-text focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-                (click)="toggleSort(header, $event)">
+                (click)="header.column.getToggleSortingHandler()?.($event)">
                 <span>{{ header.column.columnDef.header }}</span>
                 @if (header.column.getIsSorted(); as direction) {
                   <span class="sort-direction text-sm text-primary" aria-hidden="true">{{ direction === 'asc' ? '↑' : '↓' }}</span>
