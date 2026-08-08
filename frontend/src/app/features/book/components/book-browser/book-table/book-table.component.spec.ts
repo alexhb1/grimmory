@@ -88,6 +88,9 @@ describe('BookTableComponent', () => {
   });
 
   it('renders grid semantics and keeps resize handles out of the tab order', () => {
+    // `injectTable` builds the table lazily on a microtask, so the column inputs have
+    // to be set in the same synchronous block as `createComponent`.
+    fixture = TestBed.createComponent(BookTableComponent);
     fixture.componentRef.setInput('books', [makeBook(1, 'Alpha')]);
     fixture.componentRef.setInput('visibleColumns', [
       {field: 'title', header: 'Title'},

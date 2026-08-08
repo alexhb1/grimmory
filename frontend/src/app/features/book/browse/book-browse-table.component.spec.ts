@@ -25,6 +25,29 @@ describe('BookBrowseTableComponent', () => {
   let storedWidths: Record<string, number>;
   let saveWidths: ReturnType<typeof vi.fn>;
 
+  // `injectTable` builds the table lazily on a microtask, so every input has to be
+  // set in the same synchronous block as `createComponent`.
+  function createComponent(): void {
+    fixture = TestBed.createComponent(BookBrowseTableComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('books', []);
+    fixture.componentRef.setInput('hasNextPage', false);
+    fixture.componentRef.setInput('pendingDeletionIds', new Set());
+    fixture.componentRef.setInput('visibleColumns', [
+      {field: 'title', header: 'Title'},
+      {field: 'authors', header: 'Authors'},
+    ]);
+    fixture.componentRef.setInput('sorting', []);
+    fixture.componentRef.setInput('sortableFields', new Set(['title']));
+    fixture.componentRef.setInput('mobile', false);
+    fixture.componentRef.setInput('selection', {
+      mode: 'available', allSelected: false, someSelected: false, isSelected: () => false,
+    });
+    fixture.componentRef.setInput('openMenuBookId', null);
+    fixture.componentRef.setInput('useSquareCovers', false);
+    fixture.componentRef.setInput('nextPageError', false);
+  }
+
   beforeEach(() => {
     storedWidths = {};
     saveWidths = vi.fn();
@@ -45,25 +68,6 @@ describe('BookBrowseTableComponent', () => {
         },
       ],
     });
-
-    fixture = TestBed.createComponent(BookBrowseTableComponent);
-    fixture.componentRef.setInput('books', []);
-    fixture.componentRef.setInput('hasNextPage', false);
-    fixture.componentRef.setInput('pendingDeletionIds', new Set());
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('visibleColumns', [
-      {field: 'title', header: 'Title'},
-      {field: 'authors', header: 'Authors'},
-    ]);
-    fixture.componentRef.setInput('sorting', []);
-    fixture.componentRef.setInput('sortableFields', new Set(['title']));
-    fixture.componentRef.setInput('mobile', false);
-    fixture.componentRef.setInput('selection', {
-      mode: 'available', allSelected: false, someSelected: false, isSelected: () => false,
-    });
-    fixture.componentRef.setInput('openMenuBookId', null);
-    fixture.componentRef.setInput('useSquareCovers', false);
-    fixture.componentRef.setInput('nextPageError', false);
   });
 
   afterEach(() => {
@@ -73,6 +77,7 @@ describe('BookBrowseTableComponent', () => {
 
   it('holds the first-load skeleton fill until the 180ms delay elapses', () => {
     vi.useFakeTimers();
+    createComponent();
     fixture.detectChanges();
 
     const rowCountAttr = (): string | null =>
@@ -90,6 +95,7 @@ describe('BookBrowseTableComponent', () => {
 
   it('skips the skeleton fill when loaded books are present', () => {
     vi.useFakeTimers();
+    createComponent();
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
     fixture.detectChanges();
 
@@ -97,6 +103,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('keeps both the row model and virtual geometry bounded to loaded books', () => {
+    createComponent();
     const books = [book(1, 'Alpha'), book(2, 'Beta')];
     fixture.componentRef.setInput('books', books);
     fixture.detectChanges();
@@ -110,6 +117,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('gives TanStack Virtual stable book ids instead of loaded-window indexes', async () => {
+    createComponent();
     fixture.componentRef.setInput('books', [book(101, 'Alpha'), book(205, 'Beta')]);
     await fixture.whenStable();
 
@@ -121,6 +129,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('uses TanStack header sorting and emits controlled server sort state', () => {
+    createComponent();
     const changes: unknown[] = [];
     component.sortingChange.subscribe(change => changes.push(change));
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -132,6 +141,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('reveals all selection controls during selection and only toggles from the checkbox', () => {
+    createComponent();
     const changes: unknown[] = [];
     component.selectionChange.subscribe(change => changes.push(change));
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -152,6 +162,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('emits a row menu request on desktop right-click and leaves mobile alone', () => {
+    createComponent();
     const requests: unknown[] = [];
     component.menuRequested.subscribe(request => requests.push(request));
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -182,6 +193,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('keeps a real detail href and emits requests only for plain left clicks', () => {
+    createComponent();
     const requests: BookSummary[] = [];
     component.detailRequested.subscribe(book => requests.push(book));
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -206,6 +218,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('marks the row whose menu is open', () => {
+    createComponent();
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
     fixture.componentRef.setInput('openMenuBookId', 1);
     const virtualizer = Reflect.get(component, 'rowVirtualizer') as {getVirtualItems(): unknown[]};
@@ -218,6 +231,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('mobile select mode turns the whole row into the selection toggle', () => {
+    createComponent();
     const changes: unknown[] = [];
     component.selectionChange.subscribe(change => changes.push(change));
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -244,20 +258,8 @@ describe('BookBrowseTableComponent', () => {
 
   it('seeds column widths from the device preference', () => {
     storedWidths = {title: 400};
-    fixture = TestBed.createComponent(BookBrowseTableComponent);
+    createComponent();
     fixture.componentRef.setInput('visibleColumns', [{field: 'title', header: 'Title'}]);
-    fixture.componentRef.setInput('sortableFields', new Set(['title']));
-    fixture.componentRef.setInput('books', []);
-    fixture.componentRef.setInput('hasNextPage', false);
-    fixture.componentRef.setInput('pendingDeletionIds', new Set());
-    fixture.componentRef.setInput('sorting', []);
-    fixture.componentRef.setInput('mobile', false);
-    fixture.componentRef.setInput('selection', {
-      mode: 'available', allSelected: false, someSelected: false, isSelected: () => false,
-    });
-    fixture.componentRef.setInput('openMenuBookId', null);
-    fixture.componentRef.setInput('useSquareCovers', false);
-    fixture.componentRef.setInput('nextPageError', false);
     fixture.detectChanges();
 
     const table = Reflect.get(fixture.componentInstance, 'table') as {
@@ -268,6 +270,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('persists column widths once sizing settles, not on mount', () => {
+    createComponent();
     fixture.detectChanges();
     expect(saveWidths).not.toHaveBeenCalled();
 
@@ -281,6 +284,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('scrollToTop resets the vertical pane offset', () => {
+    createComponent();
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
     fixture.detectChanges();
 
@@ -291,6 +295,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('shows a next-page retry action when a continuation fails', async () => {
+    createComponent();
     const retryNext = vi.fn();
     component.retryNextPage.subscribe(retryNext);
     fixture.componentRef.setInput('books', [book(1, 'Alpha')]);
@@ -307,6 +312,7 @@ describe('BookBrowseTableComponent', () => {
   });
 
   it('keeps the first linked value readable and exposes remaining values as linked menu items', () => {
+    createComponent();
     const selected: unknown[] = [];
     component.facetRequested.subscribe(value => selected.push(value));
     const genreBook: BookSummary = {
