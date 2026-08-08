@@ -17,12 +17,7 @@ import {
 } from '../../../shared/components/browse/browse-grid/browse-grid.directives';
 import {type BrowseGridRenderedRange} from '../../../shared/components/browse/browse-grid/browse-grid-viewport.component';
 import {bookCardHeightForWidth} from '../components/cards/book-card.layout';
-import {
-  BookCardComponent,
-  bookCardCoverSrc,
-  bookCardSelection,
-  type BookCardSelection,
-} from '../components/cards/book-card.component';
+import {BookCardComponent, bookCardCoverSrc} from '../components/cards/book-card.component';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
 import {BookMenuHostComponent} from '../components/book-menu-host/book-menu-host.component';
 import {BookCardSkeletonComponent} from '../components/cards/book-card-skeleton.component';
@@ -643,13 +638,6 @@ export class BookBrowsePageComponent {
   protected readonly estimateItemHeight = (width: number): number =>
     bookCardHeightForWidth(width, {square: this.squareCovers(), metaLines: this.metaLines()});
   protected readonly bookItemKey = (book: BookSummary): number => book.id;
-
-  protected readonly cardSelection = (book: BookSummary): BookCardSelection =>
-    bookCardSelection({
-      enabled: this.selectionEnabled(),
-      active: this.selection.active() || this.mobileSelectMode(),
-      selected: this.selection.isSelected(book.id),
-    });
 
   private readonly scopeTitle = computed<string | null>(() => {
     this.activeLang();
