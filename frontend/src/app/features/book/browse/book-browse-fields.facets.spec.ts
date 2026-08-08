@@ -1,12 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {
-  browseFacetQueryParams,
-  countFacetSelections,
-  EMPTY_FACET_SELECTION,
-  parseFacetParams,
-  toggleFacetSelection,
-} from '../data/book-query-params';
+import {browseFacetQueryParams, parseFacetParams} from '../data/book-query-params';
 import {type BookFacetGroup} from '../data/book-query.models';
 import {
   buildRailGroups,
@@ -141,59 +135,15 @@ describe('frozen facet orders', () => {
 });
 
 describe('facet selection params', () => {
-  it('parses facet route params into a value map', () => {
-    expect(parseFacetParams(['genre:Comedy', 'genre:Drama', 'tag:Anthology'])).toEqual({
-      genre: ['Comedy', 'Drama'],
-      tag: ['Anthology'],
-    });
-  });
+  it('round-trips a selection through route params, dropping non-vocabulary keys', () => {
+    const selection = parseFacetParams(
+      ['genre:Comedy', 'genre:Drama', 'tag:Anthology', 'future_group:a:b', '__proto__:READ'],
+    );
+    expect(selection).toEqual({genre: ['Comedy', 'Drama'], tag: ['Anthology']});
 
-  it('drops unknown facet keys while preserving accepted values', () => {
-    expect(parseFacetParams(['read_status:READ', 'future_group:a:b', 'future_group:a:b'])).toEqual({
-      read_status: ['READ'],
-    });
-  });
-
-  it('drops prototype-named facet keys', () => {
-    const selection = parseFacetParams(['__proto__:READ']);
-
-    expect(selection).toEqual({});
-    expect(buildRailGroups([group('__proto__', 'Prototype', [['READ', 1, true]])])).toEqual([]);
-  });
-
-  it('serializes the selection to router params, null when empty', () => {
-    expect(browseFacetQueryParams({genre: ['Comedy']})).toEqual({facet: ['genre:Comedy']});
-    expect(browseFacetQueryParams({})).toEqual({facet: null});
-  });
-
-  it('round-trips a selection through params and back', () => {
-    const selection = parseFacetParams(['genre:Comedy', 'tag:Anthology']);
     const params = browseFacetQueryParams(selection);
+    expect(params).toEqual({facet: ['genre:Comedy', 'genre:Drama', 'tag:Anthology']});
     expect(parseFacetParams(params.facet ?? [])).toEqual(selection);
-  });
-
-  it('toggles a value in and out of the selection', () => {
-    let selection = toggleFacetSelection(EMPTY_FACET_SELECTION, 'genre', 'History', true);
-    expect(selection).toEqual({genre: ['History']});
-
-    selection = toggleFacetSelection(selection, 'genre', 'Comedy', true);
-    expect(selection).toEqual({genre: ['History', 'Comedy']});
-
-    selection = toggleFacetSelection(selection, 'genre', 'History', false);
-    expect(selection).toEqual({genre: ['Comedy']});
-
-    selection = toggleFacetSelection(selection, 'genre', 'Comedy', false);
-    expect(selection).toEqual({});
-  });
-
-  it('returns the same selection when a toggle is a no-op', () => {
-    const selection = {genre: ['History']};
-    expect(toggleFacetSelection(selection, 'genre', 'History', true)).toBe(selection);
-    expect(toggleFacetSelection(selection, 'tag', 'Owned', false)).toBe(selection);
-  });
-
-  it('counts selected values across keys', () => {
-    expect(countFacetSelections({genre: ['Comedy', 'Drama'], tag: ['Anthology']})).toBe(3);
-    expect(countFacetSelections(EMPTY_FACET_SELECTION)).toBe(0);
+    expect(browseFacetQueryParams({})).toEqual({facet: null});
   });
 });

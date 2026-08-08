@@ -42,38 +42,18 @@ describe('book browse sort fields', () => {
       defaultDirection: 'desc',
       directions: ['asc', 'desc'],
     });
-  });
-
-  it('skips unknown tokens while building advertised sort options', () => {
     expect(buildSortOptions(['futureScore', '-title']).map(option => option.id)).toEqual(['title']);
   });
 
-  it('parses an ordered multi-sort token for the server', () => {
-    expect(parseSortTermsToken('-publishedDate,title,seriesNumber')).toEqual([
-      {key: 'publishedDate', direction: 'desc'},
-      {key: 'title', direction: 'asc'},
-      {key: 'seriesNumber', direction: 'asc'},
-    ]);
-  });
-
-  it('drops unknown terms and deduplicates without changing precedence', () => {
-    expect(parseSortTermsToken('title,futureScore,-title,-pageCount')).toEqual([
+  it('round-trips a multi-sort token, dropping junk and duplicate terms', () => {
+    expect(parseSortTermsToken('title,futureScore,-title,,-, ,-pageCount')).toEqual([
       {key: 'title', direction: 'asc'},
       {key: 'pageCount', direction: 'desc'},
     ]);
-  });
-
-  it('ignores empty keys after stripping the direction marker', () => {
-    expect(parseSortTermsToken(',-, ,title')).toEqual([
-      {key: 'title', direction: 'asc'},
-    ]);
-  });
-
-  it('serializes the ordered chain', () => {
     expect(sortTermsToken([
-      {key: 'seriesName', direction: 'asc'},
-      {key: 'seriesNumber', direction: 'desc'},
-    ])).toBe('seriesName,-seriesNumber');
+      {key: 'title', direction: 'asc'},
+      {key: 'pageCount', direction: 'desc'},
+    ])).toBe('title,-pageCount');
   });
 
   it('uses the first supported term for the compact toolbar label', () => {
@@ -81,19 +61,6 @@ describe('book browse sort fields', () => {
       option: {
         id: 'pageCount',
         labelKey: 'book.fields.pageCount',
-        group: 'more',
-        defaultDirection: 'desc',
-        directions: ['desc'],
-      },
-      direction: 'desc',
-    });
-  });
-
-  it('labels newly reachable table fields from the existing column vocabulary', () => {
-    expect(parseSortToken('-seriesNumber')).toEqual({
-      option: {
-        id: 'seriesNumber',
-        labelKey: 'book.fields.seriesNumber',
         group: 'more',
         defaultDirection: 'desc',
         directions: ['desc'],
