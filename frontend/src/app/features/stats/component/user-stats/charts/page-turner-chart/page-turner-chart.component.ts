@@ -1,18 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { type ChartData, type ChartOptions } from 'chart.js';
-import { BaseChartDirective } from 'ng2-charts';
 
+import { type PageTurnerStats } from '../../../../data/user/page-turner-stats';
+import {
+  StatsCategoricalBarComponent,
+  type StatsCategoricalBarPlot,
+} from '../../../shared/stats-categorical-bar.component';
 import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
-import { type PageTurnerStats } from '../../../../data/user/page-turner-stats';
-
-type PageTurnerChartData = ChartData<'bar', number[], string>;
+import {
+  StatsChartSummaryComponent,
+  type StatsChartSummaryItem,
+} from '../../../shared/stats-chart-summary.component';
 
 const LABEL_LIMIT = 25;
 const CHART_LIMIT = 15;
@@ -21,8 +23,12 @@ const HIGHLIGHT_LIMIT = 3;
 @Component({
   selector: 'app-page-turner-chart',
   standalone: true,
-  hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
+  imports: [
+    StatsCategoricalBarComponent,
+    StatsChartCardComponent,
+    StatsChartSummaryComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './page-turner-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -40,114 +46,81 @@ export class PageTurnerChartComponent {
   readonly plotHeight = input(260);
   readonly showDescription = input(true);
 
-  readonly chartType = 'bar' as const;
   readonly chartRanking = computed(() => this.stats().ranking.slice(0, CHART_LIMIT));
   readonly highlights = computed(() => this.stats().ranking.slice(0, HIGHLIGHT_LIMIT));
   readonly mostGripping = computed(() => this.stats().ranking[0] ?? null);
   readonly guiltyPleasure = computed(
-    () =>
-      this.stats().ranking.find(
-        (book) =>
-          book.gripScore >= 60
-          && book.personalRating !== null
-          && book.personalRating <= 3,
-      ) ?? null,
+    () => this.stats().ranking.find(
+      (book) => book.gripScore >= 60 && book.personalRating !== null && book.personalRating <= 3,
+    ) ?? null,
   );
+  readonly summaryItems = computed<readonly StatsChartSummaryItem[]>(() => {
+    this.activeLanguage();
+    const mostGripping = this.mostGripping();
+    const guiltyPleasure = this.guiltyPleasure();
+    return [
+      {
+        label: this.transloco.translate('statsUser.pageTurner.mostGripping'),
+        value: mostGripping?.bookTitle ?? '—',
+        valueTitle: mostGripping?.bookTitle,
+        truncateValue: true,
+      },
+      {
+        label: this.transloco.translate('statsUser.pageTurner.avgGripScore'),
+        value: this.stats().averageGripScore,
+      },
+      {
+        label: this.transloco.translate('statsUser.pageTurner.guiltyPleasure'),
+        value: guiltyPleasure?.bookTitle ?? '—',
+        valueTitle: guiltyPleasure?.bookTitle,
+        truncateValue: true,
+      },
+    ];
+  });
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().ranking.length > 0 ? 'ready' : 'empty';
   });
-
-  readonly chartData = computed<PageTurnerChartData>(() => {
+  readonly plot = computed<StatsCategoricalBarPlot>(() => {
     this.activeLanguage();
     const ranking = this.chartRanking();
-    const colors = ranking.map((book) => gripColor(book.gripScore));
-
     return {
-      labels: ranking.map((book) => truncate(book.bookTitle, LABEL_LIMIT)),
-      datasets: [
-        {
-          label: this.transloco.translate('statsUser.pageTurner.gripScore'),
-          data: ranking.map((book) => book.gripScore),
-          backgroundColor: colors,
-          borderColor: colors.map((color) => color.replace('0.85', '1')),
-          borderWidth: 1,
-          borderRadius: 4,
-          barPercentage: 0.8,
-          categoryPercentage: 0.7,
-        },
-      ],
-    };
-  });
-
-  readonly chartOptions = computed<ChartOptions<'bar'>>(() => {
-    this.activeLanguage();
-    const ranking = this.chartRanking();
-
-    return {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          borderColor: 'rgba(251, 146, 60, 0.8)',
-          borderWidth: 2,
-          cornerRadius: 8,
-          displayColors: false,
-          padding: 16,
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: (context) => {
-              const book = ranking.at(context.dataIndex);
-              if (!book) return '';
-
-              const lines = [
-                this.transloco.translate('statsUser.pageTurner.tooltipGripScore', {
-                  score: book.gripScore,
-                }),
-                this.transloco.translate('statsUser.pageTurner.tooltipSessions', {
-                  count: book.totalSessions,
-                }),
-                this.transloco.translate('statsUser.pageTurner.tooltipAvgSession', {
-                  minutes: Math.round(book.avgSessionDurationSeconds / 60),
-                }),
-              ];
-
-              if (book.personalRating !== null) {
-                lines.push(
-                  this.transloco.translate('statsUser.pageTurner.tooltipRating', {
-                    rating: book.personalRating,
-                  }),
-                );
-              }
-
-              return lines;
-            },
-          },
-        },
+      categories: ranking.map((book) => ({ label: truncate(book.bookTitle, LABEL_LIMIT) })),
+      series: [{
+        label: this.transloco.translate('statsUser.pageTurner.gripScore'),
+        color: 'rgba(251, 146, 60, 0.85)',
+        values: ranking.map((book) => {
+          const color = gripColor(book.gripScore);
+          const tooltipLines = [
+            this.transloco.translate('statsUser.pageTurner.tooltipGripScore', { score: book.gripScore }),
+            this.transloco.translate('statsUser.pageTurner.tooltipSessions', { count: book.totalSessions }),
+            this.transloco.translate('statsUser.pageTurner.tooltipAvgSession', {
+              minutes: Math.round(book.avgSessionDurationSeconds / 60),
+            }),
+          ];
+          if (book.personalRating !== null) {
+            tooltipLines.push(this.transloco.translate('statsUser.pageTurner.tooltipRating', {
+              rating: book.personalRating,
+            }));
+          }
+          return {
+            value: book.gripScore,
+            color,
+            borderColor: color.replace('0.85', '1'),
+            tooltipLines,
+          };
+        }),
+      }],
+      orientation: 'horizontal',
+      primaryAxis: {
+        title: this.transloco.translate('statsUser.pageTurner.axisGripScore'),
+        minimum: 0,
+        maximum: 100,
       },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: this.transloco.translate('statsUser.pageTurner.axisGripScore'),
-            font: { size: 13, weight: 'bold' },
-          },
-          min: 0,
-          max: 100,
-          ticks: { font: { size: 11 } },
-          border: { display: false },
-        },
-        y: {
-          ticks: { font: { size: 11 } },
-          grid: { display: false },
-          border: { display: false },
-        },
-      },
+      categoryPercentage: 0.7,
+      axisStyle: 'strong',
+      tooltipStyle: { kind: 'rich-accent', accent: 'rgba(251, 146, 60, 0.8)' },
     };
   });
 }

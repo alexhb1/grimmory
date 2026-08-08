@@ -16,6 +16,14 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import {
+  StatsChartLegendComponent,
+  type StatsChartLegendItem,
+} from '../../../shared/stats-chart-legend.component';
+import {
+  StatsChartSummaryComponent,
+  type StatsChartSummaryItem,
+} from '../../../shared/stats-chart-summary.component';
+import {
   type SeriesProgressStats,
   type SeriesProgressStatus,
 } from '../../../../data/user/series-progress-stats';
@@ -31,12 +39,6 @@ interface SeriesProgressSegment {
   readonly fill: string;
   readonly border: string;
   readonly count: (series: SeriesProgressSeries) => number;
-}
-
-interface SeriesProgressLegendEntry {
-  readonly key: string;
-  readonly label: string;
-  readonly color: string;
 }
 
 const SEGMENTS: readonly SeriesProgressSegment[] = [
@@ -131,6 +133,8 @@ const LABEL_LIMIT = 25;
     LucideChevronLeft,
     LucideChevronRight,
     StatsChartCardComponent,
+    StatsChartLegendComponent,
+    StatsChartSummaryComponent,
     TranslocoDirective,
   ],
   templateUrl: './series-progress-chart.component.html',
@@ -158,7 +162,7 @@ export class SeriesProgressChartComponent {
 
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().series.length > 0 ? 'ready' : 'empty';
   });
 
@@ -226,13 +230,49 @@ export class SeriesProgressChartComponent {
     return this.transloco.translate('common.next');
   });
 
-  readonly legend = computed<readonly SeriesProgressLegendEntry[]>(() => {
+  readonly legend = computed<readonly StatsChartLegendItem[]>(() => {
     this.activeLanguage();
     return SEGMENTS.map((segment) => ({
-      key: segment.key,
       label: this.transloco.translate(`statsUser.seriesProgress.${segment.labelKey}`),
       color: segment.fill,
     }));
+  });
+
+  readonly summaryItems = computed<readonly StatsChartSummaryItem[]>(() => {
+    this.activeLanguage();
+    const stats = this.stats();
+    const highestRated = stats.highestRated;
+
+    return [
+      {
+        label: this.transloco.translate('statsUser.seriesProgress.series'),
+        value: this.formatCount(stats.series.length),
+      },
+      {
+        label: this.transloco.translate('statsUser.seriesProgress.avgCompletion'),
+        value: `${this.formatCount(stats.averageCompletionPercent)}%`,
+      },
+      ...(highestRated ? [{
+        label: this.transloco.translate('statsUser.seriesProgress.topRated'),
+        value: this.formatRating(highestRated.averagePersonalRating ?? 0),
+        detail: highestRated.name,
+        valueTitle: highestRated.name,
+        truncateValue: true,
+        truncateDetail: true,
+      }] : []),
+      {
+        label: this.transloco.translate('statsUser.seriesProgress.completed'),
+        value: this.formatCount(stats.completedCount),
+      },
+      {
+        label: this.transloco.translate('statsUser.seriesProgress.inProgress'),
+        value: this.formatCount(stats.inProgressCount),
+      },
+      {
+        label: this.transloco.translate('statsUser.seriesProgress.notStarted'),
+        value: this.formatCount(stats.notStartedCount),
+      },
+    ];
   });
 
   readonly chartData = computed<ChartData<'bar', number[], string>>(() => {
@@ -258,8 +298,6 @@ export class SeriesProgressChartComponent {
     const series = this.chartSeries();
 
     return {
-      responsive: true,
-      maintainAspectRatio: false,
       indexAxis: 'y',
       layout: { padding: { top: 10, right: 20, bottom: 10, left: 10 } },
       scales: {
@@ -283,13 +321,10 @@ export class SeriesProgressChartComponent {
         },
       },
       plugins: {
-        legend: { display: false },
         tooltip: {
-          enabled: true,
           borderColor: '#673ab7',
           borderWidth: 2,
           cornerRadius: 8,
-          padding: 12,
           titleFont: { size: 12, weight: 'bold' },
           bodyFont: { size: 10 },
           callbacks: {

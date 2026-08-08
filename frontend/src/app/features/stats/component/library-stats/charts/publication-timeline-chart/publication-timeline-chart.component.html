@@ -3,6 +3,8 @@
     [heading]="t('title')"
     [description]="t('description')"
     [showDescription]="showDescription()"
+    [loadingMessage]="loadingMessage()"
+    [plotHeight]="plotHeight()"
     [state]="state()"
     [emptyMessage]="t('noData')">
     @if (state() === 'ready') {
@@ -12,105 +14,11 @@
         }
       </div>
 
-      @if (loading()) {
-        <div
-          class="relative overflow-hidden rounded-lg bg-text/4"
-          [style.height.px]="plotHeight()"
-          role="status"
-          [attr.aria-label]="loadingMessage()">
-          <div
-            class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
-            aria-hidden="true"></div>
-        </div>
-      } @else {
-        <div class="relative min-w-0" [style.height.px]="plotHeight()">
-          <canvas
-            baseChart
-            [data]="chartData()"
-            [options]="chartOptions"
-            [type]="chartType"></canvas>
-        </div>
-      }
+      <app-stats-categorical-bar [plot]="plot()" [height]="plotHeight()" />
     }
 
-    @if (stats().insights; as insights) {
-      <dl
-        statsChartSummary
-        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightOldest') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.oldestBook?.year ?? '—' }}
-          </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="insights.oldestBook?.title ?? ''">
-            {{ insights.oldestBook?.title ?? '—' }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightAverageYear') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.averageYear }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">{{ t('insightMedian', { year: insights.medianYear }) }}</dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightNewest') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.newestBook?.year ?? '—' }}
-          </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="insights.newestBook?.title ?? ''">
-            {{ insights.newestBook?.title ?? '—' }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightMostCommonYear') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.mostCommonYear?.year ?? '—' }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">
-            {{ t('insightMostCommonYearBooks', { count: formatCount(insights.mostCommonYear?.bookCount ?? 0) }) }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightTimeSpan') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ formatCount(insights.yearSpan) }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">{{ t('insightYearsOfLiterature') }}</dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightPeakDecade') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.peakDecade ? decadeLabel(insights.peakDecade.decadeStart) : '—' }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">
-            {{ t('insightPeakDecadeBooks', { count: formatCount(insights.peakDecade?.bookCount ?? 0) }) }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightGoldenEra') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.goldenEra ? insights.goldenEra.startYear + '–' + insights.goldenEra.endYear : '—' }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">
-            {{ t('insightGoldenEraRange', { count: formatCount(insights.goldenEra?.bookCount ?? 0) }) }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('insightRarityScore') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ formatPercent(insights.rarityPercent) }}
-          </dd>
-          <dd class="text-xs tabular-nums text-text-muted">{{ t('insightRarePicks') }}</dd>
-        </div>
-      </dl>
+    @if (summaryItems().length > 0) {
+      <app-stats-chart-summary statsChartSummary [items]="summaryItems()" />
     }
   </app-stats-chart-card>
 </ng-container>

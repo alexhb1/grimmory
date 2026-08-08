@@ -72,6 +72,7 @@ function buildStatsChartThemeOptions(): ChartConfiguration['options'] {
         bodyColor: colors.textSecondary,
         borderColor: colors.border,
         borderWidth: 1,
+        padding: 12,
       }
     },
   };
@@ -81,6 +82,8 @@ function applyStatsChartDefaults(colors: StatsChartThemeColors): void {
   Chart.defaults.color = colors.textSecondary;
   Chart.defaults.backgroundColor = colors.surface;
   Chart.defaults.borderColor = colors.grid;
+  Chart.defaults.maintainAspectRatio = false;
+  Chart.defaults.plugins.legend.display = false;
 
   Object.assign(Chart.defaults.elements.arc, {
     borderColor: 'transparent',
@@ -97,6 +100,7 @@ function applyStatsChartDefaults(colors: StatsChartThemeColors): void {
   Object.assign(Chart.defaults.scale.ticks, {
     color: colors.textSecondary,
     backdropColor: 'transparent',
+    font: {size: 11},
   });
   Object.assign(Chart.defaults.scale.grid, {color: colors.grid});
   Object.assign(Chart.defaults.scales.radialLinear.angleLines, {color: colors.grid});

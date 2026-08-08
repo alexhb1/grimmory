@@ -77,24 +77,24 @@
     <ng-template #chartTemplate let-chartConfig>
       @switch (chartConfig.id) {
         @case ('bookFormats') {
-          <app-book-formats-chart
-            [stats]="statsData.bookFormatStats()"
+          <app-stats-circular-distribution-chart
+            [chart]="bookFormatsChart()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
             [showDescription]="showChartDescriptions()" />
         }
         @case ('languageDistribution') {
-          <app-language-chart
-            [stats]="statsData.languageStats()"
+          <app-stats-circular-distribution-chart
+            [chart]="languagesChart()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
             [showDescription]="showChartDescriptions()" />
         }
         @case ('metadataScore') {
-          <app-metadata-score-chart
-            [stats]="statsData.metadataScoreStats()"
+          <app-stats-circular-distribution-chart
+            [chart]="metadataScoreChart()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -117,8 +117,8 @@
             [showDescription]="showChartDescriptions()" />
         }
         @case ('readingJourney') {
-          <app-reading-journey-chart
-            [stats]="statsData.readingJourneyStats()"
+          <app-stats-line-family-chart
+            [chart]="readingJourneyLineChart()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -141,8 +141,8 @@
             [showDescription]="showChartDescriptions()" />
         }
         @case ('publicationTrend') {
-          <app-publication-trend-chart
-            [stats]="statsData.publicationTrendStats()"
+          <app-stats-line-family-chart
+            [chart]="publicationTrendLineChart()"
             [loading]="isLoading()"
             [loadingMessage]="t('main.loading')"
             [plotHeight]="chartGrid.plotHeight(chartConfig.size)"

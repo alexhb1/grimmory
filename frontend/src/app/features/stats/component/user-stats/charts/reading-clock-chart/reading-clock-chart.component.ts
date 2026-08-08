@@ -10,6 +10,10 @@ import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
+import {
+  StatsChartSummaryComponent,
+  type StatsChartSummaryItem,
+} from '../../../shared/stats-chart-summary.component';
 import { type ReadingClockStats } from '../../../../data/user/reading-clock-stats';
 
 type ReadingClockChartData = ChartData<'polarArea', number[], string>;
@@ -18,7 +22,7 @@ type ReadingClockChartData = ChartData<'polarArea', number[], string>;
   selector: 'app-reading-clock-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
+  imports: [BaseChartDirective, StatsChartCardComponent, StatsChartSummaryComponent, TranslocoDirective],
   templateUrl: './reading-clock-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -39,7 +43,7 @@ export class ReadingClockChartComponent {
   readonly chartType = 'polarArea' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().segments.length > 0 ? 'ready' : 'empty';
   });
 
@@ -54,6 +58,25 @@ export class ReadingClockChartComponent {
   readonly readerTypeLabel = computed(() => {
     this.activeLanguage();
     return this.transloco.translate(`statsUser.readingClock.${this.stats().readerType}`);
+  });
+  readonly summaryItems = computed<readonly StatsChartSummaryItem[]>(() => {
+    this.activeLanguage();
+    return [
+      {
+        label: this.transloco.translate('statsUser.readingClock.peakHour'),
+        value: this.peakHourLabel(),
+      },
+      {
+        label: this.transloco.translate('statsUser.readingClock.totalRead'),
+        value: `${this.stats().totalHours}h`,
+      },
+      {
+        label: this.transloco.translate('statsUser.readingClock.readerType'),
+        value: this.readerTypeLabel(),
+        valueTitle: this.readerTypeLabel(),
+        truncateValue: true,
+      },
+    ];
   });
 
   readonly chartData = computed<ReadingClockChartData>(() => {
@@ -76,15 +99,9 @@ export class ReadingClockChartComponent {
     const hourLabels = this.hourLabels();
 
     return {
-      responsive: true,
-      maintainAspectRatio: false,
       layout: { padding: { top: 10, bottom: 10 } },
       plugins: {
-        legend: { display: false },
         tooltip: {
-          borderWidth: 1,
-          cornerRadius: 6,
-          padding: 12,
           titleFont: { size: 13, weight: 'bold' },
           bodyFont: { size: 12 },
           callbacks: {

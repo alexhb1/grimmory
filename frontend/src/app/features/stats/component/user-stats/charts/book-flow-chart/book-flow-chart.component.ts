@@ -17,6 +17,10 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { readStatsChartThemeColors } from '../../../shared/stats-chart-theme.service';
 import {
+  StatsChartSummaryComponent,
+  type StatsChartSummaryItem,
+} from '../../../shared/stats-chart-summary.component';
+import {
   BOOK_FLOW_OTHER_QUARTERS_ID,
   type BookFlowColumn,
   type BookFlowNode,
@@ -89,7 +93,7 @@ const LABEL_LIMIT = 18;
 @Component({
   selector: 'app-book-flow-chart',
   standalone: true,
-  imports: [StatsChartCardComponent, TranslocoDirective],
+  imports: [StatsChartCardComponent, StatsChartSummaryComponent, TranslocoDirective],
   templateUrl: './book-flow-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -110,7 +114,7 @@ export class BookFlowChartComponent {
 
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().nodes.length > 0 ? 'ready' : 'empty';
   });
 
@@ -123,6 +127,29 @@ export class BookFlowChartComponent {
     this.activeLanguage();
     const status = this.stats().topStatus;
     return status ? this.transloco.translate(STATUS_LABEL_KEYS[status]) : UNKNOWN_LABEL;
+  });
+  readonly summaryItems = computed<readonly StatsChartSummaryItem[]>(() => {
+    this.activeLanguage();
+    return [
+      {
+        label: this.transloco.translate('statsUser.bookFlow.totalBooks'),
+        value: this.formatCount(this.stats().totalBooks),
+      },
+      {
+        label: this.transloco.translate('statsUser.bookFlow.busiestQuarter'),
+        value: this.busiestQuarterLabel(),
+        truncateValue: true,
+      },
+      {
+        label: this.transloco.translate('statsUser.bookFlow.topStatus'),
+        value: this.topStatusLabel(),
+        truncateValue: true,
+      },
+      {
+        label: this.transloco.translate('statsUser.bookFlow.completionRate'),
+        value: `${this.formatCount(this.stats().completionPercent)}%`,
+      },
+    ];
   });
 
   private readonly repaint = effect(() => {

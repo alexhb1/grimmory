@@ -14,31 +14,34 @@ import {
   StatsPageShellComponent,
   type StatsPageShellLabels,
 } from '../shared/stats-page-shell.component';
+import {
+  StatsCircularDistributionChartComponent,
+  type StatsCircularDistribution,
+} from '../shared/stats-circular-distribution-chart.component';
+import {
+  StatsReadingProfileChartComponent,
+  type StatsReadingProfile,
+} from '../shared/stats-reading-profile-chart.component';
+import {
+  StatsLineFamilyChartComponent,
+} from '../shared/line-family/stats-line-family-chart.component';
+import { type StatsLineFamilyChart } from '../shared/line-family/stats-line-family-chart.types';
 import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { UserStatsDataService } from './user-stats-data.service';
 import { BookFlowChartComponent } from './charts/book-flow-chart/book-flow-chart.component';
-import { BookLengthChartComponent } from './charts/book-length-chart/book-length-chart.component';
-import { CompletionRaceChartComponent } from './charts/completion-race-chart/completion-race-chart.component';
 import { CompletionTimelineChartComponent } from './charts/completion-timeline-chart/completion-timeline-chart.component';
 import { FavoriteDaysChartComponent } from './charts/favorite-days-chart/favorite-days-chart.component';
 import { GenreStatsChartComponent } from './charts/genre-stats-chart/genre-stats-chart.component';
+import { StatsHeatmapFamilyComponent } from './charts/heatmap-family/stats-heatmap-family.component';
+import { type StatsHeatmapFamilyChart } from './charts/heatmap-family/stats-heatmap-family.types';
 import { PageTurnerChartComponent } from './charts/page-turner-chart/page-turner-chart.component';
-import { PeakHoursChartComponent } from './charts/peak-hours-chart/peak-hours-chart.component';
 import { PersonalRatingChartComponent } from './charts/personal-rating-chart/personal-rating-chart.component';
-import { PublicationEraChartComponent } from './charts/publication-era-chart/publication-era-chart.component';
-import { RatingTasteChartComponent } from './charts/rating-taste-chart/rating-taste-chart.component';
-import { ReadStatusChartComponent } from './charts/read-status-chart/read-status-chart.component';
-import { ReadingDNAChartComponent } from './charts/reading-dna-chart/reading-dna-chart.component';
+import { StatsPointFamilyComponent } from './charts/point-family/stats-point-family.component';
+import { type StatsPointFamilyChart } from './charts/point-family/stats-point-family.types';
 import { ReadingDebtChartComponent } from './charts/reading-debt-chart/reading-debt-chart.component';
-import { ReadingHabitsChartComponent } from './charts/reading-habits-chart/reading-habits-chart.component';
-import { ReadingHeatmapChartComponent } from './charts/reading-heatmap-chart/reading-heatmap-chart.component';
-import { ReadingProgressChartComponent } from './charts/reading-progress-chart/reading-progress-chart.component';
-import { ReadingSessionHeatmapComponent } from './charts/reading-session-heatmap/reading-session-heatmap.component';
 import { ReadingSessionTimelineComponent } from './charts/reading-session-timeline/reading-session-timeline.component';
-import { ReadingSurvivalChartComponent } from './charts/reading-survival-chart/reading-survival-chart.component';
 import { ReadingClockChartComponent } from './charts/reading-clock-chart/reading-clock-chart.component';
 import { SeriesProgressChartComponent } from './charts/series-progress-chart/series-progress-chart.component';
-import { SessionArchetypesChartComponent } from './charts/session-archetypes-chart/session-archetypes-chart.component';
 
 const DEFAULT_CHARTS: readonly StatsPageChartConfig[] = [
   { id: 'heatmap', nameKey: 'chartNames.heatmap', size: 'full' },
@@ -72,29 +75,21 @@ const DEFAULT_CHARTS: readonly StatsPageChartConfig[] = [
   imports: [
     AppMessageComponent,
     BookFlowChartComponent,
-    BookLengthChartComponent,
-    CompletionRaceChartComponent,
     CompletionTimelineChartComponent,
     FavoriteDaysChartComponent,
     GenreStatsChartComponent,
     PageTurnerChartComponent,
-    PeakHoursChartComponent,
     PersonalRatingChartComponent,
-    PublicationEraChartComponent,
-    RatingTasteChartComponent,
-    ReadStatusChartComponent,
     ReadingClockChartComponent,
-    ReadingDNAChartComponent,
     ReadingDebtChartComponent,
-    ReadingHabitsChartComponent,
-    ReadingHeatmapChartComponent,
-    ReadingProgressChartComponent,
-    ReadingSessionHeatmapComponent,
     ReadingSessionTimelineComponent,
-    ReadingSurvivalChartComponent,
     SeriesProgressChartComponent,
-    SessionArchetypesChartComponent,
+    StatsCircularDistributionChartComponent,
+    StatsLineFamilyChartComponent,
+    StatsHeatmapFamilyComponent,
     StatsPageShellComponent,
+    StatsPointFamilyComponent,
+    StatsReadingProfileChartComponent,
     TranslocoDirective,
     TranslocoPipe,
   ],
@@ -112,6 +107,58 @@ export class UserStatsComponent implements OnInit {
   });
 
   readonly statsData = inject(UserStatsDataService);
+  readonly sessionHeatmapChart = computed<StatsHeatmapFamilyChart>(() => ({
+    kind: 'session-calendar',
+    stats: this.statsData.sessionHeatmapStats(),
+    year: this.statsData.heatmapYear(),
+    yearOptions: this.statsData.readingYears(),
+  }));
+  readonly readingHeatmapChart = computed<StatsHeatmapFamilyChart>(() => ({
+    kind: 'reading-months', stats: this.statsData.readingHeatmapStats(),
+  }));
+  readonly bookLengthPointChart = computed<StatsPointFamilyChart>(() => ({
+    kind: 'book-length', stats: this.statsData.bookLengthStats(),
+  }));
+  readonly ratingTastePointChart = computed<StatsPointFamilyChart>(() => ({
+    kind: 'rating-taste', stats: this.statsData.ratingTasteStats(),
+  }));
+  readonly sessionArchetypesPointChart = computed<StatsPointFamilyChart>(() => ({
+    kind: 'session-archetypes',
+    stats: this.statsData.sessionArchetypesStats(),
+    year: this.statsData.sessionArchetypesYear(),
+    yearOptions: this.statsData.readingYears(),
+  }));
+  readonly peakHoursLineChart = computed<StatsLineFamilyChart>(() => ({
+    kind: 'peak-hours',
+    stats: this.statsData.peakHoursStats(),
+    year: this.statsData.peakHoursParams().year,
+    month: this.statsData.peakHoursParams().month,
+    yearOptions: this.statsData.readingYears(),
+  }));
+  readonly publicationEraLineChart = computed<StatsLineFamilyChart>(() => ({
+    kind: 'publication-era', stats: this.statsData.publicationEraStats(),
+  }));
+  readonly completionRaceLineChart = computed<StatsLineFamilyChart>(() => ({
+    kind: 'completion-race',
+    stats: this.statsData.completionRaceStats(),
+    year: this.statsData.completionRaceYear(),
+    yearOptions: this.statsData.readingYears(),
+  }));
+  readonly readingSurvivalLineChart = computed<StatsLineFamilyChart>(() => ({
+    kind: 'reading-survival', stats: this.statsData.readingSurvivalStats(),
+  }));
+  readonly readStatusChart = computed<StatsCircularDistribution>(() => ({
+    kind: 'read-status', stats: this.statsData.readStatusStats(),
+  }));
+  readonly readingProgressChart = computed<StatsCircularDistribution>(() => ({
+    kind: 'reading-progress', stats: this.statsData.readingProgressStats(),
+  }));
+  readonly readingDnaProfile = computed<StatsReadingProfile>(() => ({
+    kind: 'dna', stats: this.statsData.readingDnaStats(),
+  }));
+  readonly readingHabitsProfile = computed<StatsReadingProfile>(() => ({
+    kind: 'habits', stats: this.statsData.readingHabitsStats(),
+  }));
   readonly userName = computed(() => {
     const user = this.userService.currentUser();
     return user ? user.name || user.username : '';

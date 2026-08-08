@@ -1,5 +1,6 @@
 import {TestBed} from '@angular/core/testing';
 import {TranslocoService} from '@jsverse/transloco';
+import {of} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {PageCountStats} from '../../../../data/library/page-count-stats';
@@ -23,7 +24,10 @@ describe('PageCountChartComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [PageCountChartComponent],
-      providers: [{provide: TranslocoService, useValue: {translate}}],
+      providers: [{
+        provide: TranslocoService,
+        useValue: {translate, getActiveLang: () => 'en', langChanges$: of('en')},
+      }],
     });
   });
 
@@ -37,27 +41,29 @@ describe('PageCountChartComponent', () => {
 
   it('renders every typed page-count bucket', () => {
     const component = createComponent({totalBooks: 13, buckets: BUCKETS});
-    const dataset = component.chartData().datasets[0];
+    const plot = component.plot();
 
-    expect(component.chartData().labels).toEqual(BUCKETS.map(bucket => bucket.label));
-    expect(dataset?.data).toEqual([2, 2, 2, 2, 2, 2, 1]);
-    expect(dataset?.backgroundColor).toEqual([
+    expect(plot.categories.map(category => category.label)).toEqual(BUCKETS.map(bucket => bucket.label));
+    expect(plot.series[0]?.values.map(datum => datum.value)).toEqual([2, 2, 2, 2, 2, 2, 1]);
+    expect(plot.series[0]?.values.map(datum => datum.color)).toEqual([
       '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF',
     ]);
   });
 
   it('formats tooltip labels without raw-book access', () => {
-    const component = createComponent({totalBooks: 0, buckets: []});
-    const title = component.chartOptions?.plugins?.tooltip?.callbacks?.title as
-      | ((context: {label: string}[]) => string)
-      | undefined;
-    const label = component.chartOptions?.plugins?.tooltip?.callbacks?.label as
-      | ((context: {parsed: {y: number}}) => string)
-      | undefined;
+    const component = createComponent({totalBooks: 6, buckets: [
+      {id: '301-to-500', label: '301-500', bookCount: 1},
+      {id: '501-to-750', label: '501-750', bookCount: 5},
+    ]});
+    const plot = component.plot();
 
-    expect(title?.([{label: '301-500'}]))
+    expect(plot.categories[0]?.tooltipTitle)
       .toBe('statsLibrary.pageCount.tooltipTitle|label=301-500');
-    expect(label?.({parsed: {y: 1}})).toBe('statsLibrary.pageCount.tooltipLabel|value=1');
-    expect(label?.({parsed: {y: 3}})).toBe('statsLibrary.pageCount.tooltipLabelPlural|value=3');
+    expect(plot.series[0]?.values[0]?.tooltipLines).toEqual([
+      'statsLibrary.pageCount.tooltipLabel|value=1',
+    ]);
+    expect(plot.series[0]?.values[1]?.tooltipLines).toEqual([
+      'statsLibrary.pageCount.tooltipLabelPlural|value=5',
+    ]);
   });
 });

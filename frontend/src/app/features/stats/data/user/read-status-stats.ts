@@ -21,4 +21,3 @@ export function calculateReadStatusStats(books: readonly BookSummary[]) {
 }
 
 export type ReadStatusStats = ReturnType<typeof calculateReadStatusStats>;
-export type ReadStatusSlice = ReadStatusStats['slices'][number];

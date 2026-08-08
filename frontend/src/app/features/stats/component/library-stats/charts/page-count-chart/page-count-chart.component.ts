@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {PageCountStats} from '../../../../data/library/page-count-stats';
+import { PageCountStats } from '../../../../data/library/page-count-stats';
+import {
+  StatsCategoricalBarComponent,
+  type StatsCategoricalBarPlot,
+} from '../../../shared/stats-categorical-bar.component';
 import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
-
-type PageChartData = ChartData<'bar', number[], string>;
 
 const PAGE_COLORS = [
   '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF',
@@ -19,14 +19,16 @@ const PAGE_COLORS = [
 @Component({
   selector: 'app-page-count-chart',
   standalone: true,
-  hostDirectives: [StatsChartJsHostDirective],
-  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
+  imports: [StatsCategoricalBarComponent, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './page-count-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
 })
 export class PageCountChartComponent {
   private readonly t = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.t.langChanges$, {
+    initialValue: this.t.getActiveLang(),
+  });
 
   readonly stats = input.required<PageCountStats>();
   readonly loading = input(false);
@@ -34,101 +36,41 @@ export class PageCountChartComponent {
   readonly plotHeight = input(260);
   readonly showDescription = input(true);
 
-  public readonly chartType = 'bar' as const;
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
-
-  public readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 10, bottom: 10}
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderColor: '#8B5CF6',
-        borderWidth: 2,
-        cornerRadius: 8,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 11},
-        callbacks: {
-          title: (context) => this.t.translate('statsLibrary.pageCount.tooltipTitle', {label: context[0].label}),
-          label: (context) => {
-            const value = context.parsed.y;
-            return value === 1
-              ? this.t.translate('statsLibrary.pageCount.tooltipLabel', {value})
-              : this.t.translate('statsLibrary.pageCount.tooltipLabelPlural', {value});
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: this.t.translate('statsLibrary.pageCount.axisPageCount'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 10
-          }
-        },
-        grid: {display: false},
-        border: {display: false}
-      },
-      y: {
-        title: {
-          display: true,
-          text: this.t.translate('statsLibrary.pageCount.axisBooks'),
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        beginAtZero: true,
-        ticks: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 10
-          },
-          stepSize: 1,
-          maxTicksLimit: 6
-        },
-        grid: {
-        },
-        border: {display: false}
-      }
-    }
-  };
-
-  public readonly chartData = computed<PageChartData>(() => {
-    if (this.stats().totalBooks === 0) {
-      return {labels: [], datasets: []};
-    }
-
-    const labels = this.stats().buckets.map(bucket => bucket.label);
-    const data = this.stats().buckets.map(bucket => bucket.bookCount);
+  readonly plot = computed<StatsCategoricalBarPlot>(() => {
+    this.activeLanguage();
     return {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: PAGE_COLORS,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.8,
-        categoryPercentage: 0.7
-      }]
+    categories: this.stats().buckets.map((bucket) => ({
+      label: bucket.label,
+      tooltipTitle: this.t.translate('statsLibrary.pageCount.tooltipTitle', { label: bucket.label }),
+    })),
+    series: [{
+      label: '',
+      color: PAGE_COLORS[0],
+      values: this.stats().buckets.map((bucket, index) => ({
+        value: bucket.bookCount,
+        color: PAGE_COLORS[index] ?? PAGE_COLORS[0],
+        tooltipLines: [this.t.translate(
+          bucket.bookCount === 1
+            ? 'statsLibrary.pageCount.tooltipLabel'
+            : 'statsLibrary.pageCount.tooltipLabelPlural',
+          { value: bucket.bookCount },
+        )],
+      })),
+    }],
+    categoryAxisTitle: this.t.translate('statsLibrary.pageCount.axisPageCount'),
+    primaryAxis: {
+      title: this.t.translate('statsLibrary.pageCount.axisBooks'),
+      stepSize: 1,
+      maxTicks: 6,
+    },
+    categoryPercentage: 0.7,
+    padding: { top: 10, bottom: 10 },
+    axisStyle: 'library-compact',
+      tooltipStyle: { kind: 'compact-accent', accent: '#8B5CF6' },
     };
   });
-
 }

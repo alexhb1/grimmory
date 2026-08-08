@@ -13,12 +13,10 @@
     <ng-template #chartTemplate let-chartConfig>
       @switch (chartConfig.id) {
             @case ('heatmap') {
-              <app-reading-session-heatmap
-                [stats]="statsData.sessionHeatmapStats()"
+              <app-stats-heatmap-family
+                [chart]="sessionHeatmapChart()"
                 [loading]="statsData.sessionHeatmapLoading()"
                 [error]="statsData.sessionHeatmapError()"
-                [year]="statsData.heatmapYear()"
-                [yearOptions]="statsData.readingYears()"
                 (yearChange)="statsData.heatmapYear.set($event)"
                 [loadingMessage]="t('main.loading')"
                 [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -76,13 +74,10 @@
                 />
             }
             @case ('peak-hours') {
-              <app-peak-hours-chart
-                [stats]="statsData.peakHoursStats()"
+              <app-stats-line-family-chart
+                [chart]="peakHoursLineChart()"
                 [loading]="statsData.peakHoursLoading()"
                 [error]="statsData.peakHoursError()"
-                [year]="statsData.peakHoursParams().year"
-                [month]="statsData.peakHoursParams().month"
-                [yearOptions]="statsData.readingYears()"
                 (paramsChange)="statsData.peakHoursParams.set($event)"
                 [loadingMessage]="t('main.loading')"
                 [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -90,8 +85,8 @@
                 />
             }
             @case ('reading-dna') {
-              <app-reading-dna-chart
-                [stats]="statsData.readingDnaStats()"
+              <app-stats-reading-profile-chart
+                [profile]="readingDnaProfile()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -100,8 +95,8 @@
                 />
             }
             @case ('reading-habits') {
-              <app-reading-habits-chart
-                [stats]="statsData.readingHabitsStats()"
+              <app-stats-reading-profile-chart
+                [profile]="readingHabitsProfile()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -110,8 +105,8 @@
                 />
             }
             @case ('reading-heatmap') {
-              <app-reading-heatmap-chart
-                [stats]="statsData.readingHeatmapStats()"
+              <app-stats-heatmap-family
+                [chart]="readingHeatmapChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -130,8 +125,8 @@
                 />
             }
             @case ('reading-progress') {
-              <app-reading-progress-chart
-                [stats]="statsData.readingProgressStats()"
+              <app-stats-circular-distribution-chart
+                [chart]="readingProgressChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -140,8 +135,8 @@
                 />
             }
             @case ('read-status') {
-              <app-read-status-chart
-                [stats]="statsData.readStatusStats()"
+              <app-stats-circular-distribution-chart
+                [chart]="readStatusChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -150,8 +145,8 @@
                 />
             }
             @case ('rating-taste') {
-              <app-rating-taste-chart
-                [stats]="statsData.ratingTasteStats()"
+              <app-stats-point-family
+                [chart]="ratingTastePointChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -180,12 +175,10 @@
                 />
             }
             @case ('completion-race') {
-              <app-completion-race-chart
-                [stats]="statsData.completionRaceStats()"
+              <app-stats-line-family-chart
+                [chart]="completionRaceLineChart()"
                 [loading]="statsData.completionRaceLoading()"
                 [error]="statsData.completionRaceError()"
-                [year]="statsData.completionRaceYear()"
-                [yearOptions]="statsData.readingYears()"
                 (yearChange)="statsData.completionRaceYear.set($event)"
                 [loadingMessage]="t('main.loading')"
                 [plotHeight]="chartGrid.plotHeight(chartConfig.size)"
@@ -193,8 +186,8 @@
                 />
             }
             @case ('reading-survival') {
-              <app-reading-survival-chart
-                [stats]="statsData.readingSurvivalStats()"
+              <app-stats-line-family-chart
+                [chart]="readingSurvivalLineChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -213,8 +206,8 @@
                 />
             }
             @case ('book-length') {
-              <app-book-length-chart
-                [stats]="statsData.bookLengthStats()"
+              <app-stats-point-family
+                [chart]="bookLengthPointChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -243,8 +236,8 @@
                 />
             }
             @case ('publication-era') {
-              <app-publication-era-chart
-                [stats]="statsData.publicationEraStats()"
+              <app-stats-line-family-chart
+                [chart]="publicationEraLineChart()"
                 [loading]="statsData.statsLoading()"
                 [error]="statsData.statsError()"
                 [loadingMessage]="t('main.loading')"
@@ -253,12 +246,10 @@
                 />
             }
             @case ('session-archetypes') {
-              <app-session-archetypes-chart
-                [stats]="statsData.sessionArchetypesStats()"
+              <app-stats-point-family
+                [chart]="sessionArchetypesPointChart()"
                 [loading]="statsData.sessionArchetypesLoading()"
                 [error]="statsData.sessionArchetypesError()"
-                [year]="statsData.sessionArchetypesYear()"
-                [yearOptions]="statsData.readingYears()"
                 (yearChange)="statsData.sessionArchetypesYear.set($event)"
                 [loadingMessage]="t('main.loading')"
                 [plotHeight]="chartGrid.plotHeight(chartConfig.size)"

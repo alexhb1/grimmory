@@ -1,0 +1,46 @@
+<app-stats-chart-card
+  [sectionedHeader]="chart().kind === 'session-archetypes'"
+  [heading]="presentation().heading"
+  [description]="presentation().description"
+  [showDescription]="showDescription()"
+  [loadingMessage]="loadingMessage()"
+  [plotHeight]="plotHeight()"
+  [state]="state()"
+  [emptyMessage]="presentation().emptyMessage">
+  @if (sessionChart(); as session) {
+    <app-select
+      statsChartActions
+      size="sm"
+      styleClass="min-w-24"
+      [options]="yearOptions()"
+      [value]="session.year"
+      [ariaLabel]="yearSelectorLabel()"
+      (valueChange)="onYearChange($event)" />
+  }
+
+  @if (state() === 'ready') {
+    <div class="relative min-w-0" [style.height.px]="plotHeight()">
+      <canvas baseChart [data]="chartData()" [options]="chartOptions()" [type]="chartType"></canvas>
+    </div>
+    <app-stats-chart-legend [items]="presentation().legend" styleClass="mt-2" />
+  }
+
+  @if (state() === 'ready') {
+    <dl statsChartSummary [class]="summaryClass()">
+      @for (item of presentation().summary; track item.label) {
+        <div class="min-w-0">
+          <dt class="text-xs font-medium text-text-secondary">{{ item.label }}</dt>
+          <dd
+            class="mt-1 text-lg font-semibold tabular-nums text-text-strong"
+            [class.truncate]="item.truncateValue"
+            [attr.title]="item.valueTitle ?? null">
+            {{ item.value }}
+          </dd>
+          @if (item.detail; as detail) {
+            <dd class="text-xs tabular-nums text-text-muted">{{ detail }}</dd>
+          }
+        </div>
+      }
+    </dl>
+  }
+</app-stats-chart-card>

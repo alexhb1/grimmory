@@ -3,19 +3,11 @@
     [heading]="t('title')"
     [description]="t('description')"
     [showDescription]="showDescription()"
+    [loadingMessage]="loadingMessage()"
+    [plotHeight]="plotHeight()"
     [state]="state()"
     [emptyMessage]="t('noData') + ' ' + t('noDataHint')">
-    @if (loading()) {
-      <div
-        class="relative overflow-hidden rounded-lg bg-text/4"
-        [style.height.px]="plotHeight()"
-        role="status"
-        [attr.aria-label]="loadingMessage()">
-        <div
-          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
-          aria-hidden="true"></div>
-      </div>
-    } @else if (state() === 'ready') {
+    @if (state() === 'ready') {
       <div class="relative min-w-0" [style.height.px]="plotHeight()">
         <canvas
           baseChart
@@ -25,33 +17,8 @@
       </div>
     }
 
-    @if (state() === 'ready' && !loading()) {
-      <dl
-        statsChartSummary
-        class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('peakHour') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ peakHourLabel() }}
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('totalRead') }}</dt>
-          <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ stats().totalHours }}h
-          </dd>
-        </div>
-
-        <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('readerType') }}</dt>
-          <dd
-            class="mt-1 truncate text-lg font-semibold tabular-nums text-text-strong"
-            [title]="readerTypeLabel()">
-            {{ readerTypeLabel() }}
-          </dd>
-        </div>
-      </dl>
+    @if (state() === 'ready') {
+      <app-stats-chart-summary statsChartSummary [items]="summaryItems()" />
     }
   </app-stats-chart-card>
 </ng-container>
