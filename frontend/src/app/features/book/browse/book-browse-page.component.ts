@@ -36,9 +36,7 @@ import {CoverScalePreferenceService} from '../../../shared/service/cover-scale-p
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
 import {MagicShelfService} from '../../magic-shelf/service/magic-shelf.service';
 import {LibraryService} from '../service/library.service';
-import {BookReadService} from '../service/book-read.service';
 import {BookNavigationService} from '../service/book-navigation.service';
-import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {
   type EntityViewPreference,
   type EntityViewPreferenceOverride,
@@ -230,9 +228,7 @@ export class BookBrowsePageComponent {
   private readonly shelfDefinitionQuery = inject(ShelfDefinitionQueryService);
   private readonly magicShelfService = inject(MagicShelfService);
   private readonly libraryService = inject(LibraryService);
-  private readonly bookRead = inject(BookReadService);
   private readonly bookNavigation = inject(BookNavigationService);
-  private readonly bookDialogHelper = inject(BookDialogHelperService);
   private readonly userService = inject(UserService);
   private readonly urlHelper = inject(UrlHelperService);
   private readonly dialogLauncher = inject(DialogLauncherService);
@@ -279,8 +275,6 @@ export class BookBrowsePageComponent {
   protected readonly minCardWidth = computed(() =>
     this.isMobile() ? 1 : Math.round(CARD_BASE_WIDTH * this.coverScale.scaleFactor()),
   );
-  private readonly metadataCenterViewMode = computed(() =>
-    this.userService.currentUser()?.userSettings.metadataCenterViewMode ?? 'route');
   protected readonly formatPill = computed(() =>
     this.userService.currentUser()?.userSettings.entityViewPreferences?.global?.overlayBookType ?? true);
 
@@ -814,20 +808,11 @@ export class BookBrowsePageComponent {
   }
 
   protected onCardAction(book: BookSummary): void {
-    this.bookRead.readBook(book);
+    this.bookNavigation.readBook(book);
   }
 
   protected onBookDetailRequested(book: BookSummary): void {
-    const bookIds = this.books().map(presented => presented.id);
-    if (bookIds.length > 0) {
-      this.bookNavigation.setNavigationContext(bookIds, book.id);
-    }
-
-    if (this.metadataCenterViewMode() === 'route') {
-      void this.router.navigate(['/book', book.id]);
-      return;
-    }
-    void this.bookDialogHelper.openBookDetailsDialog(book.id);
+    this.bookNavigation.openBook(book.id, this.books().map(presented => presented.id));
   }
 
   protected onToggleSelect(book: BookSummary, index: number, shiftKey: boolean): void {

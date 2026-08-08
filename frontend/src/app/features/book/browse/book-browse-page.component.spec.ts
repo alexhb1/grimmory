@@ -21,7 +21,6 @@ import {BookBrowseBulkBarComponent} from './book-browse-bulk-bar.component';
 import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
 import {DialogService} from '@openng/optimus-ui/dynamicdialog';
 
-import {BookReadService} from '../service/book-read.service';
 import {BookFileService} from '../service/book-file.service';
 import {LibraryService} from '../service/library.service';
 import {LibraryShelfMenuService} from '../service/library-shelf-menu.service';
@@ -276,7 +275,6 @@ describe('BookBrowsePageComponent', () => {
           provide: LibraryShelfMenuService,
           useValue: {},
         },
-        {provide: BookReadService, useValue: {readBook: () => undefined}},
         {provide: UserService, useValue: {
           currentUser,
           getCurrentUser: () => currentUser(),
