@@ -1,0 +1,112 @@
+import {describe, expect, it} from 'vitest';
+
+import {
+  parseSortTermsToken,
+  sortTermsToken,
+} from '../data/book-query-params';
+import {
+  buildSortOptions,
+  parseSortToken,
+  sortTerms,
+} from './book-browse-fields';
+
+describe('book browse sort fields', () => {
+  it('groups exact server tokens in the browser order without inventing sort terms', () => {
+    const options = buildSortOptions([
+      'pageCount', '-pageCount',
+      'title', '-title',
+      'seriesName', '-seriesName',
+      'amazonReviewCount', '-amazonReviewCount',
+    ]);
+
+    expect(options.map(option => option.id)).toEqual([
+      'title',
+      'seriesName',
+      'pageCount',
+      'amazonReviewCount',
+    ]);
+    expect(options[0]).toMatchObject({
+      group: 'common',
+      defaultDirection: 'asc',
+      directions: ['asc', 'desc'],
+    });
+    expect(options[1]).toMatchObject({directions: ['asc', 'desc']});
+    expect(options[2]).toMatchObject({
+      labelKey: 'book.fields.pageCount',
+      group: 'more',
+      defaultDirection: 'desc',
+      directions: ['asc', 'desc'],
+    });
+    expect(options[3]).toMatchObject({
+      labelKey: 'book.fields.amazonReviewCount',
+      defaultDirection: 'desc',
+      directions: ['asc', 'desc'],
+    });
+  });
+
+  it('skips unknown tokens while building advertised sort options', () => {
+    expect(buildSortOptions(['futureScore', '-title']).map(option => option.id)).toEqual(['title']);
+  });
+
+  it('parses an ordered multi-sort token for the server', () => {
+    expect(parseSortTermsToken('-publishedDate,title,seriesNumber')).toEqual([
+      {key: 'publishedDate', direction: 'desc'},
+      {key: 'title', direction: 'asc'},
+      {key: 'seriesNumber', direction: 'asc'},
+    ]);
+  });
+
+  it('drops unknown terms and deduplicates without changing precedence', () => {
+    expect(parseSortTermsToken('title,futureScore,-title,-pageCount')).toEqual([
+      {key: 'title', direction: 'asc'},
+      {key: 'pageCount', direction: 'desc'},
+    ]);
+  });
+
+  it('ignores empty keys after stripping the direction marker', () => {
+    expect(parseSortTermsToken(',-, ,title')).toEqual([
+      {key: 'title', direction: 'asc'},
+    ]);
+  });
+
+  it('serializes the ordered chain', () => {
+    expect(sortTermsToken([
+      {key: 'seriesName', direction: 'asc'},
+      {key: 'seriesNumber', direction: 'desc'},
+    ])).toBe('seriesName,-seriesNumber');
+  });
+
+  it('uses the first supported term for the compact toolbar label', () => {
+    expect(parseSortToken('futureScore,-pageCount,title')).toEqual({
+      option: {
+        id: 'pageCount',
+        labelKey: 'book.fields.pageCount',
+        group: 'more',
+        defaultDirection: 'desc',
+        directions: ['desc'],
+      },
+      direction: 'desc',
+    });
+  });
+
+  it('labels newly reachable table fields from the existing column vocabulary', () => {
+    expect(parseSortToken('-seriesNumber')).toEqual({
+      option: {
+        id: 'seriesNumber',
+        labelKey: 'book.fields.seriesNumber',
+        group: 'more',
+        defaultDirection: 'desc',
+        directions: ['desc'],
+      },
+      direction: 'desc',
+    });
+  });
+
+  it('serializes only the selected backend capability without frontend tiebreakers', () => {
+    const [series] = buildSortOptions(['seriesName', '-seriesName']);
+
+    expect(sortTerms({option: series, direction: 'asc'})).toEqual([
+      {key: 'seriesName', direction: 'asc'},
+    ]);
+  });
+});

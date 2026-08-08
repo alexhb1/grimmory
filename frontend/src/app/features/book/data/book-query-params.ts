@@ -99,6 +99,98 @@ export function isBookQuerySortKey(value: string): value is BookQuerySortKey {
   return BOOK_QUERY_SORT_KEY_SET.has(value);
 }
 
+export function parseFacetParams(tokens: readonly string[]): FacetValueMap {
+  const facets = new Map<BookQueryFacetKey, string[]>();
+  for (const token of tokens) {
+    const separator = token.indexOf(':');
+    if (separator <= 0) {
+      continue;
+    }
+    const key = token.slice(0, separator);
+    const value = token.slice(separator + 1);
+    if (!isBookQueryFacetKey(key) || value === '') {
+      continue;
+    }
+    const values = facets.get(key) ?? [];
+    if (!values.includes(value)) {
+      values.push(value);
+      facets.set(key, values);
+    }
+  }
+  return Object.fromEntries(facets);
+}
+
+function facetParamTokens(facets: FacetValueMap): string[] {
+  return Object.entries(facets).flatMap(([key, values]) =>
+    values.map(value => `${key}:${value}`),
+  );
+}
+
+export function browseFacetQueryParams(facets: FacetValueMap): Record<'facet', string[] | null> {
+  const tokens = facetParamTokens(facets);
+  return {facet: tokens.length > 0 ? tokens : null};
+}
+
+export function toggleFacetSelection(
+  current: FacetValueMap,
+  key: BookQueryFacetKey,
+  value: string,
+  selected: boolean,
+): FacetValueMap {
+  const values = facetValuesForKey(current, key);
+  if (selected === values.includes(value)) {
+    return current;
+  }
+  const remaining = selected ? [...values, value] : values.filter(item => item !== value);
+  const next: Partial<Record<BookQueryFacetKey, readonly string[]>> = {...current};
+  if (remaining.length > 0) {
+    next[key] = remaining;
+  } else {
+    delete next[key];
+  }
+  return next;
+}
+
+export function countFacetSelections(facets: FacetValueMap): number {
+  return Object.values(facets).reduce((count, values) => count + values.length, 0);
+}
+
+export function facetValuesForKey(
+  facets: FacetValueMap,
+  key: BookQueryFacetKey,
+): readonly string[] {
+  return facets[key] ?? [];
+}
+
+export function parseSortTermsToken(token: string | null): BookSortTerm[] {
+  if (!token) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const terms: BookSortTerm[] = [];
+  for (const rawTerm of token.split(',')) {
+    const term = rawTerm.trim();
+    if (!term) {
+      continue;
+    }
+    const descending = term.startsWith('-');
+    const key = (descending ? term.slice(1) : term).trim();
+    if (!isBookQuerySortKey(key) || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    terms.push({key, direction: descending ? 'desc' : 'asc'});
+  }
+  return terms;
+}
+
+export function sortTermsToken(terms: readonly BookSortTerm[]): string {
+  return terms
+    .map(term => term.direction === 'desc' ? `-${term.key}` : term.key)
+    .join(',');
+}
+
 export function normalizeBookPageParams(params: BookPageParams): BookPageParams {
   return {
     ...normalizeBookQueryParams(params),
@@ -176,7 +268,5 @@ function appendFacetParams(httpParams: HttpParams, facets: FacetValueMap): HttpP
 }
 
 function serializeSort(sort: readonly BookSortTerm[]): string {
-  return sort
-    .map(term => `${term.direction === 'desc' ? '-' : ''}${term.key}`)
-    .join(',');
+  return sortTermsToken(sort);
 }

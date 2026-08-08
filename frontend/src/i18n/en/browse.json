@@ -3,7 +3,12 @@
     "empty": "No books here yet.",
     "filteredEmpty": "No books match these filters.",
     "clearFilters": "Clear filters",
-    "loadError": "We couldn't load these books."
+    "loadError": "We couldn't load these books.",
+    "pageError": "Couldn't load more books."
+  },
+  "table": {
+    "selectBook": "Select {{title}}",
+    "moreValues": "Show {{count}} more {{column}}"
   },
   "rail": {
     "showAll": "Show all",

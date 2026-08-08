@@ -9,7 +9,7 @@ import {lastValueFrom, Observable, map, takeUntil} from 'rxjs';
 
 import {API_CONFIG} from '../../../core/config/api-config';
 import {findBrowsePageLink} from '../../../core/data/browse.models';
-import {mapBrowseFacetGroups, mapBrowsePage} from '../../../core/data/browse-response';
+import {mapBrowseFacetResult, mapBrowsePage} from '../../../core/data/browse-response';
 import {bookQueryKeys} from './book-query-keys';
 import {
   BookCollectionFilterParams,
@@ -23,7 +23,7 @@ import {
   toIdsHttpParams,
   toPageHttpParams,
 } from './book-query-params';
-import {BookFacetGroup, BookPage} from './book-query.models';
+import {BookFacetResult, BookPage} from './book-query.models';
 import {BookDetail, BookRecommendation, BookSummary} from './book-response.models';
 import {abortSignal, QUERY_DEFAULTS} from '../../../core/data/query-transport';
 import {AuthService} from '../../../shared/service/auth.service';
@@ -70,10 +70,10 @@ export class BookQueryService {
 
     return queryOptions({
       queryKey: bookQueryKeys.facets(normalized),
-      queryFn: ({signal}): Promise<BookFacetGroup[]> => this.getMapped(
+      queryFn: ({signal}): Promise<BookFacetResult> => this.getMapped(
         `${this.baseUrl}/facets`,
         signal,
-        mapBrowseFacetGroups,
+        mapBrowseFacetResult,
         toCollectionHttpParams(normalized),
       ),
       ...QUERY_DEFAULTS,
