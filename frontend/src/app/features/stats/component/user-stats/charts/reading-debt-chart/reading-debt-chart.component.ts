@@ -12,6 +12,12 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { type ReadingDebtStats } from '../../../../data/user/reading-debt-stats';
 
+interface ReadingDebtLegendEntry {
+  readonly key: string;
+  readonly label: string;
+  readonly color: string;
+}
+
 const SERIES_COLORS = {
   added: '#ef5350',
   finished: '#66bb6a',
@@ -50,6 +56,27 @@ export class ReadingDebtChartComponent {
   readonly trendLabel = computed(() => {
     this.activeLanguage();
     return this.transloco.translate(`statsUser.readingDebt.${this.stats().trend}`);
+  });
+
+  readonly legend = computed<readonly ReadingDebtLegendEntry[]>(() => {
+    this.activeLanguage();
+    return [
+      {
+        key: 'added',
+        label: this.transloco.translate('statsUser.readingDebt.booksAdded'),
+        color: SERIES_COLORS.added,
+      },
+      {
+        key: 'finished',
+        label: this.transloco.translate('statsUser.readingDebt.booksFinished'),
+        color: SERIES_COLORS.finished,
+      },
+      {
+        key: 'backlog',
+        label: this.transloco.translate('statsUser.readingDebt.backlog'),
+        color: SERIES_COLORS.backlog,
+      },
+    ];
   });
 
   readonly chartData = computed<ChartData<'bar' | 'line', number[], string>>(() => {
