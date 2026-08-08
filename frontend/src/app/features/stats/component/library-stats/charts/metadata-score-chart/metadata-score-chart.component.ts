@@ -68,9 +68,10 @@ export class MetadataScoreChartComponent {
     const averageScore = this.stats().averageScore;
     return averageScore == null ? '—' : `${averageScore}%`;
   });
-  readonly state = computed<StatsChartState>(() =>
-    this.loading() || this.totalBooks() > 0 ? 'ready' : 'empty',
-  );
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'loading';
+    return this.totalBooks() > 0 ? 'ready' : 'empty';
+  });
 
   public readonly chartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,

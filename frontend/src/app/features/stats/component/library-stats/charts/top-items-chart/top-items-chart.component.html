@@ -4,6 +4,8 @@
     [heading]="t('titlePrefix') + ' ' + selectedDataType().label"
     [description]="t('descriptionPrefix') + ' ' + selectedDataType().label.toLowerCase() + ' ' + t('descriptionSuffix')"
     [showDescription]="showDescription()"
+    [loadingMessage]="loadingMessage()"
+    [plotHeight]="plotHeight()"
     [state]="state()"
     [emptyMessage]="t('noDataPrefix') + ' ' + selectedDataType().label.toLowerCase() + ' ' + t('noDataSuffix') + ' ' + t('noDataHintPrefix') + ' ' + selectedDataType().label.toLowerCase() + ' ' + t('noDataHintSuffix')">
     <div statsChartActions class="flex items-center gap-3">
@@ -21,17 +23,7 @@
         (valueChange)="onDataTypeChange($event)" />
     </div>
 
-    @if (loading()) {
-      <div
-        class="relative overflow-hidden rounded-lg bg-text/4"
-        [style.height.px]="plotHeight()"
-        role="status"
-        [attr.aria-label]="loadingMessage()">
-        <div
-          class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
-          aria-hidden="true"></div>
-      </div>
-    } @else if (state() === 'ready') {
+    @if (state() === 'ready') {
       <div class="relative min-w-0" [style.height.px]="plotHeight()">
         <canvas
           baseChart

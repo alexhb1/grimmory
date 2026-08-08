@@ -42,7 +42,7 @@ export class ReadingSurvivalChartComponent {
   readonly chartType = 'line' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalStarted > 0 ? 'ready' : 'empty';
   });
   readonly medianDropoutLabel = computed(() => {

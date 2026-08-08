@@ -80,7 +80,7 @@ export class CompletionTimelineChartComponent {
   readonly chartType = 'bar' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
 

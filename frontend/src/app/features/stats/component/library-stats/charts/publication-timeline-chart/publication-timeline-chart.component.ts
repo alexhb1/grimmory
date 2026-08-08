@@ -54,7 +54,7 @@ export class PublicationTimelineChartComponent {
   public readonly chartType = 'bar' as const;
   public chartOptions: ChartConfiguration<'bar'>['options'];
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
   public readonly chartData = computed<TimelineChartData>(() => {

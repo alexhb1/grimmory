@@ -77,7 +77,7 @@ export class PublicationTrendChartComponent {
   });
   public readonly totalBooks = computed(() => this.stats().totalBooks);
   public readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.totalBooks() > 0 ? 'ready' : 'empty';
   });
   public readonly yearRange = computed(() => this.stats().firstYear == null

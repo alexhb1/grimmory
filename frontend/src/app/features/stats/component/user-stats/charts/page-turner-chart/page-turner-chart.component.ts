@@ -55,7 +55,7 @@ export class PageTurnerChartComponent {
   );
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().ranking.length > 0 ? 'ready' : 'empty';
   });
 

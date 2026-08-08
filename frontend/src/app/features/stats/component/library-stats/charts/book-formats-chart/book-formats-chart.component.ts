@@ -55,9 +55,10 @@ export class BookFormatsChartComponent {
 
   readonly chartType = 'pie' as const;
   readonly totalBooks = computed(() => this.stats().totalBooks);
-  readonly state = computed<StatsChartState>(() =>
-    this.loading() || this.totalBooks() > 0 ? 'ready' : 'empty',
-  );
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'loading';
+    return this.totalBooks() > 0 ? 'ready' : 'empty';
+  });
   readonly rows = computed<readonly BookFormatLegendEntry[]>(() =>
     this.stats().formats.map(({ format, bookCount }) => ({
       format,

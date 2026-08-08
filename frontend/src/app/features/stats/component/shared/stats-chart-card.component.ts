@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 import { AppMessageComponent } from '../../../../shared/ui/message/app-message.component';
 
-export type StatsChartState = 'ready' | 'empty' | 'error';
+export type StatsChartState = 'loading' | 'ready' | 'empty' | 'error';
 
 let nextHeadingId = 0;
 
@@ -41,6 +41,17 @@ let nextHeadingId = 0;
 
         <div [class]="contentClass()">
           @switch (state()) {
+            @case ('loading') {
+              <div
+                class="relative overflow-hidden rounded-lg bg-text/4"
+                [style.height.px]="plotHeight()"
+                role="status"
+                [attr.aria-label]="loadingMessage()">
+                <div
+                  class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent via-text/8 to-transparent motion-reduce:animate-none"
+                  aria-hidden="true"></div>
+              </div>
+            }
             @case ('empty') {
               <div class="flex min-h-56 items-center justify-center px-4 text-center text-text-secondary">
                 <p class="max-w-sm text-sm leading-5">{{ emptyMessage() }}</p>
@@ -64,7 +75,6 @@ let nextHeadingId = 0;
         </div>
       </article>
   `,
-  styleUrl: './stats-chart-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: '@container block h-full min-w-0' },
 })
@@ -74,6 +84,8 @@ export class StatsChartCardComponent {
   readonly showDescription = input(true);
   readonly sectionedHeader = input(false);
   readonly state = input<StatsChartState>('ready');
+  readonly loadingMessage = input('Loading chart');
+  readonly plotHeight = input(220);
   readonly emptyMessage = input('No data available');
   readonly errorMessage = input('The chart could not be loaded');
 

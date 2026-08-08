@@ -70,7 +70,7 @@ export class BookLengthChartComponent {
   readonly chartType = 'scatter' as const;
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalRatedBooks > 0 ? 'ready' : 'empty';
   });
   readonly emptyMessage = computed(() => {

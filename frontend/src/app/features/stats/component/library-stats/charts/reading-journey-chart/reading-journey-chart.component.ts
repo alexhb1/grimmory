@@ -45,7 +45,7 @@ export class ReadingJourneyChartComponent {
   public chartOptions: ChartConfiguration<'line'>['options'];
   public readonly hasData = computed(() => this.monthlyData().length > 0);
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.hasData() ? 'ready' : 'empty';
   });
   public readonly dateRange = computed(() => {

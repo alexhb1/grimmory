@@ -106,7 +106,7 @@ export class TopItemsChartComponent implements OnInit {
   readonly totalItems = computed(() => this.itemStats().length);
   readonly insights = computed(() => this.buildInsights(this.kindStats()));
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.totalItems() > 0 ? 'ready' : 'empty';
   });
   readonly legend = computed<readonly TopItemsLegendEntry[]>(() =>

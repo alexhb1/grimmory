@@ -83,7 +83,7 @@ export class AuthorUniverseChartComponent {
   );
   readonly chartData = computed<AuthorUniverseChartData>(() => this.buildChartData(this.authors()));
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.totalAuthors() > 0 ? 'ready' : 'empty';
   });
   readonly legend = computed<readonly CompletionLegendEntry[]>(() =>

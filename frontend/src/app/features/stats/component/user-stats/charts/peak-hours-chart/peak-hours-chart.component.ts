@@ -95,7 +95,7 @@ export class PeakHoursChartComponent {
   });
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalSessions > 0 ? 'ready' : 'empty';
   });
 

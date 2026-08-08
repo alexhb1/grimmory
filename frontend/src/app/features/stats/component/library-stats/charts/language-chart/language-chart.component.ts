@@ -163,9 +163,10 @@ export class LanguageChartComponent {
   })));
   readonly totalBooks = computed(() => this.stats().totalBooks);
   readonly booksWithLanguage = computed(() => this.languageStats().reduce((sum, s) => sum + s.count, 0));
-  readonly state = computed<StatsChartState>(() =>
-    this.loading() || this.booksWithLanguage() > 0 ? 'ready' : 'empty',
-  );
+  readonly state = computed<StatsChartState>(() => {
+    if (this.loading()) return 'loading';
+    return this.booksWithLanguage() > 0 ? 'ready' : 'empty';
+  });
 
   readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
     responsive: true,

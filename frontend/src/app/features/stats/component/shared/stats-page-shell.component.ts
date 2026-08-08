@@ -162,10 +162,25 @@ const RESPONSIVE_COLUMN_CLASSES: Readonly<Record<StatsChartColumnSpan, string>> 
 
       <ng-content select="[statsPageSummary]" />
 
-      <div [class.hidden]="emptyNotice()" class="flex flex-col gap-4" cdkDropListGroup>
+      <div
+        [class.hidden]="emptyNotice()"
+        class="flex flex-col gap-4 [&_.cdk-drag-animating]:[transition:transform_250ms_cubic-bezier(0,0,0.2,1)]"
+        cdkDropListGroup>
         @for (row of controller().rows(); track row.id) {
           <div
-            class="grid min-w-0 grid-cols-1 gap-4 @2xl:grid-cols-12"
+            class="
+              grid min-w-0 grid-cols-1 gap-4 @2xl:grid-cols-12
+              [@container(width>=42rem)]:[&[data-preview-layout=full]>.cdk-drag]:!col-span-12
+              [@container(width>=42rem)]:[&[data-preview-layout=halves]>.cdk-drag]:!col-span-6
+              [@container(width>=42rem)]:[&[data-preview-layout=new-row]>.cdk-drag-placeholder+_.cdk-drag]:!col-start-1
+              [@container(width>=42rem)]:[&[data-preview-layout=new-row]>.cdk-drag-placeholder:not([data-chart-size=small])]:![grid-column-end:span_12]
+              [@container(width>=42rem)]:[&[data-preview-layout=new-row]>.cdk-drag-placeholder[data-chart-size=small]]:![grid-column-end:span_6]
+              [@container(width>=42rem)]:[&[data-preview-layout=new-row]>.cdk-drag-placeholder]:!col-start-1
+              [@container(width>=42rem)]:[&[data-preview-layout=single-small]>.cdk-drag]:!col-span-6
+              [@container(width>=42rem)]:[&[data-preview-layout=small-wide]>[data-chart-size=small]]:!col-span-4
+              [@container(width>=42rem)]:[&[data-preview-layout=small-wide]>[data-chart-size=wide]]:!col-span-8
+              [@container(width>=42rem)]:[&[data-preview-layout=thirds]>.cdk-drag]:!col-span-4
+            "
             [attr.data-preview-layout]="controller().previewLayout(row.id)"
             [id]="row.id"
             cdkDropList
@@ -253,7 +268,6 @@ const RESPONSIVE_COLUMN_CLASSES: Readonly<Record<StatsChartColumnSpan, string>> 
       </div>
     </div>
   `,
-  styleUrl: './stats-page-shell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
 })

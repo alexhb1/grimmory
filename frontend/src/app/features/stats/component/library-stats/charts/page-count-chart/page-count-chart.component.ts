@@ -36,7 +36,7 @@ export class PageCountChartComponent {
 
   public readonly chartType = 'bar' as const;
   readonly state = computed<StatsChartState>(() => {
-    if (this.loading()) return 'ready';
+    if (this.loading()) return 'loading';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
   });
 
