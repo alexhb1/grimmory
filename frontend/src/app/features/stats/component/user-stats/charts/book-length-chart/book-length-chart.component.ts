@@ -21,6 +21,7 @@ interface BookLengthDatum extends ScatterDataPoint {
 }
 
 type BookLengthChartData = ChartData<'scatter', BookLengthDatum[], string>;
+type BookLengthRangeId = NonNullable<BookLengthStats['sweetSpot']>['rangeId'];
 
 const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
@@ -36,6 +37,15 @@ const GROUP_LABEL_KEYS: Readonly<Record<BookLengthStatusGroup, string>> = {
   reading: 'statusReading',
   abandoned: 'statusAbandoned',
   other: 'statusOther',
+};
+
+const RANGE_LABELS: Readonly<Record<BookLengthRangeId, string>> = {
+  'up-to-100': '0-100',
+  '101-to-200': '101-200',
+  '201-to-300': '201-300',
+  '301-to-400': '301-400',
+  '401-to-500': '401-500',
+  'over-500': '501+',
 };
 
 @Component({
@@ -190,6 +200,10 @@ export class BookLengthChartComponent {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
+  }
+
+  protected rangeLabel(rangeId: BookLengthRangeId): string {
+    return RANGE_LABELS[rangeId];
   }
 
   private groupLabel(group: BookLengthStatusGroup): string {

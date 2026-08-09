@@ -76,7 +76,7 @@ export class ReadingProgressChartComponent {
     const bands = this.bands();
 
     return {
-      labels: bands.map((band) => band.label),
+      labels: bands.map((band) => this.bandDescription(band.id)),
       datasets: [
         {
           label: this.transloco.translate('statsUser.readingProgress.booksByProgress'),
