@@ -15,10 +15,7 @@ import {
 import { type CompletionTimelineStats } from '../../../../data/user/completion-timeline-stats';
 
 type CompletionTimelineChartData = ChartData<'bar', number[], string>;
-type CompletionTimelineSeriesId = Exclude<
-  keyof CompletionTimelineStats['months'][number],
-  'month'
->;
+type CompletionTimelineSeriesId = 'completed' | 'activeReading' | 'paused' | 'discontinued';
 
 const COMPLETION_TIMELINE_SERIES: readonly CompletionTimelineSeriesId[] = [
   'completed',
@@ -111,7 +108,9 @@ export class CompletionTimelineChartComponent {
       labels: [...MONTH_LABELS],
       datasets: COMPLETION_TIMELINE_SERIES.map((series) => ({
         label: this.transloco.translate(SERIES_LABEL_KEYS[series]),
-        data: months.map((month) => month[series]),
+        data: months.map((month) => series === 'completed'
+          ? month.finished + month.partiallyRead
+          : month[series]),
         backgroundColor: SERIES_COLORS[series],
         borderColor: SERIES_COLORS[series].replace('0.8)', '1)'),
         borderWidth: 1,

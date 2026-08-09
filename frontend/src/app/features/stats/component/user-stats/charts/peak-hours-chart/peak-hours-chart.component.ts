@@ -13,6 +13,7 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { type PeakHoursStats } from '../../../../data/user/peak-hours-stats';
+import { type UserStatsMonthFilter } from '../../../../data/user/user-stats-transport';
 
 const SESSIONS_COLOR = 'rgba(34, 197, 94, 0.9)';
 const SESSIONS_FILL = 'rgba(34, 197, 94, 0.1)';
@@ -58,7 +59,7 @@ export class PeakHoursChartComponent {
   readonly year = input<number | null>(null);
   readonly month = input<number | null>(null);
   readonly yearOptions = input<readonly number[]>([]);
-  readonly paramsChange = output<{ year: number | null; month: number | null }>();
+  readonly paramsChange = output<UserStatsMonthFilter>();
 
   protected readonly chartType = 'line' as const;
 
@@ -207,11 +208,12 @@ export class PeakHoursChartComponent {
   });
 
   protected onYearChange(year: number | null): void {
-    this.paramsChange.emit({ year, month: this.month() });
+    this.paramsChange.emit(year === null ? { year, month: null } : { year, month: this.month() });
   }
 
   protected onMonthChange(month: number | null): void {
-    this.paramsChange.emit({ year: this.year(), month });
+    const year = this.year();
+    this.paramsChange.emit(year === null ? { year, month: null } : { year, month });
   }
 
   private hourLabel(hour: number): string {

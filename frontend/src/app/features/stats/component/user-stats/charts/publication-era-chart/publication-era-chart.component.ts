@@ -55,16 +55,18 @@ export class PublicationEraChartComponent {
   });
 
   readonly chartData = computed<ChartData<'line', number[], string>>(() => {
-    const { decades, ratingBucketLabels } = this.stats();
+    const { decades } = this.stats();
+    const ratingBands = decades[0]?.ratingBands ?? [];
 
     return {
-      labels: [...ratingBucketLabels],
+      labels: ratingBands.map(({ minimumRating, maximumRating }) =>
+        `${minimumRating}-${maximumRating}`),
       datasets: decades.map((decade, index) => {
         const color = DECADE_COLORS[index % DECADE_COLORS.length];
 
         return {
-          label: decade.label,
-          data: [...decade.bucketCounts],
+          label: `${decade.startYear}s`,
+          data: decade.ratingBands.map(({ bookCount }) => bookCount),
           borderColor: color,
           backgroundColor: `${color}20`,
           borderWidth: 2.5,

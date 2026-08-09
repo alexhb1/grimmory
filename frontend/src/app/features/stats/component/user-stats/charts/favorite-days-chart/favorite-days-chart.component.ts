@@ -13,6 +13,7 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { type FavoriteDaysStats } from '../../../../data/user/favorite-days-stats';
+import { type UserStatsMonthFilter } from '../../../../data/user/user-stats-transport';
 
 const SESSIONS_COLOR = 'rgba(139, 92, 246, 0.8)';
 const SESSIONS_BORDER = 'rgba(139, 92, 246, 1)';
@@ -68,7 +69,7 @@ export class FavoriteDaysChartComponent {
   readonly year = input<number | null>(null);
   readonly month = input<number | null>(null);
   readonly yearOptions = input<readonly number[]>([]);
-  readonly paramsChange = output<{ year: number | null; month: number | null }>();
+  readonly paramsChange = output<UserStatsMonthFilter>();
 
   protected readonly chartType = 'bar' as const;
 
@@ -209,11 +210,12 @@ export class FavoriteDaysChartComponent {
   });
 
   protected onYearChange(year: number | null): void {
-    this.paramsChange.emit({ year, month: this.month() });
+    this.paramsChange.emit(year === null ? { year, month: null } : { year, month: this.month() });
   }
 
   protected onMonthChange(month: number | null): void {
-    this.paramsChange.emit({ year: this.year(), month });
+    const year = this.year();
+    this.paramsChange.emit(year === null ? { year, month: null } : { year, month });
   }
 
   private formatHours(value: number): string {

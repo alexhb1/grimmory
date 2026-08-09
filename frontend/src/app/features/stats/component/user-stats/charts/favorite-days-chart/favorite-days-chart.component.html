@@ -20,6 +20,7 @@
       <app-select
         size="sm"
         styleClass="min-w-32"
+        [disabled]="year() === null"
         [showClear]="true"
         [options]="monthSelectOptions()"
         [value]="month()"

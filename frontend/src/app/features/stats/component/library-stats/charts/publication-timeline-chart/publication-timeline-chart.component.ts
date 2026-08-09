@@ -4,16 +4,14 @@ import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.d
 import {BaseChartDirective} from 'ng2-charts';
 import {ChartConfiguration, ChartData} from 'chart.js';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {
-  PRE_1900_DECADE_START,
-  PublicationTimelineStats,
-} from '../../../../data/library/publication-timeline-stats';
+import { PublicationTimelineStats } from '../../../../data/library/publication-timeline-stats';
 import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 
 type TimelineChartData = ChartData<'bar', number[], string>;
+type TimelineDecade = PublicationTimelineStats['decades'][number];
 
 // Color gradient from warm (old) to cool (new)
 const DECADE_COLORS: Record<string, string> = {
@@ -63,9 +61,9 @@ export class PublicationTimelineChartComponent {
       return {labels: [], datasets: []};
     }
 
-    const labels = stats.map(s => this.decadeLabel(s.decadeStart));
+    const labels = stats.map(decade => this.decadeLabel(decade));
     const data = stats.map(s => s.bookCount);
-    const colors = stats.map(s => DECADE_COLORS[this.decadeKey(s.decadeStart)] ?? '#6B7280');
+    const colors = stats.map(decade => DECADE_COLORS[this.decadeKey(decade)] ?? '#6B7280');
 
     return {
       labels,
@@ -155,14 +153,16 @@ export class PublicationTimelineChartComponent {
     };
   }
 
-  private decadeKey(decadeStart: number): string {
+  private decadeKey(decade: TimelineDecade): string {
+    if (decade.kind === 'pre-1900') return 'pre1900';
+    const decadeStart = decade.startYear;
     if (decadeStart < 1900) return 'pre1900';
     if (decadeStart >= 2020) return '2020s';
     return `${decadeStart}s`;
   }
 
-  protected decadeLabel(decadeStart: number): string {
-    return decadeStart === PRE_1900_DECADE_START ? 'Pre-1900' : `${decadeStart}s`;
+  protected decadeLabel(decade: TimelineDecade): string {
+    return decade.kind === 'pre-1900' ? 'Pre-1900' : `${decade.startYear}s`;
   }
 
   protected formatCount(value: number): string {

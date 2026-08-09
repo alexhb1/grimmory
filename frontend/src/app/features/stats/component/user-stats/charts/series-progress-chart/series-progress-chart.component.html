@@ -68,9 +68,6 @@
                   </p>
                   <p class="mt-0.5 text-xs tabular-nums text-text-muted">
                     {{ t('booksRead', { read: formatCount(series.booksRead), owned: formatCount(series.booksOwned) }) }}
-                    @if (series.totalInSeries) {
-                      {{ t('inSeriesHint', { total: formatCount(series.totalInSeries) }) }}
-                    }
                   </p>
                 </div>
 

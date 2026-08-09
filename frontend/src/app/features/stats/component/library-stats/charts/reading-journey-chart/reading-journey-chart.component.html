@@ -38,7 +38,7 @@
         <div>
           <dt class="text-xs font-medium text-text-secondary">{{ t('insightAvgTimeToFinish') }}</dt>
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ formatNumber(insights.averageDaysToFinish) }}
+            {{ insights.averageDaysToFinish === null ? '—' : formatNumber(insights.averageDaysToFinish) }}
           </dd>
           <dd class="text-xs tabular-nums text-text-muted">{{ t('insightDaysAfterAdding') }}</dd>
         </div>

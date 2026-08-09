@@ -152,7 +152,7 @@ export class ReadingSessionTimelineComponent {
   }
 
   private toSessionView(session: TimelineSessionSegment): TimelineSessionView {
-    const color = session.bookType
+    const color = session.bookType && isKnownBookType(session.bookType)
       ? BOOK_TYPE_COLORS[session.bookType]
       : DEFAULT_BOOK_TYPE_COLOR;
     const range = `${this.formatHour(session.startHour)} - ${this.formatHour(session.endHour)}`;
@@ -227,6 +227,10 @@ export class ReadingSessionTimelineComponent {
     if (remainingMinutes > 0) return `${remainingMinutes}m${seconds > 0 ? `${seconds}s` : ''}`;
     return `${seconds}s`;
   }
+}
+
+function isKnownBookType(value: string): value is BookType {
+  return Object.hasOwn(BOOK_TYPE_COLORS, value);
 }
 
 function shiftReadingWeek(

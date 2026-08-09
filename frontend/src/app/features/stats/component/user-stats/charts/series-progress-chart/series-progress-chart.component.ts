@@ -291,13 +291,6 @@ export class SeriesProgressChartComponent {
                   owned: entry.booksOwned,
                 }),
               ];
-              if (entry.totalInSeries) {
-                lines.push(
-                  this.transloco.translate('statsUser.seriesProgress.tooltipSeriesTotal', {
-                    total: entry.totalInSeries,
-                  }),
-                );
-              }
               if (entry.averagePersonalRating) {
                 lines.push(
                   this.transloco.translate('statsUser.seriesProgress.tooltipYourRating', {

@@ -47,7 +47,7 @@ export class ReadingClockChartComponent {
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
-    return this.stats().segments.length > 0 ? 'ready' : 'empty';
+    return this.stats().minutesByHour.length > 0 ? 'ready' : 'empty';
   });
 
   readonly peakHourLabel = computed(() => {
@@ -60,15 +60,15 @@ export class ReadingClockChartComponent {
   });
 
   readonly chartData = computed<ReadingClockChartData>(() => {
-    const segments = this.stats().segments;
-    const peakMinutes = Math.max(1, ...segments.map((segment) => segment.minutes));
+    const minutesByHour = this.stats().minutesByHour;
+    const peakMinutes = Math.max(1, ...minutesByHour);
 
     return {
       labels: [...HOUR_LABELS],
       datasets: [
         {
-          data: segments.map((segment) => segment.minutes),
-          backgroundColor: segments.map((segment) => segmentColor(segment.minutes / peakMinutes)),
+          data: [...minutesByHour],
+          backgroundColor: minutesByHour.map((minutes) => segmentColor(minutes / peakMinutes)),
         },
       ],
     };

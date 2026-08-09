@@ -6,7 +6,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { type Chart, type ChartConfiguration, type ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
-import { ReadStatus } from '../../../../../book/model/book.model';
+import { type KnownBookReadStatus } from '../../../../../book/data/book-response.models';
 import {
   StatsChartCardComponent,
   type StatsChartState,
@@ -21,28 +21,28 @@ type ReadStatusChartData = ChartData<'doughnut', number[], string>;
 
 const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
-const STATUS_COLORS: Readonly<Record<ReadStatus, string>> = {
-  [ReadStatus.UNREAD]: '#6c757d',
-  [ReadStatus.READING]: '#17a2b8',
-  [ReadStatus.RE_READING]: '#6f42c1',
-  [ReadStatus.READ]: '#28a745',
-  [ReadStatus.PARTIALLY_READ]: '#ffc107',
-  [ReadStatus.PAUSED]: '#fd7e14',
-  [ReadStatus.WONT_READ]: '#dc3545',
-  [ReadStatus.ABANDONED]: '#e74c3c',
-  [ReadStatus.UNSET]: '#343a40',
+const STATUS_COLORS: Readonly<Record<KnownBookReadStatus, string>> = {
+  UNREAD: '#6c757d',
+  READING: '#17a2b8',
+  RE_READING: '#6f42c1',
+  READ: '#28a745',
+  PARTIALLY_READ: '#ffc107',
+  PAUSED: '#fd7e14',
+  WONT_READ: '#dc3545',
+  ABANDONED: '#e74c3c',
+  UNSET: '#343a40',
 };
 
-const STATUS_LABEL_KEYS: Readonly<Record<ReadStatus, string>> = {
-  [ReadStatus.UNREAD]: 'unread',
-  [ReadStatus.READING]: 'currentlyReading',
-  [ReadStatus.RE_READING]: 'reReading',
-  [ReadStatus.READ]: 'read',
-  [ReadStatus.PARTIALLY_READ]: 'partiallyRead',
-  [ReadStatus.PAUSED]: 'paused',
-  [ReadStatus.WONT_READ]: 'wontRead',
-  [ReadStatus.ABANDONED]: 'abandoned',
-  [ReadStatus.UNSET]: 'noStatus',
+const STATUS_LABEL_KEYS: Readonly<Record<KnownBookReadStatus, string>> = {
+  UNREAD: 'unread',
+  READING: 'currentlyReading',
+  RE_READING: 'reReading',
+  READ: 'read',
+  PARTIALLY_READ: 'partiallyRead',
+  PAUSED: 'paused',
+  WONT_READ: 'wontRead',
+  ABANDONED: 'abandoned',
+  UNSET: 'noStatus',
 };
 
 @Component({
@@ -164,7 +164,7 @@ export class ReadStatusChartComponent {
     });
   }
 
-  private statusLabel(status: ReadStatus): string {
+  private statusLabel(status: KnownBookReadStatus): string {
     this.activeLanguage();
     return this.transloco.translate(`statsUser.readStatus.${STATUS_LABEL_KEYS[status]}`);
   }

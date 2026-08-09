@@ -298,7 +298,6 @@
         "sortByBooks": "",
         "tooltip": "",
         "noMatchingSearch": "",
-        "tooltipSeriesTotal": "",
         "sortByName": "",
         "searchSeries": "",
         "tooltipRead": "",
@@ -317,7 +316,6 @@
         "paused": "",
         "axisCompletion": "",
         "unread": "",
-        "inSeriesHint": "",
         "series": "",
         "abandoned": ""
     },

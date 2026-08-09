@@ -30,10 +30,10 @@
         <div class="min-w-0">
           <dt class="text-xs font-medium text-text-secondary">{{ t('insightOldest') }}</dt>
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.oldestBook?.year ?? '—' }}
+            {{ insights.oldestBook.year }}
           </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.oldestBook?.title)">
-            {{ titleOrUnknown(insights.oldestBook?.title) }}
+          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.oldestBook.title)">
+            {{ titleOrUnknown(insights.oldestBook.title) }}
           </dd>
         </div>
 
@@ -48,10 +48,10 @@
         <div class="min-w-0">
           <dt class="text-xs font-medium text-text-secondary">{{ t('insightNewest') }}</dt>
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.newestBook?.year ?? '—' }}
+            {{ insights.newestBook.year }}
           </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.newestBook?.title)">
-            {{ titleOrUnknown(insights.newestBook?.title) }}
+          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.newestBook.title)">
+            {{ titleOrUnknown(insights.newestBook.title) }}
           </dd>
         </div>
 
@@ -76,7 +76,7 @@
         <div class="min-w-0">
           <dt class="text-xs font-medium text-text-secondary">{{ t('insightPeakDecade') }}</dt>
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.peakDecade ? decadeLabel(insights.peakDecade.decadeStart) : '—' }}
+              {{ insights.peakDecade ? decadeLabel(insights.peakDecade) : '—' }}
           </dd>
           <dd class="text-xs tabular-nums text-text-muted">
             {{ t('insightPeakDecadeBooks', { count: formatCount(insights.peakDecade?.bookCount ?? 0) }) }}
