@@ -152,7 +152,14 @@ export class ReadingJourneyChartComponent {
       },
       plugins: {
         legend: {
-          display: false
+          display: true,
+          position: 'top',
+          labels: {
+            font: {family: "'Inter', sans-serif", size: 12},
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: 'circle',
+          },
         },
         tooltip: {
           enabled: true,
@@ -166,9 +173,7 @@ export class ReadingJourneyChartComponent {
             title: (context) => context[0].label,
             afterBody: (context) => {
               const dataIndex = context[0].dataIndex;
-              const addedValue = context[0].chart.data.datasets[0].data[dataIndex] as number;
-              const finishedValue = context[0].chart.data.datasets[1].data[dataIndex] as number;
-              const backlog = addedValue - finishedValue;
+              const backlog = this.stats().months[dataIndex]?.backlog ?? 0;
               return [`\n${this.t.translate('statsLibrary.readingJourney.tooltipBacklog', {count: backlog})}`];
             }
           }

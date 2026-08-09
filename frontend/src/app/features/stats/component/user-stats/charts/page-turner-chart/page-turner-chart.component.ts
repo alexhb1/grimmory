@@ -17,6 +17,7 @@ type PageTurnerChartData = ChartData<'bar', number[], string>;
 const LABEL_LIMIT = 25;
 const CHART_LIMIT = 15;
 const HIGHLIGHT_LIMIT = 3;
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
 @Component({
   selector: 'app-page-turner-chart',
@@ -44,15 +45,7 @@ export class PageTurnerChartComponent {
   readonly chartRanking = computed(() => this.stats().ranking.slice(0, CHART_LIMIT));
   readonly highlights = computed(() => this.stats().ranking.slice(0, HIGHLIGHT_LIMIT));
   readonly mostGripping = computed(() => this.stats().ranking[0] ?? null);
-  readonly guiltyPleasure = computed(
-    () =>
-      this.stats().ranking.find(
-        (book) =>
-          book.gripScore >= 60
-          && book.personalRating !== null
-          && book.personalRating <= 3,
-      ) ?? null,
-  );
+  readonly guiltyPleasure = computed(() => this.stats().guiltyPleasure);
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
@@ -93,6 +86,7 @@ export class PageTurnerChartComponent {
       plugins: {
         legend: { display: false },
         tooltip: {
+          enabled: true,
           borderColor: 'rgba(251, 146, 60, 0.8)',
           borderWidth: 2,
           cornerRadius: 8,
@@ -117,7 +111,7 @@ export class PageTurnerChartComponent {
                 }),
               ];
 
-              if (book.personalRating !== null) {
+              if (book.personalRating) {
                 lines.push(
                   this.transloco.translate('statsUser.pageTurner.tooltipRating', {
                     rating: book.personalRating,
@@ -135,15 +129,15 @@ export class PageTurnerChartComponent {
           title: {
             display: true,
             text: this.transloco.translate('statsUser.pageTurner.axisGripScore'),
-            font: { size: 13, weight: 'bold' },
+            font: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
           },
           min: 0,
           max: 100,
-          ticks: { font: { size: 11 } },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 } },
           border: { display: false },
         },
         y: {
-          ticks: { font: { size: 11 } },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 } },
           grid: { display: false },
           border: { display: false },
         },
@@ -161,5 +155,5 @@ function gripColor(gripScore: number): string {
 }
 
 function truncate(value: string, maximumLength: number): string {
-  return value.length > maximumLength ? `${value.slice(0, maximumLength)}…` : value;
+  return value.length > maximumLength ? `${value.slice(0, maximumLength)}...` : value;
 }

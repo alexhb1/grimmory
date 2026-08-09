@@ -5,10 +5,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Chart, type ChartConfiguration, type ChartData } from 'chart.js';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
+import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { BaseChartDirective } from 'ng2-charts';
 
-import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
-import { type SelectOption } from '../../../../../../shared/ui/select/app-select.options';
+import { AppButtonComponent } from '../../../../../../shared/ui/button/app-button.component';
 import {
   StatsChartCardComponent,
   type StatsChartState,
@@ -32,13 +32,23 @@ interface MatrixDataPoint {
   date: string;
 }
 
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 Chart.register(MatrixController, MatrixElement);
 
 @Component({
   selector: 'app-reading-session-heatmap',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
+  imports: [
+    AppButtonComponent,
+    BaseChartDirective,
+    LucideChevronLeft,
+    LucideChevronRight,
+    StatsChartCardComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './reading-session-heatmap.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -56,19 +66,11 @@ export class ReadingSessionHeatmapComponent {
   readonly plotHeight = input(260);
   readonly showDescription = input(true);
   readonly year = input.required<number>();
-  readonly yearOptions = input<readonly number[]>([]);
   readonly yearChange = output<number>();
 
   protected readonly chartType = 'matrix' as const;
 
   protected readonly streaks = computed(() => this.stats().streaks);
-  protected readonly yearSelectOptions = computed<readonly SelectOption<number>[]>(() => {
-    const years = new Set(this.yearOptions());
-    years.add(this.year());
-    return Array.from(years)
-      .sort((left, right) => right - left)
-      .map((year) => ({ value: year, label: year.toString() }));
-  });
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
@@ -104,9 +106,6 @@ export class ReadingSessionHeatmapComponent {
   });
 
   protected readonly chartOptions = computed<ChartConfiguration<'matrix'>['options']>(() => {
-    const locale = this.activeLanguage();
-    const { weekMonths } = this.stats().calendar;
-
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -124,7 +123,7 @@ export class ReadingSessionHeatmapComponent {
           callbacks: {
             title: (context) => {
               const point = context[0].raw as MatrixDataPoint;
-              return new Intl.DateTimeFormat(locale, {
+              return new Intl.DateTimeFormat('en-US', {
                 timeZone: 'UTC',
                 weekday: 'short',
                 year: 'numeric',
@@ -149,16 +148,15 @@ export class ReadingSessionHeatmapComponent {
           type: 'linear',
           position: 'top',
           min: 0,
-          max: Math.max(0, weekMonths.length - 1),
+          max: 52,
           ticks: {
             stepSize: 4,
             callback: (value) => {
               const week = value as number;
               if (week % 4 !== 0) return '';
-              const month = weekMonths.at(week);
-              return month === undefined ? '' : this.monthLabel(month);
+              return MONTH_NAMES[this.dateFromWeek(this.year(), week).getMonth()];
             },
-            font: { size: 11 },
+            font: { family: "'Inter', sans-serif", size: 11 },
           },
           grid: { display: false },
           border: { display: false },
@@ -169,8 +167,8 @@ export class ReadingSessionHeatmapComponent {
           max: 6,
           ticks: {
             stepSize: 1,
-            callback: (value) => this.weekdayLabel(value as number),
-            font: { size: 11 },
+            callback: (value) => DAY_NAMES[value as number] ?? '',
+            font: { family: "'Inter', sans-serif", size: 11 },
           },
           border: { display: false },
         },
@@ -178,8 +176,8 @@ export class ReadingSessionHeatmapComponent {
     };
   });
 
-  protected onYearChange(year: number | null): void {
-    if (year !== null) this.yearChange.emit(year);
+  protected onYearStep(delta: number): void {
+    this.yearChange.emit(this.year() + delta);
   }
 
   protected formatCount(value: number): string {
@@ -207,18 +205,9 @@ export class ReadingSessionHeatmapComponent {
     return this.transloco.translate(`statsUser.sessionHeatmap.${keys[id]}`);
   }
 
-  private monthLabel(month: number): string {
-    return new Intl.DateTimeFormat(this.activeLanguage(), {
-      month: 'short',
-      timeZone: 'UTC',
-    }).format(Date.UTC(2023, month, 1));
-  }
-
-  private weekdayLabel(weekday: number): string {
-    if (weekday < 0 || weekday > 6) return '';
-    return new Intl.DateTimeFormat(this.activeLanguage(), {
-      weekday: 'short',
-      timeZone: 'UTC',
-    }).format(Date.UTC(2023, 0, 2 + weekday));
+  private dateFromWeek(year: number, week: number): Date {
+    const date = new Date(year, 0, 1);
+    date.setDate(date.getDate() + week * 7 - date.getDay());
+    return date;
   }
 }

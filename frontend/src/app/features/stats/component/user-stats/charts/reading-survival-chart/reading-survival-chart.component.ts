@@ -98,8 +98,8 @@ export class ReadingSurvivalChartComponent {
           borderWidth: 1,
           cornerRadius: 6,
           padding: 12,
-          titleFont: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
-          bodyFont: { family: CHART_FONT_FAMILY, size: 12 },
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
           callbacks: {
             title: (context) =>
               this.transloco.translate('statsUser.readingSurvival.tooltipProgress', {

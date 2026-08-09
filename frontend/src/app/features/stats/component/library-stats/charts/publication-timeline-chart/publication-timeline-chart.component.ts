@@ -172,4 +172,8 @@ export class PublicationTimelineChartComponent {
   protected formatPercent(value: number): string {
     return new Intl.NumberFormat(this.t.getActiveLang(), { style: 'percent' }).format(value / 100);
   }
+
+  protected titleOrUnknown(title: string | null | undefined): string {
+    return title || this.t.translate('statsLibrary.publicationTimeline.unknownTitle');
+  }
 }

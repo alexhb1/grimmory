@@ -11,8 +11,8 @@ import {
   type StatsPageChartConfig,
 } from '../shared/stats-chart-grid.controller';
 import {
+  createStatsPageShellLabels,
   StatsPageShellComponent,
-  type StatsPageShellLabels,
 } from '../shared/stats-page-shell.component';
 import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { UserStatsDataService } from './user-stats-data.service';
@@ -129,31 +129,9 @@ export class UserStatsComponent implements OnInit {
     label: (chart) => this.transloco.translate(`statsUser.${chart.nameKey}`),
   });
   readonly showChartDescriptions = signal(true);
-  readonly shellLabels = computed<StatsPageShellLabels>(() => {
+  readonly shellLabels = computed(() => {
     this.activeLanguage();
-    const chartName = (chart: StatsPageChartConfig) =>
-      this.transloco.translate(`statsUser.${chart.nameKey}`);
-    return {
-      menu: this.transloco.translate('statsUser.config.title'),
-      showDescriptions: this.transloco.translate('statsUser.config.showDescriptions'),
-      edit: this.transloco.translate('statsUser.config.edit'),
-      resetOrder: this.transloco.translate('statsUser.config.resetOrder'),
-      addChart: this.transloco.translate('statsUser.config.addChart'),
-      done: this.transloco.translate('statsUser.config.done'),
-      chartName,
-      reorderChart: (chart) =>
-        `${chartName(chart)}: ${this.transloco.translate('statsUser.main.dragToReorder')}`,
-      removeChart: (chart) =>
-        `${this.transloco.translate('statsUser.config.removeChart')}: ${chartName(chart)}`,
-      moveChartEarlier: (chart) => this.transloco.translate(
-        'statsUser.config.moveChartEarlier',
-        { name: chartName(chart) },
-      ),
-      moveChartLater: (chart) => this.transloco.translate(
-        'statsUser.config.moveChartLater',
-        { name: chartName(chart) },
-      ),
-    };
+    return createStatsPageShellLabels(this.transloco, 'statsUser');
   });
 
   ngOnInit(): void {

@@ -14,16 +14,20 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { type FavoriteDaysStats } from '../../../../data/user/favorite-days-stats';
 
-interface FavoriteDaysLegendEntry {
-  readonly id: 'sessions' | 'duration';
-  readonly label: string;
-  readonly color: string;
-}
-
 const SESSIONS_COLOR = 'rgba(139, 92, 246, 0.8)';
 const SESSIONS_BORDER = 'rgba(139, 92, 246, 1)';
 const DURATION_COLOR = 'rgba(236, 72, 153, 0.8)';
 const DURATION_BORDER = 'rgba(236, 72, 153, 1)';
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
+const WEEKDAY_LABELS: readonly string[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
 
 const MONTH_KEYS = [
   'january',
@@ -78,21 +82,6 @@ export class FavoriteDaysChartComponent {
       label: this.transloco.translate(`statsUser.favoriteDays.${key}`),
     }));
   });
-  protected readonly legend = computed<readonly FavoriteDaysLegendEntry[]>(() => {
-    this.activeLanguage();
-    return [
-      {
-        id: 'sessions',
-        label: this.transloco.translate('statsUser.favoriteDays.sessions'),
-        color: SESSIONS_BORDER,
-      },
-      {
-        id: 'duration',
-        label: this.transloco.translate('statsUser.favoriteDays.durationHours'),
-        color: DURATION_BORDER,
-      },
-    ];
-  });
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
@@ -104,7 +93,7 @@ export class FavoriteDaysChartComponent {
     const days = this.stats().days;
 
     return {
-      labels: days.map((day) => this.weekdayLabel(day.dayIndex)),
+      labels: days.map((day) => WEEKDAY_LABELS[day.dayIndex]),
       datasets: [
         {
           label: this.transloco.translate('statsUser.favoriteDays.sessions'),
@@ -140,7 +129,15 @@ export class FavoriteDaysChartComponent {
       maintainAspectRatio: false,
       layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: CHART_FONT_FAMILY, size: 11 },
+            boxWidth: 12,
+            padding: 10,
+          },
+        },
         tooltip: {
           enabled: true,
           borderWidth: 1,
@@ -171,9 +168,9 @@ export class FavoriteDaysChartComponent {
           title: {
             display: true,
             text: this.transloco.translate('statsUser.favoriteDays.axisDayOfWeek'),
-            font: { size: 13, weight: 'bold' },
+            font: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
           },
-          ticks: { font: { size: 11 } },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 } },
           grid: { display: false },
           border: { display: false },
         },
@@ -185,9 +182,9 @@ export class FavoriteDaysChartComponent {
             display: true,
             text: this.transloco.translate('statsUser.favoriteDays.axisNumberOfSessions'),
             color: SESSIONS_BORDER,
-            font: { size: 13, weight: 'bold' },
+            font: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
           },
-          ticks: { font: { size: 11 }, stepSize: 1 },
+          ticks: { font: { family: CHART_FONT_FAMILY, size: 11 }, stepSize: 1 },
           border: { display: false },
         },
         y1: {
@@ -198,10 +195,10 @@ export class FavoriteDaysChartComponent {
             display: true,
             text: this.transloco.translate('statsUser.favoriteDays.axisDurationHours'),
             color: DURATION_BORDER,
-            font: { size: 13, weight: 'bold' },
+            font: { family: CHART_FONT_FAMILY, size: 13, weight: 'bold' },
           },
           ticks: {
-            font: { size: 11 },
+            font: { family: CHART_FONT_FAMILY, size: 11 },
             callback: (value) => `${typeof value === 'number' ? value.toFixed(1) : '0.0'}h`,
           },
           grid: { drawOnChartArea: false },
@@ -219,16 +216,9 @@ export class FavoriteDaysChartComponent {
     this.paramsChange.emit({ year: this.year(), month });
   }
 
-  private weekdayLabel(dayIndex: number): string {
-    return new Intl.DateTimeFormat(this.activeLanguage(), {
-      weekday: 'short',
-      timeZone: 'UTC',
-    }).format(Date.UTC(2023, 0, 1 + dayIndex));
-  }
-
   private formatHours(value: number): string {
     const hours = Math.floor(value);
-    const minutes = Math.round((value % 1) * 60);
+    const minutes = Math.floor((value % 1) * 60);
     return `${hours}h ${minutes}m`;
   }
 }

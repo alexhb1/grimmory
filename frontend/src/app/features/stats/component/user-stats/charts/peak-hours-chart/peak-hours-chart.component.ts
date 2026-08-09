@@ -14,12 +14,6 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { type PeakHoursStats } from '../../../../data/user/peak-hours-stats';
 
-interface PeakHoursLegendEntry {
-  readonly id: 'sessions' | 'duration';
-  readonly label: string;
-  readonly color: string;
-}
-
 const SESSIONS_COLOR = 'rgba(34, 197, 94, 0.9)';
 const SESSIONS_FILL = 'rgba(34, 197, 94, 0.1)';
 const DURATION_COLOR = 'rgba(251, 191, 36, 0.9)';
@@ -78,21 +72,6 @@ export class PeakHoursChartComponent {
       label: this.transloco.translate(`statsUser.peakHours.${key}`),
     }));
   });
-  protected readonly legend = computed<readonly PeakHoursLegendEntry[]>(() => {
-    this.activeLanguage();
-    return [
-      {
-        id: 'sessions',
-        label: this.transloco.translate('statsUser.peakHours.sessions'),
-        color: SESSIONS_COLOR,
-      },
-      {
-        id: 'duration',
-        label: this.transloco.translate('statsUser.peakHours.avgDurationMin'),
-        color: DURATION_COLOR,
-      },
-    ];
-  });
   readonly state = computed<StatsChartState>(() => {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
@@ -146,7 +125,15 @@ export class PeakHoursChartComponent {
       maintainAspectRatio: false,
       layout: { padding: { top: 10, bottom: 10, left: 10, right: 10 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: "'Inter', sans-serif", size: 11 },
+            boxWidth: 12,
+            padding: 10,
+          },
+        },
         tooltip: {
           enabled: true,
           borderWidth: 1,
@@ -159,15 +146,16 @@ export class PeakHoursChartComponent {
             label: (context) => {
               const label = context.dataset.label ?? '';
               const value = context.parsed.y;
-              if (context.dataset.yAxisID === 'y1') {
-                return this.transloco.translate('statsUser.peakHours.tooltipMin', { label, value });
+              const sessionsLabel = this.transloco.translate('statsUser.peakHours.sessions');
+              if (label === sessionsLabel) {
+                return this.transloco.translate(
+                  value === 1
+                    ? 'statsUser.peakHours.tooltipSessions'
+                    : 'statsUser.peakHours.tooltipSessionsPlural',
+                  { label, value },
+                );
               }
-              return this.transloco.translate(
-                value === 1
-                  ? 'statsUser.peakHours.tooltipSessions'
-                  : 'statsUser.peakHours.tooltipSessionsPlural',
-                { label, value },
-              );
+              return this.transloco.translate('statsUser.peakHours.tooltipMin', { label, value });
             },
           },
         },
@@ -177,37 +165,39 @@ export class PeakHoursChartComponent {
           title: {
             display: true,
             text: this.transloco.translate('statsUser.peakHours.axisHourOfDay'),
-            font: { size: 13, weight: 'bold' },
+            font: { family: "'Inter', sans-serif", size: 13, weight: 'bold' },
           },
-          ticks: { font: { size: 11 }, maxRotation: 0, autoSkipPadding: 12 },
+          ticks: { font: { family: "'Inter', sans-serif", size: 11 } },
           border: { display: false },
         },
         y: {
           type: 'linear',
+          display: true,
           position: 'left',
           beginAtZero: true,
           title: {
             display: true,
             text: this.transloco.translate('statsUser.peakHours.axisNumberOfSessions'),
             color: SESSIONS_COLOR,
-            font: { size: 13, weight: 'bold' },
+            font: { family: "'Inter', sans-serif", size: 13, weight: 'bold' },
           },
-          ticks: { font: { size: 11 }, stepSize: 1 },
+          ticks: { font: { family: "'Inter', sans-serif", size: 11 }, stepSize: 1 },
           border: { display: false },
         },
         y1: {
           type: 'linear',
+          display: true,
           position: 'right',
           beginAtZero: true,
           title: {
             display: true,
             text: this.transloco.translate('statsUser.peakHours.axisAvgDuration'),
             color: DURATION_COLOR,
-            font: { size: 13, weight: 'bold' },
+            font: { family: "'Inter', sans-serif", size: 13, weight: 'bold' },
           },
           ticks: {
-            font: { size: 11 },
-            callback: (value) => `${typeof value === 'number' ? Math.round(value) : 0}m`,
+            font: { family: "'Inter', sans-serif", size: 11 },
+            callback: (value) => `${typeof value === 'number' ? Math.round(value) : '0'}m`,
           },
           grid: { drawOnChartArea: false },
           border: { display: false },
@@ -225,9 +215,9 @@ export class PeakHoursChartComponent {
   }
 
   private hourLabel(hour: number): string {
-    return new Intl.DateTimeFormat(this.activeLanguage(), {
-      hour: 'numeric',
-      timeZone: 'UTC',
-    }).format(Date.UTC(2023, 0, 1, hour));
+    if (hour === 0) return '12 AM';
+    if (hour === 12) return '12 PM';
+    if (hour < 12) return `${hour} AM`;
+    return `${hour - 12} PM`;
   }
 }

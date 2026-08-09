@@ -10,7 +10,6 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 
 interface LanguageChartStat {
   readonly language: string;
@@ -138,7 +137,6 @@ const LANGUAGE_NAMES: Record<string, string> = {
   imports: [
     BaseChartDirective,
     StatsChartCardComponent,
-    StatsCircularChartLayoutComponent,
     TranslocoDirective,
   ],
   templateUrl: './language-chart.component.html',
@@ -176,7 +174,14 @@ export class LanguageChartComponent {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'right',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 12},
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 15,
+        },
       },
       tooltip: {
         enabled: true,
@@ -216,10 +221,6 @@ export class LanguageChartComponent {
       }]
     };
   });
-
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.t.getActiveLang());
-  }
 
   private getDisplayName(language: string): string {
     const lower = language.toLowerCase();

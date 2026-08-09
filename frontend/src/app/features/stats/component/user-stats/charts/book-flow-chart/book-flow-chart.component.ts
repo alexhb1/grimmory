@@ -62,18 +62,19 @@ const RATING_COLORS: Readonly<Record<BookFlowRatingId, string>> = {
 };
 
 const STATUS_LABEL_KEYS: Readonly<Record<BookFlowStatusId, string>> = {
-  read: 'statsUser.readStatus.read',
-  reading: 'statsUser.readStatus.currentlyReading',
-  unread: 'statsUser.readStatus.unread',
-  paused: 'statsUser.readStatus.paused',
-  abandoned: 'statsUser.readStatus.abandoned',
-  other: 'statsUser.readStatus.noStatus',
+  read: 'statsUser.bookFlow.statusRead',
+  reading: 'statsUser.bookFlow.statusReading',
+  unread: 'statsUser.bookFlow.statusUnread',
+  paused: 'statsUser.bookFlow.statusPaused',
+  abandoned: 'statsUser.bookFlow.statusAbandoned',
+  other: 'statsUser.bookFlow.statusOther',
 };
 
-const RATING_LABELS: Readonly<Record<Exclude<BookFlowRatingId, 'unrated'>, string>> = {
-  high: '4-5',
-  mid: '3',
-  low: '1-2',
+const RATING_LABEL_KEYS: Readonly<Record<BookFlowRatingId, string>> = {
+  high: 'statsUser.bookFlow.ratingHigh',
+  mid: 'statsUser.bookFlow.ratingMid',
+  low: 'statsUser.bookFlow.ratingLow',
+  unrated: 'statsUser.bookFlow.ratingUnrated',
 };
 
 const UNKNOWN_LABEL = '—';
@@ -116,7 +117,9 @@ export class BookFlowChartComponent {
 
   readonly busiestQuarterLabel = computed(() => {
     const quarter = this.stats().busiestQuarter;
-    return quarter ? formatQuarter(quarter) : UNKNOWN_LABEL;
+    return quarter
+      ? formatQuarter(quarter)
+      : this.transloco.translate('statsUser.bookFlow.unknownQuarter');
   });
 
   readonly topStatusLabel = computed(() => {
@@ -245,16 +248,16 @@ export class BookFlowChartComponent {
     switch (node.column) {
       case 'added':
         if (node.id === BOOK_FLOW_OTHER_QUARTERS_ID) {
-          return this.transloco.translate('statsUser.bookFlow.statusOther');
+          return this.transloco.translate('statsUser.bookFlow.otherQuarters');
         }
-        return node.quarter ? formatQuarter(node.quarter) : UNKNOWN_LABEL;
+        return node.quarter
+          ? formatQuarter(node.quarter)
+          : this.transloco.translate('statsUser.bookFlow.unknownQuarter');
       case 'status':
         return this.transloco.translate(STATUS_LABEL_KEYS[node.id as BookFlowStatusId]);
       case 'rating': {
         const ratingId = node.id as BookFlowRatingId;
-        return ratingId === 'unrated'
-          ? this.transloco.translate('book.table.noRating')
-          : RATING_LABELS[ratingId];
+        return this.transloco.translate(RATING_LABEL_KEYS[ratingId]);
       }
     }
   }

@@ -32,8 +32,8 @@
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
             {{ insights.oldestBook?.year ?? '—' }}
           </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="insights.oldestBook?.title ?? ''">
-            {{ insights.oldestBook?.title ?? '—' }}
+          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.oldestBook?.title)">
+            {{ titleOrUnknown(insights.oldestBook?.title) }}
           </dd>
         </div>
 
@@ -50,8 +50,8 @@
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
             {{ insights.newestBook?.year ?? '—' }}
           </dd>
-          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="insights.newestBook?.title ?? ''">
-            {{ insights.newestBook?.title ?? '—' }}
+          <dd class="truncate text-xs tabular-nums text-text-muted" [title]="titleOrUnknown(insights.newestBook?.title)">
+            {{ titleOrUnknown(insights.newestBook?.title) }}
           </dd>
         </div>
 

@@ -1,8 +1,12 @@
 import {TestBed} from '@angular/core/testing';
 import {TranslocoService} from '@jsverse/transloco';
+import {of} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {BookFormatStats} from '../../../../data/library/book-format-stats';
+import {
+  BookFormatStats,
+  UNKNOWN_BOOK_FORMAT_ID,
+} from '../../../../data/library/book-format-stats';
 import {BookFormatsChartComponent} from './book-formats-chart.component';
 
 interface TooltipContext {
@@ -19,7 +23,11 @@ describe('BookFormatsChartComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [BookFormatsChartComponent],
-      providers: [{provide: TranslocoService, useValue: {translate}}],
+      providers: [{provide: TranslocoService, useValue: {
+        translate,
+        langChanges$: of('en'),
+        getActiveLang: () => 'en',
+      }}],
     });
   });
 
@@ -38,12 +46,17 @@ describe('BookFormatsChartComponent', () => {
         {format: 'EPUB', bookCount: 4},
         {format: 'PDF', bookCount: 3},
         {format: 'AUDIOBOOK', bookCount: 2},
-        {format: 'Unknown', bookCount: 1},
+        {format: UNKNOWN_BOOK_FORMAT_ID, bookCount: 1},
       ],
     });
 
     expect(component.totalBooks()).toBe(10);
-    expect(component.chartData().labels).toEqual(['EPUB', 'PDF', 'AUDIOBOOK', 'Unknown']);
+    expect(component.chartData().labels).toEqual([
+      'EPUB',
+      'PDF',
+      'AUDIOBOOK',
+      'statsLibrary.bookFormats.unknown',
+    ]);
     expect(component.chartData().datasets[0]?.data).toEqual([4, 3, 2, 1]);
     expect(component.chartData().datasets[0]?.backgroundColor).toEqual([
       '#0D9488', '#E11D48', '#6B7280', '#6B7280',

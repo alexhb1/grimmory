@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
-import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { Chart, type ChartConfiguration, type ChartData } from 'chart.js';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
@@ -21,6 +20,20 @@ interface HeatmapPoint {
 }
 
 const MONTHS_PER_YEAR = 12;
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
 
 Chart.register(MatrixController, MatrixElement);
 
@@ -35,9 +48,6 @@ Chart.register(MatrixController, MatrixElement);
 })
 export class ReadingHeatmapChartComponent {
   private readonly transloco = inject(TranslocoService);
-  private readonly activeLanguage = toSignal(this.transloco.langChanges$, {
-    initialValue: this.transloco.getActiveLang(),
-  });
 
   readonly stats = input.required<ReadingHeatmapStats>();
   readonly loading = input(false);
@@ -51,13 +61,6 @@ export class ReadingHeatmapChartComponent {
     if (this.error()) return 'error';
     if (this.loading()) return 'loading';
     return this.stats().totalBooks > 0 ? 'ready' : 'empty';
-  });
-
-  private readonly monthLabels = computed(() => {
-    const locale = this.activeLanguage();
-    return Array.from({ length: MONTHS_PER_YEAR }, (_, month) =>
-      new Date(2000, month, 1).toLocaleDateString(locale, { month: 'short' }),
-    );
   });
 
   readonly chartData = computed<ChartData<'matrix', HeatmapPoint[], string>>(() => {
@@ -81,15 +84,14 @@ export class ReadingHeatmapChartComponent {
             return `rgba(239, 71, 111, ${Math.max(0.2, Math.min(1, intensity * 0.8 + 0.2))})`;
           },
           borderWidth: 1,
-          width: ({ chart }) => chart.chartArea.width / MONTHS_PER_YEAR - 1,
-          height: ({ chart }) => chart.chartArea.height / years.length - 1,
+          width: ({ chart }) => (chart.chartArea?.width || 0) / MONTHS_PER_YEAR - 1,
+          height: ({ chart }) => (chart.chartArea?.height || 0) / years.length - 1,
         },
       ],
     };
   });
 
   readonly chartOptions = computed<ChartConfiguration<'matrix'>['options']>(() => {
-    const months = this.monthLabels();
     const years = this.stats().years;
 
     return {
@@ -112,7 +114,7 @@ export class ReadingHeatmapChartComponent {
               const point = context[0]?.raw as HeatmapPoint | undefined;
               if (!point) return '';
 
-              return `${months[point.x]} ${years[point.y]}`;
+              return `${MONTH_LABELS[point.x]} ${years[point.y]}`;
             },
             label: (context) => {
               const point = context.raw as HeatmapPoint | undefined;
@@ -132,7 +134,7 @@ export class ReadingHeatmapChartComponent {
           position: 'bottom',
           ticks: {
             stepSize: 1,
-            callback: (value) => months[value as number] ?? '',
+            callback: (value) => MONTH_LABELS[value as number] ?? '',
             font: { family: "'Inter', sans-serif", size: 11 },
           },
           grid: { display: false },

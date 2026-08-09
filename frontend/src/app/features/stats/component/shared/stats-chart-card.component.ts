@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 import { AppMessageComponent } from '../../../../shared/ui/message/app-message.component';
 
@@ -9,7 +10,7 @@ let nextHeadingId = 0;
 @Component({
   selector: 'app-stats-chart-card',
   standalone: true,
-  imports: [AppMessageComponent],
+  imports: [AppMessageComponent, TranslocoPipe],
   template: `
     <article
       class="flex h-full min-w-0 flex-col rounded-xl bg-page text-text tabular-nums ring-1 ring-inset ring-border"
@@ -54,13 +55,15 @@ let nextHeadingId = 0;
             }
             @case ('empty') {
               <div class="flex min-h-56 items-center justify-center px-4 text-center text-text-secondary">
-                <p class="max-w-sm text-sm leading-5">{{ emptyMessage() }}</p>
+                <p class="max-w-sm text-sm leading-5">
+                  {{ emptyMessage() ?? ('common.statsChartNoData' | transloco) }}
+                </p>
               </div>
             }
             @case ('error') {
               <div class="flex min-h-56 items-center justify-center">
                 <app-message color="red" styleClass="max-w-md">
-                  {{ errorMessage() }}
+                  {{ 'common.statsChartLoadError' | transloco }}
                 </app-message>
               </div>
             }
@@ -86,8 +89,7 @@ export class StatsChartCardComponent {
   readonly state = input<StatsChartState>('ready');
   readonly loadingMessage = input('Loading chart');
   readonly plotHeight = input(220);
-  readonly emptyMessage = input('No data available');
-  readonly errorMessage = input('The chart could not be loaded');
+  readonly emptyMessage = input<string>();
 
   protected readonly headingId = `stats-chart-heading-${nextHeadingId++}`;
   protected readonly headerClass = computed(() => {

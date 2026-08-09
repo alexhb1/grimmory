@@ -117,6 +117,64 @@ describe('StatsChartGridController', () => {
     ]);
   });
 
+  it('adds a removed chart and resets enabled charts to their default order', () => {
+    const controller = createController();
+
+    controller.remove('second');
+    controller.move('third', -1);
+    controller.add('second');
+    expect(controller.enabledCharts().map(({ id }) => id)).toEqual([
+      'third',
+      'first',
+      'full',
+      'second',
+    ]);
+
+    controller.resetOrder();
+    expect(controller.enabledCharts().map(({ id }) => id)).toEqual([
+      'first',
+      'second',
+      'third',
+      'full',
+    ]);
+  });
+
+  it('reorders within a row from a drag/drop event', () => {
+    const controller = createController();
+    const row = controller.rows().find(({ charts }) => charts.length > 1);
+    if (!row) throw new Error('Expected a multi-chart row');
+
+    controller.reorder({
+      previousContainer: { id: row.id },
+      container: { id: row.id },
+      previousIndex: 0,
+      currentIndex: 1,
+    } as Parameters<StatsChartGridController['reorder']>[0]);
+
+    expect(controller.enabledCharts().slice(0, 3).map(({ id }) => id)).toEqual([
+      'second',
+      'first',
+      'third',
+    ]);
+  });
+
+  it('supports Home and End keys and falls back from corrupt persistence', () => {
+    localStorage.setItem(STORAGE_KEY, '{invalid');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const controller = createController();
+    expect(controller.enabledCharts()).toHaveLength(CHARTS.length);
+
+    const home = new KeyboardEvent('keydown', { key: 'Home', cancelable: true });
+    controller.reorderKeydown(home, 'third');
+    expect(home.defaultPrevented).toBe(true);
+    expect(controller.enabledCharts()[0].id).toBe('third');
+
+    const end = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+    controller.reorderKeydown(end, 'third');
+    expect(controller.enabledCharts().at(-1)?.id).toBe('third');
+    consoleError.mockRestore();
+  });
+
   function createController(): StatsChartGridController {
     return TestBed.runInInjectionContext(() =>
       new StatsChartGridController({

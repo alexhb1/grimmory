@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { type ChartConfiguration, type ChartData, type TooltipItem } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
@@ -15,18 +15,6 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-
-interface ItemStats {
-  name: string;
-  count: number;
-  statusBreakdown: Record<ReadStatus, number>;
-}
-
-interface TopItemsLegendEntry {
-  readonly status: ReadStatus;
-  readonly label: string;
-  readonly color: string;
-}
 
 type ItemChartData = ChartData<'bar', number[], string>;
 
@@ -72,7 +60,7 @@ const READ_STATUS_COLORS: Record<ReadStatus, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
 })
-export class TopItemsChartComponent implements OnInit {
+export class TopItemsChartComponent {
   private readonly t = inject(TranslocoService);
 
   readonly stats = input.required<TopItemsStats>();
@@ -80,7 +68,6 @@ export class TopItemsChartComponent implements OnInit {
   readonly loadingMessage = input('Loading chart');
   readonly plotHeight = input(260);
   readonly showDescription = input(true);
-  readonly initialDataType = input<TopItemsKind | null>(null);
 
   readonly chartType = 'bar' as const;
   readonly dataTypeOptions = DATA_TYPE_DEFS.map(def => ({
@@ -91,39 +78,20 @@ export class TopItemsChartComponent implements OnInit {
   }));
   readonly selectedDataType = signal(this.dataTypeOptions[0]);
   readonly kindStats = computed(() => this.stats().kinds[this.selectedDataType().value]);
-  readonly itemStats = computed<ItemStats[]>(() => this.kindStats().items.map(item => ({
-    name: item.name,
-    count: item.bookCount,
-    statusBreakdown: Object.fromEntries(
-      Object.values(ReadStatus).map(status => [
-        status,
-        item.segments
-          .filter(segment => segment.status === status)
-          .reduce((total, segment) => total + segment.count, 0),
-      ]),
-    ) as Record<ReadStatus, number>,
-  })));
-  readonly totalItems = computed(() => this.itemStats().length);
+  readonly totalItems = computed(() => this.kindStats().items.length);
   readonly insights = computed(() => this.buildInsights(this.kindStats()));
   readonly state = computed<StatsChartState>(() => {
     if (this.loading()) return 'loading';
     return this.totalItems() > 0 ? 'ready' : 'empty';
   });
-  readonly legend = computed<readonly TopItemsLegendEntry[]>(() =>
-    this.kindStats().statuses.map(status => ({
-      status,
-      label: this.t.translate(`statsLibrary.topItems.readStatus.${READ_STATUS_KEYS[status]}`),
-      color: READ_STATUS_COLORS[status],
-    })),
-  );
-
   readonly chartData = computed<ItemChartData>(() => {
-    const stats = this.itemStats();
+    const items = this.kindStats().items;
     return {
-      labels: stats.map(item => this.truncateTitle(item.name, 30)),
+      labels: items.map(item => this.truncateTitle(item.name, 30)),
       datasets: this.kindStats().statuses.map(status => ({
         label: this.t.translate(`statsLibrary.topItems.readStatus.${READ_STATUS_KEYS[status]}`),
-        data: stats.map(item => item.statusBreakdown[status]),
+        data: items.map(item =>
+          item.segments.find(segment => segment.status === status)?.count ?? 0),
         backgroundColor: READ_STATUS_COLORS[status],
         borderColor: READ_STATUS_COLORS[status],
         borderWidth: 1,
@@ -161,7 +129,14 @@ export class TopItemsChartComponent implements OnInit {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'bottom',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 11},
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'circle',
+        },
       },
       tooltip: {
         enabled: true,
@@ -173,18 +148,13 @@ export class TopItemsChartComponent implements OnInit {
         titleFont: {size: 14, weight: 'bold'},
         bodyFont: {size: 12},
         callbacks: {
-          title: context => this.itemStats()[context[0].dataIndex]?.name || 'Unknown',
+          title: context => this.kindStats().items[context[0].dataIndex]?.name || 'Unknown',
           label: context => this.formatTooltipLabel(context),
         },
       },
     },
     interaction: {intersect: true, mode: 'nearest', axis: 'y'},
   }));
-
-  ngOnInit(): void {
-    const initialOption = this.dataTypeOptions.find(option => option.value === this.initialDataType());
-    if (initialOption) this.selectedDataType.set(initialOption);
-  }
 
   onDataTypeChange(kind: TopItemsKind | null): void {
     const option = this.dataTypeOptions.find(candidate => candidate.value === kind);

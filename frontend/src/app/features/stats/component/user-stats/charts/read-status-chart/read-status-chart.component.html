@@ -8,28 +8,13 @@
     [state]="state()"
     [emptyMessage]="emptyMessage()">
     @if (state() === 'ready') {
-      <app-stats-circular-chart-layout [plotHeight]="plotHeight()">
+      <div class="relative min-w-0" [style.height.px]="plotHeight()">
         <canvas
-          statsCircularChartPlot
           baseChart
           [data]="chartData()"
           [options]="chartOptions()"
           [type]="chartType"></canvas>
-
-        <ul statsCircularChartLegend class="min-w-0 space-y-1.5 text-xs text-text-secondary">
-          @for (entry of legend(); track entry.status) {
-            <li class="flex min-w-0 items-center gap-2">
-              <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
-                <circle cx="5" cy="5" r="5" [attr.fill]="entry.color"></circle>
-              </svg>
-              <span class="min-w-0 flex-1 truncate" [title]="entry.label">{{ entry.label }}</span>
-              <span class="shrink-0 pl-5 font-medium tabular-nums text-text-strong">
-                {{ formatCount(entry.bookCount) }}
-              </span>
-            </li>
-          }
-        </ul>
-      </app-stats-circular-chart-layout>
+      </div>
     }
   </app-stats-chart-card>
 </ng-container>

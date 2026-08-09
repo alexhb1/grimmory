@@ -3,11 +3,11 @@ import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.d
 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
+import { LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { type ChartData, type ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
-import { AppSelectComponent } from '../../../../../../shared/ui/select/app-select.component';
-import { type SelectOption } from '../../../../../../shared/ui/select/app-select.options';
+import { AppButtonComponent } from '../../../../../../shared/ui/button/app-button.component';
 import {
   StatsChartCardComponent,
   type StatsChartState,
@@ -15,12 +15,6 @@ import {
 import { type SessionArchetypeStats } from '../../../../data/user/session-archetypes-stats';
 
 type SessionArchetypeChartData = ChartData<'scatter', { x: number; y: number }[], string>;
-
-interface SessionArchetypeLegendEntry {
-  readonly dayOfWeek: number;
-  readonly label: string;
-  readonly color: string;
-}
 
 const DAY_COLORS: readonly string[] = [
   '#ef5350',
@@ -31,12 +25,20 @@ const DAY_COLORS: readonly string[] = [
   '#7e57c2',
   '#ec407a',
 ];
+const DAY_NAMES: readonly string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 @Component({
   selector: 'app-session-archetypes-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [AppSelectComponent, BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
+  imports: [
+    AppButtonComponent,
+    BaseChartDirective,
+    LucideChevronLeft,
+    LucideChevronRight,
+    StatsChartCardComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './session-archetypes-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -49,7 +51,6 @@ export class SessionArchetypesChartComponent {
 
   readonly stats = input.required<SessionArchetypeStats>();
   readonly year = input.required<number>();
-  readonly yearOptions = input<readonly number[]>([]);
   readonly loading = input(false);
   readonly error = input(false);
   readonly loadingMessage = input('Loading chart');
@@ -64,12 +65,13 @@ export class SessionArchetypesChartComponent {
     return this.stats().sessionCount > 0 ? 'ready' : 'empty';
   });
 
-  readonly yearSelectOptions = computed<readonly SelectOption<number>[]>(() => {
-    return this.yearOptions().map((year) => ({ value: year, label: String(year) }));
-  });
-  readonly yearSelectorLabel = computed(() => {
+  readonly previousYearLabel = computed(() => {
     this.activeLanguage();
-    return this.transloco.translate('statsUser.peakHours.selectYear');
+    return this.transloco.translate('statsUser.completionRace.previousYear');
+  });
+  readonly nextYearLabel = computed(() => {
+    this.activeLanguage();
+    return this.transloco.translate('statsUser.completionRace.nextYear');
   });
   readonly dominantArchetypeLabel = computed(() => {
     this.activeLanguage();
@@ -78,24 +80,13 @@ export class SessionArchetypesChartComponent {
       ? '—'
       : this.transloco.translate(`statsUser.sessionArchetypes.archetype_${archetype}`);
   });
-  readonly legend = computed<readonly SessionArchetypeLegendEntry[]>(() => {
-    const locale = this.activeLanguage();
-    return this.stats().days.map((day) => ({
-      dayOfWeek: day.dayOfWeek,
-      label: formatDayName(day.dayOfWeek, locale),
-      color: DAY_COLORS[(day.dayOfWeek - 1) % DAY_COLORS.length],
-    }));
-  });
-
   readonly chartData = computed<SessionArchetypeChartData>(() => {
-    const legend = this.legend();
-
     return {
-      datasets: this.stats().days.map((day, index) => ({
-        label: legend[index].label,
+      datasets: this.stats().days.map((day) => ({
+        label: DAY_NAMES[(day.dayOfWeek - 1) % DAY_NAMES.length],
         data: day.points.map((point) => ({ x: point.hourOfDay, y: point.durationMinutes })),
-        backgroundColor: `${legend[index].color}AA`,
-        borderColor: legend[index].color,
+        backgroundColor: `${DAY_COLORS[(day.dayOfWeek - 1) % DAY_COLORS.length]}AA`,
+        borderColor: DAY_COLORS[(day.dayOfWeek - 1) % DAY_COLORS.length],
         borderWidth: 1,
         pointRadius: 5,
         pointHoverRadius: 8,
@@ -104,15 +95,21 @@ export class SessionArchetypesChartComponent {
   });
 
   readonly chartOptions = computed<ChartOptions<'scatter'>>(() => {
-    const locale = this.activeLanguage();
-
     return {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 400 },
       layout: { padding: { top: 10, right: 20 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            font: { family: "'Inter', sans-serif", size: 11 },
+            boxWidth: 10,
+            padding: 12,
+          },
+        },
         tooltip: {
           cornerRadius: 6,
           padding: 10,
@@ -135,7 +132,7 @@ export class SessionArchetypesChartComponent {
           ticks: {
             font: { size: 10 },
             stepSize: 3,
-            callback: (value) => formatHour(Number(value), locale),
+            callback: (value) => formatHour(Number(value)),
           },
           title: { display: true, text: 'Time of Day', font: { size: 11 } },
         },
@@ -148,15 +145,13 @@ export class SessionArchetypesChartComponent {
     };
   });
 
-  protected onYearChange(year: number | null): void {
-    if (year !== null) this.yearChange.emit(year);
+  protected changeYear(delta: number): void {
+    this.yearChange.emit(this.year() + delta);
   }
 }
 
-function formatDayName(dayOfWeek: number, locale: string): string {
-  return new Date(2000, 0, 1 + dayOfWeek).toLocaleDateString(locale, { weekday: 'short' });
-}
-
-function formatHour(hour: number, locale: string): string {
-  return new Date(2000, 0, 1, hour % 24).toLocaleTimeString(locale, { hour: 'numeric' });
+function formatHour(hour: number): string {
+  if (hour === 0) return '12am';
+  if (hour === 12) return '12pm';
+  return hour < 12 ? `${hour}am` : `${hour - 12}pm`;
 }

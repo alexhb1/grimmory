@@ -34,6 +34,8 @@ const TRAIT_COLORS: Readonly<Record<ReadingDnaTraitId, string>> = {
   ambitious: '#009688',
 };
 
+const TRAIT_ICONS: readonly string[] = ['🌟', '💎', '🧠', '💖', '🕰️', '👥', '📚', '🚀'];
+
 @Component({
   selector: 'app-reading-dna-chart',
   standalone: true,
@@ -121,6 +123,10 @@ export class ReadingDNAChartComponent {
           pointLabels: {
             font: { family: "'Inter', sans-serif", size: 12 },
             padding: 25,
+            callback: (label: string) => {
+              const index = traits.findIndex((entry) => entry.label === label);
+              return [TRAIT_ICONS[index] ?? '', label];
+            },
           },
         },
       },
@@ -163,6 +169,6 @@ export class ReadingDNAChartComponent {
   });
 
   protected formatScore(value: number): string {
-    return value.toLocaleString(this.activeLanguage());
+    return `${value.toLocaleString(this.activeLanguage())}%`;
   }
 }

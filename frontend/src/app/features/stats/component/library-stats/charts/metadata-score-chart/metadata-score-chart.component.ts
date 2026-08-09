@@ -10,7 +10,6 @@ import {
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 
 interface ScoreStats {
   readonly id: ScoreRangeKey;
@@ -22,12 +21,12 @@ interface ScoreStats {
 type ScoreChartData = ChartData<'doughnut', number[], string>;
 type ScoreRangeKey = 'excellent' | 'good' | 'fair' | 'poor' | 'veryPoor';
 
-const SCORE_RANGE_DEFS: { key: ScoreRangeKey; min: number; max: number; color: string }[] = [
-  {key: 'excellent', min: 90, max: 100, color: '#16A34A'},
-  {key: 'good', min: 70, max: 89, color: '#22C55E'},
-  {key: 'fair', min: 50, max: 69, color: '#F59E0B'},
-  {key: 'poor', min: 25, max: 49, color: '#F97316'},
-  {key: 'veryPoor', min: 0, max: 24, color: '#DC2626'}
+const SCORE_RANGE_DEFS: { key: ScoreRangeKey; color: string }[] = [
+  {key: 'excellent', color: '#16A34A'},
+  {key: 'good', color: '#22C55E'},
+  {key: 'fair', color: '#F59E0B'},
+  {key: 'poor', color: '#F97316'},
+  {key: 'veryPoor', color: '#DC2626'}
 ];
 
 @Component({
@@ -37,7 +36,6 @@ const SCORE_RANGE_DEFS: { key: ScoreRangeKey; min: number; max: number; color: s
   imports: [
     BaseChartDirective,
     StatsChartCardComponent,
-    StatsCircularChartLayoutComponent,
     TranslocoDirective,
   ],
   templateUrl: './metadata-score-chart.component.html',
@@ -63,11 +61,6 @@ export class MetadataScoreChartComponent {
       color: SCORE_RANGE_DEFS.find(range => range.key === bucket.id)?.color ?? '#6B7280',
     })));
   public readonly totalBooks = computed(() => this.stats().totalBooks);
-  public readonly averageScore = computed(() => this.stats().averageScore ?? 0);
-  readonly averageValue = computed(() => {
-    const averageScore = this.stats().averageScore;
-    return averageScore == null ? '—' : `${averageScore}%`;
-  });
   readonly state = computed<StatsChartState>(() => {
     if (this.loading()) return 'loading';
     return this.totalBooks() > 0 ? 'ready' : 'empty';
@@ -82,7 +75,14 @@ export class MetadataScoreChartComponent {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'right',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 12},
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 15,
+        },
       },
       tooltip: {
         enabled: true,
@@ -123,7 +123,4 @@ export class MetadataScoreChartComponent {
     };
   });
 
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.t.getActiveLang());
-  }
 }

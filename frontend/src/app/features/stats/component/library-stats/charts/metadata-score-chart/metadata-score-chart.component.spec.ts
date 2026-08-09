@@ -33,17 +33,15 @@ describe('MetadataScoreChartComponent', () => {
   it('renders typed score buckets and their translated labels', () => {
     const component = createComponent({
       totalBooks: 9,
-      averageScore: 52,
       buckets: [
-        {id: 'excellent', minimum: 90, maximum: 100, bookCount: 1},
-        {id: 'good', minimum: 70, maximum: 89, bookCount: 2},
-        {id: 'fair', minimum: 50, maximum: 69, bookCount: 2},
-        {id: 'poor', minimum: 25, maximum: 49, bookCount: 2},
-        {id: 'veryPoor', minimum: 0, maximum: 24, bookCount: 2},
+        {id: 'excellent', bookCount: 1},
+        {id: 'good', bookCount: 2},
+        {id: 'fair', bookCount: 2},
+        {id: 'poor', bookCount: 2},
+        {id: 'veryPoor', bookCount: 2},
       ],
     });
 
-    expect(component.averageScore()).toBe(52);
     expect(component.chartData().labels).toEqual([
       'statsLibrary.metadataScore.excellent',
       'statsLibrary.metadataScore.good',
@@ -58,17 +56,16 @@ describe('MetadataScoreChartComponent', () => {
   });
 
   it('renders an empty result without chart datasets', () => {
-    const component = createComponent({totalBooks: 0, averageScore: null, buckets: []});
+    const component = createComponent({totalBooks: 0, buckets: []});
     expect(component.chartData()).toEqual({labels: [], datasets: []});
   });
 
   it('formats tooltips from typed result counts', () => {
     const component = createComponent({
       totalBooks: 3,
-      averageScore: 64,
       buckets: [
-        {id: 'excellent', minimum: 90, maximum: 100, bookCount: 2},
-        {id: 'veryPoor', minimum: 0, maximum: 24, bookCount: 1},
+        {id: 'excellent', bookCount: 2},
+        {id: 'veryPoor', bookCount: 1},
       ],
     });
     const callback = component.chartOptions?.plugins?.tooltip?.callbacks?.label as

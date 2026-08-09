@@ -26,64 +26,50 @@ type SeriesProgressSeries = SeriesProgressStats['series'][number];
 type SeriesProgressSort = 'progress' | 'rating' | 'books' | 'name';
 
 interface SeriesProgressSegment {
-  readonly key: string;
   readonly labelKey: string;
   readonly fill: string;
   readonly border: string;
   readonly count: (series: SeriesProgressSeries) => number;
 }
 
-interface SeriesProgressLegendEntry {
-  readonly key: string;
-  readonly label: string;
-  readonly color: string;
-}
-
 const SEGMENTS: readonly SeriesProgressSegment[] = [
   {
-    key: 'read',
     labelKey: 'read',
     fill: 'rgba(76, 175, 80, 0.85)',
     border: '#4caf50',
     count: (series) => series.booksRead,
   },
   {
-    key: 'reading',
     labelKey: 'reading',
     fill: 'rgba(255, 193, 7, 0.85)',
     border: '#ffc107',
     count: (series) => series.booksReading,
   },
   {
-    key: 'partiallyRead',
     labelKey: 'partiallyRead',
     fill: 'rgba(255, 152, 0, 0.85)',
     border: '#ff9800',
     count: (series) => series.booksPartiallyRead,
   },
   {
-    key: 'paused',
     labelKey: 'paused',
     fill: 'rgba(33, 150, 243, 0.85)',
     border: '#2196f3',
     count: (series) => series.booksPaused,
   },
   {
-    key: 'abandoned',
     labelKey: 'abandoned',
     fill: 'rgba(239, 83, 80, 0.85)',
     border: '#ef5350',
     count: (series) => series.booksAbandoned,
   },
   {
-    key: 'wontRead',
     labelKey: 'wontRead',
     fill: 'rgba(158, 158, 158, 0.6)',
     border: '#9e9e9e',
     count: (series) => series.booksWontRead,
   },
   {
-    key: 'unread',
     labelKey: 'unread',
     fill: 'rgba(158, 158, 158, 0.3)',
     border: '#9e9e9e',
@@ -104,8 +90,6 @@ const FILTER_OPTIONS: readonly { value: SeriesProgressFilter; labelKey: string }
   { value: 'in-progress', labelKey: 'inProgress' },
   { value: 'completed', labelKey: 'completed' },
   { value: 'not-started', labelKey: 'notStarted' },
-  { value: 'paused', labelKey: 'paused' },
-  { value: 'abandoned', labelKey: 'abandoned' },
 ];
 
 const SORT_OPTIONS: readonly { value: SeriesProgressSort; labelKey: string }[] = [
@@ -226,15 +210,6 @@ export class SeriesProgressChartComponent {
     return this.transloco.translate('common.next');
   });
 
-  readonly legend = computed<readonly SeriesProgressLegendEntry[]>(() => {
-    this.activeLanguage();
-    return SEGMENTS.map((segment) => ({
-      key: segment.key,
-      label: this.transloco.translate(`statsUser.seriesProgress.${segment.labelKey}`),
-      color: segment.fill,
-    }));
-  });
-
   readonly chartData = computed<ChartData<'bar', number[], string>>(() => {
     this.activeLanguage();
     const series = this.chartSeries();
@@ -283,7 +258,16 @@ export class SeriesProgressChartComponent {
         },
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: "'Inter', sans-serif", size: 10 },
+            usePointStyle: true,
+            pointStyle: 'rect',
+            padding: 12,
+          },
+        },
         tooltip: {
           enabled: true,
           borderColor: '#673ab7',

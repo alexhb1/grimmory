@@ -3,7 +3,6 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { injectQuery } from '@tanstack/angular-query-experimental';
 import { getISOWeek, getISOWeekYear } from 'date-fns';
 
-import { type BookSummary } from '../../../book/data/book-response.models';
 import { calculateBookFlowStats } from '../../data/user/book-flow-stats';
 import { calculateBookLengthStats } from '../../data/user/book-length-stats';
 import { completionRaceQuery, EMPTY_COMPLETION_RACE_STATS } from '../../data/user/completion-race-stats';
@@ -27,7 +26,6 @@ import { calculateReadingProgressStats } from '../../data/user/reading-progress-
 import {
   EMPTY_READING_STREAKS,
   EMPTY_SESSION_HEATMAP_CALENDAR,
-  mapReadingStreaks,
   readingDatesQuery,
   sessionHeatmapQuery,
 } from '../../data/user/reading-session-heatmap-stats';
@@ -125,10 +123,9 @@ export class UserStatsDataService {
   readonly readingClockLoading = computed(() => this.readingClockResult.isPending());
   readonly readingClockError = computed(() => this.readingClockResult.isError());
 
-  private readonly readingStreaks = computed(() => {
-    const dates = this.readingDatesResult.data();
-    return dates ? mapReadingStreaks(dates) : EMPTY_READING_STREAKS;
-  });
+  private readonly readingStreaks = computed(
+    () => this.readingDatesResult.data() ?? EMPTY_READING_STREAKS,
+  );
   readonly sessionHeatmapStats = computed(() => ({
     calendar: this.sessionHeatmapResult.data() ?? EMPTY_SESSION_HEATMAP_CALENDAR,
     streaks: this.readingStreaks(),
@@ -174,40 +171,5 @@ export class UserStatsDataService {
   readonly sessionArchetypesLoading = computed(() => this.sessionArchetypesResult.isPending());
   readonly sessionArchetypesError = computed(() => this.sessionArchetypesResult.isError());
 
-  readonly readingYears = computed<readonly number[]>(() => {
-    const years = Array.from(new Set(
-      (this.readingDatesResult.data() ?? [])
-        .map(({ date }) => Number(date.slice(0, 4)))
-        .filter(Number.isFinite),
-    )).sort((left, right) => right - left);
-    return years.length > 0 ? years : [this.currentYear];
-  });
-  readonly completionTimelineYears = computed(() => completionTimelineYears(
-    this.books(),
-    this.readingYears(),
-    this.currentYear,
-    this.completionTimelineYear(),
-  ));
-}
-
-function completionTimelineYears(
-  books: readonly BookSummary[],
-  sessionYears: readonly number[],
-  currentYear: number,
-  selectedYear: number,
-): readonly number[] {
-  const knownYears = new Set([currentYear, selectedYear, ...sessionYears]);
-
-  for (const book of books) {
-    if (!book.dateFinished) continue;
-
-    const year = new Date(book.dateFinished).getFullYear();
-    if (Number.isFinite(year) && year <= currentYear) knownYears.add(year);
-  }
-
-  const firstYear = Math.min(...knownYears);
-  return Array.from(
-    { length: currentYear - firstYear + 1 },
-    (_, index) => currentYear - index,
-  );
+  readonly filterYears = Array.from({ length: 11 }, (_, index) => this.currentYear - index);
 }

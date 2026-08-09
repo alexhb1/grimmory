@@ -34,6 +34,8 @@ const HABIT_COLORS: Readonly<Record<ReadingHabitId, string>> = {
   momentum: '#673ab7',
 };
 
+const HABIT_ICONS: readonly string[] = ['📅', '📚', '✅', '🔍', '📋', '⚡', '🎯', '🔥'];
+
 @Component({
   selector: 'app-reading-habits-chart',
   standalone: true,
@@ -121,6 +123,10 @@ export class ReadingHabitsChartComponent {
           pointLabels: {
             font: { family: "'Inter', sans-serif", size: 12 },
             padding: 25,
+            callback: (label: string) => {
+              const index = habits.findIndex((entry) => entry.label === label);
+              return [HABIT_ICONS[index] ?? '', label];
+            },
           },
         },
       },
@@ -163,6 +169,6 @@ export class ReadingHabitsChartComponent {
   });
 
   protected formatScore(value: number): string {
-    return value.toLocaleString(this.activeLanguage());
+    return `${value.toLocaleString(this.activeLanguage())}%`;
   }
 }

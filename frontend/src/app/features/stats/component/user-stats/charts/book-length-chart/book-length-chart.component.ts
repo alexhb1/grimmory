@@ -16,15 +16,8 @@ import {
 } from '../../../../data/user/book-length-stats';
 
 interface BookLengthDatum extends ScatterDataPoint {
-  readonly title: string;
-  readonly group: BookLengthStatusGroup;
-}
-
-interface BookLengthLegendEntry {
-  readonly group: BookLengthStatusGroup;
-  readonly label: string;
-  readonly color: string;
-  readonly bookCount: number;
+  readonly title?: string;
+  readonly group?: BookLengthStatusGroup;
 }
 
 type BookLengthChartData = ChartData<'scatter', BookLengthDatum[], string>;
@@ -77,38 +70,44 @@ export class BookLengthChartComponent {
     this.activeLanguage();
     return this.transloco.translate('statsUser.bookFlow.noData');
   });
-  readonly legend = computed<readonly BookLengthLegendEntry[]>(() => {
-    const points = this.stats().points;
-
-    return this.stats().groups.map((group) => ({
-      group,
-      label: this.groupLabel(group),
-      color: GROUP_COLORS[group].border,
-      bookCount: points.filter((point) => point.group === group).length,
-    }));
-  });
-
   readonly chartData = computed<BookLengthChartData>(() => {
     const points = this.stats().points;
+    const datasets: BookLengthChartData['datasets'] = this.stats().groups.map((group) => {
+      const groupPoints = points.filter((point) => point.group === group);
 
-    return {
-      datasets: this.stats().groups.map((group) => ({
-        label: this.groupLabel(group),
-        data: points
-          .filter((point) => point.group === group)
-          .map<BookLengthDatum>((point) => ({
-            x: point.pageCount,
-            y: point.personalRating,
-            title: point.title,
-            group: point.group,
-          })),
+      return {
+        label: `${this.groupLabel(group)} (${groupPoints.length})`,
+        data: groupPoints.map<BookLengthDatum>((point) => ({
+          x: point.pageCount,
+          y: point.personalRating,
+          title: point.title,
+          group: point.group,
+        })),
         backgroundColor: GROUP_COLORS[group].fill,
         borderColor: GROUP_COLORS[group].border,
         pointRadius: 6,
         pointHoverRadius: 9,
         pointBorderWidth: 2,
-      })),
-    };
+      };
+    });
+
+    const trendLine = this.stats().trendLine;
+    if (trendLine) {
+      datasets.push({
+        label: this.transloco.translate('statsUser.bookLength.trend'),
+        data: trendLine.map((point) => ({
+          x: point.pageCount,
+          y: point.personalRating,
+        })),
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        pointBorderWidth: 0,
+      });
+    }
+
+    return { datasets };
   });
 
   readonly chartOptions = computed<ChartConfiguration<'scatter'>['options']>(() => {
@@ -139,7 +138,16 @@ export class BookLengthChartComponent {
         },
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: CHART_FONT_FAMILY, size: 11 },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 15,
+          },
+        },
         tooltip: {
           enabled: true,
           borderColor: '#00bcd4',
@@ -162,7 +170,7 @@ export class BookLengthChartComponent {
                 this.transloco.translate('statsUser.bookLength.tooltipPages', { count: datum.x }),
                 this.transloco.translate('statsUser.bookLength.tooltipRating', { rating: datum.y }),
                 this.transloco.translate('statsUser.bookLength.tooltipStatus', {
-                  status: this.groupLabel(datum.group),
+                  status: datum.group ? this.groupLabel(datum.group) : '',
                 }),
               ];
             },
@@ -182,15 +190,6 @@ export class BookLengthChartComponent {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
-  }
-
-  protected formatTrend(value: number): string {
-    const roundedValue = Math.abs(value) < 0.05 ? 0 : value;
-    const sign = roundedValue > 0 ? '+' : roundedValue < 0 ? '−' : '';
-    return `${sign}${Math.abs(roundedValue).toLocaleString(this.activeLanguage(), {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    })}`;
   }
 
   private groupLabel(group: BookLengthStatusGroup): string {

@@ -12,27 +12,11 @@ import {
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 import { StatsChartThemeService } from '../../../shared/stats-chart-theme.service';
 
-interface AuthorStats {
-  name: string;
-  bookCount: number;
-  totalPages: number;
-  avgRating: number;
-  readCount: number;
-  completionRate: number;
-  categories: readonly string[];
-}
-
 interface BubbleDataPoint {
   x: number;
   y: number;
   r: number;
-  authorStats: AuthorStats;
-}
-
-interface CompletionLegendEntry {
-  readonly id: string;
-  readonly label: string;
-  readonly color: string;
+  authorStats: AuthorUniverseAuthor;
 }
 
 interface AuthorUniverseInsightTile {
@@ -75,7 +59,7 @@ export class AuthorUniverseChartComponent {
   readonly showDescription = input(true);
 
   readonly chartType = 'bubble' as const;
-  readonly authors = computed<AuthorStats[]>(() => this.stats().authors.map(this.toChartAuthor));
+  readonly authors = computed(() => this.stats().authors);
   readonly totalAuthors = computed(() => this.authors().length);
   readonly insights = computed(() => this.buildInsights(this.stats().insights));
   readonly insightTiles = computed<readonly AuthorUniverseInsightTile[]>(() =>
@@ -86,14 +70,6 @@ export class AuthorUniverseChartComponent {
     if (this.loading()) return 'loading';
     return this.totalAuthors() > 0 ? 'ready' : 'empty';
   });
-  readonly legend = computed<readonly CompletionLegendEntry[]>(() =>
-    this.chartData().datasets.map((dataset, index) => ({
-      id: `${dataset.label ?? 'completion'}-${index}`,
-      label: dataset.label ?? '',
-      color: typeof dataset.borderColor === 'string' ? dataset.borderColor : '#6b7280',
-    })),
-  );
-
   readonly chartOptions: ChartConfiguration<'bubble'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -127,7 +103,14 @@ export class AuthorUniverseChartComponent {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'bottom',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 11},
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: 'circle',
+        },
       },
       tooltip: {
         enabled: false,
@@ -141,17 +124,7 @@ export class AuthorUniverseChartComponent {
     this.destroyRef.onDestroy(() => document.getElementById('author-chart-tooltip')?.remove());
   }
 
-  private readonly toChartAuthor = (author: AuthorUniverseAuthor): AuthorStats => ({
-    name: author.name,
-    bookCount: author.bookCount,
-    totalPages: author.totalPages,
-    avgRating: author.averageRating,
-    readCount: author.readCount,
-    completionRate: author.completionPercent,
-    categories: author.topGenres,
-  });
-
-  private buildChartData(authorStats: readonly AuthorStats[]): AuthorUniverseChartData {
+  private buildChartData(authorStats: readonly AuthorUniverseAuthor[]): AuthorUniverseChartData {
     if (authorStats.length === 0) return {labels: [], datasets: []};
 
     const grouped = {
@@ -166,15 +139,15 @@ export class AuthorUniverseChartComponent {
     for (const author of authorStats) {
       const point: BubbleDataPoint = {
         x: author.bookCount,
-        y: author.avgRating || 2.5,
+        y: author.averageRating || 2.5,
         r: Math.max(5, Math.min(25, 5 + (author.totalPages / maxPages) * 20)),
         authorStats: author,
       };
 
-      if (author.completionRate >= 75) grouped.high.push(point);
-      else if (author.completionRate >= 50) grouped.medium.push(point);
-      else if (author.completionRate >= 25) grouped.low.push(point);
-      else if (author.completionRate > 0) grouped.minimal.push(point);
+      if (author.completionPercent >= 75) grouped.high.push(point);
+      else if (author.completionPercent >= 50) grouped.medium.push(point);
+      else if (author.completionPercent >= 25) grouped.low.push(point);
+      else if (author.completionPercent > 0) grouped.minimal.push(point);
       else grouped.unread.push(point);
     }
 
@@ -215,7 +188,10 @@ export class AuthorUniverseChartComponent {
       }));
     }
     if (stats.mostPages) {
-      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostPages', stats.mostPages));
+      insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostPages', {
+        name: stats.mostPages.name,
+        count: stats.mostPages.count.toLocaleString(this.t.getActiveLang()),
+      }));
     }
     if (stats.bestCompletion) {
       insights.push(this.t.translate('statsLibrary.authorUniverse.insightMostRead', {
@@ -305,11 +281,11 @@ export class AuthorUniverseChartComponent {
     }
 
     const stats = (dataPoint.raw as BubbleDataPoint).authorStats;
-    const ratingText = stats.avgRating > 0
-      ? `${stats.avgRating.toFixed(2)} ★`
+    const ratingText = stats.averageRating > 0
+      ? `${stats.averageRating.toFixed(2)} ★`
       : this.t.translate('statsLibrary.authorUniverse.tooltipNoRatings');
-    const safeGenres = this.escapeHtml(stats.categories.slice(0, 3).join(', '));
-    const categoriesHtml = stats.categories.length > 0
+    const safeGenres = this.escapeHtml(stats.topGenres.slice(0, 3).join(', '));
+    const categoriesHtml = stats.topGenres.length > 0
       ? `<div style="color:${colors.textSecondary};font-size:12px;line-height:1.6">${this.t.translate('statsLibrary.authorUniverse.tooltipGenres', {genres: safeGenres})}</div>`
       : '';
     const booksLine = this.t.translate('statsLibrary.authorUniverse.tooltipBooks', {count: stats.bookCount});
@@ -318,7 +294,7 @@ export class AuthorUniverseChartComponent {
     const readLine = this.t.translate('statsLibrary.authorUniverse.tooltipRead', {
       read: stats.readCount,
       total: stats.bookCount,
-      percent: Math.round(stats.completionRate),
+      percent: Math.round(stats.completionPercent),
     });
 
     tooltipEl.innerHTML = `

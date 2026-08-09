@@ -31,5 +31,7 @@
   "on": "On",
   "off": "Off",
   "moreActionsFor": "More actions for {{label}}",
-  "dialogLoadError": "An error occurred while loading the dialog. Please try again."
+  "dialogLoadError": "An error occurred while loading the dialog. Please try again.",
+  "statsChartNoData": "No data available",
+  "statsChartLoadError": "The chart could not be loaded"
 }

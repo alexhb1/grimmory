@@ -7,14 +7,31 @@
     [loadingMessage]="loadingMessage()"
     [plotHeight]="plotHeight()"
     [state]="state()">
-    <app-select
-      statsChartActions
-      size="sm"
-      styleClass="min-w-24"
-      [options]="yearSelectOptions()"
-      [value]="year()"
-      [ariaLabel]="t('selectYear')"
-      (valueChange)="onYearChange($event)" />
+    <div statsChartActions class="flex items-center gap-1">
+      <app-button
+        tone="neutral"
+        variant="ghost"
+        size="sm"
+        iconOnly
+        [ariaLabel]="t('previousYear')"
+        [title]="t('previousYear')"
+        (clicked)="onYearStep(-1)">
+        <svg lucideChevronLeft aria-hidden="true"></svg>
+      </app-button>
+      <span class="min-w-12 text-center text-sm font-medium tabular-nums text-text-secondary">
+        {{ year() }}
+      </span>
+      <app-button
+        tone="neutral"
+        variant="ghost"
+        size="sm"
+        iconOnly
+        [ariaLabel]="t('nextYear')"
+        [title]="t('nextYear')"
+        (clicked)="onYearStep(1)">
+        <svg lucideChevronRight aria-hidden="true"></svg>
+      </app-button>
+    </div>
 
     @if (state() === 'ready') {
       <div class="relative min-w-0" [style.height.px]="plotHeight()">
@@ -26,7 +43,7 @@
       </div>
     }
 
-    @if (streaks().hasData && !loading() && state() === 'ready') {
+    @if (streaks().hasData && !loading()) {
       <div statsChartSummary>
         <dl class="grid grid-cols-2 gap-x-5 gap-y-4 border-t border-border pt-4 sm:grid-cols-4">
           <div class="min-w-0">

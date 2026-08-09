@@ -12,11 +12,6 @@ import {
 } from '../../../shared/stats-chart-card.component';
 import { type PublicationEraStats } from '../../../../data/user/publication-era-stats';
 
-interface PublicationEraLegendEntry {
-  readonly label: string;
-  readonly color: string;
-}
-
 const DECADE_COLORS: readonly string[] = [
   '#e91e63',
   '#9c27b0',
@@ -59,13 +54,6 @@ export class PublicationEraChartComponent {
     return this.stats().decades.length > 0 ? 'ready' : 'empty';
   });
 
-  readonly legend = computed<readonly PublicationEraLegendEntry[]>(() =>
-    this.stats().decades.map((decade, index) => ({
-      label: decade.label,
-      color: DECADE_COLORS[index % DECADE_COLORS.length],
-    })),
-  );
-
   readonly chartData = computed<ChartData<'line', number[], string>>(() => {
     const { decades, ratingBucketLabels } = this.stats();
 
@@ -99,24 +87,22 @@ export class PublicationEraChartComponent {
       animation: { duration: 400 },
       layout: { padding: { top: 10, right: 10 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            font: { family: "'Inter', sans-serif", size: 11 },
+            boxWidth: 12,
+            padding: 12,
+          },
+        },
         tooltip: {
           enabled: true,
           borderWidth: 1,
           cornerRadius: 6,
           padding: 10,
           callbacks: {
-            label: (context) => {
-              const count = context.parsed.y ?? 0;
-              const books = this.transloco.translate(
-                count === 1
-                  ? 'statsUser.personalRating.tooltipBook'
-                  : 'statsUser.personalRating.tooltipBooks',
-                { value: this.formatCount(count) },
-              );
-
-              return `${context.dataset.label}: ${books}`;
-            },
+            label: (context) => `${context.dataset.label}: ${context.parsed.y} books`,
           },
         },
       },
@@ -125,7 +111,7 @@ export class PublicationEraChartComponent {
           ticks: { font: { size: 11 } },
           title: {
             display: true,
-            text: this.transloco.translate('statsUser.personalRating.axisPersonalRating'),
+            text: this.transloco.translate('statsUser.publicationEra.axisRatingRange'),
             font: { size: 11 },
           },
         },
@@ -134,7 +120,7 @@ export class PublicationEraChartComponent {
           ticks: { font: { size: 11 }, stepSize: 1 },
           title: {
             display: true,
-            text: this.transloco.translate('statsUser.personalRating.axisNumberOfBooks'),
+            text: this.transloco.translate('statsUser.publicationEra.axisBooks'),
             font: { size: 11 },
           },
         },
@@ -143,14 +129,7 @@ export class PublicationEraChartComponent {
     };
   });
 
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.activeLanguage());
-  }
-
   protected formatRating(value: number): string {
-    return value.toLocaleString(this.activeLanguage(), {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    });
+    return String(Math.round(value * 10) / 10);
   }
 }

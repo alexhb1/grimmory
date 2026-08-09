@@ -14,6 +14,13 @@ import { type ReadingClockStats } from '../../../../data/user/reading-clock-stat
 
 type ReadingClockChartData = ChartData<'polarArea', number[], string>;
 
+const HOUR_LABELS = [
+  '12am', '1am', '2am', '3am', '4am', '5am',
+  '6am', '7am', '8am', '9am', '10am', '11am',
+  '12pm', '1pm', '2pm', '3pm', '4pm', '5pm',
+  '6pm', '7pm', '8pm', '9pm', '10pm', '11pm',
+] as const;
+
 @Component({
   selector: 'app-reading-clock-chart',
   standalone: true,
@@ -43,13 +50,9 @@ export class ReadingClockChartComponent {
     return this.stats().segments.length > 0 ? 'ready' : 'empty';
   });
 
-  readonly hourLabels = computed<readonly string[]>(() => {
-    const locale = this.activeLanguage();
-    return Array.from({ length: 24 }, (_, hour) => formatHour(hour, locale));
-  });
   readonly peakHourLabel = computed(() => {
     const peakHour = this.stats().peakHourOfDay;
-    return peakHour === null ? '—' : this.hourLabels()[peakHour];
+    return peakHour === null ? '—' : HOUR_LABELS[peakHour];
   });
   readonly readerTypeLabel = computed(() => {
     this.activeLanguage();
@@ -61,7 +64,7 @@ export class ReadingClockChartComponent {
     const peakMinutes = Math.max(1, ...segments.map((segment) => segment.minutes));
 
     return {
-      labels: [...this.hourLabels()],
+      labels: [...HOUR_LABELS],
       datasets: [
         {
           data: segments.map((segment) => segment.minutes),
@@ -73,7 +76,6 @@ export class ReadingClockChartComponent {
 
   readonly chartOptions = computed<ChartOptions<'polarArea'>>(() => {
     this.activeLanguage();
-    const hourLabels = this.hourLabels();
 
     return {
       responsive: true,
@@ -88,7 +90,7 @@ export class ReadingClockChartComponent {
           titleFont: { size: 13, weight: 'bold' },
           bodyFont: { size: 12 },
           callbacks: {
-            title: (context) => hourLabels[context[0].dataIndex],
+            title: (context) => HOUR_LABELS[context[0].dataIndex],
             label: (context) => {
               const minutes = context.parsed.r;
               const time =
@@ -103,15 +105,14 @@ export class ReadingClockChartComponent {
       scales: {
         r: {
           ticks: { display: false },
-          pointLabels: { display: true, font: { size: 10 } },
+          pointLabels: {
+            display: true,
+            font: { family: "'Inter', sans-serif", size: 10 },
+          },
         },
       },
     };
   });
-}
-
-function formatHour(hour: number, locale: string): string {
-  return new Date(2000, 0, 1, hour).toLocaleTimeString(locale, { hour: 'numeric' });
 }
 
 function segmentColor(ratio: number): string {

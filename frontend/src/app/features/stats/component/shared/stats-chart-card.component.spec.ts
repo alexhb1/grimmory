@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { getTranslocoModule } from '../../../../core/testing/transloco-testing';
 import {
   StatsChartCardComponent,
   type StatsChartState,
@@ -15,6 +16,7 @@ import {
       [sectionedHeader]="true"
       [state]="state()"
       loadingMessage="Loading test chart"
+      [emptyMessage]="emptyMessage()"
       [plotHeight]="240">
       <button type="button" data-content-control>Content control</button>
       <button type="button" statsChartActions data-header-control>Header control</button>
@@ -24,13 +26,16 @@ import {
 })
 class TestHostComponent {
   readonly state = signal<StatsChartState>('ready');
+  readonly emptyMessage = signal<string | undefined>(undefined);
 }
 
 describe('StatsChartCardComponent', () => {
   let fixture: ComponentFixture<TestHostComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [TestHostComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [TestHostComponent, getTranslocoModule()],
+    }).compileComponents();
     fixture = TestBed.createComponent(TestHostComponent);
     await fixture.whenStable();
   });
@@ -55,5 +60,23 @@ describe('StatsChartCardComponent', () => {
     expect(loading?.getAttribute('aria-label')).toBe('Loading test chart');
     expect(loading?.style.height).toBe('240px');
     expect(fixture.nativeElement.querySelector('[data-content-control]')).toBeNull();
+  });
+
+  it.each([
+    ['empty', 'No data available'],
+    ['error', 'The chart could not be loaded'],
+  ] as const)('translates the shared %s fallback', async (state, message) => {
+    fixture.componentInstance.state.set(state);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(message);
+  });
+
+  it('preserves an explicit state message', async () => {
+    fixture.componentInstance.emptyMessage.set('No matching books');
+    fixture.componentInstance.state.set('empty');
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No matching books');
   });
 });

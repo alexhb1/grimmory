@@ -10,18 +10,10 @@ import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
-import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 import {
   type ReadingProgressBandId,
   type ReadingProgressStats,
 } from '../../../../data/user/reading-progress-stats';
-
-interface ReadingProgressLegendEntry {
-  readonly id: ReadingProgressBandId;
-  readonly label: string;
-  readonly color: string;
-  readonly bookCount: number;
-}
 
 type ReadingProgressChartData = ChartData<'doughnut', number[], string>;
 type ReadingProgressBand = ReadingProgressStats['bands'][number];
@@ -50,12 +42,7 @@ const BAND_LABEL_KEYS: Readonly<Record<ReadingProgressBandId, string>> = {
   selector: 'app-reading-progress-chart',
   standalone: true,
   hostDirectives: [StatsChartJsHostDirective],
-  imports: [
-    BaseChartDirective,
-    StatsChartCardComponent,
-    StatsCircularChartLayoutComponent,
-    TranslocoDirective,
-  ],
+  imports: [BaseChartDirective, StatsChartCardComponent, TranslocoDirective],
   templateUrl: './reading-progress-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block h-full min-w-0' },
@@ -84,15 +71,6 @@ export class ReadingProgressChartComponent {
     this.activeLanguage();
     return this.transloco.translate('statsUser.bookFlow.noData');
   });
-  readonly legend = computed<readonly ReadingProgressLegendEntry[]>(() =>
-    this.bands().map((band) => ({
-      id: band.id,
-      label: band.label,
-      color: BAND_COLORS[band.id],
-      bookCount: band.bookCount,
-    })),
-  );
-
   readonly chartData = computed<ReadingProgressChartData>(() => {
     this.activeLanguage();
     const bands = this.bands();
@@ -118,15 +96,36 @@ export class ReadingProgressChartComponent {
       maintainAspectRatio: false,
       layout: { padding: { top: 15 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            font: { family: CHART_FONT_FAMILY, size: 12 },
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            generateLabels: (chart) => {
+              const data = chart.data;
+              if (!data.labels?.length || !data.datasets.length) return [];
+
+              return data.labels.map((label, index) => ({
+                text: `${label}: ${data.datasets[0].data[index] as number}`,
+                fillStyle: (data.datasets[0].backgroundColor as string[])[index],
+                lineWidth: 1,
+                hidden: !chart.getDataVisibility(index),
+                index,
+              }));
+            },
+          },
+        },
         tooltip: {
           enabled: true,
           borderWidth: 1,
           cornerRadius: 6,
           displayColors: true,
           padding: 12,
-          titleFont: { family: CHART_FONT_FAMILY, size: 14, weight: 'bold' },
-          bodyFont: { family: CHART_FONT_FAMILY, size: 13 },
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
           callbacks: {
             title: (context) => context[0]?.label ?? '',
             label: (context) => {
@@ -146,10 +145,6 @@ export class ReadingProgressChartComponent {
       interaction: { intersect: false, mode: 'point' },
     };
   });
-
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.activeLanguage());
-  }
 
   private bandDescription(id: ReadingProgressBandId): string {
     this.activeLanguage();

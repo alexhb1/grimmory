@@ -49,7 +49,8 @@
     "title": "Book Formats",
     "description": "Distribution of file types in your library",
     "noData": "No books available.",
-    "tooltipLabel": "{{ label }}: {{ value }} books ({{ percentage }}%)"
+    "tooltipLabel": "{{ label }}: {{ value }} books ({{ percentage }}%)",
+    "unknown": "Unknown"
   },
   "language": {
     "title": "Languages",
@@ -62,7 +63,6 @@
     "description": "Quality of book metadata in your library",
     "noData": "No metadata score data available.",
     "tooltipLabel": "{{ value }} books ({{ percentage }}%)",
-    "averageLabel": "Average",
     "excellent": "Excellent (90-100%)",
     "good": "Good (70-89%)",
     "fair": "Fair (50-69%)",
@@ -82,6 +82,7 @@
   "publicationTimeline": {
     "title": "Publication Timeline",
     "description": "When were your books originally published?",
+    "unknownTitle": "Unknown",
     "booksWithDates": "{{ count }} books with dates",
     "noData": "No publication date data available.",
     "tooltipBook": "{{ value }} book",

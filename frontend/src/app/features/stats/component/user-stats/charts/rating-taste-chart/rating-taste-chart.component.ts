@@ -26,6 +26,8 @@ interface RatingTasteDatum extends ScatterDataPoint {
 interface RatingTasteQuadrantView {
   readonly id: RatingTasteQuadrantId;
   readonly label: string;
+  readonly description: string;
+  readonly icon: string;
   readonly color: string;
   readonly bookCount: number;
   readonly sharePercent: number;
@@ -48,6 +50,20 @@ const QUADRANT_LABEL_KEYS: Readonly<Record<RatingTasteQuadrantId, string>> = {
   'popular-favorites': 'quadrantPopularFavorites',
   overrated: 'quadrantOverrated',
   'agreed-misses': 'quadrantAgreedMisses',
+};
+
+const QUADRANT_DESCRIPTION_KEYS: Readonly<Record<RatingTasteQuadrantId, string>> = {
+  'hidden-gems': 'quadrantDescHiddenGems',
+  'popular-favorites': 'quadrantDescPopularFavorites',
+  overrated: 'quadrantDescOverrated',
+  'agreed-misses': 'quadrantDescAgreedMisses',
+};
+
+const QUADRANT_ICONS: Readonly<Record<RatingTasteQuadrantId, string>> = {
+  'hidden-gems': '💎',
+  'popular-favorites': '⭐',
+  overrated: '📉',
+  'agreed-misses': '👎',
 };
 
 @Component({
@@ -80,17 +96,19 @@ export class RatingTasteChartComponent {
   });
   readonly emptyMessage = computed(() => {
     this.activeLanguage();
-    return this.transloco.translate('statsUser.bookFlow.noData');
+    return this.transloco.translate('statsUser.ratingTaste.noData');
   });
   readonly quadrants = computed<readonly RatingTasteQuadrantView[]>(() =>
     this.stats().quadrants.map((quadrant) => this.toQuadrantView(quadrant)),
   );
   readonly deviationDescription = computed(() => {
     this.activeLanguage();
-    const deviation = this.stats().averageDeviation;
-    if (deviation > 1) return this.transloco.translate('statsUser.ratingTaste.uniqueTaste');
-    if (deviation <= 0.5) return this.transloco.translate('statsUser.ratingTaste.mainstream');
-    return this.transloco.translate('statsUser.ratingTaste.balanced');
+    const key = {
+      'unique-taste': 'uniqueTaste',
+      balanced: 'balanced',
+      mainstream: 'mainstream',
+    }[this.stats().profile];
+    return this.transloco.translate(`statsUser.ratingTaste.${key}`);
   });
 
   readonly chartData = computed<RatingTasteChartData>(() => {
@@ -100,7 +118,7 @@ export class RatingTasteChartComponent {
       datasets: this.stats()
         .quadrants.filter((quadrant) => quadrant.bookCount > 0)
         .map((quadrant) => ({
-          label: this.quadrantLabel(quadrant.id),
+          label: `${this.quadrantLabel(quadrant.id)} (${quadrant.bookCount})`,
           data: books
             .filter((book) => book.quadrant === quadrant.id)
             .map<RatingTasteDatum>((book) => ({
@@ -153,7 +171,16 @@ export class RatingTasteChartComponent {
         },
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: CHART_FONT_FAMILY, size: 11 },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 15,
+          },
+        },
         tooltip: {
           enabled: true,
           borderColor: '#9c27b0',
@@ -211,6 +238,10 @@ export class RatingTasteChartComponent {
     return {
       id: quadrant.id,
       label: this.quadrantLabel(quadrant.id),
+      description: this.transloco.translate(
+        `statsUser.ratingTaste.${QUADRANT_DESCRIPTION_KEYS[quadrant.id]}`,
+      ),
+      icon: QUADRANT_ICONS[quadrant.id],
       color: QUADRANT_COLORS[quadrant.id].border,
       bookCount: quadrant.bookCount,
       sharePercent: quadrant.sharePercent,

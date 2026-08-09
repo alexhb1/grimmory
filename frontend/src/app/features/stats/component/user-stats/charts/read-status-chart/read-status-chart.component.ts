@@ -3,7 +3,7 @@ import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.d
 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
-import { type ChartConfiguration, type ChartData } from 'chart.js';
+import { type Chart, type ChartConfiguration, type ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
 import { ReadStatus } from '../../../../../book/model/book.model';
@@ -11,14 +11,10 @@ import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
-import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 import { type ReadStatusSlice, type ReadStatusStats } from '../../../../data/user/read-status-stats';
 
-interface ReadStatusLegendEntry {
-  readonly status: ReadStatus;
-  readonly label: string;
-  readonly color: string;
-  readonly bookCount: number;
+interface DatasetMetaPoint {
+  readonly hidden?: boolean;
 }
 
 type ReadStatusChartData = ChartData<'doughnut', number[], string>;
@@ -56,7 +52,6 @@ const STATUS_LABEL_KEYS: Readonly<Record<ReadStatus, string>> = {
   imports: [
     BaseChartDirective,
     StatsChartCardComponent,
-    StatsCircularChartLayoutComponent,
     TranslocoDirective,
   ],
   templateUrl: './read-status-chart.component.html',
@@ -85,16 +80,8 @@ export class ReadStatusChartComponent {
   });
   readonly emptyMessage = computed(() => {
     this.activeLanguage();
-    return this.transloco.translate('statsUser.bookFlow.noData');
+    return this.transloco.translate('statsUser.readStatus.noData');
   });
-  readonly legend = computed<readonly ReadStatusLegendEntry[]>(() =>
-    this.slices().map((slice) => ({
-      status: slice.status,
-      label: this.statusLabel(slice.status),
-      color: STATUS_COLORS[slice.status],
-      bookCount: slice.bookCount,
-    })),
-  );
 
   readonly chartData = computed<ReadStatusChartData>(() => {
     const slices = this.slices();
@@ -111,14 +98,21 @@ export class ReadStatusChartComponent {
   });
 
   readonly chartOptions = computed<ChartConfiguration<'doughnut'>['options']>(() => {
-    const slices = this.slices();
-
     return {
       responsive: true,
       maintainAspectRatio: false,
       layout: { padding: { top: 15 } },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            padding: 15,
+            usePointStyle: true,
+            font: { family: CHART_FONT_FAMILY, size: 12 },
+            generateLabels: (chart) => this.generateLegendLabels(chart),
+          },
+        },
         tooltip: {
           enabled: true,
           borderWidth: 1,
@@ -130,13 +124,15 @@ export class ReadStatusChartComponent {
           callbacks: {
             title: (context) => context[0]?.label ?? '',
             label: (context) => {
-              const slice = slices.at(context.dataIndex);
-              if (!slice) return '';
+              const value = context.dataset.data[context.dataIndex];
+              const label = context.chart.data.labels?.[context.dataIndex] ?? '';
+              const total = context.dataset.data.reduce((sum, count) => sum + count, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
 
               return this.transloco.translate('statsUser.readStatus.tooltipLabel', {
-                label: this.statusLabel(slice.status),
-                value: slice.bookCount,
-                percentage: slice.sharePercent.toFixed(1),
+                label,
+                value,
+                percentage,
               });
             },
           },
@@ -146,8 +142,26 @@ export class ReadStatusChartComponent {
     };
   });
 
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.activeLanguage());
+  private generateLegendLabels(chart: Chart) {
+    const data = chart.data;
+    if (!data.labels?.length || !data.datasets[0]?.data.length) return [];
+
+    const dataset = data.datasets[0];
+    const values = dataset.data as number[];
+    const colors = dataset.backgroundColor as string[];
+
+    return data.labels.map((label, index) => {
+      const metaPoint = chart.getDatasetMeta(0).data[index] as DatasetMetaPoint | undefined;
+      const visible = chart.getDataVisibility(index) && !metaPoint?.hidden;
+
+      return {
+        text: `${String(label)} (${values[index]})`,
+        fillStyle: colors[index],
+        lineWidth: 1,
+        hidden: !visible,
+        index,
+      };
+    });
   }
 
   private statusLabel(status: ReadStatus): string {

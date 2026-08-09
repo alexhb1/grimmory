@@ -7,7 +7,7 @@
     [loadingMessage]="loadingMessage()"
     [plotHeight]="plotHeight()"
     [state]="state()">
-    <div statsChartActions class="flex items-center gap-1">
+    <div statsChartActions class="flex flex-wrap items-center justify-end gap-1">
       <app-button
         tone="neutral"
         variant="ghost"
@@ -34,6 +34,20 @@
         (clicked)="onWeekStep(1)">
         <svg lucideChevronRight aria-hidden="true"></svg>
       </app-button>
+      <app-select
+        size="sm"
+        styleClass="min-w-24"
+        [options]="yearSelectOptions()"
+        [value]="year()"
+        [ariaLabel]="t('selectYear')"
+        (valueChange)="onYearChange($event)" />
+      <app-select
+        size="sm"
+        styleClass="min-w-28"
+        [options]="weekSelectOptions()"
+        [value]="week()"
+        [ariaLabel]="t('selectWeek')"
+        (valueChange)="onWeekChange($event)" />
     </div>
 
     @if (state() === 'ready') {
@@ -41,7 +55,7 @@
         <div class="flex" aria-hidden="true">
           <div class="w-12 shrink-0 sm:w-14"></div>
           <div class="grid flex-1 grid-cols-24">
-            @for (label of hourLabels(); track $index) {
+            @for (label of hourLabels; track $index) {
               <div class="relative h-5">
                 @if ($index % 3 === 0) {
                   <span
@@ -63,7 +77,7 @@
               </div>
               <div class="relative min-h-9 flex-1 rounded-sm border border-border bg-text/2">
                 <div class="pointer-events-none absolute inset-0 grid grid-cols-24" aria-hidden="true">
-                  @for (label of hourLabels(); track $index) {
+                  @for (label of hourLabels; track $index) {
                     <div class="border-r border-text/5 last:border-r-0"></div>
                   }
                 </div>
@@ -71,24 +85,45 @@
                 <div class="absolute inset-1">
                   @for (session of day.sessions; track session.key) {
                     <div
-                      class="absolute overflow-hidden rounded-xs border transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+                      class="group absolute transition-transform duration-200 ease-out hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
                       role="img"
                       tabindex="0"
-                      [attr.aria-label]="session.tooltip"
-                      [appTooltip]="session.tooltip"
+                      [attr.aria-label]="session.accessibleLabel"
                       [style.left.%]="session.leftPercent"
                       [style.width.%]="session.widthPercent"
                       [style.top.%]="session.topPercent"
-                      [style.height.%]="session.heightPercent"
-                      [style.backgroundColor]="session.fill"
-                      [style.borderColor]="session.border">
-                      @if (session.showLabels) {
-                        <div
-                          class="flex h-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[0.625rem] leading-none font-medium text-white">
-                          <span class="max-w-full truncate">{{ session.timeLabel }}</span>
-                          <span class="hidden opacity-90 @sm:inline">{{ session.durationLabel }}</span>
+                      [style.height.%]="session.heightPercent">
+                      <div
+                        class="h-full overflow-hidden rounded-xs border"
+                        [style.backgroundColor]="session.fill"
+                        [style.borderColor]="session.border">
+                        @if (session.showLabels) {
+                          <div
+                            class="flex h-full flex-col items-center justify-center gap-0.5 px-1 text-center text-[0.625rem] leading-none font-medium text-white">
+                            <span class="max-w-full truncate">{{ session.timeLabel }}</span>
+                            <span class="hidden opacity-90 @sm:inline">{{ session.durationLabel }}</span>
+                          </div>
+                        }
+                      </div>
+                      <div
+                        class="pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-1/2 z-30 flex w-72 -translate-x-1/2 gap-3 rounded-lg border border-border bg-surface p-3 text-left opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                        role="tooltip">
+                        <img
+                          class="h-20 w-14 shrink-0 rounded-sm object-cover"
+                          [src]="session.coverUrl"
+                          [alt]="session.title" />
+                        <div class="min-w-0 flex-1 text-xs text-text-secondary">
+                          <div class="truncate text-sm font-semibold text-text">{{ session.title }}</div>
+                          <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
+                            <dt>{{ t('tooltipTime') }}</dt>
+                            <dd class="text-right text-text">{{ session.timeRange }}</dd>
+                            <dt>{{ t('tooltipDuration') }}</dt>
+                            <dd class="text-right text-text">{{ session.fullDurationLabel }}</dd>
+                            <dt>{{ t('tooltipFormat') }}</dt>
+                            <dd class="text-right text-text">{{ session.formatLabel }}</dd>
+                          </dl>
                         </div>
-                      }
+                      </div>
                     </div>
                   }
                 </div>

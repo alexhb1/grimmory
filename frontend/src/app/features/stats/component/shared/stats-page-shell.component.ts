@@ -1,16 +1,19 @@
 import { CdkDrag, CdkDragHandle, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   contentChild,
   ElementRef,
   inject,
+  Injector,
   input,
   model,
   TemplateRef,
   viewChild,
 } from '@angular/core';
+import { type TranslocoService } from '@jsverse/transloco';
 import {
   LucideChevronDown,
   LucideChevronUp,
@@ -54,6 +57,36 @@ export interface StatsPageShellLabels {
 
 export interface StatsPageChartContext {
   readonly $implicit: StatsPageChartConfig;
+}
+
+export function createStatsPageShellLabels(
+  transloco: TranslocoService,
+  prefix: 'statsLibrary' | 'statsUser',
+): StatsPageShellLabels {
+  const chartName = (chart: StatsPageChartConfig) =>
+    transloco.translate(`${prefix}.${chart.nameKey}`);
+
+  return {
+    menu: transloco.translate(`${prefix}.config.title`),
+    showDescriptions: transloco.translate(`${prefix}.config.showDescriptions`),
+    edit: transloco.translate(`${prefix}.config.edit`),
+    resetOrder: transloco.translate(`${prefix}.config.resetOrder`),
+    addChart: transloco.translate(`${prefix}.config.addChart`),
+    done: transloco.translate(`${prefix}.config.done`),
+    chartName,
+    reorderChart: (chart) =>
+      `${chartName(chart)}: ${transloco.translate(`${prefix}.main.dragToReorder`)}`,
+    removeChart: (chart) =>
+      `${transloco.translate(`${prefix}.config.removeChart`)}: ${chartName(chart)}`,
+    moveChartEarlier: (chart) => transloco.translate(
+      `${prefix}.config.moveChartEarlier`,
+      { name: chartName(chart) },
+    ),
+    moveChartLater: (chart) => transloco.translate(
+      `${prefix}.config.moveChartLater`,
+      { name: chartName(chart) },
+    ),
+  };
 }
 
 const RESPONSIVE_COLUMN_CLASSES: Readonly<Record<StatsChartColumnSpan, string>> = {
@@ -273,6 +306,7 @@ const RESPONSIVE_COLUMN_CLASSES: Readonly<Record<StatsChartColumnSpan, string>> 
 })
 export class StatsPageShellComponent {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   readonly pageHeader = input.required<PageHeader>();
   readonly controller = input.required<StatsChartGridController>();
   readonly labels = input.required<StatsPageShellLabels>();
@@ -336,15 +370,18 @@ export class StatsPageShellComponent {
   }
 
   private restoreChartFocus(chartId: string): void {
-    setTimeout(() => {
+    afterNextRender(() => {
       const handles = this.element.nativeElement.querySelectorAll<HTMLElement>(
         '[data-chart-reorder-handle]',
       );
       [...handles].find((handle) => handle.dataset['chartReorderHandle'] === chartId)?.focus();
-    });
+    }, { injector: this.injector });
   }
 
   private restoreFocus(selector: string): void {
-    setTimeout(() => this.element.nativeElement.querySelector<HTMLElement>(selector)?.focus());
+    afterNextRender(
+      () => this.element.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
+      { injector: this.injector },
+    );
   }
 }

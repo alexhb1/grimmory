@@ -8,23 +8,9 @@
     [state]="state()"
     [emptyMessage]="t('noData') + ' ' + t('noDataHint')">
     @if (state() === 'ready') {
-      <div class="mb-1 flex flex-wrap items-center gap-x-4 gap-y-2 px-2 text-xs text-text-secondary">
-        <span class="flex items-center gap-1.5">
-          <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
-            <circle cx="5" cy="5" r="5" fill="#3b82f6"></circle>
-          </svg>
-          {{ t('legendBooksAdded') }}
-        </span>
-        <span class="flex items-center gap-1.5">
-          <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
-            <circle cx="5" cy="5" r="5" fill="#10b981"></circle>
-          </svg>
-          {{ t('legendBooksFinished') }}
-        </span>
-        @if (dateRange()) {
-          <span class="ml-auto tabular-nums text-text-muted">{{ dateRange() }}</span>
-        }
-      </div>
+      @if (dateRange()) {
+        <p class="mb-1 px-2 text-right text-xs tabular-nums text-text-muted">{{ dateRange() }}</p>
+      }
 
       <div class="relative min-w-0" [style.height.px]="plotHeight()">
         <canvas
@@ -52,7 +38,7 @@
         <div>
           <dt class="text-xs font-medium text-text-secondary">{{ t('insightAvgTimeToFinish') }}</dt>
           <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-            {{ insights.averageDaysToFinish === null ? '—' : formatNumber(insights.averageDaysToFinish) }}
+            {{ formatNumber(insights.averageDaysToFinish) }}
           </dd>
           <dd class="text-xs tabular-nums text-text-muted">{{ t('insightDaysAfterAdding') }}</dd>
         </div>
@@ -63,7 +49,7 @@
             {{ formatNumber(insights.bestReadingMonth?.count ?? 0) }}
           </dd>
           <dd class="truncate text-xs tabular-nums text-text-muted">
-            {{ insights.bestReadingMonth ? formatMonth(insights.bestReadingMonth.month, 'short') : '—' }}
+            {{ insights.bestReadingMonth ? formatMonth(insights.bestReadingMonth.month, 'short') : 'N/A' }}
           </dd>
         </div>
 
@@ -73,7 +59,7 @@
             {{ formatNumber(insights.peakAcquisitionMonth?.count ?? 0) }}
           </dd>
           <dd class="truncate text-xs tabular-nums text-text-muted">
-            {{ insights.peakAcquisitionMonth ? formatMonth(insights.peakAcquisitionMonth.month, 'short') : '—' }}
+            {{ insights.peakAcquisitionMonth ? formatMonth(insights.peakAcquisitionMonth.month, 'short') : 'N/A' }}
           </dd>
         </div>
 

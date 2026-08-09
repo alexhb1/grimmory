@@ -22,17 +22,6 @@
           [type]="chartType"></canvas>
       </div>
 
-      <ul class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-xs text-text-secondary">
-        @for (entry of legend(); track entry.key) {
-          <li class="flex items-center gap-1.5">
-            <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
-              <circle cx="5" cy="5" r="5" [attr.fill]="entry.color"></circle>
-            </svg>
-            <span>{{ entry.label }}</span>
-          </li>
-        }
-      </ul>
-
       <section class="mt-4 px-2">
         <p class="text-xs font-medium text-text-secondary">{{ t('seriesBreakdown') }}</p>
 
@@ -175,12 +164,9 @@
         @if (stats().highestRated; as highestRated) {
           <div class="min-w-0">
             <dt class="text-xs font-medium text-text-secondary">{{ t('topRated') }}</dt>
-            <dd
-              class="mt-1 truncate text-lg font-semibold tabular-nums text-text-strong"
-              [title]="highestRated.name">
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
               {{ formatRating(highestRated.averagePersonalRating ?? 0) }}
             </dd>
-            <dd class="truncate text-xs tabular-nums text-text-muted">{{ highestRated.name }}</dd>
           </div>
         }
 

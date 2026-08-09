@@ -26,6 +26,12 @@
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
               {{ formatScore(trait.score) }}
             </dd>
+            <dd class="mt-2 h-1.5 overflow-hidden rounded-full bg-text/8" aria-hidden="true">
+              <span
+                class="block h-full rounded-full"
+                [style.width.%]="trait.score"
+                [style.backgroundColor]="trait.color"></span>
+            </dd>
             <dd class="min-h-16 line-clamp-4 text-xs tabular-nums text-text-muted">
               {{ trait.description }}
             </dd>

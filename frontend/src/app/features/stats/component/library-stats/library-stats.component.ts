@@ -11,8 +11,8 @@ import {
   type StatsPageChartConfig,
 } from '../shared/stats-chart-grid.controller';
 import {
+  createStatsPageShellLabels,
   StatsPageShellComponent,
-  type StatsPageShellLabels,
 } from '../shared/stats-page-shell.component';
 import { AllBooksStatsSourceService } from '../../data/all-books-stats-source.service';
 import { AuthorUniverseChartComponent } from './charts/author-universe-chart/author-universe-chart.component';
@@ -101,31 +101,9 @@ export class LibraryStatsComponent implements OnInit {
     label: (chart) => this.transloco.translate(`statsLibrary.${chart.nameKey}`),
   });
   readonly showChartDescriptions = signal(true);
-  readonly shellLabels = computed<StatsPageShellLabels>(() => {
+  readonly shellLabels = computed(() => {
     this.activeLanguage();
-    const chartName = (chart: StatsPageChartConfig) =>
-      this.transloco.translate(`statsLibrary.${chart.nameKey}`);
-    return {
-      menu: this.transloco.translate('statsLibrary.config.title'),
-      showDescriptions: this.transloco.translate('statsLibrary.config.showDescriptions'),
-      edit: this.transloco.translate('statsLibrary.config.edit'),
-      resetOrder: this.transloco.translate('statsLibrary.config.resetOrder'),
-      addChart: this.transloco.translate('statsLibrary.config.addChart'),
-      done: this.transloco.translate('statsLibrary.config.done'),
-      chartName,
-      reorderChart: (chart) =>
-        `${chartName(chart)}: ${this.transloco.translate('statsLibrary.main.dragToReorder')}`,
-      removeChart: (chart) =>
-        `${this.transloco.translate('statsLibrary.config.removeChart')}: ${chartName(chart)}`,
-      moveChartEarlier: (chart) => this.transloco.translate(
-        'statsLibrary.config.moveChartEarlier',
-        { name: chartName(chart) },
-      ),
-      moveChartLater: (chart) => this.transloco.translate(
-        'statsLibrary.config.moveChartLater',
-        { name: chartName(chart) },
-      ),
-    };
+    return createStatsPageShellLabels(this.transloco, 'statsLibrary');
   });
 
   ngOnInit(): void {

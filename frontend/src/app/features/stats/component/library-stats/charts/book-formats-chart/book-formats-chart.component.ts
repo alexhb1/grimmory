@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { type ChartConfiguration, type ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
-import { type BookFormatStats } from '../../../../data/library/book-format-stats';
+import {
+  type BookFormatStats,
+  UNKNOWN_BOOK_FORMAT_ID,
+} from '../../../../data/library/book-format-stats';
 import {
   StatsChartCardComponent,
   type StatsChartState,
 } from '../../../shared/stats-chart-card.component';
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
-import { StatsCircularChartLayoutComponent } from '../../../shared/stats-circular-chart-layout.component';
 
 interface BookFormatLegendEntry {
   readonly format: string;
@@ -37,7 +40,6 @@ const FORMAT_COLORS: Record<string, string> = {
   imports: [
     BaseChartDirective,
     StatsChartCardComponent,
-    StatsCircularChartLayoutComponent,
     TranslocoDirective,
   ],
   templateUrl: './book-formats-chart.component.html',
@@ -46,6 +48,9 @@ const FORMAT_COLORS: Record<string, string> = {
 })
 export class BookFormatsChartComponent {
   private readonly t = inject(TranslocoService);
+  private readonly activeLanguage = toSignal(this.t.langChanges$, {
+    initialValue: this.t.getActiveLang(),
+  });
 
   readonly stats = input.required<BookFormatStats>();
   readonly loading = input(false);
@@ -59,14 +64,17 @@ export class BookFormatsChartComponent {
     if (this.loading()) return 'loading';
     return this.totalBooks() > 0 ? 'ready' : 'empty';
   });
-  readonly rows = computed<readonly BookFormatLegendEntry[]>(() =>
-    this.stats().formats.map(({ format, bookCount }) => ({
+  readonly rows = computed<readonly BookFormatLegendEntry[]>(() => {
+    this.activeLanguage();
+    return this.stats().formats.map(({ format, bookCount }) => ({
       format,
-      label: format,
+      label: format === UNKNOWN_BOOK_FORMAT_ID
+        ? this.t.translate('statsLibrary.bookFormats.unknown')
+        : format,
       bookCount,
       color: FORMAT_COLORS[format] || '#6B7280',
-    })),
-  );
+    }));
+  });
 
   readonly chartOptions: ChartConfiguration<'pie'>['options'] = {
     responsive: true,
@@ -76,7 +84,14 @@ export class BookFormatsChartComponent {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'right',
+        labels: {
+          font: {family: "'Inter', sans-serif", size: 12},
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 15,
+        },
       },
       tooltip: {
         enabled: true,
@@ -117,7 +132,4 @@ export class BookFormatsChartComponent {
     };
   });
 
-  protected formatCount(value: number): string {
-    return value.toLocaleString(this.t.getActiveLang());
-  }
 }

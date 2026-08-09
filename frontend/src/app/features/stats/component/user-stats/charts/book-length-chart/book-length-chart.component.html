@@ -15,18 +15,6 @@
           [options]="chartOptions()"
           [type]="chartType"></canvas>
       </div>
-
-      <ul class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-2 text-xs text-text-secondary">
-        @for (entry of legend(); track entry.group) {
-          <li class="flex items-center gap-1.5">
-            <svg class="size-2.5 shrink-0" viewBox="0 0 10 10" aria-hidden="true">
-              <circle cx="5" cy="5" r="5" [attr.fill]="entry.color"></circle>
-            </svg>
-            <span>{{ entry.label }}</span>
-            <span class="font-medium tabular-nums text-text-strong">{{ formatCount(entry.bookCount) }}</span>
-          </li>
-        }
-      </ul>
     }
 
     @if (state() === 'ready' && !loading()) {
@@ -44,11 +32,12 @@
           <dt class="text-xs font-medium text-text-secondary">{{ t('sweetSpot') }}</dt>
           @if (stats().sweetSpot; as sweetSpot) {
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-              {{ sweetSpot.label }}
-            </dd>
-            <dd class="text-xs tabular-nums text-text-muted">
-              {{ t('tooltipRating', { rating: formatRating(sweetSpot.averageRating) }) }} ·
-              {{ t('sweetSpotBookCount', { count: formatCount(sweetSpot.bookCount) }) }}
+              {{
+                t('sweetSpotValue', {
+                  range: sweetSpot.label,
+                  rating: formatRating(sweetSpot.averageRating),
+                })
+              }}
             </dd>
           } @else {
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">—</dd>
@@ -56,12 +45,11 @@
         </div>
 
         <div class="min-w-0">
-          <dt class="text-xs font-medium text-text-secondary">{{ t('trend') }}</dt>
-          @if (stats().trend; as trend) {
+          <dt class="text-xs font-medium text-text-secondary">{{ t('highestRated') }}</dt>
+          @if (stats().highestRatedLength; as highestRatedLength) {
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
-              {{ formatTrend(trend.ratingChangePerDoubling) }}
+              {{ t('pageCount', { count: formatCount(highestRatedLength) }) }}
             </dd>
-            <dd class="text-xs text-text-muted">{{ t('trendDescription') }}</dd>
           } @else {
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">—</dd>
           }

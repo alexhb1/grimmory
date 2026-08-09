@@ -15,6 +15,7 @@ import { type GenreStats } from '../../../../data/user/genre-stats';
 type GenreChartData = ChartData<'bar', number[], string>;
 
 const LABEL_LIMIT = 12;
+const CHART_FONT_FAMILY = "'Inter', sans-serif";
 
 @Component({
   selector: 'app-genre-stats-chart',
@@ -77,6 +78,7 @@ export class GenreStatsChartComponent {
       plugins: {
         legend: { display: false },
         tooltip: {
+          enabled: true,
           borderWidth: 1,
           cornerRadius: 6,
           padding: 12,
@@ -96,15 +98,15 @@ export class GenreStatsChartComponent {
           title: {
             display: true,
             text: this.transloco.translate('statsUser.genreStats.axisGenres'),
-            font: { size: 12 },
+            font: { family: CHART_FONT_FAMILY, size: 12 },
           },
           ticks: {
-            font: { size: 11 },
+            font: { family: CHART_FONT_FAMILY, size: 11 },
             maxRotation: 90,
             minRotation: 90,
             callback: (_value, index) => {
               const genre = rows[index]?.genre ?? '';
-              return genre.length > LABEL_LIMIT ? `${genre.slice(0, LABEL_LIMIT)}…` : genre;
+              return genre.length > LABEL_LIMIT ? `${genre.slice(0, LABEL_LIMIT)}...` : genre;
             },
           },
           grid: { display: false },
@@ -114,11 +116,11 @@ export class GenreStatsChartComponent {
           title: {
             display: true,
             text: this.transloco.translate('statsUser.genreStats.axisTimeRead'),
-            font: { size: 12 },
+            font: { family: CHART_FONT_FAMILY, size: 12 },
           },
           beginAtZero: true,
           ticks: {
-            font: { size: 11 },
+            font: { family: CHART_FONT_FAMILY, size: 11 },
             maxTicksLimit: 8,
             callback: (value) => this.formatAxisDuration(Number(value)),
           },
