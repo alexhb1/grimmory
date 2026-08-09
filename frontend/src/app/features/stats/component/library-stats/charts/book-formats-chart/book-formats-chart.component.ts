@@ -5,10 +5,7 @@ import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { type ChartConfiguration, type ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
-import {
-  type BookFormatStats,
-  UNKNOWN_BOOK_FORMAT_ID,
-} from '../../../../data/library/book-format-stats';
+import { type BookFormatStats } from '../../../../data/library/book-format-stats';
 import {
   StatsChartCardComponent,
   type StatsChartState,
@@ -16,7 +13,7 @@ import {
 import { StatsChartJsHostDirective } from '../../../shared/stats-chart-js-host.directive';
 
 interface BookFormatLegendEntry {
-  readonly format: string;
+  readonly format: string | null;
   readonly label: string;
   readonly bookCount: number;
   readonly color: string;
@@ -68,11 +65,11 @@ export class BookFormatsChartComponent {
     this.activeLanguage();
     return this.stats().formats.map(({ format, bookCount }) => ({
       format,
-      label: format === UNKNOWN_BOOK_FORMAT_ID
+      label: format === null
         ? this.t.translate('statsLibrary.bookFormats.unknown')
         : format,
       bookCount,
-      color: FORMAT_COLORS[format] || '#6B7280',
+      color: format === null ? '#6B7280' : FORMAT_COLORS[format] || '#6B7280',
     }));
   });
 

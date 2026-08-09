@@ -116,7 +116,8 @@ export class PageCountChartComponent {
       return {labels: [], datasets: []};
     }
 
-    const labels = this.stats().buckets.map(bucket => bucket.label);
+    const labels = this.stats().buckets.map(({ minimum, maximum }) =>
+      maximum === null ? `${minimum}+` : `${minimum}-${maximum}`);
     const data = this.stats().buckets.map(bucket => bucket.bookCount);
     return {
       labels,

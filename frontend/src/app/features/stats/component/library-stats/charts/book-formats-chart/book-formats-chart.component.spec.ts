@@ -3,10 +3,7 @@ import {TranslocoService} from '@jsverse/transloco';
 import {of} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {
-  BookFormatStats,
-  UNKNOWN_BOOK_FORMAT_ID,
-} from '../../../../data/library/book-format-stats';
+import {BookFormatStats} from '../../../../data/library/book-format-stats';
 import {BookFormatsChartComponent} from './book-formats-chart.component';
 
 interface TooltipContext {
@@ -46,7 +43,7 @@ describe('BookFormatsChartComponent', () => {
         {format: 'EPUB', bookCount: 4},
         {format: 'PDF', bookCount: 3},
         {format: 'AUDIOBOOK', bookCount: 2},
-        {format: UNKNOWN_BOOK_FORMAT_ID, bookCount: 1},
+        {format: null, bookCount: 1},
       ],
     });
 
