@@ -29,6 +29,15 @@ const BAND_COLORS: Readonly<Record<ReadingProgressBandId, string>> = {
   completed: '#28a745',
 };
 
+const BAND_LABELS: Readonly<Record<ReadingProgressBandId, string>> = {
+  'not-started': '0%',
+  'just-started': '1-25%',
+  'getting-into-it': '26-50%',
+  'halfway-through': '51-75%',
+  'almost-finished': '76-99%',
+  completed: '100%',
+};
+
 const BAND_LABEL_KEYS: Readonly<Record<ReadingProgressBandId, string>> = {
   'not-started': 'notStarted',
   'just-started': 'justStarted',
@@ -76,7 +85,7 @@ export class ReadingProgressChartComponent {
     const bands = this.bands();
 
     return {
-      labels: bands.map((band) => this.bandDescription(band.id)),
+      labels: bands.map((band) => BAND_LABELS[band.id]),
       datasets: [
         {
           label: this.transloco.translate('statsUser.readingProgress.booksByProgress'),

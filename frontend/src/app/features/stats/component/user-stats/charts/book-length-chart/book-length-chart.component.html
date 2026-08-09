@@ -34,7 +34,7 @@
             <dd class="mt-1 text-lg font-semibold tabular-nums text-text-strong">
               {{
                 t('sweetSpotValue', {
-                  range: rangeLabel(sweetSpot.rangeId),
+                  range: rangeLabel(sweetSpot.minimum, sweetSpot.maximum),
                   rating: formatRating(sweetSpot.averageRating),
                 })
               }}
