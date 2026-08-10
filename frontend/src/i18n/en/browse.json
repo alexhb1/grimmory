@@ -8,6 +8,7 @@
   },
   "table": {
     "selectBook": "Select {{title}}",
+    "selectAll": "Select all books",
     "moreValues": "Show {{count}} more {{column}}"
   },
   "rail": {

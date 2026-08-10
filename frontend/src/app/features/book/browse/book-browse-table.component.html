@@ -22,7 +22,7 @@
               <span class="selection-control grid h-full w-full place-items-center" (pointerdown)="rememberSelectionPointer($event)">
                 <app-checkbox
                   size="sm"
-                  [ariaLabel]="'book.browser.tooltip.selectAll' | transloco"
+                  [ariaLabel]="'browse.table.selectAll' | transloco"
                   [checked]="allSelected()"
                   [indeterminate]="someSelected()"
                   (checkedChange)="changeHeaderSelection($event)" />
@@ -123,6 +123,8 @@
                       <button
                         type="button"
                         class="inline-flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="book.id === openMenuBookId()"
                         [attr.aria-label]="'cards.aria.bookMenu' | transloco: {title: title(book)}"
                         (click)="onRowMenu(book, $event)">
                         <svg lucideEllipsisVertical class="size-4" aria-hidden="true"></svg>
