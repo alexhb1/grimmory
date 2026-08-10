@@ -61,6 +61,7 @@ COMPONENTS=(
   bookdrop
   metadata
   book
+  cards
   magic-shelf
   notebook
   reader-audiobook
