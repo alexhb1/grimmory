@@ -1,0 +1,14 @@
+{
+  "book": {
+    "read": "Read",
+    "continue": "Continue",
+    "play": "Play",
+    "physical": "PHY",
+    "unknownTitle": "Unknown Title"
+  },
+  "aria": {
+    "selectToggle": "Select {{ title }}",
+    "bookMenu": "Options for {{ title }}",
+    "coverAlt": "Cover of {{ title }}"
+  }
+}
