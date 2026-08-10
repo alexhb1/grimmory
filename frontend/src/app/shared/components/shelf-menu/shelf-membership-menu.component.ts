@@ -57,7 +57,7 @@ const FILTER_THRESHOLD = 8;
           </div>
           <app-menu-separator />
         }
-        <div class="max-h-80 overflow-y-auto overscroll-contain">
+        <div class="max-h-80 overflow-x-hidden overflow-y-auto overscroll-contain">
           @for (shelf of filteredShelves(); track shelf.id) {
             <app-menu-checkbox
               [checked]="shelf.checked"
@@ -73,6 +73,10 @@ const FILTER_THRESHOLD = 8;
           <app-menu-separator />
         }
         <app-menu-item (selected)="createShelf.emit()">{{ 'shared.ui.shelfMenu.newShelf' | transloco }}</app-menu-item>
+        <app-menu-separator />
+        <app-menu-item (selected)="removeFromAllShelves.emit()">
+          {{ 'shared.ui.shelfMenu.removeFromAllShelves' | transloco }}
+        </app-menu-item>
       </ng-template>
     </app-menu>
   `,
@@ -82,6 +86,7 @@ export class ShelfMembershipMenuComponent {
 
   readonly toggleShelf = output<{shelfId: number; checked: boolean}>();
   readonly createShelf = output<void>();
+  readonly removeFromAllShelves = output<void>();
 
   readonly menu = viewChild.required(AppMenuComponent);
   readonly ariaMenu = viewChild.required(AppMenuComponent, {read: Menu});
