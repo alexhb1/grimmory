@@ -8,9 +8,8 @@ import {
   CLEAR_READ_STATUS_LABEL_KEY,
   READ_STATUS_TARGET_LABEL_KEYS,
   READ_STATUS_TARGETS,
-  type BookMenuCapabilities,
   type ReadStatusTarget,
-} from '../../../shared/components/book-menu/book-menu';
+} from '../components/book-menu/book-menu';
 import {
   BulkActionsBarComponent,
   BulkActionsDividerComponent,
@@ -80,7 +79,7 @@ const BULK_BAR_WIDTHS = {
             variant="ghost"
             size="md"
             [disabled]="isResolving()"
-            [label]="'shared.ui.bookMenu.addToShelf' | transloco"
+            [label]="'book.menu.addToShelf' | transloco"
             [appMenuTriggerFor]="bulkShelfMenuHost.menu()">
             <svg lucideBookmark aria-hidden="true"></svg>
           </app-button>
@@ -90,7 +89,7 @@ const BULK_BAR_WIDTHS = {
             variant="ghost"
             size="md"
             [disabled]="isResolving()"
-            [label]="'shared.ui.bookMenu.markAs' | transloco"
+            [label]="'book.menu.markAs' | transloco"
             [appMenuTriggerFor]="bulkMarkAsMenu">
             <svg lucideCheck aria-hidden="true"></svg>
           </app-button>
@@ -110,7 +109,7 @@ const BULK_BAR_WIDTHS = {
             variant="ghost"
             size="md"
             [disabled]="isResolving()"
-            [label]="'book.card.menu.metadata' | transloco"
+            [label]="'book.menu.metadata' | transloco"
             [appMenuTriggerFor]="bulkMetadataMenu">
             <svg lucideDatabase aria-hidden="true"></svg>
           </app-button>
@@ -121,7 +120,7 @@ const BULK_BAR_WIDTHS = {
             size="md"
             iconOnly
             [disabled]="isResolving()"
-            [ariaLabel]="'book.card.menu.moreActions' | transloco"
+            [ariaLabel]="'book.menu.moreActions' | transloco"
             [appMenuTriggerFor]="bulkMoreMenu">
             <svg lucideEllipsis aria-hidden="true"></svg>
           </app-button>
@@ -146,7 +145,7 @@ const BULK_BAR_WIDTHS = {
         (createShelf)="commands.createShelf()"
         (removeFromAllShelves)="commands.removeFromAllShelves(selection(), resolveIds(), bulkShelfIds())" />
 
-      <app-menu #bulkMarkAsMenu #bulkMarkAsAria="ngMenu" [ariaLabel]="'shared.ui.bookMenu.markAs' | transloco">
+      <app-menu #bulkMarkAsMenu #bulkMarkAsAria="ngMenu" [ariaLabel]="'book.menu.markAs' | transloco">
         @for (status of readStatusTargets; track status) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.markAs(selection(), resolveIds(), status)">{{ statusLabelKey(status) | transloco }}</app-menu-item>
         }
@@ -161,10 +160,10 @@ const BULK_BAR_WIDTHS = {
         <app-menu-item [disabled]="isResolving()" (selected)="commands.editOneByOne(selection(), resolveIds())">{{ 'browse.bulk.editOneByOne' | transloco }}</app-menu-item>
       </app-menu>
 
-      <app-menu #bulkMetadataMenu #bulkMetadataAria="ngMenu" [ariaLabel]="'book.card.menu.metadata' | transloco">
+      <app-menu #bulkMetadataMenu #bulkMetadataAria="ngMenu" [ariaLabel]="'book.menu.metadata' | transloco">
         @if (menuCapabilities().canEditMetadata) {
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadata(selection(), resolveIds())">{{ 'metadata.viewer.fetchMetadataBtn' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadataWithOptions(selection(), resolveIds())">{{ 'shared.ui.bookMenu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadata(selection(), resolveIds())">{{ 'book.menu.fetchMetadata' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadataWithOptions(selection(), resolveIds())">{{ 'book.menu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
         }
         @if (menuCapabilities().canEditMetadata && canBulkLockUnlockMetadata()) {
           <app-menu-separator />
@@ -172,28 +171,28 @@ const BULK_BAR_WIDTHS = {
         @if (canBulkLockUnlockMetadata()) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), true)">{{ 'metadata.editor.lockAllBtn' | transloco }}</app-menu-item>
           <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), false)">{{ 'metadata.editor.unlockAllBtn' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.lockUnlockMetadata(selection(), resolveIds())">{{ 'book.browser.tooltip.lockUnlockMetadata' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.lockUnlockMetadata(selection(), resolveIds())">{{ 'browse.bulk.lockUnlockMetadata' | transloco }}</app-menu-item>
         }
         @if (menuCapabilities().canEditMetadata) {
           <app-menu-separator />
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'regenerate')">{{ 'book.menuService.menu.regenerateCovers' | transloco }}</app-menu-item>
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'generate')">{{ 'browse.bulk.customCovers' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'regenerate')">{{ 'book.menu.restoreCover' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'generate')">{{ 'book.menu.generateCover' | transloco }}</app-menu-item>
         }
       </app-menu>
 
-      <app-menu #bulkMoreMenu [ariaLabel]="'book.card.menu.moreActions' | transloco">
+      <app-menu #bulkMoreMenu [ariaLabel]="'book.menu.moreActions' | transloco">
         @if (!bulkBarShowsMarkAs() || (bulkMetadataAvailable() && !bulkBarShowsMetadata())) {
           @if (!bulkBarShowsAddToShelf()) {
-            <app-menu-item [disabled]="isResolving()" [submenu]="bulkShelfMenuHost.ariaMenu()">{{ 'shared.ui.bookMenu.addToShelf' | transloco }}</app-menu-item>
+            <app-menu-item [disabled]="isResolving()" [submenu]="bulkShelfMenuHost.ariaMenu()">{{ 'book.menu.addToShelf' | transloco }}</app-menu-item>
           }
           @if (!bulkBarShowsMarkAs()) {
-            <app-menu-item [disabled]="isResolving()" [submenu]="bulkMarkAsAria">{{ 'shared.ui.bookMenu.markAs' | transloco }}</app-menu-item>
+            <app-menu-item [disabled]="isResolving()" [submenu]="bulkMarkAsAria">{{ 'book.menu.markAs' | transloco }}</app-menu-item>
           }
           @if (bulkMetadataAvailable() && !bulkBarShowsMetadata()) {
             @if (menuCapabilities().canEditMetadata && !bulkBarShowsEdit()) {
               <app-menu-item [disabled]="isResolving()" [submenu]="bulkEditAria">{{ 'common.edit' | transloco }}</app-menu-item>
             }
-            <app-menu-item [disabled]="isResolving()" [submenu]="bulkMetadataAria">{{ 'book.card.menu.metadata' | transloco }}</app-menu-item>
+            <app-menu-item [disabled]="isResolving()" [submenu]="bulkMetadataAria">{{ 'book.menu.metadata' | transloco }}</app-menu-item>
           }
           @if (canBulkResetGrimmory()
             || canBulkResetKoreader()
@@ -204,10 +203,10 @@ const BULK_BAR_WIDTHS = {
           }
         }
         @if (canBulkResetGrimmory()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'GRIMMORY')">{{ 'book.menuService.menu.resetGrimmoryProgress' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'GRIMMORY')">{{ 'book.menu.resetGrimmoryProgress' | transloco }}</app-menu-item>
         }
         @if (canBulkResetKoreader()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'KOREADER')">{{ 'book.menuService.menu.resetKOReaderProgress' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'KOREADER')">{{ 'book.menu.resetKoreaderProgress' | transloco }}</app-menu-item>
         }
         @if ((canBulkResetGrimmory() || canBulkResetKoreader())
           && (canBulkOrganizeFiles()
@@ -216,7 +215,7 @@ const BULK_BAR_WIDTHS = {
           <app-menu-separator />
         }
         @if (canBulkOrganizeFiles()) {
-          <app-menu-item [disabled]="isResolving()" (selected)="commands.organizeFiles(selection(), resolveIds())">{{ 'book.browser.tooltip.organizeFiles' | transloco }}</app-menu-item>
+          <app-menu-item [disabled]="isResolving()" (selected)="commands.organizeFiles(selection(), resolveIds())">{{ 'browse.bulk.organizeFiles' | transloco }}</app-menu-item>
         }
         @if (canBulkAttachFiles()) {
           <app-menu-item [disabled]="!bulkAttachEligible() || isResolving()" (selected)="commands.attachFiles(selection(), books())">
@@ -260,7 +259,7 @@ export class BookBrowseBulkBarComponent {
   protected readonly clearReadStatus = CLEAR_READ_STATUS;
   protected readonly clearReadStatusLabelKey = CLEAR_READ_STATUS_LABEL_KEY;
 
-  protected readonly menuCapabilities = computed<BookMenuCapabilities>(() => {
+  protected readonly menuCapabilities = computed(() => {
     const permissions = this.userService.currentUser()?.permissions;
     return {
       canDownload: !!permissions?.canDownload,

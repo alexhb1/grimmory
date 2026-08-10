@@ -19,7 +19,7 @@ import {type BrowseGridRenderedRange} from '../../../shared/components/browse/br
 import {bookCardHeightForWidth} from '../components/cards/book-card.layout';
 import {BookCardComponent, bookCardCoverSrc} from '../components/cards/book-card.component';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
-import {BookMenuHostComponent} from '../components/book-menu-host/book-menu-host.component';
+import {BookMenuComponent} from '../components/book-menu/book-menu.component';
 import {BookCardSkeletonComponent} from '../components/cards/book-card-skeleton.component';
 import {ArtworkRevealGroupDirective} from '../../../shared/components/cover/artwork-reveal-group.directive';
 import {AppPageHeaderComponent} from '../../../shared/layout/page-header/app.page-header.component';
@@ -194,7 +194,7 @@ const BROWSE_PAGE_PARAMS: Omit<BookPageParams, 'sort'> = {
     BrowseGridSkeletonDef,
     BrowseGridEmptyDef,
     BookCardComponent,
-    BookMenuHostComponent,
+    BookMenuComponent,
     BookCardSkeletonComponent,
     ArtworkRevealGroupDirective,
     BookBrowseToolbarComponent,
@@ -251,7 +251,7 @@ export class BookBrowsePageComponent {
 
   private readonly gridRef = viewChild(BrowseGridComponent);
   private readonly tableRef = viewChild(BookBrowseTableComponent);
-  private readonly cardMenuHost = viewChild(BookMenuHostComponent);
+  private readonly bookMenu = viewChild(BookMenuComponent);
   private readonly isMobile = computed(() => !this.layout.isDesktop());
   protected readonly mobileSelectMode = signal(false);
   private readonly screenWidth = signal(window.innerWidth);
@@ -354,7 +354,7 @@ export class BookBrowsePageComponent {
     });
   });
 
-  protected readonly menuOpenBookId = computed(() => this.cardMenuHost()?.openBookId() ?? null);
+  protected readonly menuOpenBookId = computed(() => this.bookMenu()?.openBookId() ?? null);
 
   private readonly queryParamMap = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -874,7 +874,7 @@ export class BookBrowsePageComponent {
   }
 
   protected onMenuRequested(book: BookSummary, request: ContextMenuRequest): void {
-    this.cardMenuHost()?.openFromCard(book, request);
+    this.bookMenu()?.openFor(book, request);
   }
 
   protected onDensityChange(direction: GridDensityDirection): void {

@@ -6,11 +6,6 @@
     "loadError": "We couldn't load these books.",
     "pageError": "Couldn't load more books."
   },
-  "table": {
-    "selectBook": "Select {{title}}",
-    "selectAll": "Select all books",
-    "moreValues": "Show {{count}} more {{column}}"
-  },
   "toolbar": {
     "columnGroups": {
       "reading": "Reading",
@@ -33,6 +28,11 @@
     "columns": "Columns",
     "filter": "Filter"
   },
+  "table": {
+    "selectBook": "Select {{title}}",
+    "selectAll": "Select all books",
+    "moreValues": "Show {{count}} more {{column}}"
+  },
   "sort": {
     "multiSort": "Multi-Sort",
     "addField": "Add field",
@@ -51,9 +51,11 @@
   },
   "bulk": {
     "markAsMessage": "Mark {{count}} books as {{status}}?",
+    "updateReadStatus": "Update Read Status",
     "editAll": "Edit All",
     "editOneByOne": "Edit One by One",
-    "customCovers": "Custom Covers",
+    "lockUnlockMetadata": "Lock/Unlock Metadata",
+    "organizeFiles": "Organize Files",
     "selectionEmpty": "That selection no longer matches any books.",
     "selectionLoadError": "Couldn't load the selection. Please try again."
   },

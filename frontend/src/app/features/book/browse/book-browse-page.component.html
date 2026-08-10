@@ -28,7 +28,8 @@
       (mobileSelectToggle)="onMobileSelectToggle()" />
   </app-page-header>
 
-  <app-book-menu-host
+  <app-book-menu
+    openInNewTab
     [books]="books()"
     (deleted)="selection.pruneDeleted($event)" />
 
