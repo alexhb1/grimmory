@@ -16,7 +16,7 @@ import {SEARCH_DEBOUNCE_MS} from '../../../shared/util/search-terms';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
 import {type BrowseLink} from '../../../core/data/browse.models';
 import {type BookSummary} from '../data/book-response.models';
-import {BookMenuHostComponent} from '../components/book-menu-host/book-menu-host.component';
+import {BookMenuComponent} from '../components/book-menu/book-menu.component';
 import {BookBrowseBulkBarComponent} from './book-browse-bulk-bar.component';
 import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
 import {DialogService} from '@openng/optimus-ui/dynamicdialog';
@@ -195,9 +195,7 @@ describe('BookBrowsePageComponent', () => {
   }
 
   function bulkMetadataMenu(): HTMLElement {
-    return Array.from(document.querySelectorAll('app-menu[aria-label="Metadata"]'))
-      .find(menu => menu.textContent.includes('Custom Covers')
-        || menu.textContent.includes('Lock/Unlock Metadata')) as HTMLElement;
+    return document.querySelector('app-book-browse-bulk-bar app-menu[aria-label="Metadata"]') as HTMLElement;
   }
 
   function bulkMetadataItemLabels(): string[] {
@@ -968,10 +966,10 @@ describe('BookBrowsePageComponent', () => {
 
     expect(bulkBarButton('Metadata')).toBeDefined();
     expect(bulkMetadataItemLabels()).toEqual([
-      'Fetch Metadata',
-      'Fetch with Options',
-      'Regenerate Covers',
-      'Custom Covers',
+      'Refresh Metadata',
+      'Refresh with Options',
+      'Restore Cover from File',
+      'Generate Cover from Title',
     ]);
     expect(bulkMetadataMenu().querySelectorAll('app-menu-separator')).toHaveLength(1);
   });
@@ -1051,19 +1049,19 @@ describe('BookBrowsePageComponent', () => {
     fixture.detectChanges();
     expectInitialPageRequest().flush(bookPage([1], 1));
     await flushQueryAsync();
-    const host = fixture.debugElement.query(By.directive(BookMenuHostComponent))
+    const menu = fixture.debugElement.query(By.directive(BookMenuComponent))
       .componentInstance as unknown as {
-        menuBookSnapshot: {set(value: BookSummary): void};
+        bookSnapshot: {set(value: BookSummary): void};
         onMetadataLockChange(locked: boolean): void;
       };
-    host.menuBookSnapshot.set({
+    menu.bookSnapshot.set({
       id: 1,
       libraryId: 1,
       libraryName: 'Library',
       metadata: {bookId: 1, allMetadataLocked: false},
     });
 
-    host.onMetadataLockChange(true);
+    menu.onMetadataLockChange(true);
     await flushQueryAsync(1);
 
     const request = http.expectOne(`${API_CONFIG.BASE_URL}/api/v1/books/metadata/toggle-all-lock`);
@@ -1086,14 +1084,14 @@ describe('BookBrowsePageComponent', () => {
     expectInitialPageRequest().flush(bookPage([1], 1));
     await flushQueryAsync();
 
-    const host = fixture.debugElement.query(By.directive(BookMenuHostComponent))
+    const menu = fixture.debugElement.query(By.directive(BookMenuComponent))
       .componentInstance as unknown as {
-        menuBookSnapshot: {set(value: BookSummary): void};
+        bookSnapshot: {set(value: BookSummary): void};
         shelves(): readonly {id: number}[];
       };
-    host.menuBookSnapshot.set(book(1));
+    menu.bookSnapshot.set(book(1));
 
-    expect(host.shelves().map(shelf => shelf.id)).toEqual([5]);
+    expect(menu.shelves().map(shelf => shelf.id)).toEqual([5]);
     expect(bulkHost().bulkShelves().map(shelf => shelf.id)).toEqual([5]);
   });
 });
