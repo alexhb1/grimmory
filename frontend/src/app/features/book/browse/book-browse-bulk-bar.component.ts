@@ -4,12 +4,15 @@ import {injectQuery} from '@tanstack/angular-query-experimental';
 import {LucideBookmark, LucideCheck, LucideDatabase, LucideEllipsis, LucidePenLine} from '@lucide/angular';
 
 import {
-  CLEAR_READ_STATUS,
-  CLEAR_READ_STATUS_LABEL_KEY,
-  READ_STATUS_TARGET_LABEL_KEYS,
-  READ_STATUS_TARGETS,
-  type ReadStatusTarget,
-} from '../components/book-menu/book-menu';
+  bookActionPermissions,
+} from '../data/book-actions';
+import {
+  BOOK_READ_STATUS_LABEL_KEYS,
+  BOOK_READ_STATUS_TARGETS,
+  CLEAR_BOOK_READ_STATUS,
+  CLEAR_BOOK_READ_STATUS_LABEL_KEY,
+  type BookReadStatusTarget,
+} from '../components/book-read-status-options';
 import {
   BulkActionsBarComponent,
   BulkActionsDividerComponent,
@@ -161,57 +164,68 @@ const BULK_BAR_WIDTHS = {
       </app-menu>
 
       <app-menu #bulkMetadataMenu #bulkMetadataAria="ngMenu" [ariaLabel]="'book.menu.metadata' | transloco">
-        @if (menuCapabilities().canEditMetadata) {
+        @if (bulkPermissions().canAutoFetchMetadata) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadata(selection(), resolveIds())">{{ 'book.menu.fetchMetadata' | transloco }}</app-menu-item>
+        }
+        @if (bulkPermissions().canCustomFetchMetadata) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.fetchMetadataWithOptions(selection(), resolveIds())">{{ 'book.menu.fetchMetadataWithOptions' | transloco }}</app-menu-item>
         }
-        @if (menuCapabilities().canEditMetadata && canBulkLockUnlockMetadata()) {
+        @if ((bulkPermissions().canAutoFetchMetadata || bulkPermissions().canCustomFetchMetadata)
+          && bulkPermissions().canLockUnlockMetadata) {
           <app-menu-separator />
         }
-        @if (canBulkLockUnlockMetadata()) {
+        @if (bulkPermissions().canLockUnlockMetadata) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), true)">{{ 'metadata.editor.lockAllBtn' | transloco }}</app-menu-item>
           <app-menu-item [disabled]="isResolving()" (selected)="commands.setMetadataLocks(selection(), resolveIds(), false)">{{ 'metadata.editor.unlockAllBtn' | transloco }}</app-menu-item>
           <app-menu-item [disabled]="isResolving()" (selected)="commands.lockUnlockMetadata(selection(), resolveIds())">{{ 'browse.bulk.lockUnlockMetadata' | transloco }}</app-menu-item>
         }
-        @if (menuCapabilities().canEditMetadata) {
+        @if ((bulkPermissions().canAutoFetchMetadata
+          || bulkPermissions().canCustomFetchMetadata
+          || bulkPermissions().canLockUnlockMetadata)
+          && bulkPermissions().canRegenerateCover) {
           <app-menu-separator />
+        }
+        @if (bulkPermissions().canRegenerateCover) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'regenerate')">{{ 'book.menu.restoreCover' | transloco }}</app-menu-item>
           <app-menu-item [disabled]="isResolving()" (selected)="commands.changeCovers(selection(), resolveIds(), 'generate')">{{ 'book.menu.generateCover' | transloco }}</app-menu-item>
         }
       </app-menu>
 
       <app-menu #bulkMoreMenu [ariaLabel]="'book.menu.moreActions' | transloco">
-        @if (!bulkBarShowsMarkAs() || (bulkMetadataAvailable() && !bulkBarShowsMetadata())) {
+        @if (!bulkBarShowsMarkAs()
+          || (bulkPermissions().canEditMetadata && !bulkBarShowsEdit())
+          || (bulkMetadataAvailable() && !bulkBarShowsMetadata())) {
           @if (!bulkBarShowsAddToShelf()) {
             <app-menu-item [disabled]="isResolving()" [submenu]="bulkShelfMenuHost.ariaMenu()">{{ 'book.menu.addToShelf' | transloco }}</app-menu-item>
           }
           @if (!bulkBarShowsMarkAs()) {
             <app-menu-item [disabled]="isResolving()" [submenu]="bulkMarkAsAria">{{ 'book.menu.markAs' | transloco }}</app-menu-item>
           }
+          @if (bulkPermissions().canEditMetadata && !bulkBarShowsEdit()) {
+            <app-menu-item [disabled]="isResolving()" [submenu]="bulkEditAria">{{ 'common.edit' | transloco }}</app-menu-item>
+          }
           @if (bulkMetadataAvailable() && !bulkBarShowsMetadata()) {
-            @if (menuCapabilities().canEditMetadata && !bulkBarShowsEdit()) {
-              <app-menu-item [disabled]="isResolving()" [submenu]="bulkEditAria">{{ 'common.edit' | transloco }}</app-menu-item>
-            }
             <app-menu-item [disabled]="isResolving()" [submenu]="bulkMetadataAria">{{ 'book.menu.metadata' | transloco }}</app-menu-item>
           }
-          @if (canBulkResetGrimmory()
-            || canBulkResetKoreader()
+          @if (actionPermissions().canResetGrimmoryProgress
+            || actionPermissions().canResetKoreaderProgress
             || canBulkOrganizeFiles()
             || canBulkAttachFiles()
-            || (menuCapabilities().canDeleteBook && !bulkBarShowsDelete())) {
+            || (actionPermissions().canDeleteBook && !bulkBarShowsDelete())) {
             <app-menu-separator />
           }
         }
-        @if (canBulkResetGrimmory()) {
+        @if (actionPermissions().canResetGrimmoryProgress) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'GRIMMORY')">{{ 'book.menu.resetGrimmoryProgress' | transloco }}</app-menu-item>
         }
-        @if (canBulkResetKoreader()) {
+        @if (actionPermissions().canResetKoreaderProgress) {
           <app-menu-item [disabled]="isResolving()" (selected)="commands.resetProgress(selection(), resolveIds(), 'KOREADER')">{{ 'book.menu.resetKoreaderProgress' | transloco }}</app-menu-item>
         }
-        @if ((canBulkResetGrimmory() || canBulkResetKoreader())
+        @if ((actionPermissions().canResetGrimmoryProgress
+          || actionPermissions().canResetKoreaderProgress)
           && (canBulkOrganizeFiles()
             || canBulkAttachFiles()
-            || (menuCapabilities().canDeleteBook && !bulkBarShowsDelete()))) {
+            || (actionPermissions().canDeleteBook && !bulkBarShowsDelete()))) {
           <app-menu-separator />
         }
         @if (canBulkOrganizeFiles()) {
@@ -223,11 +237,11 @@ const BULK_BAR_WIDTHS = {
           </app-menu-item>
         }
         @if ((canBulkOrganizeFiles() || canBulkAttachFiles())
-          && menuCapabilities().canDeleteBook
+          && actionPermissions().canDeleteBook
           && !bulkBarShowsDelete()) {
           <app-menu-separator />
         }
-        @if (menuCapabilities().canDeleteBook && !bulkBarShowsDelete()) {
+        @if (actionPermissions().canDeleteBook && !bulkBarShowsDelete()) {
           <app-menu-item variant="destructive" [loading]="bulkDeleting()" [disabled]="isResolving()" (selected)="commands.delete(selection(), resolveIds())">
             {{ 'common.delete' | transloco }}
           </app-menu-item>
@@ -255,23 +269,28 @@ export class BookBrowseBulkBarComponent {
   private readonly bulkBar = viewChild(BulkActionsBarComponent);
   private readonly isMobile = computed(() => !this.layout.isDesktop());
   protected readonly isResolving = this.commands.isResolving;
-  protected readonly readStatusTargets = READ_STATUS_TARGETS;
-  protected readonly clearReadStatus = CLEAR_READ_STATUS;
-  protected readonly clearReadStatusLabelKey = CLEAR_READ_STATUS_LABEL_KEY;
+  protected readonly readStatusTargets = BOOK_READ_STATUS_TARGETS;
+  protected readonly clearReadStatus = CLEAR_BOOK_READ_STATUS;
+  protected readonly clearReadStatusLabelKey = CLEAR_BOOK_READ_STATUS_LABEL_KEY;
 
-  protected readonly menuCapabilities = computed(() => {
+  protected readonly actionPermissions = computed(() =>
+    bookActionPermissions(this.userService.currentUser()?.permissions));
+  protected readonly bulkPermissions = computed(() => {
     const permissions = this.userService.currentUser()?.permissions;
+    const admin = !!permissions?.admin;
     return {
-      canDownload: !!permissions?.canDownload,
-      canEmailBook: !!permissions?.canEmailBook,
-      canEditMetadata: !!permissions?.canEditMetadata,
-      canDeleteBook: !!permissions?.canDeleteBook,
+      canAutoFetchMetadata: admin || !!permissions?.canBulkAutoFetchMetadata,
+      canCustomFetchMetadata: admin || !!permissions?.canBulkCustomFetchMetadata,
+      canEditMetadata: admin || !!permissions?.canBulkEditMetadata,
+      canRegenerateCover: admin || !!permissions?.canBulkRegenerateCover,
+      canLockUnlockMetadata: admin || !!permissions?.canBulkLockUnlockMetadata,
     };
   });
 
   private readonly bulkBarFit = computed(() => {
     const available = this.bulkBar()?.availableWidth() ?? 0;
-    const capabilities = this.menuCapabilities();
+    const permissions = this.actionPermissions();
+    const bulkPermissions = this.bulkPermissions();
     const w = BULK_BAR_WIDTHS;
     let used = w.frame + w.more + (this.isMobile() ? 0 : w.fixedSection);
     let fitting = true;
@@ -283,9 +302,9 @@ export class BookBrowseBulkBarComponent {
     return {
       addToShelf: take(w.addToShelf),
       markAs: take(w.markAs),
-      edit: capabilities.canEditMetadata && take(w.edit),
+      edit: bulkPermissions.canEditMetadata && take(w.edit),
       metadata: this.bulkMetadataAvailable() && take(w.metadata),
-      delete: capabilities.canDeleteBook && take(w.deleteGroup),
+      delete: permissions.canDeleteBook && take(w.deleteGroup),
     };
   });
   protected readonly bulkBarShowsAddToShelf = computed(() => this.bulkBarFit().addToShelf);
@@ -338,18 +357,13 @@ export class BookBrowseBulkBarComponent {
   });
   protected readonly bulkShelfIds = computed(() => this.bulkShelves().map(shelf => shelf.id));
 
-  protected readonly canBulkResetGrimmory = computed(() =>
-    !!this.userService.currentUser()?.permissions.canBulkResetGrimmoryReadProgress,
-  );
-  protected readonly canBulkLockUnlockMetadata = computed(() =>
-    !!this.userService.currentUser()?.permissions.canBulkLockUnlockMetadata,
-  );
-  protected readonly bulkMetadataAvailable = computed(() =>
-    this.menuCapabilities().canEditMetadata || this.canBulkLockUnlockMetadata(),
-  );
-  protected readonly canBulkResetKoreader = computed(() =>
-    !!this.userService.currentUser()?.permissions.canBulkResetKoReaderReadProgress,
-  );
+  protected readonly bulkMetadataAvailable = computed(() => {
+    const permissions = this.bulkPermissions();
+    return permissions.canAutoFetchMetadata
+      || permissions.canCustomFetchMetadata
+      || permissions.canRegenerateCover
+      || permissions.canLockUnlockMetadata;
+  });
   protected readonly canBulkOrganizeFiles = computed(() =>
     !!this.userService.currentUser()?.permissions.canMoveOrganizeFiles
       && this.appSettingsService.appSettings()?.diskType === 'LOCAL',
@@ -364,19 +378,20 @@ export class BookBrowseBulkBarComponent {
       && new Set(evidenced.map(book => book.libraryId)).size === 1;
   });
   protected readonly bulkMoreMenuHasItems = computed(() => {
-    const capabilities = this.menuCapabilities();
+    const permissions = this.actionPermissions();
     return !this.bulkBarShowsAddToShelf()
       || !this.bulkBarShowsMarkAs()
+      || (this.bulkPermissions().canEditMetadata && !this.bulkBarShowsEdit())
       || (this.bulkMetadataAvailable() && !this.bulkBarShowsMetadata())
-      || this.canBulkResetGrimmory()
-      || this.canBulkResetKoreader()
+      || permissions.canResetGrimmoryProgress
+      || permissions.canResetKoreaderProgress
       || this.canBulkOrganizeFiles()
       || this.canBulkAttachFiles()
-      || (capabilities.canDeleteBook && !this.bulkBarShowsDelete());
+      || (permissions.canDeleteBook && !this.bulkBarShowsDelete());
   });
   protected readonly bulkDeleting = computed(() => this.pendingDeletions().size > 0);
 
-  protected statusLabelKey(status: ReadStatusTarget): string {
-    return READ_STATUS_TARGET_LABEL_KEYS[status];
+  protected statusLabelKey(status: BookReadStatusTarget): string {
+    return BOOK_READ_STATUS_LABEL_KEYS[status];
   }
 }

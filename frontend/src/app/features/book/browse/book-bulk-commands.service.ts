@@ -5,9 +5,9 @@ import {injectMutation} from '@tanstack/angular-query-experimental';
 import {take} from 'rxjs/operators';
 
 import {
-  CLEAR_READ_STATUS_LABEL_KEY,
-  READ_STATUS_TARGET_LABEL_KEYS,
-} from '../components/book-menu/book-menu';
+  BOOK_READ_STATUS_LABEL_KEYS,
+  CLEAR_BOOK_READ_STATUS_LABEL_KEY,
+} from '../components/book-read-status-options';
 import {DeleteBooksPartialError, type BookProgressSource} from '../data/book-command.models';
 import {BookBackgroundSubmissionService} from '../data/book-background-submission.service';
 import {BookCommandService} from '../data/book-command.service';
@@ -172,7 +172,9 @@ export class BookBulkCommandsService {
 
   markAs(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, status: KnownBookReadStatus): void {
     const statusLabel = this.transloco.translate(
-      status === 'UNSET' ? CLEAR_READ_STATUS_LABEL_KEY : READ_STATUS_TARGET_LABEL_KEYS[status],
+      status === 'UNSET'
+        ? CLEAR_BOOK_READ_STATUS_LABEL_KEY
+        : BOOK_READ_STATUS_LABEL_KEYS[status],
     );
     this.confirmationService.confirm({
       header: this.transloco.translate('browse.bulk.updateReadStatus'),

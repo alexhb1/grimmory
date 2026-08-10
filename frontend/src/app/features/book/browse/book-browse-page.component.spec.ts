@@ -915,7 +915,7 @@ describe('BookBrowsePageComponent', () => {
   });
 
   it('offers Edit All and Edit One by One from the bar Edit menu', async () => {
-    currentUser.set(userFixture({canEditMetadata: true}));
+    currentUser.set(userFixture({canBulkEditMetadata: true}));
     await loadAndSelect([book(41)]);
 
     fitAllBulkVerbs();
@@ -929,7 +929,7 @@ describe('BookBrowsePageComponent', () => {
   });
 
   it('folds Edit into the more menu as one submenu entry when the bar is narrow', async () => {
-    currentUser.set(userFixture({canEditMetadata: true}));
+    currentUser.set(userFixture({canBulkEditMetadata: true}));
     await loadAndSelect([book(42)]);
 
     expect(bulkBarButton('Edit')).toBeUndefined();
@@ -958,8 +958,12 @@ describe('BookBrowsePageComponent', () => {
     expect(bulkMetadataMenu().querySelectorAll('app-menu-separator')).toHaveLength(0);
   });
 
-  it('shows only fetch and cover actions in Metadata for an edit-only user', async () => {
-    currentUser.set(userFixture({canEditMetadata: true}));
+  it('shows only the permitted fetch and cover actions in Metadata', async () => {
+    currentUser.set(userFixture({
+      canBulkAutoFetchMetadata: true,
+      canBulkCustomFetchMetadata: true,
+      canBulkRegenerateCover: true,
+    }));
     await loadAndSelect([book(232)]);
 
     fitAllBulkVerbs();
