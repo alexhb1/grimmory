@@ -140,6 +140,12 @@
       "readStatusMenu": "Change read status"
     }
   },
+  "menu": {
+    "read": "Read Book",
+    "play": "Play Audiobook",
+    "continueReading": "Continue Reading",
+    "continueListening": "Continue Listening"
+  },
   "notes": {
     "confirm": {
       "deleteMessage": "Are you sure you want to delete the note \"{{ title }}\"?",

@@ -23,6 +23,16 @@ export interface DeleteBooksResult {
   readonly fileCleanupFailedBookIds: readonly number[];
 }
 
+export interface DeleteBookFileVariables {
+  readonly bookId: number;
+  readonly fileId: number;
+}
+
+export interface DeleteBookFileResult {
+  readonly bookId: number;
+  readonly fileId: number;
+}
+
 export type BookProgressSource = 'GRIMMORY' | 'KOREADER' | 'KOBO';
 
 export interface ResetBookProgressVariables {
