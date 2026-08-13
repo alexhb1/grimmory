@@ -16,6 +16,8 @@ module.exports = tseslint.config(
     processor: angular.processInlineTemplates,
     rules: {
       "*": "off",
+      // Keep Angular's framework checks after general JS/TS linting moves to Oxlint.
+      ...angular.configs.tsRecommended[1].rules,
       "@typescript-eslint/no-explicit-any": "error",
       "@angular-eslint/directive-selector": [
         "error",
