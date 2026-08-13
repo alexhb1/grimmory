@@ -1,26 +1,30 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": [
+    "eslint",
     "typescript",
     "unicorn",
+    "oxc",
     "vitest"
   ],
   "categories": {
-    "correctness": "off"
+    "correctness": "error"
   },
   "options": {
+    "reportUnusedDisableDirectives": "error",
+    "respectEslintDisableDirectives": false,
     "typeAware": true
   },
   "ignorePatterns": [
     "src/assets/**"
   ],
   "rules": {
-    "typescript/no-misused-spread": "warn",
-    "typescript/no-useless-default-assignment": "warn",
-    "typescript/require-array-sort-compare": "warn",
-    "unicorn/no-new-array": "warn",
-    "unicorn/no-useless-spread": "warn",
-    "typescript/await-thenable": "warn",
+    "typescript/no-misused-spread": "error",
+    "typescript/no-useless-default-assignment": "error",
+    "typescript/require-array-sort-compare": "error",
+    "unicorn/no-new-array": "error",
+    "unicorn/no-useless-spread": "error",
+    "typescript/await-thenable": "error",
     "typescript/no-array-delete": "error",
     "typescript/no-base-to-string": "warn",
     "typescript/no-deprecated": "warn",
@@ -28,8 +32,10 @@
     "typescript/no-floating-promises": "warn",
     "typescript/no-for-in-array": "error",
     "typescript/no-implied-eval": "error",
-    "typescript/no-misused-promises": "warn",
-    "typescript/no-redundant-type-constituents": "warn",
+    "typescript/no-mixed-enums": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-non-null-asserted-nullish-coalescing": "error",
+    "typescript/no-redundant-type-constituents": "error",
     "typescript/no-unnecessary-type-assertion": "warn",
     "typescript/no-unnecessary-type-parameters": "warn",
     "typescript/no-unsafe-type-assertion": "warn",
@@ -41,17 +47,18 @@
     "typescript/no-unsafe-return": "warn",
     "typescript/no-unsafe-unary-minus": "error",
     "typescript/only-throw-error": "error",
-    "typescript/prefer-promise-reject-errors": "warn",
-    "typescript/require-await": "warn",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/require-await": "error",
     "typescript/restrict-plus-operands": "error",
     "typescript/restrict-template-expressions": "warn",
+    "typescript/return-await": "error",
     "typescript/unbound-method": [
-      "warn",
+      "error",
       {
         "ignoreStatic": true
       }
     ],
-    "typescript/use-unknown-in-catch-callback-variable": "warn",
+    "typescript/use-unknown-in-catch-callback-variable": "error",
     "vitest/no-conditional-tests": "error",
     "vitest/no-focused-tests": "error",
     "vitest/no-identical-title": "error",
@@ -179,7 +186,11 @@
         "typescript/no-unsafe-return": "off",
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/no-deprecated": "off",
-        "typescript/consistent-type-assertions": "error"
+        "typescript/consistent-type-assertions": "error",
+        "vitest/expect-expect": "off",
+        "vitest/no-disabled-tests": "off",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-to-throw-message": "off"
       }
     },
     {
@@ -187,7 +198,8 @@
         "src/app/core/testing/**/*.ts"
       ],
       "rules": {
-        "typescript/no-unnecessary-type-parameters": "off"
+        "typescript/no-unnecessary-type-parameters": "off",
+        "vitest/require-mock-type-parameters": "off"
       }
     }
   ]
