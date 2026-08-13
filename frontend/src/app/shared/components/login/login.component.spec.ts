@@ -1,6 +1,7 @@
 import {signal} from '@angular/core';
+import {HttpErrorResponse} from '@angular/common/http';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute, convertToParamMap, Router} from '@angular/router';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {of, throwError} from 'rxjs';
 
@@ -79,7 +80,7 @@ describe('LoginComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            queryParams: of(queryParams),
+            queryParamMap: of(convertToParamMap(queryParams)),
           }
         },
       ]
@@ -187,11 +188,11 @@ describe('LoginComponent', () => {
   it('shows translated messages for network and rate-limit login failures', () => {
     configureComponent();
 
-    authService.internalLogin.mockReturnValueOnce(throwError(() => ({status: 0})));
+    authService.internalLogin.mockReturnValueOnce(throwError(() => new HttpErrorResponse({status: 0})));
     component.login();
     expect(component.errorMessage).toBe('Cannot connect to the server. Please check your connection and try again.');
 
-    authService.internalLogin.mockReturnValueOnce(throwError(() => ({status: 429})));
+    authService.internalLogin.mockReturnValueOnce(throwError(() => new HttpErrorResponse({status: 429})));
     component.login();
     expect(component.errorMessage).toBe('Too many failed login attempts. Please try again later.');
   });
@@ -199,7 +200,7 @@ describe('LoginComponent', () => {
   it('uses the backend error message when login fails unexpectedly', () => {
     configureComponent();
     authService.internalLogin.mockReturnValue(
-      throwError(() => ({status: 500, error: {message: 'Bad credentials'}}))
+      throwError(() => new HttpErrorResponse({status: 500, error: {status: 500, message: 'Bad credentials'}}))
     );
 
     component.login();

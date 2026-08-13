@@ -27,7 +27,7 @@ export class FaviconService {
       URL.revokeObjectURL(this.currentUrl);
     }
 
-    let favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    let favicon = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
     if (!favicon) {
       favicon = document.createElement('link');
       favicon.rel = 'icon';

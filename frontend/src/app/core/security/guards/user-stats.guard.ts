@@ -12,6 +12,5 @@ export const UserStatsGuard: CanActivateFn = (route: ActivatedRouteSnapshot, sta
   if (user && (user.permissions.admin || user.permissions.canAccessUserStats)) {
     return true;
   }
-  router.navigate(['/dashboard']);
-  return false;
+  return router.createUrlTree(['/dashboard']);
 };

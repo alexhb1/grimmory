@@ -167,7 +167,8 @@ export class AppMessageComponent {
 
   private focusAndReveal(issue: ValidationError.WithFieldTree): void {
     issue.fieldTree().focusBoundControl();
-    const field = (this.document.activeElement as HTMLElement | null)?.closest<HTMLElement>('app-field') ?? null;
+    const activeElement = this.document.activeElement;
+    const field = activeElement instanceof HTMLElement ? activeElement.closest<HTMLElement>('app-field') : null;
     if (!field) return;
 
     field.scrollIntoView?.({ behavior: 'smooth', block: 'center' });

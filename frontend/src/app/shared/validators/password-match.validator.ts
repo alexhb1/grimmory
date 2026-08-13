@@ -4,8 +4,8 @@ export const passwordMatchValidator = (
   passwordControlName: string,
   confirmPasswordControlName: string
 ): ValidatorFn => (control: AbstractControl): ValidationErrors | null => {
-  const password = control.get(passwordControlName)?.value;
-  const confirmPassword = control.get(confirmPasswordControlName)?.value;
+  const password: unknown = control.get(passwordControlName)?.value;
+  const confirmPassword: unknown = control.get(confirmPasswordControlName)?.value;
 
   if (!password || !confirmPassword) return null;
 

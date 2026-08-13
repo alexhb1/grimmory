@@ -137,6 +137,8 @@ export class AppPageHeaderBreadcrumbsComponent {
     if (breadcrumb.commands?.length) {
       this.router.navigate([...breadcrumb.commands], {
         queryParamsHandling: breadcrumb.queryParamsHandling,
+      }).catch((error: unknown) => {
+        console.error('Breadcrumb navigation failed:', error);
       });
     }
   }
@@ -147,7 +149,8 @@ export class AppPageHeaderBreadcrumbsComponent {
 
   toggleHiddenBreadcrumbs(event: MouseEvent): void {
     const menu = this.hiddenBreadcrumbMenu()!;
-    const origin = event.currentTarget as HTMLElement;
+    const origin = event.currentTarget;
+    if (!(origin instanceof HTMLElement)) return;
     if (menu.openerElement() === origin) {
       menu.close();
     } else {

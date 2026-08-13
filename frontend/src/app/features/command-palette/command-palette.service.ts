@@ -133,11 +133,13 @@ export class CommandPaletteService {
     this.hide();
     queueMicrotask(() => {
       if (item.command) {
-        void Promise.resolve(item.command()).catch(() => undefined);
+        item.command();
         return;
       }
       if (item.route) {
-        void this.router.navigate(item.route, item.queryParams ? { queryParams: item.queryParams } : {});
+        this.router.navigate(item.route, item.queryParams ? { queryParams: item.queryParams } : {}).catch((error: unknown) => {
+          console.error('Command palette navigation failed:', error);
+        });
       }
     });
   }
@@ -213,10 +215,18 @@ export class CommandPaletteService {
     const user = this.userService.currentUser();
     if (!user) return [];
     return buildQuickActionNavItems(this.translate, user.permissions, {
-      createLibrary: () => void this.dialogLauncherService.openLibraryCreateDialog().catch(() => undefined),
-      createShelf: () => void this.bookDialogHelperService.openShelfCreatorDialog().catch(() => undefined),
-      createMagicShelf: () => void this.dialogLauncherService.openMagicShelfCreateDialog().catch(() => undefined),
-      uploadBook: () => void this.dialogLauncherService.openFileUploadDialog().catch(() => undefined),
+      createLibrary: () => {
+        void this.dialogLauncherService.openLibraryCreateDialog();
+      },
+      createShelf: () => {
+        void this.bookDialogHelperService.openShelfCreatorDialog();
+      },
+      createMagicShelf: () => {
+        void this.dialogLauncherService.openMagicShelfCreateDialog();
+      },
+      uploadBook: () => {
+        void this.dialogLauncherService.openFileUploadDialog();
+      },
     }).map((item) => this.toPaletteNavItem(item, 'action'));
   });
 

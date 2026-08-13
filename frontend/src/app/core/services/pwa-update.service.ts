@@ -34,9 +34,15 @@ export class PwaUpdateService {
         const now = Date.now();
         try {
             const guardStr = sessionStorage.getItem(key);
-            const guard = guardStr ? JSON.parse(guardStr) : null;
+            const guard: unknown = guardStr ? JSON.parse(guardStr) : null;
 
-            if (guard && guard.reason === reason && now - guard.timestamp < 10000) {
+            if (typeof guard === 'object'
+                && guard !== null
+                && 'reason' in guard
+                && guard.reason === reason
+                && 'timestamp' in guard
+                && typeof guard.timestamp === 'number'
+                && now - guard.timestamp < 10000) {
                 console.error(`PWA reload guard triggered for reason: ${reason}. Stopped reloading to avoid loop.`);
                 return false;
             }

@@ -40,7 +40,7 @@ describe('BookCoverService', () => {
       author: 'Frank Herbert',
       coverType: 'ebook',
     };
-    const mockImage = {url: 'https://example.test/cover-1.jpg', index: 1};
+    const mockImage = {url: 'https://example.test/cover-1.jpg', width: 600, height: 900, index: 1};
     const encoder = new TextEncoder();
     const dataChunk = encoder.encode(`data: ${JSON.stringify(mockImage)}\n`);
 

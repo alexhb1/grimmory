@@ -44,15 +44,15 @@ export class DialogLauncherService {
     maximizable: false,
   }
 
-  openDialog(component: unknown, options: object): DynamicDialogRef | null {
-    return this.dialogService.open(component as Type<unknown>, {
+  openDialog(component: Type<unknown>, options: object): DynamicDialogRef | null {
+    return this.dialogService.open(component, {
       ...this.defaultDialogOptions,
       ...options,
     });
   }
 
   launchLazyDialog(dialogFn: () => Promise<DynamicDialogRef | null>): Promise<DynamicDialogRef | null> {
-    return dialogFn().catch(err => {
+    return dialogFn().catch((err: unknown) => {
       console.error('Failed to load dialog', err);
       this.messageService.add({
         severity: 'error',
@@ -63,7 +63,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openLibraryCreateDialog(): Promise<DynamicDialogRef | null> {
+  openLibraryCreateDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {LibraryCreatorComponent} = await import('../../features/library-creator/library-creator.component');
       return this.openDialog(LibraryCreatorComponent, {
@@ -73,7 +73,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openDirectoryPickerDialog(): Promise<DynamicDialogRef | null> {
+  openDirectoryPickerDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {DirectoryPickerComponent} = await import('../components/directory-picker/directory-picker.component');
       return this.openDialog(DirectoryPickerComponent, {
@@ -83,7 +83,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openLibraryEditDialog(libraryId: number): Promise<DynamicDialogRef | null> {
+  openLibraryEditDialog(libraryId: number): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {LibraryCreatorComponent} = await import('../../features/library-creator/library-creator.component');
       return this.openDialog(LibraryCreatorComponent, {
@@ -97,34 +97,32 @@ export class DialogLauncherService {
     });
   }
 
-  async openLibraryMetadataFetchDialog(libraryId: number): Promise<DynamicDialogRef | null> {
+  openLibraryMetadataFetchDialog(libraryId: number): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {MetadataFetchOptionsComponent} = await import('../../features/metadata/component/metadata-options-dialog/metadata-fetch-options/metadata-fetch-options.component');
       return this.openDialog(MetadataFetchOptionsComponent, {
         showHeader: false,
         styleClass: `${DialogSize.SM} ${DialogStyle.MINIMAL}`,
         data: {
-          libraryId: libraryId,
+          libraryId,
           metadataRefreshType: MetadataRefreshType.LIBRARY,
         },
       });
     });
   }
 
-  async openShelfEditDialog(shelfId: number): Promise<DynamicDialogRef | null> {
+  openShelfEditDialog(shelfId: number): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {ShelfEditDialogComponent} = await import('../../features/book/components/shelf-edit-dialog/shelf-edit-dialog.component');
       return this.openDialog(ShelfEditDialogComponent, {
         showHeader: false,
         styleClass: `${DialogSize.SM} ${DialogStyle.MINIMAL}`,
-        data: {
-          shelfId: shelfId
-        },
+        data: {shelfId},
       });
     });
   }
 
-  async openFileUploadDialog(): Promise<DynamicDialogRef | null> {
+  openFileUploadDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {BookUploaderComponent} = await import('../components/book-uploader/book-uploader.component');
       return this.openDialog(BookUploaderComponent, {
@@ -134,7 +132,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openCreateUserDialog(): Promise<DynamicDialogRef | null> {
+  openCreateUserDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {CreateUserDialogComponent} = await import('../../features/settings/user-management/create-user-dialog/create-user-dialog.component');
       return this.openDialog(CreateUserDialogComponent, {
@@ -144,7 +142,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openUserProfileDialog(): Promise<DynamicDialogRef | null> {
+  openUserProfileDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {UserProfileDialogComponent} = await import('../../features/settings/user-profile-dialog/user-profile-dialog.component');
       return this.openDialog(UserProfileDialogComponent, {
@@ -154,7 +152,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openMagicShelfCreateDialog(): Promise<DynamicDialogRef | null> {
+  openMagicShelfCreateDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {MagicShelfComponent} = await import('../../features/magic-shelf/component/magic-shelf-component');
       return this.openDialog(MagicShelfComponent, {
@@ -164,7 +162,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openMagicShelfEditDialog(shelfId: number): Promise<DynamicDialogRef | null> {
+  openMagicShelfEditDialog(shelfId: number): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {MagicShelfComponent} = await import('../../features/magic-shelf/component/magic-shelf-component');
       return this.openDialog(MagicShelfComponent, {
@@ -178,7 +176,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openVersionChangelogDialog(): Promise<DynamicDialogRef | null> {
+  openVersionChangelogDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {VersionChangelogDialogComponent} = await import('../layout/layout-sidebar/version-changelog-dialog/version-changelog-dialog.component');
       return this.openDialog(VersionChangelogDialogComponent, {
@@ -188,7 +186,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openEmailRecipientDialog(): Promise<DynamicDialogRef | null> {
+  openEmailRecipientDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {CreateEmailRecipientDialogComponent} = await import('../../features/settings/email-v2/create-email-recipient-dialog/create-email-recipient-dialog.component');
       return this.openDialog(CreateEmailRecipientDialogComponent, {
@@ -198,7 +196,7 @@ export class DialogLauncherService {
     });
   }
 
-  async openEmailProviderDialog(): Promise<DynamicDialogRef | null> {
+  openEmailProviderDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {CreateEmailProviderDialogComponent} = await import('../../features/settings/email-v2/create-email-provider-dialog/create-email-provider-dialog.component');
       return this.openDialog(CreateEmailProviderDialogComponent, {
@@ -208,33 +206,29 @@ export class DialogLauncherService {
     });
   }
 
-  async openBookdropFinalizeResultDialog(result: BookdropFinalizeResult): Promise<DynamicDialogRef | null> {
+  openBookdropFinalizeResultDialog(result: BookdropFinalizeResult): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {BookdropFinalizeResultDialogComponent} = await import('../../features/bookdrop/component/bookdrop-finalize-result-dialog/bookdrop-finalize-result-dialog.component');
       return this.openDialog(BookdropFinalizeResultDialogComponent, {
         showHeader: false,
         styleClass: `${DialogSize.MD} ${DialogStyle.MINIMAL}`,
-        data: {
-          result: result,
-        },
+        data: {result},
       });
     });
   }
 
-  async openMetadataReviewDialog(taskId: string): Promise<DynamicDialogRef | null> {
+  openMetadataReviewDialog(taskId: string): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {MetadataReviewDialogComponent} = await import('../../features/metadata/component/metadata-review-dialog/metadata-review-dialog-component');
       return this.openDialog(MetadataReviewDialogComponent, {
         showHeader: false,
         styleClass: `${DialogSize.FULL} ${DialogStyle.MINIMAL}`,
-        data: {
-          taskId,
-        },
+        data: {taskId},
       });
     });
   }
 
-  async openIconPickerDialog(): Promise<DynamicDialogRef | null> {
+  openIconPickerDialog(): Promise<DynamicDialogRef | null> {
     return this.launchLazyDialog(async () => {
       const {IconPickerComponent} = await import('../components/icon-picker/icon-picker-component');
       return this.openDialog(IconPickerComponent, {

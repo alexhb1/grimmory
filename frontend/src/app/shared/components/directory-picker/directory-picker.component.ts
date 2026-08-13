@@ -24,7 +24,6 @@ import {TranslocoDirective, TranslocoPipe} from '@jsverse/transloco';
     FormsModule,
     ProgressSpinner,
     Checkbox,
-    InputIcon,
     Button,
     InputIcon,
     IconField,

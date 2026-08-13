@@ -59,6 +59,8 @@ export class LibraryImportProgressWidgetComponent {
       if (navigated) {
         this.dismiss();
       }
+    }).catch((error: unknown) => {
+      console.error('Imported library navigation failed:', error);
     });
   }
 }

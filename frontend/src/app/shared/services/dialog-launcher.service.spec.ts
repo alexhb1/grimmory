@@ -32,8 +32,8 @@ describe('DialogLauncherService', () => {
     service = TestBed.inject(DialogLauncherService);
   });
 
-  it('merges the default dialog options with caller overrides', async () => {
-    await service.openDialog(LibraryCreatorComponent, {
+  it('merges the default dialog options with caller overrides', () => {
+    service.openDialog(LibraryCreatorComponent, {
       showHeader: false,
       data: {mode: 'create'},
     });

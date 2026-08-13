@@ -5,7 +5,6 @@ import { catchError, map, shareReplay } from 'rxjs/operators';
 import { RxStompService } from '../websocket/rx-stomp.service';
 import { API_CONFIG } from '../../core/config/api-config';
 import { createRxStompConfig } from '../websocket/rx-stomp.config';
-import { Router } from '@angular/router';
 import { PostLoginInitializerService } from '../../core/services/post-login-initializer.service';
 
 interface AccessTokenResponse {
@@ -36,7 +35,6 @@ export class AuthService {
 
   private http = inject(HttpClient);
   private injector = inject(Injector);
-  private router = inject(Router);
   private postLoginInitializer = inject(PostLoginInitializerService);
 
   readonly token = signal<string | null>(this.getInternalAccessToken());
@@ -67,7 +65,7 @@ export class AuthService {
 
     return this.refreshInternalSession().pipe(
       map(response => response.accessToken),
-      catchError(error => {
+      catchError((error: unknown) => {
         if (error instanceof StaleRefreshResponseError && this.hasCurrentAccessToken()) {
           return of(this.getInternalAccessToken()!);
         }
@@ -224,7 +222,9 @@ export class AuthService {
 
     this.token.set(null);
     this._postLoginInitialized.set(false);
-    this.getRxStompService().deactivate();
+    this.getRxStompService().deactivate().catch((error: unknown) => {
+      console.error('Failed to deactivate the authenticated WebSocket session:', error);
+    });
   }
 
   getRxStompService(): RxStompService {

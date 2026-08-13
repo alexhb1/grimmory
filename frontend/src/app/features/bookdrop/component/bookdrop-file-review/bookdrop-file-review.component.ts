@@ -551,7 +551,7 @@ export class BookdropFileReviewComponent implements OnInit {
           detail: this.t.translate('bookdrop.fileReview.toast.importCompleteDetail'),
         });
 
-        this.dialogLauncherService.openBookdropFinalizeResultDialog(result);
+        void this.dialogLauncherService.openBookdropFinalizeResultDialog(result);
 
         const finalizedIds = new Set(files.map(f => f.fileId));
         Object.keys(this.fileUiCache).forEach(idStr => {

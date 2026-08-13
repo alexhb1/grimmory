@@ -12,6 +12,5 @@ export const BookdropGuard: CanActivateFn = (route: ActivatedRouteSnapshot, stat
   if (user && (user.permissions.admin || user.permissions.canAccessBookdrop)) {
     return true;
   }
-  router.navigate(['/dashboard']);
-  return false;
+  return router.createUrlTree(['/dashboard']);
 };

@@ -14,6 +14,7 @@ import {catchError, mergeMap, toArray} from 'rxjs/operators';
 import {LucideCirclePlus, LucideDynamicIcon, LucideImages, LucidePalette, LucideSearch, LucideSparkles, provideLucideConfig, type LucideIconData, type LucideIconNode} from '@lucide/angular';
 import iconNodes from 'lucide-static/icon-nodes.json';
 import {SvgContentDirective} from '../icon/svg-content.directive';
+import {getApiErrorMessage} from '../../models/api-exception.model';
 
 interface SvgEntry {
   name: string;
@@ -371,12 +372,12 @@ export class IconPickerComponent implements OnInit {
         );
         this.isLoadingSvgIcons.set(false);
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.isLoadingSvgIcons.set(false);
         this.messageService.add({
           severity: 'error',
           summary: 'Delete Failed',
-          detail: error.error?.message || this.ERROR_MESSAGES.DELETE_ERROR,
+          detail: getApiErrorMessage(error, this.ERROR_MESSAGES.DELETE_ERROR),
           life: 4000
         });
       }

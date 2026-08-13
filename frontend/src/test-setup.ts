@@ -60,11 +60,11 @@ if (process.env['GITHUB_ACTIONS']) {
 }
 
 if (!globalThis.ResizeObserver) {
-  globalThis.ResizeObserver = MockResizeObserver as typeof ResizeObserver;
+  globalThis.ResizeObserver = MockResizeObserver;
 }
 
 if (!globalThis.IntersectionObserver) {
-  globalThis.IntersectionObserver = MockIntersectionObserver as typeof IntersectionObserver;
+  globalThis.IntersectionObserver = MockIntersectionObserver;
 }
 
 if (!globalThis.PointerEvent) {

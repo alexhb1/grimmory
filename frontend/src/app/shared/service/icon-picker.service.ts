@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {EMPTY, from, Observable, switchMap} from 'rxjs';
+import {EMPTY, filter, from, Observable, switchMap} from 'rxjs';
 import {DialogLauncherService} from '../services/dialog-launcher.service';
 import {IconSelection} from '../icons/icon-selection';
 
@@ -13,8 +13,19 @@ export class IconPickerService {
         if (!ref) {
           return EMPTY;
         }
-        return ref.onClose as Observable<IconSelection>;
+        return ref.onClose.pipe(filter(isIconSelection));
       })
     );
   }
+}
+
+function isIconSelection(value: unknown): value is IconSelection {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  return 'type' in value
+    && (value.type === 'LUCIDE' || value.type === 'CUSTOM_SVG')
+    && 'value' in value
+    && typeof value.value === 'string';
 }

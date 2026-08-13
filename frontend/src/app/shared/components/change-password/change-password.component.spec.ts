@@ -1,4 +1,5 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {HttpErrorResponse} from '@angular/common/http';
 import {of, throwError} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {MessageService} from '@openng/optimus-ui/api';
@@ -112,7 +113,10 @@ describe('ChangePasswordComponent', () => {
 
   it('surfaces backend failures through the error message and toast service', () => {
     userService.changePassword.mockReturnValueOnce(
-      throwError(() => ({message: 'Password update failed'}))
+      throwError(() => new HttpErrorResponse({
+        status: 400,
+        error: {status: 400, message: 'Password update failed'},
+      }))
     );
     component.currentPassword = 'current-password';
     component.newPassword = 'new-password';

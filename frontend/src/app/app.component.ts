@@ -9,7 +9,6 @@ import {RouterOutlet} from '@angular/router';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 import {AuthInitializationService} from './core/security/auth-initialization-service';
 import {AppThemeService} from './shared/service/app-theme.service';
-import {MetadataBatchProgressNotification} from './shared/model/metadata-batch-progress.model';
 import {MetadataProgressService} from './shared/service/metadata-progress.service';
 import {BookdropFileNotification, BookdropFileService} from './features/bookdrop/service/bookdrop-file.service';
 import {Subscription} from 'rxjs';
@@ -20,6 +19,7 @@ import {CommandPaletteComponent} from './features/command-palette/command-palett
 import {CommandPaletteService} from './features/command-palette/command-palette.service';
 import {LibraryImportProgressService} from './shared/service/library-import-progress.service';
 import {AuthorService} from './features/author-browser/service/author.service';
+import {MetadataBatchProgressNotification} from './shared/model/metadata-batch-progress.model';
 
 @Component({
   selector: 'app-root',
@@ -90,15 +90,15 @@ export class AppComponent implements OnInit, OnDestroy {
   };
 
   private onOffline = () => {
-    this.checkServerReachable().then(reachable => {
-      this.offline.set(!reachable);
-    });
+    this.checkServerReachable().then(
+      reachable => this.offline.set(!reachable),
+      () => this.offline.set(true),
+    );
   };
 
   private checkServerReachable(): Promise<boolean> {
     return fetch('/api/public/settings', {method: 'HEAD', cache: 'no-store'})
-      .then(() => true)
-      .catch(() => false);
+      .then(() => true);
   }
 
   reload(): void {

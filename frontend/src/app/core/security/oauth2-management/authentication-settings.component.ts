@@ -1,4 +1,3 @@
-import {HttpErrorResponse} from '@angular/common/http';
 import {Component, effect, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {InputText} from '@openng/optimus-ui/inputtext';
@@ -13,6 +12,7 @@ import {MultiSelect} from '@openng/optimus-ui/multiselect';
 import {LibraryService} from '../../../features/book/service/library.service';
 import {ExternalDocLinkComponent} from '../../../shared/components/external-doc-link/external-doc-link.component';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 import {OidcGroupMapping} from '../../../shared/model/oidc-group-mapping.model';
 import {OidcGroupMappingService} from '../../../shared/service/oidc-group-mapping.service';
 import {Select} from '@openng/optimus-ui/select';
@@ -229,10 +229,10 @@ export class AuthenticationSettingsComponent {
         summary: this.t.translate('settingsAuth.toast.saved'),
         detail: this.t.translate('settingsAuth.toast.providerSaved')
       }),
-      error: (error: HttpErrorResponse) => this.messageService.add({
+      error: (error: unknown) => this.messageService.add({
         severity: 'error',
         summary: this.t.translate('common.error'),
-        detail: error?.error?.message || this.t.translate('settingsAuth.toast.providerError')
+        detail: getApiErrorMessage(error, this.t.translate('settingsAuth.toast.providerError'))
       })
     });
   }
@@ -242,13 +242,21 @@ export class AuthenticationSettingsComponent {
   }
 
   copyToClipboard(value: string): void {
-    navigator.clipboard.writeText(value).then(() => {
-      this.messageService.add({
+    void navigator.clipboard.writeText(value).then(
+      () => this.messageService.add({
         severity: 'success',
         summary: this.t.translate('settingsAuth.toast.saved'),
         detail: this.t.translate('settingsAuth.toast.copiedToClipboard')
-      });
-    });
+      }),
+      (error: unknown) => {
+        console.error('Failed to copy OIDC value:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: this.t.translate('common.error'),
+          detail: this.t.translate('settingsAuth.toast.copyFailed')
+        });
+      }
+    );
   }
 
   saveSessionDuration(): void {
@@ -483,12 +491,12 @@ export class AuthenticationSettingsComponent {
         summary: this.t.translate('settingsAuth.toast.saved'),
         detail: this.t.translate('settingsAuth.oidcOnly.saved')
       }),
-      error: (err) => {
+      error: (error: unknown) => {
         this.oidcForceOnlyMode = !this.oidcForceOnlyMode;
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('common.error'),
-          detail: err?.error?.message || this.t.translate('settingsAuth.oidcOnly.error')
+          detail: getApiErrorMessage(error, this.t.translate('settingsAuth.oidcOnly.error'))
         });
       }
     });

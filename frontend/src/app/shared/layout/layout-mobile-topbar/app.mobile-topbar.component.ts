@@ -41,6 +41,8 @@ export class AppMobileTopbarComponent {
     if (backTarget) {
       this.router.navigate([...backTarget.commands], {
         queryParamsHandling: backTarget.queryParamsHandling,
+      }).catch((error: unknown) => {
+        console.error('Mobile back navigation failed:', error);
       });
     }
   }

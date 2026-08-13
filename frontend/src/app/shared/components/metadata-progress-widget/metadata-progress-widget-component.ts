@@ -76,7 +76,7 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
   private markTaskStalled(taskId: string): void {
     const task = this.activeTasks[taskId];
     if (!task) return;
-    if (task.status !== MetadataBatchStatus.COMPLETED && task.status !== 'ERROR') {
+    if (task.status !== MetadataBatchStatus.COMPLETED && task.status !== MetadataBatchStatus.ERROR) {
       this.activeTasks[taskId] = {
         ...task,
         status: MetadataBatchStatus.ERROR,
@@ -88,7 +88,7 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
 
   getProgressPercent(task: MetadataBatchProgressNotification): number {
     if (task.total <= 0) return 0;
-    if (task.status === 'COMPLETED') return 100;
+    if (task.status === MetadataBatchStatus.COMPLETED) return 100;
     return Math.round((task.completed / task.total) * 100);
   }
 
@@ -102,7 +102,7 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
   }
 
   reviewTask(taskId: string): void {
-    void this.dialogLauncherService.openMetadataReviewDialog(taskId).catch(() => undefined);
+    void this.dialogLauncherService.openMetadataReviewDialog(taskId);
   }
 
   cancelTask(taskId: string): void {
@@ -143,15 +143,15 @@ export class MetadataProgressWidgetComponent implements OnInit, OnDestroy {
     this.lastUpdateMap.clear();
   }
 
-  getTagSeverity(status: 'IN_PROGRESS' | 'COMPLETED' | 'ERROR' | 'CANCELLED'): 'info' | 'success' | 'danger' | 'warn' {
+  getTagSeverity(status: MetadataBatchStatus): 'info' | 'success' | 'danger' | 'warn' {
     switch (status) {
-      case 'COMPLETED':
+      case MetadataBatchStatus.COMPLETED:
         return 'success';
-      case 'ERROR':
+      case MetadataBatchStatus.ERROR:
         return 'danger';
-      case 'CANCELLED':
+      case MetadataBatchStatus.CANCELLED:
         return 'warn';
-      case 'IN_PROGRESS':
+      case MetadataBatchStatus.IN_PROGRESS:
       default:
         return 'info';
     }

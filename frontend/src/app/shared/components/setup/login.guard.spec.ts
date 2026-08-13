@@ -11,7 +11,7 @@ import {LoginGuard} from './login.guard';
 describe('LoginGuard', () => {
   const setupStatusUrl = `${API_CONFIG.BASE_URL}/api/v1/setup/status`;
   const router = {
-    navigate: vi.fn(() => Promise.resolve(true)),
+    createUrlTree: vi.fn((commands: string[]) => ({commands})),
   };
 
   let guard: LoginGuard;
@@ -20,7 +20,7 @@ describe('LoginGuard', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
-    router.navigate.mockClear();
+    router.createUrlTree.mockClear();
 
     TestBed.configureTestingModule({
       providers: [
@@ -47,7 +47,7 @@ describe('LoginGuard', () => {
     request.flush({data: true});
 
     await expect(resultPromise).resolves.toBe(true);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(router.createUrlTree).not.toHaveBeenCalled();
   });
 
   it('redirects to setup when the setup status request fails', async () => {
@@ -56,7 +56,7 @@ describe('LoginGuard', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush('boom', {status: 500, statusText: 'Server Error'});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/setup']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/setup']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/setup']);
   });
 });

@@ -118,7 +118,7 @@ export class ShelfAssignerComponent {
   }
 
   createShelfDialog(): void {
-    this.bookDialogHelper.openShelfCreatorDialog();
+    void this.bookDialogHelper.openShelfCreatorDialog();
   }
 
   closeDialog(): void {

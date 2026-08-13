@@ -1,7 +1,13 @@
 import Aura from '@openng/optimus-ui-themes/aura';
-import {$t, definePreset} from '@openng/optimus-ui-themes';
+import {definePreset, type ThemeOptions, useTheme} from '@openng/optimus-ui-themes';
+import type {Preset} from '@openng/optimus-ui-themes/types';
 
 export type ColorPalette = Record<string, string>;
+
+export const AppOptimusThemeOptions = {
+  darkModeSelector: '.dark',
+  cssLayer: {name: 'optimus', order: 'theme, base, optimus, components, utilities'},
+} satisfies ThemeOptions;
 
 export interface ResolvedThemePalettes {
   primary: ColorPalette;
@@ -150,17 +156,19 @@ function scaleRemString(value: string): string {
   return result;
 }
 
-function scaleOptimusRems<T>(value: T): T {
+function scaleOptimusRems(value: Preset): Preset;
+function scaleOptimusRems(value: unknown): unknown;
+function scaleOptimusRems(value: unknown): unknown {
   if (typeof value === 'string') {
-    return scaleRemString(value) as T;
+    return scaleRemString(value);
   }
   if (Array.isArray(value)) {
-    return value.map(scaleOptimusRems) as T;
+    return value.map(entry => scaleOptimusRems(entry));
   }
-  if (value && typeof value === 'object') {
+  if (typeof value === 'object' && value !== null) {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [key, scaleOptimusRems(entry)])
-    ) as T;
+    );
   }
   return value;
 }
@@ -182,7 +190,7 @@ export function optimusThemeTokenPalettes(): ResolvedThemePalettes {
   return appTokenPalettes;
 }
 
-function buildOptimusPalettePreset(theme: ResolvedThemePalettes): object {
+function buildOptimusPalettePreset(theme: ResolvedThemePalettes): Preset {
   return {
     semantic: {
       primary: theme.primary,
@@ -195,6 +203,17 @@ function buildOptimusPalettePreset(theme: ResolvedThemePalettes): object {
           primary: appPrimary,
           highlight: appHighlight,
         },
+      },
+    },
+  };
+}
+
+function buildOptimusSurfacePreset(theme: ResolvedThemePalettes): Preset {
+  return {
+    semantic: {
+      colorScheme: {
+        light: {surface: theme.surface},
+        dark: {surface: theme.surface},
       },
     },
   };
@@ -241,11 +260,14 @@ const AppOptimusPreset = definePreset(AppOptimusBasePreset, {
 });
 
 export function applyOptimusTheme(theme: ResolvedThemePalettes): void {
-  $t()
-    .preset(AppOptimusPreset)
-    .preset(buildOptimusPalettePreset(theme))
-    .surfacePalette(theme.surface)
-    .use({useDefaultOptions: true});
+  useTheme({
+    preset: definePreset(
+      AppOptimusPreset,
+      buildOptimusPalettePreset(theme),
+      buildOptimusSurfacePreset(theme),
+    ),
+    options: AppOptimusThemeOptions,
+  });
 }
 
 export default AppOptimusPreset;

@@ -28,8 +28,8 @@ export const AuthInterceptorService: HttpInterceptorFn = (req, next: HttpHandler
   const authReq = (token && isApiRequest && !isAuthRequest && !hasAuthHeader) ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req;
 
   return next(authReq).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !isAuthRequest) {
+    catchError((error: unknown) => {
+      if (error instanceof HttpErrorResponse && error.status === 401 && !isAuthRequest) {
         return handle401Error(authService, authReq, next);
       }
       return throwError(() => error);
@@ -40,9 +40,9 @@ export const AuthInterceptorService: HttpInterceptorFn = (req, next: HttpHandler
 function handle401Error(authService: AuthService, request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
   return defer(() => {
     return authService.ensureAccessToken({forceRefresh: true}).pipe(
-      catchError(err => {
+      catchError((error: unknown) => {
         forceLogout(authService);
-        return throwError(() => err);
+        return throwError(() => error);
       }),
       switchMap(accessToken =>
         next(request.clone({

@@ -4,6 +4,8 @@ import {Observable} from 'rxjs';
 import {API_CONFIG} from '../../../core/config/api-config';
 
 export interface SetupPayload {
+  name: string;
+  username: string;
   email: string;
   password: string;
 }

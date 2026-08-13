@@ -32,11 +32,18 @@ describe('SetupService', () => {
   });
 
   it('posts the admin setup payload to the setup endpoint', () => {
-    service.createAdmin({email: 'admin@example.com', password: 'secret'}).subscribe();
+    service.createAdmin({
+      name: 'Admin User',
+      username: 'admin',
+      email: 'admin@example.com',
+      password: 'secret',
+    }).subscribe();
 
     const request = httpTestingController.expectOne(setupUrl);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
+      name: 'Admin User',
+      username: 'admin',
       email: 'admin@example.com',
       password: 'secret',
     });

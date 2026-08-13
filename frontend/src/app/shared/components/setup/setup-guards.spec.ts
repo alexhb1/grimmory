@@ -14,7 +14,6 @@ describe('setup and login guards', () => {
   const setupStatusUrl = `${API_CONFIG.BASE_URL}/api/v1/setup/status`;
   const router = {
     createUrlTree: vi.fn((commands: string[]) => ({commands}) as unknown as UrlTree),
-    navigate: vi.fn(() => Promise.resolve(true)),
   };
 
   let httpTestingController: HttpTestingController;
@@ -26,7 +25,6 @@ describe('setup and login guards', () => {
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
     router.createUrlTree.mockClear();
-    router.navigate.mockClear();
 
     TestBed.configureTestingModule({
       providers: [
@@ -73,7 +71,7 @@ describe('setup and login guards', () => {
     request.flush({data: true});
 
     await expect(resultPromise).resolves.toBe(true);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(router.createUrlTree).not.toHaveBeenCalled();
   });
 
   it('redirects login to setup when setup is incomplete', async () => {
@@ -81,8 +79,8 @@ describe('setup and login guards', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush({data: false});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/setup']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/setup']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/setup']);
   });
 
   it('redirects login to setup when the setup status request fails', async () => {
@@ -90,8 +88,8 @@ describe('setup and login guards', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush('boom', {status: 500, statusText: 'Server Error'});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/setup']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/setup']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/setup']);
   });
 
   it('sends users from the root route to setup when configuration is missing', async () => {
@@ -99,8 +97,8 @@ describe('setup and login guards', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush({data: false});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/setup']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/setup']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/setup']);
   });
 
   it('sends users from the root route to the dashboard when setup is complete', async () => {
@@ -108,7 +106,7 @@ describe('setup and login guards', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush({data: true});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/dashboard']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
   });
 });

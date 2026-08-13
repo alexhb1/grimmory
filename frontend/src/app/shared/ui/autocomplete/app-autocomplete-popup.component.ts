@@ -242,7 +242,7 @@ export class AppAutocompletePopupComponent {
   }
 
   private lastSelectedValue(values: readonly string[] | Set<string>): string | null {
-    const selected = Array.isArray(values) ? values : [...values];
+    const selected = values instanceof Set ? [...values] : values;
     return selected[selected.length - 1] ?? null;
   }
 }

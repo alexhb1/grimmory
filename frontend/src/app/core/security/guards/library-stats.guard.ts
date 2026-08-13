@@ -12,6 +12,5 @@ export const LibraryStatsGuard: CanActivateFn = (route: ActivatedRouteSnapshot, 
   if (user && (user.permissions.admin || user.permissions.canAccessLibraryStats)) {
     return true;
   }
-  router.navigate(['/dashboard']);
-  return false;
+  return router.createUrlTree(['/dashboard']);
 };

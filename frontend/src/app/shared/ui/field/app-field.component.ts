@@ -99,8 +99,7 @@ export class AppFieldComponent implements AppFieldContext {
     }
 
     const errors = this.errors();
-    if (Array.isArray(errors)) return errors;
-    return errors ? [errors] : [];
+    return typeof errors === 'string' ? [errors] : errors;
   });
   protected readonly disabledReasonMessages = computed<readonly string[]>(() =>
     (this.fieldState()?.disabledReasons() ?? [])

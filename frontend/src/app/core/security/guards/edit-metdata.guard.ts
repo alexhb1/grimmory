@@ -12,6 +12,5 @@ export const EditMetadataGuard: CanActivateFn = (route: ActivatedRouteSnapshot, 
   if (user && (user.permissions.admin || user.permissions.canEditMetadata)) {
     return true;
   }
-  router.navigate(['/dashboard']);
-  return false;
+  return router.createUrlTree(['/dashboard']);
 };

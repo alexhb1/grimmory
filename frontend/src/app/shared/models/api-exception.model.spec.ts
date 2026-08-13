@@ -8,7 +8,7 @@ describe('api-exception.model', () => {
       status: 500,
       message: 'Boom',
       timestamp: '2026-03-26T10:00:00Z',
-      error: 'Internal Server Error'
+      details: ['bookId: must be positive']
     };
 
     expect(error.status).toBe(500);

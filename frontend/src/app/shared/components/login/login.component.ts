@@ -1,4 +1,5 @@
 import {Component, effect, inject, OnInit} from '@angular/core';
+import {HttpErrorResponse} from '@angular/common/http';
 import {AuthService} from '../../service/auth.service';
 import {ActivatedRoute, Router} from '@angular/router';
 import {FormsModule} from '@angular/forms';
@@ -10,6 +11,7 @@ import {take} from 'rxjs/operators';
 import {AppSettingsService} from '../../service/app-settings.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {OidcService} from '../../../core/security/oidc.service';
+import {getApiErrorMessage} from '../../models/api-exception.model';
 
 @Component({
   selector: 'app-login',
@@ -49,9 +51,9 @@ export class LoginComponent implements OnInit {
     this.oidcName = publicSettings.oidcProviderDetails?.providerName || 'OIDC';
 
     if (publicSettings.oidcForceOnlyMode) {
-      this.route.queryParams.pipe(take(1)).subscribe(params => {
-        const isLocalMode = params['local'] === 'true';
-        const hasOidcError = !!params['oidcError'];
+      this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+        const isLocalMode = params.get('local') === 'true';
+        const hasOidcError = params.has('oidcError');
 
         if (!isLocalMode && !hasOidcError) {
           this.handleAutoRedirect();
@@ -71,12 +73,12 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     this.authService.clearSessionOnLoginPage();
 
-    this.route.queryParams.pipe(take(1)).subscribe(params => {
-      if (params['reason'] === 'session_revoked') {
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      if (params.get('reason') === 'session_revoked') {
         this.infoMessage = this.translocoService.translate('auth.login.sessionRevoked');
       }
 
-      const oidcError = params['oidcError'];
+      const oidcError = params.get('oidcError');
       if (oidcError) {
         this.errorMessage = this.resolveOidcError(oidcError);
       }
@@ -98,7 +100,9 @@ export class LoginComponent implements OnInit {
     this.oidcOnlyAutoRedirect = true;
     sessionStorage.setItem('oidc_redirect_count', String(count + 1));
     this.showLocalLogin = false;
-    this.loginWithOidc();
+    this.loginWithOidc().catch((error: unknown) => {
+      console.error('OIDC auto-redirect failed:', error);
+    });
   }
 
   private resolveOidcError(error: string): string {
@@ -126,19 +130,21 @@ export class LoginComponent implements OnInit {
   login(): void {
     this.authService.internalLogin({username: this.username, password: this.password}).subscribe({
       next: (response) => {
-        if (response.isDefaultPassword) {
-          this.router.navigate(['/change-password']);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
+        const destination = response.isDefaultPassword ? '/change-password' : '/dashboard';
+        this.router.navigate([destination]).catch((error: unknown) => {
+          console.error('Post-login navigation failed:', error);
+        });
       },
-      error: (error) => {
-        if (error.status === 0) {
+      error: (error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 0) {
           this.errorMessage = this.translocoService.translate('auth.login.connectionError');
-        } else if (error.status === 429) {
+        } else if (error instanceof HttpErrorResponse && error.status === 429) {
           this.errorMessage = this.translocoService.translate('auth.login.rateLimited');
         } else {
-          this.errorMessage = error?.error?.message || this.translocoService.translate('auth.login.unexpectedError');
+          this.errorMessage = getApiErrorMessage(
+            error,
+            this.translocoService.translate('auth.login.unexpectedError')
+          );
         }
       }
     });
@@ -186,5 +192,4 @@ export class LoginComponent implements OnInit {
       this.isOidcLoginInProgress = false;
     }
   }
-
 }
