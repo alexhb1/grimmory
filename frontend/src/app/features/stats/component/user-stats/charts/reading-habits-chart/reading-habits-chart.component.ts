@@ -44,7 +44,10 @@ export class ReadingHabitsChartComponent {
     return this.calculateReadingHabitsData(this.bookService.books());
   });
 
-  private readonly habitKeys = ['consistency', 'multitasking', 'completionism', 'exploration', 'organization', 'intensity', 'methodology', 'momentum'];
+  private readonly habitKeys: (keyof ReadingHabitsProfile)[] = [
+    'consistency', 'multitasking', 'completionism', 'exploration',
+    'organization', 'intensity', 'methodology', 'momentum'
+  ];
 
   public readonly chartType = 'radar' as const;
 
@@ -461,8 +464,8 @@ export class ReadingHabitsChartComponent {
 
     return this.habitKeys.map((key, i) => ({
       habit: this.t.translate(`statsUser.readingHabits.habits.${key}`),
-      score: profile[key as keyof ReadingHabitsProfile],
-      description: this.getHabitDescription(key, profile[key as keyof ReadingHabitsProfile]),
+      score: profile[key],
+      description: this.getHabitDescription(key, profile[key]),
       color: habitColors[i]
     }));
   }

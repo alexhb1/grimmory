@@ -1,6 +1,6 @@
-import {Component, inject, Input, OnInit, signal} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {MessageService} from '@openng/optimus-ui/api';
-import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {BookCoverService, CoverFetchRequest, CoverImage} from '../../../../shared/services/book-cover.service';
 import {finalize} from 'rxjs/operators';
 import {Button} from '@openng/optimus-ui/button';
@@ -12,6 +12,12 @@ import {BookMetadataManageService} from '../../../book/service/book-metadata-man
 import {Image} from '@openng/optimus-ui/image';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../../shared/models/api-exception.model';
+
+export interface CoverSearchDialogData {
+  bookId: number;
+  coverType?: 'ebook' | 'audiobook';
+}
 
 @Component({
   selector: 'app-cover-search',
@@ -29,8 +35,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
   styleUrls: ['./cover-search.component.scss']
 })
 export class CoverSearchComponent implements OnInit {
-  @Input() bookId!: number;
-  searchForm: FormGroup;
+  bookId!: number;
   coverImages: CoverImage[] = [];
   loading = signal(false);
   hasSearched = signal(false);
@@ -38,27 +43,29 @@ export class CoverSearchComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private bookCoverService = inject(BookCoverService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<CoverSearchDialogData>>(DynamicDialogConfig);
   protected dynamicDialogRef = inject(DynamicDialogRef);
   protected bookService = inject(BookService);
   private bookMetadataManageService = inject(BookMetadataManageService);
   private messageService = inject(MessageService);
   private readonly t = inject(TranslocoService);
-
-  constructor() {
-    this.searchForm = this.fb.group({
-      title: ['', Validators.required],
-      author: ['']
-    });
-  }
+  readonly searchForm = this.fb.nonNullable.group({
+    title: ['', Validators.required],
+    author: ['']
+  });
 
   ngOnInit() {
-    this.bookId = this.dynamicDialogConfig.data.bookId;
+    const dialogData = this.dynamicDialogConfig.data;
+    if (!dialogData) {
+      throw new Error('Cover search dialog requires book data');
+    }
+
+    this.bookId = dialogData.bookId;
     const book = this.bookService.findBookById(this.bookId);
 
     // Use explicitly provided coverType, or auto-detect based on primary file
-    if (this.dynamicDialogConfig.data.coverType) {
-      this.coverType = this.dynamicDialogConfig.data.coverType;
+    if (dialogData.coverType) {
+      this.coverType = dialogData.coverType;
     } else if (book?.primaryFile?.bookType === 'AUDIOBOOK') {
       this.coverType = 'audiobook';
     } else {
@@ -98,7 +105,7 @@ export class CoverSearchComponent implements OnInit {
             this.coverImages.push(image);
             this.coverImages.sort((a, b) => a.index - b.index);
           },
-          error: (error) => {
+          error: (error: unknown) => {
             console.error('Error fetching covers:', error);
           }
         });
@@ -126,11 +133,11 @@ export class CoverSearchComponent implements OnInit {
         });
         this.dynamicDialogRef.close(true);
       },
-      error: err => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('metadata.coverSearch.toast.coverUpdateFailedSummary'),
-          detail: err?.message || this.t.translate('metadata.coverSearch.toast.coverUpdateFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('metadata.coverSearch.toast.coverUpdateFailedDetail'))
         });
       }
     });

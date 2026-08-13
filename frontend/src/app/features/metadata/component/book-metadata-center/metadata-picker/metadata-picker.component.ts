@@ -239,16 +239,20 @@ export class MetadataPickerComponent {
   }
 
   onAutoCompleteSelect(fieldName: string, event: AutoCompleteSelectEvent) {
+    if (typeof event.value !== 'string') return;
+
     const values = (this.metadataForm.get(fieldName)?.value as string[]) || [];
-    if (!values.includes(event.value as string)) {
-      this.metadataForm.get(fieldName)?.setValue([...values, event.value as string]);
+    if (!values.includes(event.value)) {
+      this.metadataForm.get(fieldName)?.setValue([...values, event.value]);
     }
-    (event.originalEvent.target as HTMLInputElement).value = '';
+    if (event.originalEvent.target instanceof HTMLInputElement) {
+      event.originalEvent.target.value = '';
+    }
   }
 
   onAutoCompleteKeyUp(fieldName: string, event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      const input = event.target as HTMLInputElement;
+    if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+      const input = event.target;
       const value = input.value?.trim();
       if (value) {
         const values = this.metadataForm.get(fieldName)?.value || [];
@@ -289,8 +293,10 @@ export class MetadataPickerComponent {
   }
 
   onAuthorInputSelect(event: AutoCompleteSelectEvent) {
+    if (typeof event.value !== 'string') return;
+
     const authors = (this.metadataForm.get('authors')?.value as string[]) || [];
-    const value = event.value as string;
+    const value = event.value;
     if (!authors.includes(value)) {
       this.metadataForm.get('authors')?.setValue([...authors, value]);
       this.metadataForm.get('authors')?.markAsDirty();
@@ -512,7 +518,7 @@ export class MetadataPickerComponent {
       }
     }
 
-    return flags as MetadataClearFlags;
+    return flags;
   }
 
   getThumbnail(): string | null {

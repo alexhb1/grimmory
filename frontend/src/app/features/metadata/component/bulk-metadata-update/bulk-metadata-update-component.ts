@@ -1,5 +1,5 @@
 import {Component, computed, effect, inject, Injector, OnInit} from '@angular/core';
-import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {FormBuilder, FormsModule, ReactiveFormsModule} from '@angular/forms';
 
 import {InputText} from '@openng/optimus-ui/inputtext';
 import {Button} from '@openng/optimus-ui/button';
@@ -14,6 +14,12 @@ import {Checkbox} from '@openng/optimus-ui/checkbox';
 import {AutoComplete} from '@openng/optimus-ui/autocomplete';
 import {AutoCompleteSelectEvent} from '@openng/optimus-ui/autocomplete';
 import {ProgressSpinner} from '@openng/optimus-ui/progressspinner';
+
+export interface BulkMetadataUpdateDialogData {
+  bookIds: number[];
+}
+
+type MultiValueMetadataField = 'authors' | 'genres' | 'moods' | 'tags';
 
 @Component({
   selector: 'app-bulk-metadata-update-component',
@@ -34,7 +40,6 @@ import {ProgressSpinner} from '@openng/optimus-ui/progressspinner';
   styleUrl: './bulk-metadata-update-component.scss'
 })
 export class BulkMetadataUpdateComponent implements OnInit {
-  metadataForm!: FormGroup;
   bookIds: number[] = [];
   books: Book[] = [];
   showBookList = true;
@@ -56,7 +61,7 @@ export class BulkMetadataUpdateComponent implements OnInit {
     tags: false,
   };
 
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<BulkMetadataUpdateDialogData>>(DynamicDialogConfig);
   readonly ref = inject(DynamicDialogRef);
   private readonly fb = inject(FormBuilder);
   private readonly bookService = inject(BookService);
@@ -64,6 +69,17 @@ export class BulkMetadataUpdateComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly uniqueMetadata = computed(() => this.bookService.uniqueMetadata());
+  readonly metadataForm = this.fb.group({
+    authors: this.fb.control<string[]>([]),
+    publisher: this.fb.control(''),
+    language: this.fb.control(''),
+    seriesName: this.fb.control(''),
+    seriesTotal: this.fb.control<number | null>(null),
+    publishedDate: this.fb.control<string | null>(null),
+    genres: this.fb.control<string[]>([]),
+    moods: this.fb.control<string[]>([]),
+    tags: this.fb.control<string[]>([]),
+  });
 
   get allAuthors(): string[] { return this.uniqueMetadata().authors; }
   get allGenres(): string[] { return this.uniqueMetadata().categories; }
@@ -124,18 +140,6 @@ export class BulkMetadataUpdateComponent implements OnInit {
     this.bookIds = this.config.data?.bookIds ?? [];
     this.books = this.bookService.getBooksByIds(this.bookIds);
 
-    this.metadataForm = this.fb.group({
-      authors: [],
-      publisher: [''],
-      language: [''],
-      seriesName: [''],
-      seriesTotal: [''],
-      publishedDate: [null],
-      genres: [],
-      moods: [],
-      tags: []
-    });
-
     effect(() => {
       this.books = this.bookService.books().filter(book => this.bookIds.includes(book.id));
     }, {injector: this.injector});
@@ -147,38 +151,52 @@ export class BulkMetadataUpdateComponent implements OnInit {
 
     if (this.clearFields[field]) {
       control.disable();
-      control.setValue(null);
+      control.reset();
     } else {
       control.enable();
     }
   }
 
-  onAutoCompleteSelect(fieldName: string, event: AutoCompleteSelectEvent) {
-    const values = (this.metadataForm.get(fieldName)?.value as string[]) || [];
-    if (!values.includes(event.value as string)) {
-      this.metadataForm.get(fieldName)?.setValue([...values, event.value as string]);
+  onAutoCompleteSelect(fieldName: MultiValueMetadataField, event: AutoCompleteSelectEvent) {
+    const value: unknown = event.value;
+    if (typeof value !== 'string') {
+      return;
     }
-    (event.originalEvent.target as HTMLInputElement).value = "";
+
+    const control = this.metadataForm.controls[fieldName];
+    const values = control.value ?? [];
+    if (!values.includes(value)) {
+      control.setValue([...values, value]);
+    }
+
+    const input = event.originalEvent.target;
+    if (input instanceof HTMLInputElement) {
+      input.value = '';
+    }
   }
 
-  onAutoCompleteKeyUp(fieldName: string, event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      const input = event.target as HTMLInputElement;
-      const value = input.value?.trim();
+  onAutoCompleteKeyUp(fieldName: MultiValueMetadataField, event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) {
+        return;
+      }
+
+      const value = input.value.trim();
       if (value) {
-        const values = this.metadataForm.get(fieldName)?.value || [];
+        const control = this.metadataForm.controls[fieldName];
+        const values = control.value ?? [];
         if (!values.includes(value)) {
-          this.metadataForm.get(fieldName)?.setValue([...values, value]);
+          control.setValue([...values, value]);
         }
-        input.value = "";
+        input.value = '';
       }
     }
   }
 
   onFormKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
-      if ((event.target as HTMLElement)?.tagName === 'BUTTON' &&
-        (event.target as HTMLButtonElement)?.type === 'submit') {
+      if (event.target instanceof HTMLButtonElement && event.target.type === 'submit') {
         return;
       }
       event.preventDefault();
@@ -275,7 +293,11 @@ export class BulkMetadataUpdateComponent implements OnInit {
   }
 
   onCoverFileSelect(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
     if (input.files && input.files.length > 0) {
       this.selectedCoverFile = input.files[0];
     }

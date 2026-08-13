@@ -110,17 +110,17 @@ public class MetadataTaskService {
                             .count();
 
                     String message;
-                    String status;
+                    MetadataFetchTaskStatus status;
                     int completedCount = task.getCompletedBooks() != null ? task.getCompletedBooks() : 0;
 
                     if (task.getStatus() == MetadataFetchTaskStatus.ERROR) {
                         total = task.getTotalBooksCount() != null ? task.getTotalBooksCount() : remaining.size();
                         message = String.format("Metadata fetch failed, processed %d of %d books.", completedCount, total);
-                        status = "ERROR";
+                        status = MetadataFetchTaskStatus.ERROR;
                     } else {
                         total = remaining.size();
                         message = String.format("Metadata fetch completed! %d books need review.", fetchedCount);
-                        status = "COMPLETED";
+                        status = MetadataFetchTaskStatus.COMPLETED;
                         completedCount = (int) acceptedCount;
                     }
 

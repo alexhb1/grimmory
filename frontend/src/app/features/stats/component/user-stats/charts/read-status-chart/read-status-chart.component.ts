@@ -13,10 +13,6 @@ interface ReadingStatusStats {
   percentage: number;
 }
 
-interface DatasetMetaPoint {
-  hidden?: boolean;
-}
-
 const STATUS_COLOR_MAP: Record<string, string> = {
   [ReadStatus.UNREAD]: '#6c757d',
   [ReadStatus.READING]: '#17a2b8',
@@ -28,6 +24,12 @@ const STATUS_COLOR_MAP: Record<string, string> = {
   [ReadStatus.ABANDONED]: '#e74c3c',
   [ReadStatus.UNSET]: '#343a40'
 } as const;
+
+const READ_STATUSES = new Set<string>(Object.values(ReadStatus));
+
+function isReadStatus(value: unknown): value is ReadStatus {
+  return typeof value === 'string' && READ_STATUSES.has(value);
+}
 
 type StatusChartData = ChartData<'doughnut', number[], string>;
 
@@ -51,7 +53,7 @@ export class ReadStatusChartComponent {
 
   public readonly chartType = 'doughnut' as const;
 
-  public readonly chartOptions: ChartConfiguration['options'] = {
+  public readonly chartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -84,9 +86,9 @@ export class ReadStatusChartComponent {
           label: (context) => {
             const dataIndex = context.dataIndex;
             const dataset = context.dataset;
-            const value = dataset.data[dataIndex] as number;
+            const value = dataset.data[dataIndex];
             const label = context.chart.data.labels?.[dataIndex] || '';
-            const total = (dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
+            const total = dataset.data.reduce((a, b) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1);
             return this.t.translate('statsUser.readStatus.tooltipLabel', {label, value, percentage});
           }
@@ -110,7 +112,7 @@ export class ReadStatusChartComponent {
         labels,
         datasets: [{
           data: dataValues,
-          backgroundColor: colors.length > 0 ? colors : [...Object.values(STATUS_COLOR_MAP)]
+          backgroundColor: colors.length > 0 ? colors : Object.values(STATUS_COLOR_MAP)
         }]
       };
     } catch (error) {
@@ -119,7 +121,7 @@ export class ReadStatusChartComponent {
         labels: [],
         datasets: [{
           data: [],
-          backgroundColor: [...Object.values(STATUS_COLOR_MAP)]
+          backgroundColor: Object.values(STATUS_COLOR_MAP)
         }]
       };
     }
@@ -147,9 +149,7 @@ export class ReadStatusChartComponent {
 
     for (const book of books) {
       const rawStatus = book.readStatus;
-      const status: ReadStatus = Object.values(ReadStatus).includes(rawStatus as ReadStatus)
-        ? (rawStatus as ReadStatus)
-        : ReadStatus.UNSET;
+      const status = isReadStatus(rawStatus) ? rawStatus : ReadStatus.UNSET;
 
       statusMap.set(status, (statusMap.get(status) || 0) + 1);
     }
@@ -185,26 +185,24 @@ export class ReadStatusChartComponent {
     return STATUS_MAPPING[status] ?? this.t.translate('statsUser.readStatus.noStatus');
   }
 
-  private generateLegendLabels(chart: Chart) {
+  private generateLegendLabels(chart: Chart<'doughnut'>) {
     const data = chart.data;
     if (!data.labels?.length || !data.datasets?.[0]?.data?.length) {
       return [];
     }
 
     const dataset = data.datasets[0];
-    const dataValues = dataset.data as number[];
+    const dataValues = dataset.data;
+    const stats = this.readingStatusStats();
 
     return data.labels.map((label: unknown, index: number) => {
-      const metaPoint = chart.getDatasetMeta(0)?.data?.[index] as DatasetMetaPoint | undefined;
-      const isVisible = typeof chart.getDataVisibility === 'function'
-        ? chart.getDataVisibility(index)
-        : !(metaPoint?.hidden || false);
+      const status = stats[index]?.rawStatus ?? ReadStatus.UNSET;
 
       return {
         text: `${String(label)} (${dataValues[index]})`,
-        fillStyle: (dataset.backgroundColor as string[])[index],
+        fillStyle: STATUS_COLOR_MAP[status],
         lineWidth: 1,
-        hidden: !isVisible,
+        hidden: !chart.getDataVisibility(index),
         index,
       };
     });

@@ -40,7 +40,7 @@ export class LibraryFilterService {
     books.forEach(book => {
       if (!libraryMap.has(book.libraryId)) {
         const library = libraries.find(lib => lib.id === book.libraryId);
-        const libraryName = library?.name || this.t.translate('statsLibrary.libraryFilter.libraryFallback', {id: book.libraryId}) as string;
+        const libraryName = library?.name || this.t.translate<string>('statsLibrary.libraryFilter.libraryFallback', {id: book.libraryId});
         libraryMap.set(book.libraryId, libraryName);
       }
     });

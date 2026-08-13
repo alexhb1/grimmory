@@ -330,7 +330,7 @@ export class MetadataSearcherComponent implements OnDestroy, OnChanges {
     if (metadata.goodreadsId) return 'goodreads';
     if (metadata.googleId) return 'google';
     if (metadata.hardcoverId) return 'hardcover';
-    if (metadata['doubanId']) return 'douban';
+    if (metadata.doubanId) return 'douban';
     if (metadata['lubimyczytacId']) return 'lubimyczytac';
     if (metadata.comicvineId) return 'comicvine';
     if (metadata.ranobedbId) return 'ranobedb';
@@ -487,8 +487,8 @@ export class MetadataSearcherComponent implements OnDestroy, OnChanges {
       return `https://hardcover.app/books/${metadata.hardcoverId}`;
     }
 
-    if (metadata['doubanId']) {
-      return `https://book.douban.com/subject/${metadata['doubanId']}`;
+    if (metadata.doubanId) {
+      return `https://book.douban.com/subject/${metadata.doubanId}`;
     }
 
     if (metadata['lubimyczytacId']) {
@@ -532,7 +532,7 @@ export class MetadataSearcherComponent implements OnDestroy, OnChanges {
       return 'Hardcover';
     }
 
-    if (metadata['doubanId']) {
+    if (metadata.doubanId) {
       return 'Douban';
     }
 
@@ -557,8 +557,7 @@ export class MetadataSearcherComponent implements OnDestroy, OnChanges {
   }
 
   onProviderClick(event: Event) {
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'A' || target.closest('a')) {
+    if (event.target instanceof Element && event.target.closest('a')) {
       event.stopPropagation();
     }
   }

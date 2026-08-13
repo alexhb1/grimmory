@@ -64,7 +64,7 @@
   <!-- Charts Container -->
   <div class="charts-container" cdkDropList [cdkDropListData]="visibleCharts()" (cdkDropListDropped)="drop($event)">
     @for (chart of visibleCharts(); track chart.id) {
-      <div class="chart-card" [class]="chart.sizeClass" cdkDrag>
+      <div [class]="'chart-card ' + chart.sizeClass" cdkDrag>
         <div class="chart-drag-handle" cdkDragHandle>
           <i class="pi pi-arrows-alt"></i>
         </div>

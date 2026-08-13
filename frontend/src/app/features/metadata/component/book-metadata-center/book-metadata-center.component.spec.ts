@@ -27,7 +27,7 @@ describe('BookMetadataCenterComponent', () => {
     appSettingsSignal = signal<AppSettings | null>(null);
     currentUserSignal = signal({permissions: {admin: true, canEditMetadata: true}});
     queryParamMapSubject = new BehaviorSubject(convertToParamMap({}));
-    routerNavigate = vi.fn();
+    routerNavigate = vi.fn(() => Promise.resolve(true));
 
     TestBed.configureTestingModule({
       providers: [

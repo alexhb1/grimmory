@@ -2,6 +2,7 @@ package org.booklore.model.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.booklore.model.enums.MetadataFetchTaskStatus;
 
 @Data
 @AllArgsConstructor
@@ -10,6 +11,6 @@ public class MetadataBatchProgressNotification {
     private int completed;
     private int total;
     private String message;
-    private String status;
+    private MetadataFetchTaskStatus status;
     private boolean isReview;
 }

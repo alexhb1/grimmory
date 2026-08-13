@@ -258,7 +258,7 @@ public class MetadataRefreshService {
     }
 
     private void sendBatchProgressNotification(String taskId, int current, int total, String message, MetadataFetchTaskStatus status, boolean isReview) {
-        notificationService.sendMessage(Topic.BOOK_METADATA_BATCH_PROGRESS, new MetadataBatchProgressNotification(taskId, current, total, message, status.name(), isReview));
+        notificationService.sendMessage(Topic.BOOK_METADATA_BATCH_PROGRESS, new MetadataBatchProgressNotification(taskId, current, total, message, status, isReview));
     }
 
     private void completeTask(MetadataFetchJobEntity task, int completed, int total, boolean isReviewMode) {

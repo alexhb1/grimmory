@@ -8,7 +8,10 @@ import {BookService} from '../../../book/service/book.service';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
 import {Book} from '../../../book/model/book.model';
 import {FormsModule} from '@angular/forms';
-import {MetadataFetchOptionsComponent} from '../metadata-options-dialog/metadata-fetch-options/metadata-fetch-options.component';
+import {
+  MetadataFetchOptionsComponent,
+  type MetadataRefreshDialogData
+} from '../metadata-options-dialog/metadata-fetch-options/metadata-fetch-options.component';
 import {Button} from '@openng/optimus-ui/button';
 
 @Component({
@@ -19,11 +22,7 @@ import {Button} from '@openng/optimus-ui/button';
   imports: [MetadataFetchOptionsComponent, FormsModule, Button],
 })
 export class MultiBookMetadataFetchComponent implements OnInit, OnChanges {
-  @Input() dialogData?: {
-    libraryId?: number | null;
-    bookIds?: number[];
-    metadataRefreshType?: MetadataRefreshType;
-  };
+  @Input() dialogData?: MetadataRefreshDialogData;
 
   bookIds: number[] = [];
   libraryId: number | null = null;
@@ -31,7 +30,7 @@ export class MultiBookMetadataFetchComponent implements OnInit, OnChanges {
   metadataRefreshType: MetadataRefreshType = MetadataRefreshType.BOOKS;
   currentMetadataOptions!: MetadataRefreshOptions;
 
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<MetadataRefreshDialogData>>(DynamicDialogConfig);
   dialogRef = inject(DynamicDialogRef);
   private bookService = inject(BookService);
   private appSettingsService = inject(AppSettingsService);
@@ -52,15 +51,11 @@ export class MultiBookMetadataFetchComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if ('dialogData' in changes) {
-      this.applyContext(changes['dialogData'].currentValue ?? {});
+      this.applyContext(this.dialogData ?? {});
     }
   }
 
-  private applyContext(context: {
-    libraryId?: number | null;
-    bookIds?: number[];
-    metadataRefreshType?: MetadataRefreshType;
-  }): void {
+  private applyContext(context: MetadataRefreshDialogData): void {
     this.bookIds = context.bookIds ?? [];
     this.libraryId = context.libraryId ?? null;
     this.metadataRefreshType = context.metadataRefreshType ?? MetadataRefreshType.BOOKS;

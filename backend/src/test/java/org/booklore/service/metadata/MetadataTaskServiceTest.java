@@ -268,7 +268,7 @@ class MetadataTaskServiceTest {
             var notification = result.getFirst();
             assertThat(notification.getCompleted()).isEqualTo(2);
             assertThat(notification.getTotal()).isEqualTo(3);
-            assertThat(notification.getStatus()).isEqualTo("COMPLETED");
+            assertThat(notification.getStatus()).isEqualTo(MetadataFetchTaskStatus.COMPLETED);
             assertThat(notification.getMessage()).contains("1 books need review");
         }
 
@@ -294,7 +294,7 @@ class MetadataTaskServiceTest {
             var notification = result.getFirst();
             assertThat(notification.getCompleted()).isEqualTo(15);
             assertThat(notification.getTotal()).isEqualTo(20);
-            assertThat(notification.getStatus()).isEqualTo("ERROR");
+            assertThat(notification.getStatus()).isEqualTo(MetadataFetchTaskStatus.ERROR);
             assertThat(notification.getMessage()).contains("failed");
         }
 
