@@ -1,12 +1,13 @@
 import {Component, effect, inject} from '@angular/core';
 import {Button} from '@openng/optimus-ui/button';
-import {AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators} from '@angular/forms';
+import {AbstractControl, FormBuilder, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators} from '@angular/forms';
 import {InputText} from '@openng/optimus-ui/inputtext';
 import {Password} from '@openng/optimus-ui/password';
 import {User, UserProfileUpdateRequest, UserService} from '../user-management/user.service';
 import {MessageService} from '@openng/optimus-ui/api';
 import {DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const newPassword = control.get('newPassword');
@@ -38,24 +39,21 @@ export class UserProfileDialogComponent {
   isEditing = false;
   currentUser: User | null = null;
   editUserData: Partial<User> = {};
-  changePasswordForm: FormGroup;
 
   protected readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
-  private readonly fb = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder).nonNullable;
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly t = inject(TranslocoService);
 
-  constructor() {
-    this.changePasswordForm = this.fb.group(
-      {
-        currentPassword: ['', Validators.required],
-        newPassword: ['', [Validators.required, Validators.minLength(8)]],
-        confirmNewPassword: ['', Validators.required]
-      },
-      {validators: passwordMatchValidator}
-    );
-  }
+  readonly changePasswordForm = this.fb.group(
+    {
+      currentPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirmNewPassword: ['', Validators.required]
+    },
+    {validators: passwordMatchValidator}
+  );
 
   private readonly userSyncEffect = effect(() => {
     const user = this.userService.currentUser();
@@ -107,11 +105,11 @@ export class UserProfileDialogComponent {
         this.messageService.add({severity: 'success', summary: this.t.translate('common.success'), detail: this.t.translate('settingsProfile.toast.profileUpdated')});
         this.isEditing = false;
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('common.error'),
-          detail: err.error?.message || this.t.translate('settingsProfile.toast.profileUpdateFailed'),
+          detail: getApiErrorMessage(error, this.t.translate('settingsProfile.toast.profileUpdateFailed')),
         });
       },
     });
@@ -123,18 +121,18 @@ export class UserProfileDialogComponent {
       return;
     }
 
-    const {currentPassword, newPassword} = this.changePasswordForm.value;
+    const {currentPassword, newPassword} = this.changePasswordForm.getRawValue();
 
     this.userService.changePassword(currentPassword, newPassword).subscribe({
       next: () => {
         this.messageService.add({severity: 'success', summary: this.t.translate('common.success'), detail: this.t.translate('settingsProfile.toast.passwordChanged')});
         this.resetPasswordForm();
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('common.error'),
-          detail: err?.message || this.t.translate('settingsProfile.toast.passwordChangeFailed'),
+          detail: getApiErrorMessage(error, this.t.translate('settingsProfile.toast.passwordChangeFailed')),
         });
       }
     });

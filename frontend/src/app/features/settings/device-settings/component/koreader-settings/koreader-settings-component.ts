@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Component, DestroyRef, computed, effect, inject, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
@@ -78,8 +79,8 @@ export class KoreaderSettingsComponent {
         this.syncWithWebReader.set(koreaderUser.syncWithWebReader ?? false);
         this.credentialsSaved.set(true);
       },
-      error: err => {
-        if (err.status !== 404) {
+      error: (error: unknown) => {
+        if (!(error instanceof HttpErrorResponse) || error.status !== 404) {
           this.messageService.add({
             severity: 'error',
             summary: this.t.translate('common.error'),
@@ -169,7 +170,7 @@ export class KoreaderSettingsComponent {
         summary: this.t.translate('settingsDevice.copied'),
         detail: this.t.translate('settingsDevice.copiedDetail', {label})
       });
-    }).catch(err => {
+    }).catch((err: unknown) => {
       console.error('Copy failed', err);
       this.messageService.add({
         severity: 'error',

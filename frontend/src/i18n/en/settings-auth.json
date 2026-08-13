@@ -131,6 +131,7 @@
     "sessionDurationSaved": "Session duration saved.",
     "sessionDurationError": "Failed to save session duration.",
     "copiedToClipboard": "Copied to clipboard.",
+    "copyFailed": "Unable to copy to the clipboard. Please try again.",
     "syncModeSaved": "Group sync mode saved.",
     "syncModeError": "Failed to save group sync mode.",
     "groupMappingSaved": "Group mapping saved.",

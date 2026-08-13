@@ -120,7 +120,8 @@ export class CbxReaderPreferencesComponent {
   }
 
   onStripMaxWidthInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.selectedCbxStripMaxWidthPercent = Number(input.value);
+    if (event.target instanceof HTMLInputElement) {
+      this.selectedCbxStripMaxWidthPercent = Number(event.target.value);
+    }
   }
 }

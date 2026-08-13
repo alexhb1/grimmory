@@ -5,6 +5,7 @@ import {catchError, map} from 'rxjs/operators';
 import {of} from 'rxjs';
 import {TaskCreateRequest, TaskService, TaskType} from './task.service';
 import {TranslocoService} from '@jsverse/transloco';
+import {HttpErrorResponse} from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -29,8 +30,8 @@ export class TaskHelperService {
         });
         return {success: true};
       }),
-      catchError((e) => {
-        if (e.status === 409) {
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 409) {
           this.messageService.add({
             severity: 'error',
             summary: this.t.translate('settingsTasks.toast.alreadyRunning'),

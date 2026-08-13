@@ -1,4 +1,4 @@
-import {Component, inject, OnInit, signal} from "@angular/core";
+import {Component, ErrorHandler, inject, OnInit, signal} from "@angular/core";
 import {FormsModule} from "@angular/forms";
 import {DecimalPipe} from "@angular/common";
 import {Checkbox} from "@openng/optimus-ui/checkbox";
@@ -25,6 +25,7 @@ export class LocalSettingsComponent implements OnInit {
   private cacheStorageService = inject(CacheStorageService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private errorHandler = inject(ErrorHandler);
 
   protected settings: LocalSettings = this.localSettingsService.get();
 
@@ -32,8 +33,8 @@ export class LocalSettingsComponent implements OnInit {
   protected isClearingCacheStorage = signal(false);
   protected cacheStorageUsageMb = signal(0);
 
-  async ngOnInit(): Promise<void> {
-    await this.loadCacheStorageUsage();
+  ngOnInit(): void {
+    this.loadCacheStorageUsage().catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   onSettingChange(): void {

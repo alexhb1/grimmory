@@ -183,9 +183,9 @@ export class ViewPreferencesComponent implements OnInit {
         : [...DEFAULT_VISIBLE_SORT_FIELDS];
 
       this.overrides = (prefs?.overrides ?? []).map(override => {
-        const sortCriteria = override.preferences.sortCriteria?.length
+        const sortCriteria: SortCriterion[] = override.preferences.sortCriteria?.length
           ? [...override.preferences.sortCriteria]
-          : [{field: override.preferences.sortKey, direction: override.preferences.sortDir ?? 'ASC'} as SortCriterion];
+          : [{field: override.preferences.sortKey, direction: override.preferences.sortDir ?? 'ASC'}];
         return {
           entityType: override.entityType,
           library: override.entityId,

@@ -4,6 +4,8 @@ import {Observable} from 'rxjs';
 import {API_CONFIG} from '../../../../core/config/api-config';
 import {EmailProvider} from '../email-provider.model';
 
+type EmailProviderCreateRequest = Pick<EmailProvider, 'name' | 'host' | 'port' | 'username' | 'password' | 'fromAddress' | 'auth' | 'startTls'>;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -16,7 +18,7 @@ export class EmailV2ProviderService {
     return this.http.get<EmailProvider[]>(this.url);
   }
 
-  createEmailProvider(provider: EmailProvider): Observable<EmailProvider> {
+  createEmailProvider(provider: EmailProviderCreateRequest): Observable<EmailProvider> {
     return this.http.post<EmailProvider>(this.url, provider);
   }
 

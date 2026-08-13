@@ -40,7 +40,7 @@ export class CustomFontsComponent implements OnInit {
   get isLoading(): boolean { return this.customFontService.isFontsLoading(); }
 
   ngOnInit(): void {
-    this.loadFonts();
+    void this.loadFonts();
   }
 
   async loadFonts(): Promise<void> {

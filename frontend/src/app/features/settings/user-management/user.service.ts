@@ -10,6 +10,7 @@ import { injectQuery, queryOptions, QueryClient } from '@tanstack/angular-query-
 import { CURRENT_USER_QUERY_KEY } from './user-query-keys';
 import { AppTheme, CustomPrimary } from '../../../shared/model/app-state.model';
 import {DEFAULT_UI_FONT, normalizeUiFont, type UiFontPreference} from '../../../shared/model/ui-font.model';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 export interface EntityViewPreferences {
   global: EntityViewPreference;
@@ -378,6 +379,45 @@ export interface UserUpdateRequest {
   assignedLibraries?: number[];
 }
 
+export interface UserCreateRequest {
+  name: string;
+  email: string;
+  username: string;
+  password: string;
+  selectedLibraries: number[];
+  permissionUpload: boolean;
+  permissionDownload: boolean;
+  permissionEditMetadata: boolean;
+  permissionManageLibrary: boolean;
+  permissionEmailBook: boolean;
+  permissionDeleteBook: boolean;
+  permissionAccessOpds: boolean;
+  permissionSyncKoreader: boolean;
+  permissionSyncKobo: boolean;
+  permissionAdmin: boolean;
+  permissionManageMetadataConfig: boolean;
+  permissionAccessBookdrop: boolean;
+  permissionAccessLibraryStats: boolean;
+  permissionAccessUserStats: boolean;
+  permissionAccessTaskManager: boolean;
+  permissionManageGlobalPreferences: boolean;
+  permissionManageIcons: boolean;
+  permissionManageFonts: boolean;
+  permissionBulkAutoFetchMetadata: boolean;
+  permissionBulkCustomFetchMetadata: boolean;
+  permissionBulkEditMetadata: boolean;
+  permissionBulkRegenerateCover: boolean;
+  permissionMoveOrganizeFiles: boolean;
+  permissionBulkLockUnlockMetadata: boolean;
+  permissionBulkResetGrimmoryReadProgress: boolean;
+  permissionBulkResetKoReaderReadProgress: boolean;
+  permissionBulkResetBookReadStatus: boolean;
+}
+
+type UserCreateTransportRequest = Omit<UserCreateRequest, 'permissionBulkResetGrimmoryReadProgress'> & {
+  permissionBulkResetBookloreReadProgress: boolean;
+};
+
 export interface UserProfileUpdateRequest {
   name?: string;
   email?: string;
@@ -448,8 +488,13 @@ export class UserService {
     );
   }
 
-  createUser<T extends object>(userData: T): Observable<void> {
-    return this.http.post<void>(this.apiUrl, this.serializeUserPayload(userData));
+  createUser(userData: UserCreateRequest): Observable<void> {
+    const {permissionBulkResetGrimmoryReadProgress: permissionBulkResetBookloreReadProgress, ...request} = userData;
+    const payload: UserCreateTransportRequest = {
+      ...request,
+      permissionBulkResetBookloreReadProgress,
+    };
+    return this.http.post<void>(this.apiUrl, payload);
   }
 
   getUsers(): Observable<User[]> {
@@ -459,7 +504,7 @@ export class UserService {
   }
 
   updateUser(userId: number, updateData: UserUpdateRequest): Observable<User> {
-    return this.http.put<User>(`${this.userUrl}/${userId}`, this.serializeUserPayload(updateData)).pipe(
+    return this.http.put<User>(`${this.userUrl}/${userId}`, this.serializeUserUpdatePayload(updateData)).pipe(
       map(user => this.normalizeUser(user))
     );
   }
@@ -492,8 +537,8 @@ export class UserService {
       newPassword: newPassword
     };
     return this.http.put<void>(`${this.userUrl}/change-user-password`, payload).pipe(
-      catchError((error) => {
-        const errorMessage = error?.error?.message || 'An unexpected error occurred. Please try again.';
+      catchError((error: unknown) => {
+        const errorMessage = getApiErrorMessage(error, 'An unexpected error occurred. Please try again.');
         return throwError(() => new Error(errorMessage));
       })
     );
@@ -505,8 +550,8 @@ export class UserService {
       newPassword: newPassword
     };
     return this.http.put<void>(`${this.userUrl}/change-password`, payload).pipe(
-      catchError((error) => {
-        const errorMessage = error?.error?.message || 'An unexpected error occurred. Please try again.';
+      catchError((error: unknown) => {
+        const errorMessage = getApiErrorMessage(error, 'An unexpected error occurred. Please try again.');
         return throwError(() => new Error(errorMessage));
       })
     );
@@ -517,9 +562,9 @@ export class UserService {
       key,
       value
     };
-    this.http.put<void>(`${this.userUrl}/${userId}/settings`, payload, {
+    this.http.put(`${this.userUrl}/${userId}/settings`, payload, {
       headers: { 'Content-Type': 'application/json' },
-      responseType: 'text' as 'json'
+      responseType: 'text'
     }).subscribe(() => {
       const currentUser = this.currentUser();
       if (currentUser) {
@@ -548,33 +593,20 @@ export class UserService {
     };
   }
 
-  private serializeUserPayload<T extends object>(payload: T): T {
-    const payloadRecord = payload as Record<string, unknown>;
-    const nextPayload: Record<string, unknown> = { ...payloadRecord };
+  private serializeUserUpdatePayload(payload: UserUpdateRequest): UserUpdateRequest {
+    const permissions = payload.permissions;
+    if (!permissions) return payload;
 
-    if ('permissions' in payloadRecord && payloadRecord['permissions'] && typeof payloadRecord['permissions'] === 'object') {
-      const permissions = payloadRecord['permissions'] as User['permissions'];
-      // TODO(grimmory-cleanup): Drop the legacy Booklore permission alias after the backend accepts only Grimmory names.
-      const canBulkResetReadProgress =
-        permissions.canBulkResetGrimmoryReadProgress ?? permissions.canBulkResetBookloreReadProgress;
+    const canBulkResetReadProgress =
+      permissions.canBulkResetGrimmoryReadProgress ?? permissions.canBulkResetBookloreReadProgress;
 
-      nextPayload['permissions'] = {
+    return {
+      ...payload,
+      permissions: {
         ...permissions,
         canBulkResetGrimmoryReadProgress: canBulkResetReadProgress,
         canBulkResetBookloreReadProgress: canBulkResetReadProgress,
-      };
-    }
-
-    if ('permissionBulkResetGrimmoryReadProgress' in payloadRecord || 'permissionBulkResetBookloreReadProgress' in payloadRecord) {
-      // TODO(grimmory-cleanup): Drop the flat Booklore form field alias after the create-user API accepts only Grimmory names.
-      const canBulkResetReadProgress =
-        (payloadRecord['permissionBulkResetGrimmoryReadProgress'] as boolean | undefined)
-        ?? (payloadRecord['permissionBulkResetBookloreReadProgress'] as boolean | undefined);
-
-      nextPayload['permissionBulkResetGrimmoryReadProgress'] = canBulkResetReadProgress;
-      nextPayload['permissionBulkResetBookloreReadProgress'] = canBulkResetReadProgress;
-    }
-
-    return nextPayload as T;
+      },
+    };
   }
 }

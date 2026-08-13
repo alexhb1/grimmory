@@ -10,7 +10,6 @@ import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/tran
 
 const MIN_VISIBLE_FILTERS = 5;
 const MAX_VISIBLE_FILTERS = 50;
-type MutableSettingsBranch = Record<string, unknown>;
 
 @Component({
   selector: 'app-filter-preferences',
@@ -66,25 +65,18 @@ export class FilterPreferencesComponent {
 
   private loadPreferences(settings: UserSettings): void {
     this.selectedFilterMode = settings.filterMode ?? 'and';
-    this.selectedVisibleFilters = settings.visibleFilters ?? [...DEFAULT_VISIBLE_FILTERS];
+    const visibleFilters = Array.isArray(settings.visibleFilters)
+      ? settings.visibleFilters.filter(isVisibleFilter)
+      : [];
+    this.selectedVisibleFilters = visibleFilters.length
+      ? visibleFilters
+      : [...DEFAULT_VISIBLE_FILTERS];
   }
 
-  private updatePreference(path: string[], value: unknown): void {
+  private updatePreference(key: 'filterMode' | 'visibleFilters', value: BookFilterMode | VisibleFilterType[]): void {
     if (!this.currentUser) return;
 
-    let target = this.currentUser.userSettings as unknown as MutableSettingsBranch;
-    for (let i = 0; i < path.length - 1; i++) {
-      const next = target[path[i]];
-      if (!next || typeof next !== 'object') {
-        target[path[i]] = {};
-      }
-      target = target[path[i]] as MutableSettingsBranch;
-    }
-    target[path.at(-1)!] = value;
-
-    const [rootKey] = path;
-    const updatedValue = this.currentUser.userSettings[rootKey as keyof UserSettings];
-    this.userService.updateUserSetting(this.currentUser.id, rootKey, updatedValue);
+    this.userService.updateUserSetting(this.currentUser.id, key, value);
     this.messageService.add({
       severity: 'success',
       summary: this.t.translate('settingsView.sidebarSort.prefsUpdated'),
@@ -94,7 +86,7 @@ export class FilterPreferencesComponent {
   }
 
   onFilterModeChange(): void {
-    this.updatePreference(['filterMode'], this.selectedFilterMode);
+    this.updatePreference('filterMode', this.selectedFilterMode);
   }
 
   selectedAddFilter: string | null = null;
@@ -106,21 +98,21 @@ export class FilterPreferencesComponent {
       .map(v => ({label: this.getFilterLabel(v), value: v}));
   }
 
-  getFilterLabel(value: string): string {
-    const key = FILTER_LABEL_KEYS[value as keyof typeof FILTER_LABEL_KEYS];
+  getFilterLabel(value: VisibleFilterType): string {
+    const key = FILTER_LABEL_KEYS[value];
     return key ? this.t.translate(key) : value;
   }
 
   onDrop(event: CdkDragDrop<VisibleFilterType[]>): void {
     moveItemInArray(this.selectedVisibleFilters, event.previousIndex, event.currentIndex);
-    this.updatePreference(['visibleFilters'], this.selectedVisibleFilters);
+    this.updatePreference('visibleFilters', this.selectedVisibleFilters);
   }
 
   addFilter(): void {
-    if (this.selectedAddFilter) {
-      this.selectedVisibleFilters.push(this.selectedAddFilter as VisibleFilterType);
+    if (this.selectedAddFilter && isVisibleFilter(this.selectedAddFilter)) {
+      this.selectedVisibleFilters.push(this.selectedAddFilter);
       this.selectedAddFilter = null;
-      this.updatePreference(['visibleFilters'], this.selectedVisibleFilters);
+      this.updatePreference('visibleFilters', this.selectedVisibleFilters);
       requestAnimationFrame(() => {
         const el = this.filterList()?.nativeElement;
         if (el) el.scrollTop = el.scrollHeight;
@@ -131,16 +123,20 @@ export class FilterPreferencesComponent {
   removeFilter(index: number): void {
     if (this.selectedVisibleFilters.length > MIN_VISIBLE_FILTERS) {
       this.selectedVisibleFilters.splice(index, 1);
-      this.updatePreference(['visibleFilters'], this.selectedVisibleFilters);
+      this.updatePreference('visibleFilters', this.selectedVisibleFilters);
     }
   }
 
   resetToDefaults(): void {
     this.selectedVisibleFilters = [...DEFAULT_VISIBLE_FILTERS];
-    this.updatePreference(['visibleFilters'], this.selectedVisibleFilters);
+    this.updatePreference('visibleFilters', this.selectedVisibleFilters);
   }
 
   get selectionCountText(): string {
     return this.t.translate('settingsView.filter.selectionCount', {count: this.selectedVisibleFilters.length, total: this.allFilterOptions.length});
   }
+}
+
+function isVisibleFilter(value: unknown): value is VisibleFilterType {
+  return typeof value === 'string' && ALL_FILTER_OPTION_VALUES.some(filter => filter === value);
 }

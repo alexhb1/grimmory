@@ -1,5 +1,6 @@
 import {TestBed} from '@angular/core/testing';
 import {ReactiveFormsModule} from '@angular/forms';
+import {HttpErrorResponse} from '@angular/common/http';
 import {TranslocoService} from '@jsverse/transloco';
 import {of, throwError} from 'rxjs';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -68,7 +69,6 @@ describe('CreateEmailProviderDialogComponent', () => {
     });
 
     const component = TestBed.runInInjectionContext(() => new CreateEmailProviderDialogComponent());
-    component.ngOnInit();
     return component;
   }
 
@@ -153,8 +153,10 @@ describe('CreateEmailProviderDialogComponent', () => {
   });
 
   it('shows the translated backend error detail and keeps the dialog open when creation fails with a message', () => {
-    createEmailProvider.mockReturnValueOnce(throwError(() => ({
+    createEmailProvider.mockReturnValueOnce(throwError(() => new HttpErrorResponse({
+      status: 400,
       error: {
+        status: 400,
         message: 'SMTP rejected credentials',
       },
     })));

@@ -1,18 +1,48 @@
 import {Component, DestroyRef, inject, OnInit} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {InputText} from '@openng/optimus-ui/inputtext';
-import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Checkbox} from '@openng/optimus-ui/checkbox';
 import {MultiSelect} from '@openng/optimus-ui/multiselect';
 import {Library} from '../../../book/model/library.model';
 import {Button} from '@openng/optimus-ui/button';
 import {LibraryService} from '../../../book/service/library.service';
-import {UserService} from '../user.service';
+import {type UserCreateRequest, UserService} from '../user.service';
 import {MessageService} from '@openng/optimus-ui/api';
 import {DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {passwordMatchValidator} from '../../../../shared/validators/password-match.validator';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../../shared/models/api-exception.model';
+import {HttpErrorResponse} from '@angular/common/http';
 
+const ADMIN_PERMISSION_CONTROLS = [
+  'permissionUpload',
+  'permissionDownload',
+  'permissionEditMetadata',
+  'permissionManageLibrary',
+  'permissionEmailBook',
+  'permissionDeleteBook',
+  'permissionAccessOpds',
+  'permissionSyncKoreader',
+  'permissionSyncKobo',
+  'permissionManageMetadataConfig',
+  'permissionAccessBookdrop',
+  'permissionAccessLibraryStats',
+  'permissionAccessUserStats',
+  'permissionAccessTaskManager',
+  'permissionManageGlobalPreferences',
+  'permissionManageIcons',
+  'permissionManageFonts',
+  'permissionBulkAutoFetchMetadata',
+  'permissionBulkCustomFetchMetadata',
+  'permissionBulkEditMetadata',
+  'permissionBulkRegenerateCover',
+  'permissionMoveOrganizeFiles',
+  'permissionBulkLockUnlockMetadata',
+  'permissionBulkResetGrimmoryReadProgress',
+  'permissionBulkResetKoReaderReadProgress',
+  'permissionBulkResetBookReadStatus',
+] as const;
 
 @Component({
   selector: 'app-create-user-dialog',
@@ -31,9 +61,7 @@ import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/tran
   styleUrl: './create-user-dialog.component.scss'
 })
 export class CreateUserDialogComponent implements OnInit {
-  userForm!: FormGroup;
-
-  private fb = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder).nonNullable;
   private libraryService = inject(LibraryService);
   private userService = inject(UserService);
   private messageService = inject(MessageService);
@@ -41,76 +69,74 @@ export class CreateUserDialogComponent implements OnInit {
   private t = inject(TranslocoService);
   private destroyRef = inject(DestroyRef);
 
+  readonly userForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    email: ['', [Validators.required, Validators.email]],
+    username: ['', Validators.required],
+    password: ['', [Validators.required, Validators.minLength(8)]],
+    confirmPassword: ['', Validators.required],
+    selectedLibraries: this.fb.control<Library[]>([], Validators.required),
+    permissionUpload: false,
+    permissionDownload: false,
+    permissionEditMetadata: false,
+    permissionManageLibrary: false,
+    permissionEmailBook: false,
+    permissionDeleteBook: false,
+    permissionAccessOpds: false,
+    permissionSyncKoreader: false,
+    permissionSyncKobo: false,
+    permissionManageMetadataConfig: false,
+    permissionAccessBookdrop: false,
+    permissionAccessLibraryStats: false,
+    permissionAccessUserStats: false,
+    permissionAccessTaskManager: false,
+    permissionManageGlobalPreferences: false,
+    permissionManageIcons: false,
+    permissionManageFonts: false,
+    permissionAdmin: false,
+    permissionBulkAutoFetchMetadata: false,
+    permissionBulkCustomFetchMetadata: false,
+    permissionBulkEditMetadata: false,
+    permissionBulkRegenerateCover: false,
+    permissionMoveOrganizeFiles: false,
+    permissionBulkLockUnlockMetadata: false,
+    permissionBulkResetGrimmoryReadProgress: false,
+    permissionBulkResetKoReaderReadProgress: false,
+    permissionBulkResetBookReadStatus: false,
+  }, {validators: [passwordMatchValidator('password', 'confirmPassword')]});
+
   get libraries(): Library[] {
     return this.libraryService.libraries();
   }
 
   ngOnInit() {
-    this.userForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
-      username: ['', Validators.required],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', Validators.required],
-      selectedLibraries: [[], Validators.required],
-      permissionUpload: [false],
-      permissionDownload: [false],
-      permissionEditMetadata: [false],
-      permissionManipulateLibrary: [false],
-      permissionEmailBook: [false],
-      permissionDeleteBook: [false],
-      permissionAccessOpds: [false],
-      permissionSyncKoreader: [false],
-      permissionSyncKobo: [false],
-      permissionManageMetadataConfig: [false],
-      permissionAccessBookdrop: [false],
-      permissionAccessLibraryStats: [false],
-      permissionAccessUserStats: [false],
-      permissionAccessTaskManager: [false],
-      permissionManageEmailConfig: [false],
-      permissionManageGlobalPreferences: [false],
-      permissionManageIcons: [false],
-      permissionManageFonts: [false],
-      permissionAdmin: [false],
-      permissionBulkAutoFetchMetadata: [false],
-      permissionBulkCustomFetchMetadata: [false],
-      permissionBulkEditMetadata: [false],
-      permissionBulkRegenerateCover: [false],
-      permissionMoveOrganizeFiles: [false],
-      permissionBulkLockUnlockMetadata: [false],
-      permissionBulkResetGrimmoryReadProgress: [false],
-      permissionBulkResetKoReaderReadProgress: [false],
-      permissionBulkResetBookReadStatus: [false],
-    }, {validators: [passwordMatchValidator('password', 'confirmPassword')]});
-
-    this.userForm.get('permissionAdmin')?.valueChanges
+    this.userForm.controls.permissionAdmin.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((isAdmin: boolean) => {
-      const controls = this.userForm.controls;
-      Object.keys(controls).forEach(key => {
-        if (key !== 'permissionAdmin' && key.startsWith('permission')) {
-          controls[key].setValue(isAdmin, {emitEvent: false});
-        }
+      .subscribe((isAdmin) => {
+        ADMIN_PERMISSION_CONTROLS.forEach((controlName) => {
+          this.userForm.controls[controlName].setValue(isAdmin, {emitEvent: false});
+        });
       });
-    });
   }
 
   createUser() {
     if (this.userForm.invalid) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: this.t.translate('common.error'),
-        detail: this.t.translate('settingsUsers.createDialog.validationError')
-      });
+      this.showValidationError();
       return;
     }
-    // Detele confirmPassword from form, it's not necessary to keep once validation has passed
-    const {confirmPassword, ...formValue} = this.userForm.value;
-    void confirmPassword;
+    const {confirmPassword: _confirmPassword, selectedLibraries, ...userFields} = this.userForm.getRawValue();
+    const selectedLibraryIds: number[] = [];
+    for (const library of selectedLibraries) {
+      if (library.id === undefined) {
+        this.showValidationError();
+        return;
+      }
+      selectedLibraryIds.push(library.id);
+    }
 
-    const userData = {
-      ...formValue,
-      selectedLibraries: formValue.selectedLibraries.map((lib: Library) => lib.id)
+    const userData: UserCreateRequest = {
+      ...userFields,
+      selectedLibraries: selectedLibraryIds,
     };
 
     this.userService.createUser(userData).subscribe({
@@ -122,13 +148,19 @@ export class CreateUserDialogComponent implements OnInit {
         });
         this.ref.close(true);
       },
-      error: (err) => {
+      error: (error: unknown) => {
+        const fallback = this.t.translate('settingsUsers.createDialog.createError');
+        const message = error instanceof HttpErrorResponse
+          ? getApiErrorMessage(error, fallback)
+          : fallback;
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('common.error'),
-          detail: err?.error?.message
-            ? this.t.translate('settingsUsers.createDialog.createFailed', {message: err.error.message})
-            : this.t.translate('settingsUsers.createDialog.createError')
+          detail: message === fallback
+            ? fallback
+            : this.t.translate('settingsUsers.createDialog.createFailed', {
+              message,
+            }),
         });
       }
     });
@@ -136,5 +168,13 @@ export class CreateUserDialogComponent implements OnInit {
 
   closeDialog(): void {
     this.ref.close();
+  }
+
+  private showValidationError(): void {
+    this.messageService.add({
+      severity: 'warn',
+      summary: this.t.translate('common.error'),
+      detail: this.t.translate('settingsUsers.createDialog.validationError')
+    });
   }
 }

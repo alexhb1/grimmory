@@ -12,7 +12,7 @@ import {AppThemeService} from './shared/service/app-theme.service';
 import {MetadataProgressService} from './shared/service/metadata-progress.service';
 import {BookdropFileNotification, BookdropFileService} from './features/bookdrop/service/bookdrop-file.service';
 import {Subscription} from 'rxjs';
-import {TaskProgressPayload, TaskService} from './features/settings/task-management/task.service';
+import {TaskService} from './features/settings/task-management/task.service';
 import {LibraryHealthService} from './features/book/service/library-health.service';
 import {AuthService} from './shared/service/auth.service';
 import {CommandPaletteComponent} from './features/command-palette/command-palette.component';
@@ -161,7 +161,7 @@ export class AppComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.push(
       this.rxStompService.watch('/user/queue/task-progress').subscribe(msg => {
-        const progress = JSON.parse(msg.body) as TaskProgressPayload;
+        const progress: unknown = JSON.parse(msg.body);
         this.taskService.handleTaskProgress(progress);
       })
     );

@@ -1,4 +1,4 @@
-import {Component, DestroyRef, effect, inject, OnInit, signal} from '@angular/core';
+import {Component, DestroyRef, effect, ErrorHandler, inject, OnInit, signal} from '@angular/core';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from '@openng/optimus-ui/tabs';
 import {UserService} from './user-management/user.service';
 import {GlobalPreferencesComponent} from './global-preferences/global-preferences.component';
@@ -67,10 +67,11 @@ export class SettingsComponent implements OnInit {
   private router = inject(Router);
   private pageTitle = inject(PageTitleService);
   private destroyRef = inject(DestroyRef);
+  private errorHandler = inject(ErrorHandler);
 
   SettingsTab = SettingsTab;
 
-  private validTabs = Object.values(SettingsTab);
+  private readonly validTabs = new Set<string>(Object.values(SettingsTab));
   private _activeTab = signal<SettingsTab>(SettingsTab.ViewPreferences);
 
   visitedTabs = signal<Set<SettingsTab>>(new Set([
@@ -89,6 +90,8 @@ export class SettingsComponent implements OnInit {
       relativeTo: this.route,
       queryParams: {tab: value},
       queryParamsHandling: 'merge'
+    }).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
     });
   }
 
@@ -110,15 +113,15 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
 
     // Initialize from snapshot synchronously to ensure p-tabs (lazy) picks up the correct value on first render
-    const initialTab = this.route.snapshot.queryParams['tab'];
-    if (this.validTabs.includes(initialTab) && this.canOpenTab(initialTab as SettingsTab)) {
-      this._activeTab.set(initialTab as SettingsTab);
+    const initialTab = this.route.snapshot.queryParamMap.get('tab');
+    if (this.isSettingsTab(initialTab) && this.canOpenTab(initialTab)) {
+      this._activeTab.set(initialTab);
     }
 
-    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
-      const tabParam = params['tab'];
-      if (this.validTabs.includes(tabParam) && this.canOpenTab(tabParam as SettingsTab)) {
-        this._activeTab.set(tabParam as SettingsTab);
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const tabParam = params.get('tab');
+      if (this.isSettingsTab(tabParam) && this.canOpenTab(tabParam)) {
+        this._activeTab.set(tabParam);
       } else {
         const defaultTab = SettingsTab.ViewPreferences;
         this._activeTab.set(defaultTab);
@@ -127,9 +130,15 @@ export class SettingsComponent implements OnInit {
           queryParams: {tab: defaultTab},
           queryParamsHandling: 'merge',
           replaceUrl: true
+        }).catch((error: unknown) => {
+          this.errorHandler.handleError(error);
         });
       }
     });
+  }
+
+  private isSettingsTab(value: string | null): value is SettingsTab {
+    return value !== null && this.validTabs.has(value);
   }
 
   protected canOpenTab(tab: SettingsTab): boolean {

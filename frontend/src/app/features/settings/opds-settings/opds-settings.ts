@@ -13,13 +13,14 @@ import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
 import {OpdsService, OpdsSortOrder, OpdsUserV2, OpdsUserV2CreateRequest} from './opds.service';
 import {catchError} from 'rxjs/operators';
 import {UserService} from '../user-management/user.service';
-import {of} from 'rxjs';
+import {from, of} from 'rxjs';
 import {ToggleSwitch} from '@openng/optimus-ui/toggleswitch';
 import {AppSettingsService} from '../../../shared/service/app-settings.service';
 import {AppSettingKey, AppSettings} from '../../../shared/model/app-settings.model';
 import {ExternalDocLinkComponent} from '../../../shared/components/external-doc-link/external-doc-link.component';
 import {Select} from '@openng/optimus-ui/select';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 @Component({
   selector: 'app-opds-settings',
@@ -142,7 +143,7 @@ export class OpdsSettings implements OnInit {
       })
     ).subscribe(users => {
       this.users.set([...users]);
-      this.passwordVisibility = new Array(users.length).fill(false);
+      this.passwordVisibility = Array.from({length: users.length}, () => false);
       this.loading.set(false);
     });
   }
@@ -158,9 +159,9 @@ export class OpdsSettings implements OnInit {
         this.resetCreateUserDialog();
         this.showMessage('success', this.t.translate('common.success'), this.t.translate('settingsOpds.createSuccess'));
       },
-      error: err => {
-        console.error('Error creating user:', err);
-        const message = err?.error?.message || this.t.translate('settingsOpds.createError');
+      error: (error: unknown) => {
+        console.error('Error creating user:', error);
+        const message = getApiErrorMessage(error, this.t.translate('settingsOpds.createError'));
         this.showMessage('error', this.t.translate('common.error'), message);
       }
     });
@@ -197,9 +198,7 @@ export class OpdsSettings implements OnInit {
   }
 
   copyEndpoint(): void {
-    navigator.clipboard.writeText(this.opdsEndpoint).then(() => {
-      this.showMessage('success', this.t.translate('common.success'), this.t.translate('settingsOpds.opdsCopied'));
-    });
+    this.copyEndpointToClipboard(this.opdsEndpoint, 'settingsOpds.opdsCopied');
   }
 
   toggleOpdsServer(): void {
@@ -221,8 +220,18 @@ export class OpdsSettings implements OnInit {
   }
 
   copyKomgaEndpoint(): void {
-    navigator.clipboard.writeText(this.komgaEndpoint).then(() => {
-      this.showMessage('success', this.t.translate('common.success'), this.t.translate('settingsOpds.komgaCopied'));
+    this.copyEndpointToClipboard(this.komgaEndpoint, 'settingsOpds.komgaCopied');
+  }
+
+  private copyEndpointToClipboard(endpoint: string, successMessageKey: string): void {
+    from(navigator.clipboard.writeText(endpoint)).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => this.showMessage('success', this.t.translate('common.success'), this.t.translate(successMessageKey)),
+      error: (error: unknown) => {
+        console.error('Failed to copy endpoint:', error);
+        this.showMessage('error', this.t.translate('common.error'), this.t.translate('settingsOpds.copyFailed'));
+      }
     });
   }
 

@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Component, ViewChild, ElementRef, OnDestroy, inject} from '@angular/core';
 import {Button} from '@openng/optimus-ui/button';
 import {MessageService} from '@openng/optimus-ui/api';
@@ -42,18 +43,19 @@ export class FontUploadDialogComponent implements OnDestroy {
   }
 
   onFileInputChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    if (!(event.target instanceof HTMLInputElement)) return;
+
+    const file = event.target.files?.[0];
 
     if (!file) return;
 
     if (!this.validateFile(file)) {
-      input.value = '';
+      event.target.value = '';
       return;
     }
 
     this.processFile(file);
-    input.value = '';
+    event.target.value = '';
   }
 
   async loadFontPreview(file: File): Promise<void> {
@@ -126,9 +128,9 @@ export class FontUploadDialogComponent implements OnDestroy {
         this.isUploading = false;
         this.dialogRef.close(font); // Return the uploaded font
       },
-      error: (error) => {
+      error: (error: unknown) => {
         console.error('Failed to upload font:', error);
-        const errorMessage = error.status === 400
+        const errorMessage = error instanceof HttpErrorResponse && error.status === 400
           ? this.t.translate('settingsReader.fonts.upload.uploadFailedInvalid')
           : this.t.translate('settingsReader.fonts.upload.uploadFailedDefault');
         this.messageService.add({
@@ -211,7 +213,7 @@ export class FontUploadDialogComponent implements OnDestroy {
   private processFile(file: File): void {
     this.selectedFile = file;
     this.uploadedFontName = file.name.replace(/\.[^/.]+$/, '');
-    this.loadFontPreview(file);
+    void this.loadFontPreview(file);
   }
 
   cleanupPreviewFont(): void {

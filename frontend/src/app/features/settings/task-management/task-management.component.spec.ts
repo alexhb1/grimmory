@@ -42,16 +42,16 @@ describe('TaskManagementComponent', () => {
     component.loadTasks();
   }
 
-  const clearPdfTask: TaskInfo = {
-    taskType: TaskType.CLEAR_PDF_CACHE,
-    name: 'Clear PDF cache',
-    description: 'Clear the cached PDF files.',
+  const cleanupTempMetadataTask: TaskInfo = {
+    taskType: TaskType.CLEANUP_TEMP_METADATA,
+    name: 'Clean temporary metadata',
+    description: 'Clean up temporary metadata.',
     parallel: false,
     async: false,
     cronSupported: true,
     cronConfig: {
       id: 7,
-      taskType: TaskType.CLEAR_PDF_CACHE,
+      taskType: TaskType.CLEANUP_TEMP_METADATA,
       cronExpression: '0 0 * * * *',
       enabled: true,
       options: null,
@@ -73,7 +73,7 @@ describe('TaskManagementComponent', () => {
 
   const pendingHistory: TaskHistory = {
     id: 'task-1',
-    type: TaskType.CLEAR_PDF_CACHE,
+    type: TaskType.CLEANUP_TEMP_METADATA,
     status: TaskStatus.PENDING,
     progressPercentage: 10,
     message: 'working',
@@ -101,13 +101,13 @@ describe('TaskManagementComponent', () => {
       add: vi.fn(),
     };
     taskService = {
-      getAvailableTasks: vi.fn(() => of([refreshMetadataTask, clearPdfTask])),
+      getAvailableTasks: vi.fn(() => of([refreshMetadataTask, cleanupTempMetadataTask])),
       getLatestTasksForEachType: vi.fn(() => of({
         taskHistories: [pendingHistory],
       })),
       taskProgress$: taskProgressSubject.asObservable(),
       startTask: vi.fn(() => of({
-        type: TaskType.CLEAR_PDF_CACHE,
+        type: TaskType.CLEANUP_TEMP_METADATA,
         status: TaskStatus.ACCEPTED,
       })),
       cancelTask: vi.fn(() => of({
@@ -117,7 +117,7 @@ describe('TaskManagementComponent', () => {
       })),
       updateCronConfig: vi.fn(() => of({
         id: 7,
-        taskType: TaskType.CLEAR_PDF_CACHE,
+        taskType: TaskType.CLEANUP_TEMP_METADATA,
         cronExpression: '0 0 * * * *',
         enabled: true,
         options: null,
@@ -154,9 +154,9 @@ describe('TaskManagementComponent', () => {
     expect(taskService.getLatestTasksForEachType).toHaveBeenCalledTimes(1);
     expect(component.taskInfos.map(task => task.taskType)).toEqual([
       TaskType.REFRESH_LIBRARY_METADATA,
-      TaskType.CLEAR_PDF_CACHE,
+      TaskType.CLEANUP_TEMP_METADATA,
     ]);
-    expect(component.getTaskHistory(TaskType.CLEAR_PDF_CACHE)).toMatchObject({
+    expect(component.getTaskHistory(TaskType.CLEANUP_TEMP_METADATA)).toMatchObject({
       id: 'task-1',
       status: TaskStatus.PENDING,
     });
@@ -183,13 +183,13 @@ describe('TaskManagementComponent', () => {
 
     taskProgressSubject.next({
       taskId: 'task-2',
-      taskType: TaskType.CLEAR_PDF_CACHE,
+      taskType: TaskType.CLEANUP_TEMP_METADATA,
       message: 'done',
       progress: 100,
       taskStatus: TaskStatus.COMPLETED,
     });
 
-    expect(component.getTaskHistory(TaskType.CLEAR_PDF_CACHE)).toMatchObject({
+    expect(component.getTaskHistory(TaskType.CLEANUP_TEMP_METADATA)).toMatchObject({
       id: 'task-2',
       status: TaskStatus.COMPLETED,
       completedAt: expect.any(String),
@@ -208,7 +208,7 @@ describe('TaskManagementComponent', () => {
 
     taskProgressSubject.next({
       taskId: 'task-2',
-      taskType: TaskType.CLEAR_PDF_CACHE,
+      taskType: TaskType.CLEANUP_TEMP_METADATA,
       message: 'halfway there',
       progress: 45,
       taskStatus: TaskStatus.IN_PROGRESS,
@@ -223,20 +223,20 @@ describe('TaskManagementComponent', () => {
   it('distinguishes running, stale, and cancellable tasks', () => {
     loadTaskHistory(inProgressHistory);
 
-    expect(component.isTaskRunning(TaskType.CLEAR_PDF_CACHE)).toBe(true);
+    expect(component.isTaskRunning(TaskType.CLEANUP_TEMP_METADATA)).toBe(true);
     expect(component.canCancelTask(inProgressHistory)).toBe(true);
-    expect(component.canExecuteTask(TaskType.CLEAR_PDF_CACHE)).toBe(true);
+    expect(component.canExecuteTask(TaskType.CLEANUP_TEMP_METADATA)).toBe(true);
     expect(component.isTaskStale(inProgressHistory)).toBe(true);
-    expect(component.getTaskButtonLabel(TaskType.CLEAR_PDF_CACHE)).toBe('settingsTasks.buttons.rerun');
+    expect(component.getTaskButtonLabel(TaskType.CLEANUP_TEMP_METADATA)).toBe('settingsTasks.buttons.rerun');
 
     loadTaskHistory({
       ...inProgressHistory,
       updatedAt: '2026-03-27T03:05:45Z',
     });
 
-    expect(component.isTaskStale(component.getTaskHistory(TaskType.CLEAR_PDF_CACHE))).toBe(false);
-    expect(component.canExecuteTask(TaskType.CLEAR_PDF_CACHE)).toBe(false);
-    expect(component.getTaskButtonLabel(TaskType.CLEAR_PDF_CACHE)).toBe('settingsTasks.buttons.run');
+    expect(component.isTaskStale(component.getTaskHistory(TaskType.CLEANUP_TEMP_METADATA))).toBe(false);
+    expect(component.canExecuteTask(TaskType.CLEANUP_TEMP_METADATA)).toBe(false);
+    expect(component.getTaskButtonLabel(TaskType.CLEANUP_TEMP_METADATA)).toBe('settingsTasks.buttons.run');
   });
 
   it('blocks duplicate task execution when the task is still fresh', () => {
@@ -245,7 +245,7 @@ describe('TaskManagementComponent', () => {
       updatedAt: '2026-03-27T03:05:45Z',
     });
 
-    component.runTask(TaskType.CLEAR_PDF_CACHE);
+    component.runTask(TaskType.CLEANUP_TEMP_METADATA);
 
     expect(taskService.startTask).not.toHaveBeenCalled();
     expect(messageService.add).toHaveBeenCalledWith({
@@ -282,15 +282,16 @@ describe('TaskManagementComponent', () => {
       updatedAt: '2026-03-27T03:05:50Z',
     });
     taskService.startTask = vi.fn(() => of({
-      type: TaskType.CLEAR_PDF_CACHE,
+      taskId: 'task-1',
+      taskType: TaskType.CLEANUP_TEMP_METADATA,
       status: TaskStatus.COMPLETED,
     }));
-    component.runTask(TaskType.CLEAR_PDF_CACHE);
+    component.runTask(TaskType.CLEANUP_TEMP_METADATA);
 
     expect(messageService.add).toHaveBeenCalledWith({
       severity: 'success',
       summary: 'settingsTasks.toast.taskCompleted',
-      detail: 'settingsTasks.toast.taskCompletedDetail:{"name":"Clear PDF cache"}',
+      detail: 'settingsTasks.toast.taskCompletedDetail:{"name":"Clean temporary metadata"}',
     });
 
     messageService.add.mockClear();
@@ -301,22 +302,22 @@ describe('TaskManagementComponent', () => {
       updatedAt: '2026-03-27T03:05:55Z',
     });
     taskService.startTask = vi.fn(() => of({
-      type: TaskType.CLEAR_PDF_CACHE,
+      taskId: 'task-2',
+      taskType: TaskType.CLEANUP_TEMP_METADATA,
       status: TaskStatus.FAILED,
-      message: 'nope',
     }));
-    component.runTask(TaskType.CLEAR_PDF_CACHE);
+    component.runTask(TaskType.CLEANUP_TEMP_METADATA);
 
     expect(messageService.add).toHaveBeenCalledWith({
       severity: 'error',
       summary: 'settingsTasks.toast.taskFailed',
-      detail: 'nope',
+      detail: 'settingsTasks.toast.taskFailedDetail:{"name":"Clean temporary metadata"}',
     });
   });
 
   it('cancels tasks and handles both success and failure paths', () => {
     loadTaskHistory(pendingHistory);
-    component.cancelTask(TaskType.CLEAR_PDF_CACHE);
+    component.cancelTask(TaskType.CLEANUP_TEMP_METADATA);
 
     expect(taskService.cancelTask).toHaveBeenCalledWith('task-1');
     expect(messageService.add).toHaveBeenCalledWith({
@@ -331,7 +332,7 @@ describe('TaskManagementComponent', () => {
       cancelled: false,
       message: 'busy',
     }));
-    component.cancelTask(TaskType.CLEAR_PDF_CACHE);
+    component.cancelTask(TaskType.CLEANUP_TEMP_METADATA);
 
     expect(messageService.add).toHaveBeenCalledWith({
       severity: 'error',
@@ -341,10 +342,10 @@ describe('TaskManagementComponent', () => {
   });
 
   it('validates cron expressions and saves trimmed updates', () => {
-    component.taskInfos = [clearPdfTask];
+    component.taskInfos = [cleanupTempMetadataTask];
 
-    component.startEditingCron(TaskType.CLEAR_PDF_CACHE);
-    expect(component.isEditingCron(TaskType.CLEAR_PDF_CACHE)).toBe(true);
+    component.startEditingCron(TaskType.CLEANUP_TEMP_METADATA);
+    expect(component.isEditingCron(TaskType.CLEANUP_TEMP_METADATA)).toBe(true);
     expect(component.editingCronExpression).toBe('0 0 * * * *');
 
     component.editingCronExpression = '*/5 0-23 * * ? 0';
@@ -355,22 +356,22 @@ describe('TaskManagementComponent', () => {
     component.onCronExpressionChange();
     expect(component.cronValidationError).toBe('settingsTasks.cron.validationPrefix');
 
-    component.saveCronExpression(TaskType.CLEAR_PDF_CACHE);
+    component.saveCronExpression(TaskType.CLEANUP_TEMP_METADATA);
     expect(taskService.updateCronConfig).not.toHaveBeenCalled();
 
     component.editingCronExpression = ' 0 15 * * * * ';
     component.onCronExpressionChange();
-    component.saveCronExpression(TaskType.CLEAR_PDF_CACHE);
+    component.saveCronExpression(TaskType.CLEANUP_TEMP_METADATA);
 
-    expect(taskService.updateCronConfig).toHaveBeenCalledWith(TaskType.CLEAR_PDF_CACHE, {
+    expect(taskService.updateCronConfig).toHaveBeenCalledWith(TaskType.CLEANUP_TEMP_METADATA, {
       cronExpression: '0 15 * * * *',
     });
-    expect(component.isEditingCron(TaskType.CLEAR_PDF_CACHE)).toBe(false);
+    expect(component.isEditingCron(TaskType.CLEANUP_TEMP_METADATA)).toBe(false);
     expect(component.cronValidationError).toBeNull();
   });
 
   it('updates cron state and exposes helper text and metadata helpers', () => {
-    component.taskInfos = [clearPdfTask];
+    component.taskInfos = [cleanupTempMetadataTask];
     loadTaskHistory({
       ...pendingHistory,
       status: TaskStatus.COMPLETED,
@@ -378,8 +379,8 @@ describe('TaskManagementComponent', () => {
       updatedAt: '2026-03-27T03:05:50Z',
     });
 
-    component.toggleCronEnabled(TaskType.CLEAR_PDF_CACHE);
-    expect(taskService.updateCronConfig).toHaveBeenCalledWith(TaskType.CLEAR_PDF_CACHE, {
+    component.toggleCronEnabled(TaskType.CLEANUP_TEMP_METADATA);
+    expect(taskService.updateCronConfig).toHaveBeenCalledWith(TaskType.CLEANUP_TEMP_METADATA, {
       enabled: false,
     });
     expect(messageService.add).toHaveBeenCalledWith({
@@ -388,22 +389,22 @@ describe('TaskManagementComponent', () => {
       detail: 'settingsTasks.cron.updateSuccess',
     });
 
-    expect(component.getCronConfig(TaskType.CLEAR_PDF_CACHE)).toEqual({
+    expect(component.getCronConfig(TaskType.CLEANUP_TEMP_METADATA)).toEqual({
       enabled: true,
       cronExpression: '0 0 * * * *',
     });
     expect(component.getMetadataReplaceDescription(MetadataReplaceMode.REPLACE_ALL)).toBe('settingsTasks.metadataReplace.replaceAllDesc');
     expect(component.getMetadataReplaceDescription(MetadataReplaceMode.REPLACE_MISSING)).toBe('settingsTasks.metadataReplace.replaceMissingDesc');
-    expect(component.getTaskDisplayName(TaskType.CLEAR_PDF_CACHE)).toBe('Clear PDF cache');
-    expect(component.getTaskDescription(TaskType.CLEAR_PDF_CACHE)).toBe('Clear the cached PDF files.');
-    expect(component.getTaskLabel(TaskType.CLEAR_PDF_CACHE)).toBe('8. Clear PDF cache');
-    expect(component.getTaskIcon(TaskType.CLEAR_PDF_CACHE)).toBe('pi-database');
-    expect(component.getMetadataIcon(TaskType.CLEAR_PDF_CACHE)).toBe('pi-database');
-    expect(component.hasMetadata(TaskType.CLEAR_PDF_CACHE)).toBe(true);
-    expect(component.getLastRunMessage(TaskType.CLEAR_PDF_CACHE)).toBe('settingsTasks.status.justNow');
-    expect(component.getLastRunInfoClass(TaskType.CLEAR_PDF_CACHE)).toBe('success');
-    expect(component.getTaskButtonIcon(TaskType.CLEAR_PDF_CACHE)).toBe('pi pi-database');
-    expect(component.getCancelButtonIcon(TaskType.CLEAR_PDF_CACHE)).toBe('pi pi-times');
+    expect(component.getTaskDisplayName(TaskType.CLEANUP_TEMP_METADATA)).toBe('Clean temporary metadata');
+    expect(component.getTaskDescription(TaskType.CLEANUP_TEMP_METADATA)).toBe('Clean up temporary metadata.');
+    expect(component.getTaskLabel(TaskType.CLEANUP_TEMP_METADATA)).toBe('6. Clean temporary metadata');
+    expect(component.getTaskIcon(TaskType.CLEANUP_TEMP_METADATA)).toBe('pi-file');
+    expect(component.getMetadataIcon(TaskType.CLEANUP_TEMP_METADATA)).toBe('pi-file');
+    expect(component.hasMetadata(TaskType.CLEANUP_TEMP_METADATA)).toBe(true);
+    expect(component.getLastRunMessage(TaskType.CLEANUP_TEMP_METADATA)).toBe('settingsTasks.status.justNow');
+    expect(component.getLastRunInfoClass(TaskType.CLEANUP_TEMP_METADATA)).toBe('success');
+    expect(component.getTaskButtonIcon(TaskType.CLEANUP_TEMP_METADATA)).toBe('pi pi-file');
+    expect(component.getCancelButtonIcon(TaskType.CLEANUP_TEMP_METADATA)).toBe('pi pi-times');
     expect(component.formatDate('2026-03-27T03:00:00Z')).toContain('2026');
   });
 });

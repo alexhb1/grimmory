@@ -1,11 +1,10 @@
 import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {BehaviorSubject, Observable} from 'rxjs';
+import {BehaviorSubject, map, Observable} from 'rxjs';
 import {API_CONFIG} from '../../../core/config/api-config';
 import {MetadataRefreshRequest} from '../../metadata/model/request/metadata-refresh-request.model';
 
 export enum TaskType {
-  CLEAR_PDF_CACHE = 'CLEAR_PDF_CACHE',
   REFRESH_LIBRARY_METADATA = 'REFRESH_LIBRARY_METADATA',
   UPDATE_BOOK_RECOMMENDATIONS = 'UPDATE_BOOK_RECOMMENDATIONS',
   CLEANUP_DELETED_BOOKS = 'CLEANUP_DELETED_BOOKS',
@@ -23,7 +22,6 @@ export const TASK_TYPE_CONFIG: Record<TaskType, { parallel: boolean; async: bool
   [TaskType.CLEANUP_DELETED_BOOKS]: {parallel: false, async: false, displayOrder: 5},
   [TaskType.CLEANUP_TEMP_METADATA]: {parallel: false, async: false, displayOrder: 6},
   [TaskType.REFRESH_METADATA_MANUAL]: {parallel: false, async: false, displayOrder: 7},
-  [TaskType.CLEAR_PDF_CACHE]: {parallel: false, async: false, displayOrder: 8},
 };
 
 export enum MetadataReplaceMode {
@@ -42,11 +40,9 @@ export interface TaskCreateRequest {
 }
 
 export interface TaskCreateResponse {
-  id?: string;
-  type: string;
+  taskId: string;
+  taskType: TaskType;
   status: TaskStatus;
-  message?: string;
-  createdAt?: string;
 }
 
 export interface TaskStatusResponse {
@@ -64,7 +60,7 @@ export enum TaskStatus {
 
 export interface CronConfig {
   id: number | null;
-  taskType: string;
+  taskType: TaskType;
   cronExpression: string | null;
   enabled: boolean;
   options: Record<string, unknown> | null;
@@ -73,7 +69,7 @@ export interface CronConfig {
 }
 
 export interface TaskInfo {
-  taskType: string;
+  taskType: TaskType;
   name: string;
   description: string;
   parallel: boolean;
@@ -85,7 +81,7 @@ export interface TaskInfo {
 
 export interface TaskHistory {
   id: string | null;
-  type: string;
+  type: TaskType;
   status: TaskStatus | null;
   progressPercentage: number | null;
   message: string | null;
@@ -107,10 +103,31 @@ export interface TaskCronConfigRequest {
 
 export interface TaskProgressPayload {
   taskId: string;
-  taskType: string;
+  taskType: TaskType;
   message: string;
   progress: number; // 0-100 percentage
   taskStatus: TaskStatus;
+}
+
+interface CronConfigResponse extends Omit<CronConfig, 'taskType'> {
+  taskType: unknown;
+}
+
+interface TaskCreateResponsePayload extends Omit<TaskCreateResponse, 'taskType'> {
+  taskType: unknown;
+}
+
+interface TaskInfoResponse extends Omit<TaskInfo, 'taskType' | 'cronConfig'> {
+  taskType: unknown;
+  cronConfig: CronConfigResponse | null;
+}
+
+interface TaskHistoryResponse extends Omit<TaskHistory, 'type'> {
+  type: unknown;
+}
+
+interface TaskStatusResponsePayload {
+  taskHistories: TaskHistoryResponse[];
 }
 
 @Injectable({
@@ -124,26 +141,84 @@ export class TaskService {
   public taskProgress$ = this.taskProgressSubject.asObservable();
 
   getAvailableTasks(): Observable<TaskInfo[]> {
-    return this.http.get<TaskInfo[]>(`${this.baseUrl}`);
+    return this.http.get<TaskInfoResponse[]>(`${this.baseUrl}`).pipe(
+      map(tasks => tasks.map(parseTaskInfo))
+    );
   }
 
   startTask(request: TaskCreateRequest): Observable<TaskCreateResponse> {
-    return this.http.post<TaskCreateResponse>(`${this.baseUrl}/start`, request);
+    return this.http.post<TaskCreateResponsePayload>(`${this.baseUrl}/start`, request).pipe(
+      map(parseTaskCreateResponse)
+    );
   }
 
   getLatestTasksForEachType(): Observable<TaskStatusResponse> {
-    return this.http.get<TaskStatusResponse>(`${this.baseUrl}/last`);
+    return this.http.get<TaskStatusResponsePayload>(`${this.baseUrl}/last`).pipe(
+      map(response => ({taskHistories: response.taskHistories.map(parseTaskHistory)}))
+    );
   }
 
   cancelTask(taskId: string): Observable<TaskCancelResponse> {
     return this.http.delete<TaskCancelResponse>(`${this.baseUrl}/${taskId}/cancel`);
   }
 
-  updateCronConfig(taskType: string, request: TaskCronConfigRequest): Observable<CronConfig> {
-    return this.http.patch<CronConfig>(`${this.baseUrl}/${taskType}/cron`, request);
+  updateCronConfig(taskType: TaskType, request: TaskCronConfigRequest): Observable<CronConfig> {
+    return this.http.patch<CronConfigResponse>(`${this.baseUrl}/${taskType}/cron`, request).pipe(
+      map(parseCronConfig)
+    );
   }
 
-  handleTaskProgress(progress: TaskProgressPayload): void {
-    this.taskProgressSubject.next(progress);
+  handleTaskProgress(progress: unknown): void {
+    if (isTaskProgressPayload(progress)) {
+      this.taskProgressSubject.next(progress);
+    }
   }
+}
+
+function parseTaskInfo(task: TaskInfoResponse): TaskInfo {
+  if (!isTaskType(task.taskType)) throw new Error('Invalid task type in available tasks response');
+  return {
+    ...task,
+    taskType: task.taskType,
+    cronConfig: task.cronConfig ? parseCronConfig(task.cronConfig) : null,
+  };
+}
+
+function parseTaskCreateResponse(response: TaskCreateResponsePayload): TaskCreateResponse {
+  if (!isTaskType(response.taskType)) throw new Error('Invalid task type in task creation response');
+  return {...response, taskType: response.taskType};
+}
+
+function parseTaskHistory(history: TaskHistoryResponse): TaskHistory {
+  if (!isTaskType(history.type)) throw new Error('Invalid task type in task history response');
+  return {...history, type: history.type};
+}
+
+function parseCronConfig(config: CronConfigResponse): CronConfig {
+  if (!isTaskType(config.taskType)) throw new Error('Invalid task type in cron configuration response');
+  return {...config, taskType: config.taskType};
+}
+
+function isTaskProgressPayload(value: unknown): value is TaskProgressPayload {
+  if (!isRecord(value)) return false;
+  return typeof value['taskId'] === 'string'
+    && isTaskType(value['taskType'])
+    && typeof value['message'] === 'string'
+    && typeof value['progress'] === 'number'
+    && Number.isFinite(value['progress'])
+    && value['progress'] >= 0
+    && value['progress'] <= 100
+    && isTaskStatus(value['taskStatus']);
+}
+
+function isTaskType(value: unknown): value is TaskType {
+  return typeof value === 'string' && Object.hasOwn(TASK_TYPE_CONFIG, value);
+}
+
+function isTaskStatus(value: unknown): value is TaskStatus {
+  return typeof value === 'string' && Object.hasOwn(TaskStatus, value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

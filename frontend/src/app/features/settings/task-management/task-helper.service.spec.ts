@@ -1,4 +1,5 @@
 import {TestBed} from '@angular/core/testing';
+import {HttpErrorResponse} from '@angular/common/http';
 import {describe, expect, it, vi} from 'vitest';
 import {firstValueFrom, of, throwError} from 'rxjs';
 
@@ -38,7 +39,7 @@ describe('TaskHelperService', () => {
   });
 
   it('maps task conflicts to the already running error toast', async () => {
-    const startTask = vi.fn(() => throwError(() => ({status: 409})));
+    const startTask = vi.fn(() => throwError(() => new HttpErrorResponse({status: 409})));
     const messageAdd = vi.fn();
     const translate = vi.fn((key: string) => key);
 
@@ -63,7 +64,7 @@ describe('TaskHelperService', () => {
   });
 
   it('maps non-conflict failures to the generic error toast', async () => {
-    const startTask = vi.fn(() => throwError(() => ({status: 500})));
+    const startTask = vi.fn(() => throwError(() => new HttpErrorResponse({status: 500})));
     const messageAdd = vi.fn();
     const translate = vi.fn((key: string) => key);
 

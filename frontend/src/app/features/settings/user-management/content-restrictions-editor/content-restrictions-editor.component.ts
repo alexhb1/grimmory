@@ -159,9 +159,9 @@ export class ContentRestrictionsEditorComponent implements OnInit, OnChanges {
 
     const restriction: ContentRestriction = {
       userId: this.userId,
-      restrictionType: this.newRestriction.restrictionType!,
-      mode: this.newRestriction.mode!,
-      value: this.newRestriction.value!
+      restrictionType: this.newRestriction.restrictionType,
+      mode: this.newRestriction.mode,
+      value: this.newRestriction.value
     };
     const requestedUserId = this.userId;
 

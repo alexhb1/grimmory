@@ -53,9 +53,9 @@ export class TaskManagementComponent implements OnInit {
 
   // State
   taskInfos: TaskInfo[] = [];
-  private readonly taskHistoriesByType = signal(new Map<string, TaskHistory>());
+  private readonly taskHistoriesByType = signal(new Map<TaskType, TaskHistory>());
   readonly loading = signal(false);
-  private readonly executingTaskTypes = signal(new Set<string>());
+  private readonly executingTaskTypes = signal(new Set<TaskType>());
 
   // Metadata Replace Options
   metadataReplaceOptions = [
@@ -76,7 +76,7 @@ export class TaskManagementComponent implements OnInit {
 
   // Cron Editing State
   cronUpdating = false;
-  editingCronTaskType: string | null = null;
+  editingCronTaskType: TaskType | null = null;
   editingCronExpression: string = '';
   cronValidationError: string | null = null;
 
@@ -108,7 +108,7 @@ export class TaskManagementComponent implements OnInit {
       .subscribe({
         next: ({available, latest}) => {
           this.taskInfos = this.sortTasksByDisplayOrder(available);
-          this.taskHistoriesByType.set(new Map<string, TaskHistory>(latest.taskHistories.map(history => [history.type, history])));
+          this.taskHistoriesByType.set(new Map<TaskType, TaskHistory>(latest.taskHistories.map(history => [history.type, history])));
         },
         error: (error) => {
           console.error('Error loading tasks:', error);
@@ -155,8 +155,8 @@ export class TaskManagementComponent implements OnInit {
 
   private sortTasksByDisplayOrder(tasks: TaskInfo[]): TaskInfo[] {
     return tasks.sort((a, b) => {
-      const orderA = TASK_TYPE_CONFIG[a.taskType as TaskType]?.displayOrder ?? 999;
-      const orderB = TASK_TYPE_CONFIG[b.taskType as TaskType]?.displayOrder ?? 999;
+      const orderA = TASK_TYPE_CONFIG[a.taskType].displayOrder;
+      const orderB = TASK_TYPE_CONFIG[b.taskType].displayOrder;
       return orderA - orderB;
     });
   }
@@ -165,16 +165,16 @@ export class TaskManagementComponent implements OnInit {
   // Task Execution Operations
   // ============================================================================
 
-  canExecuteTask(taskType: string): boolean {
+  canExecuteTask(taskType: TaskType): boolean {
     const history = this.getTaskHistory(taskType);
     return this.canRunTask(history) || this.isTaskStale(history);
   }
 
-  executeTask(taskType: string): void {
+  executeTask(taskType: TaskType): void {
     this.runTask(taskType);
   }
 
-  runTask(type: string): void {
+  runTask(type: TaskType): void {
     const history = this.getTaskHistory(type);
     if (!this.canRunTask(history) && !this.isTaskStale(history)) {
       this.showMessage('warn', this.t.translate('settingsTasks.toast.alreadyRunning'), this.t.translate('settingsTasks.toast.alreadyRunningDetail'));
@@ -192,14 +192,14 @@ export class TaskManagementComponent implements OnInit {
     this.runTaskWithOptions(type, options);
   }
 
-  private runTaskWithOptions(type: string, options: LibraryRescanOptions | MetadataRefreshRequest | null): void {
+  private runTaskWithOptions(type: TaskType, options: LibraryRescanOptions | MetadataRefreshRequest | null): void {
     const request: TaskCreateRequest = {
-      taskType: type as TaskType,
+      taskType: type,
       triggeredByCron: false,
       options: options
     };
 
-    const isAsync = TASK_TYPE_CONFIG[type as TaskType]?.async || false;
+    const isAsync = TASK_TYPE_CONFIG[type].async;
 
     this.addExecutingTask(type);
     this.taskService.startTask(request)
@@ -213,7 +213,7 @@ export class TaskManagementComponent implements OnInit {
             if (response.status === TaskStatus.COMPLETED) {
               this.showMessage('success', this.t.translate('settingsTasks.toast.taskCompleted'), this.t.translate('settingsTasks.toast.taskCompletedDetail', {name}));
             } else if (response.status === TaskStatus.FAILED) {
-              this.showMessage('error', this.t.translate('settingsTasks.toast.taskFailed'), response.message || this.t.translate('settingsTasks.toast.taskFailedDetail', {name}));
+              this.showMessage('error', this.t.translate('settingsTasks.toast.taskFailed'), this.t.translate('settingsTasks.toast.taskFailedDetail', {name}));
             } else {
               this.showMessage('success', this.t.translate('settingsTasks.toast.taskStarted'), this.t.translate('settingsTasks.toast.taskStartedDetail', {name}));
             }
@@ -227,7 +227,7 @@ export class TaskManagementComponent implements OnInit {
       });
   }
 
-  cancelTask(taskType: string): void {
+  cancelTask(taskType: TaskType): void {
     const history = this.getTaskHistory(taskType);
     if (!history?.id) {
       this.showMessage('error', this.t.translate('common.error'), this.t.translate('settingsTasks.toast.cancelNoId'));
@@ -262,11 +262,11 @@ export class TaskManagementComponent implements OnInit {
     return history?.status === TaskStatus.IN_PROGRESS || history?.status === TaskStatus.PENDING;
   }
 
-  isTaskExecuting(taskType: string): boolean {
+  isTaskExecuting(taskType: TaskType): boolean {
     return this.executingTaskTypes().has(taskType);
   }
 
-  isTaskRunning(taskType: string): boolean {
+  isTaskRunning(taskType: TaskType): boolean {
     const history = this.getTaskHistory(taskType);
     return history?.status === TaskStatus.IN_PROGRESS || history?.status === TaskStatus.PENDING;
   }
@@ -288,12 +288,12 @@ export class TaskManagementComponent implements OnInit {
   // Cron Configuration Management
   // ============================================================================
 
-  isCronSupported(taskType: string): boolean {
+  isCronSupported(taskType: TaskType): boolean {
     const taskInfo = this.taskInfos.find(t => t.taskType === taskType);
     return taskInfo?.cronSupported || false;
   }
 
-  getCronConfig(taskType: string): { enabled?: boolean; cronExpression?: string } | null | undefined {
+  getCronConfig(taskType: TaskType): { enabled?: boolean; cronExpression?: string } | null | undefined {
     const taskInfo = this.taskInfos.find(t => t.taskType === taskType);
     if (!taskInfo?.cronConfig) return null;
 
@@ -304,7 +304,7 @@ export class TaskManagementComponent implements OnInit {
     };
   }
 
-  toggleCronEnabled(taskType: string): void {
+  toggleCronEnabled(taskType: TaskType): void {
     const cronConfig = this.getCronConfig(taskType);
     if (!cronConfig) return;
 
@@ -315,11 +315,11 @@ export class TaskManagementComponent implements OnInit {
     this.updateCronConfig(taskType, request);
   }
 
-  isEditingCron(taskType: string): boolean {
+  isEditingCron(taskType: TaskType): boolean {
     return this.editingCronTaskType === taskType;
   }
 
-  startEditingCron(taskType: string): void {
+  startEditingCron(taskType: TaskType): void {
     const cronConfig = this.getCronConfig(taskType);
     this.editingCronTaskType = taskType;
     this.editingCronExpression = cronConfig?.cronExpression || '';
@@ -337,7 +337,7 @@ export class TaskManagementComponent implements OnInit {
     this.validateCronExpression(this.editingCronExpression);
   }
 
-  saveCronExpression(taskType: string): void {
+  saveCronExpression(taskType: TaskType): void {
     if (this.cronValidationError) {
       return;
     }
@@ -347,7 +347,7 @@ export class TaskManagementComponent implements OnInit {
     this.cancelEditingCron();
   }
 
-  updateCronExpression(taskType: string, expression: string | null): void {
+  updateCronExpression(taskType: TaskType, expression: string | null): void {
     const request: TaskCronConfigRequest = {
       cronExpression: expression
     };
@@ -355,7 +355,7 @@ export class TaskManagementComponent implements OnInit {
     this.updateCronConfig(taskType, request);
   }
 
-  private updateCronConfig(taskType: string, request: TaskCronConfigRequest): void {
+  private updateCronConfig(taskType: TaskType, request: TaskCronConfigRequest): void {
     this.cronUpdating = true;
     this.taskService.updateCronConfig(taskType, request)
       .pipe(finalize(() => this.cronUpdating = false))
@@ -447,27 +447,26 @@ export class TaskManagementComponent implements OnInit {
   // UI Helper Methods - Task Information
   // ============================================================================
 
-  getTaskDisplayName(type: string): string {
+  getTaskDisplayName(type: TaskType): string {
     const taskInfo = this.taskInfos.find(t => t.taskType === type);
     return taskInfo?.name || type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
   }
 
-  getTaskDescription(type: string): string {
+  getTaskDescription(type: TaskType): string {
     const taskInfo = this.taskInfos.find(t => t.taskType === type);
     return taskInfo?.description || 'System maintenance task.';
   }
 
-  getTaskDisplayOrder(type: string): number {
-    return TASK_TYPE_CONFIG[type as TaskType]?.displayOrder ?? 999;
+  getTaskDisplayOrder(type: TaskType): number {
+    return TASK_TYPE_CONFIG[type].displayOrder;
   }
 
-  getTaskLabel(taskType: string): string {
+  getTaskLabel(taskType: TaskType): string {
     return `${this.getTaskDisplayOrder(taskType)}. ${this.getTaskDisplayName(taskType)}`;
   }
 
-  getTaskIcon(taskType: string): string {
+  getTaskIcon(taskType: TaskType): string {
     const icons: Record<string, string> = {
-      [TaskType.CLEAR_PDF_CACHE]: 'pi-database',
       [TaskType.REFRESH_LIBRARY_METADATA]: 'pi-refresh',
       [TaskType.UPDATE_BOOK_RECOMMENDATIONS]: 'pi-sparkles',
       [TaskType.CLEANUP_DELETED_BOOKS]: 'pi-trash',
@@ -478,19 +477,18 @@ export class TaskManagementComponent implements OnInit {
     return icons[taskType] || 'pi-cog';
   }
 
-  getTaskMetadata(taskType: string): string | null {
+  getTaskMetadata(taskType: TaskType): string | null {
     const taskInfo = this.taskInfos.find(t => t.taskType === taskType);
     return taskInfo?.metadata || null;
   }
 
-  hasMetadata(taskType: string): boolean {
+  hasMetadata(taskType: TaskType): boolean {
     const taskInfo = this.taskInfos.find(t => t.taskType === taskType);
     return !!taskInfo?.metadata && taskInfo.metadata.trim().length > 0;
   }
 
-  getMetadataIcon(taskType: string): string {
+  getMetadataIcon(taskType: TaskType): string {
     const icons: Record<string, string> = {
-      [TaskType.CLEAR_PDF_CACHE]: 'pi-database',
       [TaskType.CLEANUP_DELETED_BOOKS]: 'pi-trash',
       [TaskType.CLEANUP_TEMP_METADATA]: 'pi-file'
     };
@@ -501,19 +499,19 @@ export class TaskManagementComponent implements OnInit {
   // UI Helper Methods - Task History & Status
   // ============================================================================
 
-  getTaskHistory(taskType: string): TaskHistory | undefined {
+  getTaskHistory(taskType: TaskType): TaskHistory | undefined {
     return this.taskHistoriesByType().get(taskType);
   }
 
-  getTaskProgressPercentage(taskType: string): number | null {
+  getTaskProgressPercentage(taskType: TaskType): number | null {
     return this.getTaskHistory(taskType)?.progressPercentage ?? null;
   }
 
-  getTaskUpdatedAt(taskType: string): string | null {
+  getTaskUpdatedAt(taskType: TaskType): string | null {
     return this.getTaskHistory(taskType)?.updatedAt || null;
   }
 
-  getTaskStatusMessage(taskType: string): string {
+  getTaskStatusMessage(taskType: TaskType): string {
     const history = this.getTaskHistory(taskType);
     if (this.isTaskStale(history)) {
       return this.t.translate('settingsTasks.progress.stuckMessage');
@@ -521,7 +519,7 @@ export class TaskManagementComponent implements OnInit {
     return history?.message || this.t.translate('settingsTasks.progress.processing');
   }
 
-  getLastRunMessage(taskType: string): string {
+  getLastRunMessage(taskType: TaskType): string {
     const history = this.getTaskHistory(taskType);
     if (!history?.completedAt && !history?.updatedAt) {
       return this.t.translate('settingsTasks.status.neverRun');
@@ -545,7 +543,7 @@ export class TaskManagementComponent implements OnInit {
     return date.toLocaleDateString();
   }
 
-  getLastRunInfoClass(taskType: string): string {
+  getLastRunInfoClass(taskType: TaskType): string {
     const history = this.getTaskHistory(taskType);
     if (!history?.status) return 'info';
 
@@ -565,14 +563,14 @@ export class TaskManagementComponent implements OnInit {
   // UI Helper Methods - Buttons & Icons
   // ============================================================================
 
-  getTaskButtonIcon(taskType: string): string {
+  getTaskButtonIcon(taskType: TaskType): string {
     if (this.isTaskExecuting(taskType)) {
       return 'pi pi-spinner pi-spin';
     }
     return 'pi ' + this.getTaskIcon(taskType);
   }
 
-  getTaskButtonLabel(taskType: string): string {
+  getTaskButtonLabel(taskType: TaskType): string {
     const history = this.getTaskHistory(taskType);
     if (this.isTaskStale(history)) {
       return this.t.translate('settingsTasks.buttons.rerun');
@@ -580,7 +578,7 @@ export class TaskManagementComponent implements OnInit {
     return this.t.translate('settingsTasks.buttons.run');
   }
 
-  getCancelButtonIcon(taskType: string): string {
+  getCancelButtonIcon(taskType: TaskType): string {
     if (this.isTaskExecuting(taskType)) {
       return 'pi pi-spinner pi-spin';
     }
@@ -611,11 +609,11 @@ export class TaskManagementComponent implements OnInit {
     return date.toLocaleString();
   }
 
-  private addExecutingTask(taskType: string): void {
+  private addExecutingTask(taskType: TaskType): void {
     this.executingTaskTypes.update(tasks => new Set(tasks).add(taskType));
   }
 
-  private removeExecutingTask(taskType: string): void {
+  private removeExecutingTask(taskType: TaskType): void {
     this.executingTaskTypes.update(tasks => {
       const updatedTasks = new Set(tasks);
       updatedTasks.delete(taskType);
