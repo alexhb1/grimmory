@@ -33,7 +33,7 @@ describe('BookdropBulkEditDialogComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  function blurAutoComplete(fieldName: string, value: string) {
+  function blurAutoComplete(fieldName: 'authors', value: string) {
     const input = document.createElement('input');
     input.value = value;
 

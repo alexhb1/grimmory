@@ -25,7 +25,7 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Tooltip} from "@openng/optimus-ui/tooltip";
 import {Divider} from "@openng/optimus-ui/divider";
 import {TagComponent} from "../../../../shared/components/tag/tag.component";
-import {AfterViewChecked, ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, signal, viewChild} from '@angular/core';
+import {AfterViewChecked, ChangeDetectionStrategy, Component, computed, effect, ElementRef, ErrorHandler, inject, signal, viewChild} from '@angular/core';
 import {BookCardOverlayPreferenceService} from '../book-browser/book-card-overlay-preference.service';
 import {UrlHelperService} from '../../../../shared/service/url-helper.service';
 import {LanguageResolverService} from '../../../../shared/service/language-resolver.service';
@@ -120,6 +120,7 @@ export class SeriesPageComponent implements AfterViewChecked {
   protected urlHelper = inject(UrlHelperService);
   private authorService = inject(AuthorService);
   private layoutService = inject(LayoutService);
+  private errorHandler = inject(ErrorHandler);
 
   private readonly descriptionContentRef = viewChild<ElementRef<HTMLElement>>('descriptionContent');
   private readonly seriesGridElement = viewChild<ElementRef<HTMLElement>>('seriesGrid');
@@ -282,7 +283,7 @@ export class SeriesPageComponent implements AfterViewChecked {
 
     const counts = new Map<ReadStatus, number>();
     for (const book of books) {
-      const status = (book.readStatus as ReadStatus) ?? ReadStatus.UNREAD;
+      const status = book.readStatus ?? ReadStatus.UNREAD;
       counts.set(status, (counts.get(status) || 0) + 1);
     }
 
@@ -445,7 +446,9 @@ export class SeriesPageComponent implements AfterViewChecked {
   goToAuthorBooks(author: string): void {
     this.authorService.getAuthorByName(author).subscribe({
       next: (authorDetails) => {
-        this.router.navigate(['/author', authorDetails.id]);
+        this.router.navigate(['/author', authorDetails.id]).catch((error: unknown) => {
+          this.errorHandler.handleError(error);
+        });
       },
       error: () => {
         this.handleMetadataClick('author', author);
@@ -473,6 +476,8 @@ export class SeriesPageComponent implements AfterViewChecked {
         sidebar: true,
         filter: `${filterKey}:${encodeURIComponent(filterValue)}`,
       },
+    }).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
     });
   }
 
@@ -501,9 +506,8 @@ export class SeriesPageComponent implements AfterViewChecked {
     this.isExpanded.update(isExpanded => !isExpanded);
   }
 
-  getStatusLabel(value: string | ReadStatus | null | undefined): string {
-    const v = (value ?? '').toString().toUpperCase();
-    switch (v) {
+  getStatusLabel(value: ReadStatus | null | undefined): string {
+    switch (value) {
       case ReadStatus.UNREAD:
         return this.t.translate('book.seriesPage.status.unread');
       case ReadStatus.READING:
@@ -525,25 +529,23 @@ export class SeriesPageComponent implements AfterViewChecked {
     }
   }
 
-  getStatusColor(status: string | ReadStatus | null | undefined): string {
-    const normalized = (status ?? '').toString().toUpperCase();
-    switch (normalized) {
-      case "UNREAD":
+  getStatusColor(status: ReadStatus | null | undefined): string {
+    switch (status) {
+      case ReadStatus.UNREAD:
         return "#6b7280";
-      case "READING":
+      case ReadStatus.READING:
         return "#2563eb";
-      case "READ":
+      case ReadStatus.READ:
         return "#16a34a";
-      case "PARTIALLY_READ":
+      case ReadStatus.PARTIALLY_READ:
         return "#ca8a04";
-      case "PAUSED":
+      case ReadStatus.PAUSED:
         return "#475569";
-      case "RE-READING":
-      case "RE_READING":
+      case ReadStatus.RE_READING:
         return "#9333ea";
-      case "ABANDONED":
+      case ReadStatus.ABANDONED:
         return "#dc2626";
-      case "WONT_READ":
+      case ReadStatus.WONT_READ:
         return "#be185d";
       default:
         return "#4b5563";
@@ -571,6 +573,8 @@ export class SeriesPageComponent implements AfterViewChecked {
   viewBookDetails(bookId: number): void {
     this.router.navigate(['/book', bookId], {
       queryParams: {tab: 'view'}
+    }).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
     });
   }
 
@@ -689,8 +693,8 @@ export class SeriesPageComponent implements AfterViewChecked {
   async openShelfAssigner() {
     this.dialogRef = await this.dialogHelperService.openShelfAssignerDialog(null, this.selectedBooks());
     if (this.dialogRef) {
-      this.dialogRef.onClose.pipe(take(1)).subscribe(result => {
-        if (result?.assigned) {
+      this.dialogRef.onClose.pipe(take(1)).subscribe((result: unknown) => {
+        if (typeof result === 'object' && result !== null && 'assigned' in result && result.assigned === true) {
           this.deselectAllBooks();
         }
       });

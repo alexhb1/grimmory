@@ -13,6 +13,11 @@ import {AppSettingsService} from '../../../../shared/service/app-settings.servic
 import {AdditionalFileType, Book} from '../../model/book.model';
 import {MessageService} from '@openng/optimus-ui/api';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../../shared/models/api-exception.model';
+
+export interface AdditionalFileUploaderDialogData {
+  book: Book;
+}
 
 interface FileTypeOption {
   label: string;
@@ -43,13 +48,13 @@ interface UploadingFile {
 export class AdditionalFileUploaderComponent implements OnInit, OnDestroy {
   private readonly t = inject(TranslocoService);
   private dialogRef = inject(DynamicDialogRef);
-  private config = inject(DynamicDialogConfig);
+  private config = inject<DynamicDialogConfig<AdditionalFileUploaderDialogData>>(DynamicDialogConfig);
   private bookFileService = inject(BookFileService);
   private appSettingsService = inject(AppSettingsService);
   private messageService = inject(MessageService);
   private cdr = inject(ChangeDetectorRef);
 
-  book!: Book;
+  book: Book;
   files: UploadingFile[] = [];
   fileType: AdditionalFileType = AdditionalFileType.ALTERNATIVE_FORMAT;
   isUploading = false;
@@ -63,8 +68,15 @@ export class AdditionalFileUploaderComponent implements OnInit, OnDestroy {
   @ViewChild(FileUpload) private fileUpload!: FileUpload;
   private destroy$ = new Subject<void>();
 
+  constructor() {
+    const data = this.config.data;
+    if (!data) {
+      throw new Error('Additional file uploader dialog requires a book.');
+    }
+    this.book = data.book;
+  }
+
   ngOnInit(): void {
-    this.book = this.config.data.book;
     this.fileTypeOptions = [
       { label: this.t.translate('book.fileUploader.typeAlternativeFormat'), value: AdditionalFileType.ALTERNATIVE_FORMAT },
       { label: this.t.translate('book.fileUploader.typeSupplementary'), value: AdditionalFileType.SUPPLEMENTARY }
@@ -174,10 +186,13 @@ export class AdditionalFileUploaderComponent implements OnInit, OnDestroy {
             this.dialogRef.close({ success: true });
           }
         },
-        error: (err) => {
+        error: (error: unknown) => {
           uploadFile.status = 'Failed';
-          uploadFile.errorMessage = err?.error?.message || this.t.translate('book.fileUploader.toast.uploadFailedUnknown');
-          console.error('Upload failed for', uploadFile.file.name, err);
+          uploadFile.errorMessage = getApiErrorMessage(
+            error,
+            this.t.translate('book.fileUploader.toast.uploadFailedUnknown'),
+          );
+          console.error('Upload failed for', uploadFile.file.name, error);
           this.cdr.detectChanges();
           if (--pending === 0) {
             this.isUploading = false;

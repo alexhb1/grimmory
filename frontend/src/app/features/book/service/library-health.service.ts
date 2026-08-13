@@ -8,6 +8,11 @@ import {injectQuery, queryOptions, QueryClient} from '@tanstack/angular-query-ex
 
 const LIBRARY_HEALTH_QUERY_KEY = ['libraryHealth'] as const;
 
+function isLibraryHealth(value: unknown): value is Record<number, boolean> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && Object.values(value).every(status => typeof status === 'boolean');
+}
+
 @Injectable({providedIn: 'root'})
 export class LibraryHealthService {
   private readonly url = `${API_CONFIG.BASE_URL}/api/v1/libraries/health`;
@@ -42,8 +47,11 @@ export class LibraryHealthService {
     this.rxStompService.watch('/topic/library-health')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(msg => {
-        const payload = JSON.parse(msg.body);
-        this.queryClient.setQueryData(LIBRARY_HEALTH_QUERY_KEY, payload.libraryHealth);
+        const payload: unknown = JSON.parse(msg.body);
+        if (typeof payload === 'object' && payload !== null && 'libraryHealth' in payload
+          && isLibraryHealth(payload.libraryHealth)) {
+          this.queryClient.setQueryData(LIBRARY_HEALTH_QUERY_KEY, payload.libraryHealth);
+        }
       });
     this.socketInitialized = true;
   }

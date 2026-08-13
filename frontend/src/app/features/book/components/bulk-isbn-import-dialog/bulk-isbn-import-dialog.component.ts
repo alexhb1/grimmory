@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Component, computed, effect, inject, signal, WritableSignal} from '@angular/core';
 import {DynamicDialogConfig, DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {FormsModule} from '@angular/forms';
@@ -36,6 +37,10 @@ export interface SkippedEntry {
 
 type ImportPhase = 'upload' | 'processing' | 'summary';
 
+export interface BulkIsbnImportDialogData {
+  libraryId?: number;
+}
+
 @Component({
   selector: 'app-bulk-isbn-import-dialog',
   standalone: true,
@@ -59,7 +64,7 @@ type ImportPhase = 'upload' | 'processing' | 'summary';
 })
 export class BulkIsbnImportDialogComponent {
   private dynamicDialogRef = inject(DynamicDialogRef);
-  private dialogConfig = inject(DynamicDialogConfig);
+  private dialogConfig = inject<DynamicDialogConfig<BulkIsbnImportDialogData>>(DynamicDialogConfig);
   private bookService = inject(BookService);
   private bookMetadataService = inject(BookMetadataService);
   private libraryService = inject(LibraryService);
@@ -112,8 +117,9 @@ export class BulkIsbnImportDialogComponent {
 
     const reader = new FileReader();
     reader.onload = () => {
-      const content = reader.result as string;
-      this.parseContent(content, file.name);
+      if (typeof reader.result === 'string') {
+        this.parseContent(reader.result, file.name);
+      }
     };
     reader.readAsText(file, 'UTF-8');
   }
@@ -136,7 +142,8 @@ export class BulkIsbnImportDialogComponent {
   }
 
   async startImport(): Promise<void> {
-    if (!this.canStartImport()) return;
+    const libraryId = this.selectedLibraryId;
+    if (!libraryId || !this.canStartImport()) return;
 
     this.phase.set('processing');
     this.processedCount.set(0);
@@ -174,8 +181,8 @@ export class BulkIsbnImportDialogComponent {
         if (this.cancelled) break;
 
         const request: CreatePhysicalBookRequest = {
-          libraryId: this.selectedLibraryId!,
-          isbn: isbn,
+          libraryId,
+          isbn,
           title: metadata?.title || undefined,
           authors: metadata?.authors?.length ? [...metadata.authors] : undefined,
           description: metadata?.description || undefined,
@@ -350,9 +357,9 @@ export class BulkIsbnImportDialogComponent {
     return new Promise((resolve) => {
       this.bookMetadataService.lookupByIsbn(isbn).subscribe({
         next: metadata => resolve(metadata),
-        error: err => {
+        error: (err: unknown) => {
           // Retry once on potential rate limiting
-          if (err?.status === 429) {
+          if (err instanceof HttpErrorResponse && err.status === 429) {
             setTimeout(() => {
               this.bookMetadataService.lookupByIsbn(isbn).subscribe({
                 next: metadata => resolve(metadata),
@@ -371,7 +378,9 @@ export class BulkIsbnImportDialogComponent {
     return new Promise((resolve, reject) => {
       this.bookService.createPhysicalBook(request).subscribe({
         next: () => resolve(),
-        error: err => reject(err),
+        error: err => reject(err instanceof Error
+          ? err
+          : new Error('Failed to create physical book', {cause: err})),
       });
     });
   }

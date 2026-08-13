@@ -1,4 +1,4 @@
-import {computed, effect, inject, Injectable} from '@angular/core';
+import {computed, effect, ErrorHandler, inject, Injectable} from '@angular/core';
 import {first, from, lastValueFrom, Observable, throwError} from 'rxjs';
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {catchError, map, tap} from 'rxjs/operators';
@@ -23,6 +23,7 @@ import {
   patchBooksInCache,
   removeBookQueries,
 } from './book-query-cache';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 @Injectable({
   providedIn: 'root',
@@ -38,6 +39,7 @@ export class BookService {
   private bookSocketService = inject(BookSocketService);
   private bookPatchService = inject(BookPatchService);
   private queryClient = inject(QueryClient);
+  private errorHandler = inject(ErrorHandler);
   private readonly t = inject(TranslocoService);
   private readonly token = this.authService.token;
 
@@ -212,11 +214,12 @@ export class BookService {
           });
         }
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
+        const fallback = this.t.translate('book.bookService.toast.deleteFailedDetail');
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.deleteFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.deleteFailedDetail'),
+          detail: getApiErrorMessage(error, fallback),
         });
         return throwError(() => error);
       })
@@ -237,11 +240,12 @@ export class BookService {
           detail: this.t.translate('book.bookService.toast.physicalBookCreatedDetail', {title: newBook.metadata?.title || 'Book'})
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
+        const fallback = this.t.translate('book.bookService.toast.creationFailedDetail');
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.creationFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.creationFailedDetail')
+          detail: getApiErrorMessage(error, fallback)
         });
         return throwError(() => error);
       })
@@ -318,9 +322,13 @@ export class BookService {
     }
 
     const hasQueryParams = Object.keys(queryParams).length > 0;
-    this.router.navigate([`/${baseUrl}/book/${book.id}`], hasQueryParams ? {queryParams} : undefined);
-
     this.updateLastReadTime(book.id);
+    this.router.navigate(
+      [`/${baseUrl}/book/${book.id}`],
+      hasQueryParams ? {queryParams} : undefined,
+    ).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 
   getBookSetting(bookId: number, bookFileId: number): Observable<BookSetting> {

@@ -12,8 +12,20 @@ import {Divider} from '@openng/optimus-ui/divider';
 import {MessageService} from '@openng/optimus-ui/api';
 import {DialogService} from '@openng/optimus-ui/dynamicdialog';
 import {AuthorService} from '../../service/author.service';
-import {AuthorDetails} from '../../model/author.model';
-import {AuthorPhotoSearchComponent} from '../author-photo-search/author-photo-search.component';
+import {AuthorDetails, AuthorUpdateRequest} from '../../model/author.model';
+import {AuthorPhotoSearchComponent, AuthorPhotoSearchDialogData} from '../author-photo-search/author-photo-search.component';
+
+type LockableAuthorField = 'name' | 'description' | 'asin';
+
+type AuthorEditorForm = FormGroup<{
+  name: FormControl<string>;
+  nameLocked: FormControl<boolean>;
+  description: FormControl<string>;
+  descriptionLocked: FormControl<boolean>;
+  asin: FormControl<string>;
+  asinLocked: FormControl<boolean>;
+  photoLocked: FormControl<boolean>;
+}>;
 
 @Component({
   selector: 'app-author-editor',
@@ -44,8 +56,14 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
   private messageService = inject(MessageService);
   private dialogService = inject(DialogService);
   private t = inject(TranslocoService);
+  private readonly lockableFields: readonly LockableAuthorField[] = ['name', 'description', 'asin'];
+  private readonly lockControlNames = {
+    name: 'nameLocked',
+    description: 'descriptionLocked',
+    asin: 'asinLocked',
+  } as const;
 
-  form!: FormGroup;
+  form!: AuthorEditorForm;
   isSaving = signal(false);
   isUploading = signal(false);
   hasPhoto = true;
@@ -68,39 +86,35 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.form = new FormGroup({
-      name: new FormControl(this.author.name || ''),
-      nameLocked: new FormControl(this.author.nameLocked || false),
-      description: new FormControl(this.author.description || ''),
-      descriptionLocked: new FormControl(this.author.descriptionLocked || false),
-      asin: new FormControl(this.author.asin || ''),
-      asinLocked: new FormControl(this.author.asinLocked || false),
-      photoLocked: new FormControl(this.author.photoLocked || false)
+      name: new FormControl(this.author.name, {nonNullable: true}),
+      nameLocked: new FormControl(this.author.nameLocked, {nonNullable: true}),
+      description: new FormControl(this.author.description ?? '', {nonNullable: true}),
+      descriptionLocked: new FormControl(this.author.descriptionLocked, {nonNullable: true}),
+      asin: new FormControl(this.author.asin ?? '', {nonNullable: true}),
+      asinLocked: new FormControl(this.author.asinLocked, {nonNullable: true}),
+      photoLocked: new FormControl(this.author.photoLocked, {nonNullable: true})
     });
 
     this.applyLockStates();
   }
 
-  toggleLock(field: string): void {
-    const lockedControl = this.form.get(field + 'Locked');
-    if (!lockedControl) return;
+  toggleLock(field: LockableAuthorField): void {
+    const fieldControl = this.form.controls[field];
+    const lockedControl = this.form.controls[this.lockControlNames[field]];
     const isLocked = !lockedControl.value;
     lockedControl.setValue(isLocked);
 
-    const fieldControl = this.form.get(field);
-    if (fieldControl) {
-      if (isLocked) {
-        fieldControl.disable();
-      } else {
-        fieldControl.enable();
-      }
+    if (isLocked) {
+      fieldControl.disable();
+    } else {
+      fieldControl.enable();
     }
 
     this.saveMetadata();
   }
 
   togglePhotoLock(): void {
-    const lockedControl = this.form.get('photoLocked');
-    if (!lockedControl) return;
+    const lockedControl = this.form.controls.photoLocked;
     lockedControl.setValue(!lockedControl.value);
     this.saveMetadata();
   }
@@ -110,26 +124,34 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
   }
 
   lockAll(): void {
-    for (const field of ['name', 'description', 'asin']) {
-      this.form.get(field + 'Locked')?.setValue(true);
-      this.form.get(field)?.disable();
+    for (const field of this.lockableFields) {
+      const fieldControl = this.form.controls[field];
+      const lockedControl = this.form.controls[this.lockControlNames[field]];
+      lockedControl.setValue(true);
+      fieldControl.disable();
     }
-    this.form.get('photoLocked')?.setValue(true);
+    this.form.controls.photoLocked.setValue(true);
     this.saveMetadata();
   }
 
   unlockAll(): void {
-    for (const field of ['name', 'description', 'asin']) {
-      this.form.get(field + 'Locked')?.setValue(false);
-      this.form.get(field)?.enable();
+    for (const field of this.lockableFields) {
+      const fieldControl = this.form.controls[field];
+      const lockedControl = this.form.controls[this.lockControlNames[field]];
+      lockedControl.setValue(false);
+      fieldControl.enable();
     }
-    this.form.get('photoLocked')?.setValue(false);
+    this.form.controls.photoLocked.setValue(false);
     this.saveMetadata();
   }
 
   openPhotoSearch(): void {
+    const data: AuthorPhotoSearchDialogData = {
+      authorId: this.authorId,
+      authorName: this.author.name
+    };
     const ref = this.dialogService.open(AuthorPhotoSearchComponent, {
-      data: {authorId: this.authorId, authorName: this.author.name},
+      data,
       header: this.t.translate('authorBrowser.editor.searchPhotoTitle'),
       width: '70vw',
       height: '80vh',
@@ -138,8 +160,8 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
       dismissableMask: true,
       contentStyle: {'overflow': 'hidden', 'padding': '0', 'display': 'flex', 'flex-direction': 'column'}
     });
-    ref?.onClose.subscribe((result: boolean) => {
-      if (result) {
+    ref?.onClose.subscribe((result: unknown) => {
+      if (result === true) {
         this.photoTimestamp = Date.now();
         this.hasPhoto = true;
         this.authorUpdated.emit(this.author);
@@ -181,10 +203,10 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
     this.isSaving.set(true);
 
     const formValue = this.form.getRawValue();
-    const request = {
-      name: formValue.name?.trim() || undefined,
-      description: formValue.description?.trim(),
-      asin: formValue.asin?.trim(),
+    const request: AuthorUpdateRequest = {
+      name: formValue.name.trim() || undefined,
+      description: formValue.description.trim(),
+      asin: formValue.asin.trim(),
       nameLocked: formValue.nameLocked,
       descriptionLocked: formValue.descriptionLocked,
       asinLocked: formValue.asinLocked,
@@ -213,10 +235,10 @@ export class AuthorEditorComponent implements OnInit, OnChanges {
   }
 
   private applyLockStates(): void {
-    for (const field of ['name', 'description', 'asin']) {
-      const lockedControl = this.form.get(field + 'Locked');
-      const fieldControl = this.form.get(field);
-      if (lockedControl?.value && fieldControl) {
+    for (const field of this.lockableFields) {
+      const fieldControl = this.form.controls[field];
+      const lockedControl = this.form.controls[this.lockControlNames[field]];
+      if (lockedControl.value) {
         fieldControl.disable();
       }
     }

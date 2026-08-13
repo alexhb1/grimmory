@@ -1,4 +1,4 @@
-import {Component, DestroyRef, inject, OnInit, QueryList, signal, ViewChildren} from '@angular/core';
+import {Component, DestroyRef, ErrorHandler, inject, OnInit, QueryList, signal, ViewChildren} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {startWith, take, tap} from 'rxjs/operators';
 import {PageTitleService} from "../../../../shared/service/page-title.service";
@@ -26,8 +26,15 @@ import {NgClass} from '@angular/common';
 import {Paginator} from '@openng/optimus-ui/paginator';
 import {ActivatedRoute} from '@angular/router';
 import {BookdropFileMetadataPickerComponent} from '../bookdrop-file-metadata-picker/bookdrop-file-metadata-picker.component';
-import {BookdropBulkEditDialogComponent, BulkEditResult} from '../bookdrop-bulk-edit-dialog/bookdrop-bulk-edit-dialog.component';
-import {BookdropPatternExtractDialogComponent} from '../bookdrop-pattern-extract-dialog/bookdrop-pattern-extract-dialog.component';
+import {
+  BookdropBulkEditDialogComponent,
+  BookdropBulkEditDialogData,
+  BulkEditResult,
+} from '../bookdrop-bulk-edit-dialog/bookdrop-bulk-edit-dialog.component';
+import {
+  BookdropPatternExtractDialogComponent,
+  BookdropPatternExtractDialogData,
+} from '../bookdrop-pattern-extract-dialog/bookdrop-pattern-extract-dialog.component';
 import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 
@@ -76,6 +83,7 @@ export class BookdropFileReviewComponent implements OnInit {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly pageTitle = inject(PageTitleService);
   private readonly t = inject(TranslocoService);
+  private readonly errorHandler = inject(ErrorHandler);
 
   @ViewChildren('metadataPicker') metadataPickers!: QueryList<BookdropFileMetadataPickerComponent>;
 
@@ -235,9 +243,11 @@ export class BookdropFileReviewComponent implements OnInit {
               });
               resolve();
             },
-            error: err => {
+            error: (err: unknown) => {
               console.error('Error loading page:', err);
-              reject(err);
+              reject(err instanceof Error
+                ? err
+                : new Error(`Failed to load pending files page ${page}`, {cause: err}));
             }
           });
       });
@@ -663,17 +673,18 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
+    const data: BookdropBulkEditDialogData = {fileCount: totalCount};
     const dialogRef = this.dialogLauncherService.openDialog(BookdropBulkEditDialogComponent, {
       header: this.t.translate('bookdrop.fileReview.toast.bulkEditDialogHeader', {count: totalCount}),
       width: '600px',
       modal: true,
       closable: true,
-      data: {fileCount: totalCount},
+      data,
     });
 
     dialogRef?.onClose.pipe(take(1)).subscribe((result: BulkEditResult | null) => {
       if (result) {
-        this.applyBulkMetadataViaBackend(result);
+        this.applyBulkMetadataViaBackend(result).catch((error: unknown) => this.errorHandler.handleError(error));
       }
     });
   }
@@ -693,26 +704,25 @@ export class BookdropFileReviewComponent implements OnInit {
       return;
     }
 
-    const sampleFiles = selectedFiles.slice(0, 5).map(f => f.file.fileName);
     const selectedIds = selectedFiles.map(f => f.file.id);
+    const data: BookdropPatternExtractDialogData = {
+      fileCount: totalCount,
+      selectAll: this.selectAllAcrossPages,
+      excludedIds: Array.from(this.excludedFiles),
+      selectedIds,
+    };
 
     const dialogRef = this.dialogLauncherService.openDialog(BookdropPatternExtractDialogComponent, {
       header: this.t.translate('bookdrop.fileReview.toast.extractMetadataDialogHeader'),
       width: '700px',
       modal: true,
       closable: true,
-      data: {
-        sampleFiles,
-        fileCount: totalCount,
-        selectAll: this.selectAllAcrossPages,
-        excludedIds: Array.from(this.excludedFiles),
-        selectedIds,
-      },
+      data,
     });
 
     dialogRef?.onClose.pipe(take(1)).subscribe((result: { results: FileExtractionResult[] } | null) => {
       if (result?.results) {
-        this.applyExtractedMetadata(result.results);
+        this.applyExtractedMetadata(result.results).catch((error: unknown) => this.errorHandler.handleError(error));
       }
     });
   }

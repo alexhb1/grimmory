@@ -1,4 +1,4 @@
-import {inject, Injectable} from '@angular/core';
+import {ErrorHandler, inject, Injectable} from '@angular/core';
 import {ConfirmationService, MenuItem, MessageService} from '@openng/optimus-ui/api';
 import {BookService} from './book.service';
 import {BookMetadataManageService} from './book-metadata-manage.service';
@@ -8,8 +8,7 @@ import {ResetProgressTypes} from '../../../shared/constants/reset-progress-type'
 import {finalize} from 'rxjs';
 import {LoadingService} from '../../../core/services/loading.service';
 import {User} from '../../settings/user-management/user.service';
-import {APIException} from '../../../shared/models/api-exception.model';
-import {HttpErrorResponse} from '@angular/common/http';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 import {TranslocoService} from '@jsverse/transloco';
 
 @Injectable({
@@ -22,13 +21,14 @@ export class BookMenuService {
   bookService = inject(BookService);
   bookMetadataManageService = inject(BookMetadataManageService);
   loadingService = inject(LoadingService);
+  private readonly errorHandler = inject(ErrorHandler);
   private readonly t = inject(TranslocoService);
 
   getMetadataMenuItems(
     autoFetchMetadata: () => void,
-    fetchMetadata: () => void,
-    bulkEditMetadata: () => void,
-    multiBookEditMetadata: () => void,
+    fetchMetadata: () => Promise<void>,
+    bulkEditMetadata: () => Promise<void>,
+    multiBookEditMetadata: () => Promise<void>,
     regenerateCovers: () => void,
     generateCustomCovers: () => void,
     user: User | null): MenuItem[] {
@@ -48,7 +48,7 @@ export class BookMenuService {
       items.push({
         label: this.t.translate('book.menuService.menu.customFetchMetadata'),
         icon: 'pi pi-sync',
-        command: fetchMetadata
+        command: () => this.runDialogCommand(fetchMetadata)
       });
     }
 
@@ -56,12 +56,12 @@ export class BookMenuService {
       items.push({
         label: this.t.translate('book.menuService.menu.bulkMetadataEditor'),
         icon: 'pi pi-table',
-        command: bulkEditMetadata
+        command: () => this.runDialogCommand(bulkEditMetadata)
       });
       items.push({
         label: this.t.translate('book.menuService.menu.multiBookMetadataEditor'),
         icon: 'pi pi-clone',
-        command: multiBookEditMetadata
+        command: () => this.runDialogCommand(multiBookEditMetadata)
       });
     }
 
@@ -81,6 +81,10 @@ export class BookMenuService {
     return items;
   }
 
+  private runDialogCommand(command: () => Promise<void>): void {
+    command().catch((error: unknown) => this.errorHandler.handleError(error));
+  }
+
   getMoreActionsMenu(selectedBooks: Set<number>, user: User | null): MenuItem[] {
     const count = selectedBooks.size;
     const permissions = user?.permissions;
@@ -90,9 +94,10 @@ export class BookMenuService {
       items.push({
         label: this.t.translate('book.menuService.menu.updateReadStatus'),
         icon: 'pi pi-book',
-        items: Object.entries(readStatusLabels).map(([status, label]) => ({
-          label,
+        items: Object.values(ReadStatus).map(status => ({
+          label: readStatusLabels[status],
           command: () => {
+            const label = readStatusLabels[status];
             this.confirmationService.confirm({
               message: this.t.translate('book.menuService.confirm.readStatusMessage', {count, label}),
               header: this.t.translate('book.menuService.confirm.readStatusHeader'),
@@ -110,7 +115,7 @@ export class BookMenuService {
               accept: () => {
                 const loader = this.loadingService.show(this.t.translate('book.menuService.loading.updatingReadStatus', {count}));
 
-                this.bookService.updateBookReadStatus(Array.from(selectedBooks), status as ReadStatus)
+                this.bookService.updateBookReadStatus(Array.from(selectedBooks), status)
                   .pipe(finalize(() => this.loadingService.hide(loader)))
                   .subscribe({
                     next: () => {
@@ -121,12 +126,11 @@ export class BookMenuService {
                         life: 2000
                       });
                     },
-                    error: (err: HttpErrorResponse) => {
-                      const apiError = err.error as APIException;
+                    error: (error: unknown) => {
                       this.messageService.add({
                         severity: 'error',
                         summary: this.t.translate('book.menuService.toast.updateFailedSummary'),
-                        detail: apiError?.message || this.t.translate('book.menuService.toast.readStatusFailedDetail'),
+                        detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.readStatusFailedDetail')),
                         life: 3000
                       });
                     }
@@ -167,12 +171,11 @@ export class BookMenuService {
                           life: 2000
                         });
                       },
-                      error: (err: HttpErrorResponse) => {
-                        const apiError = err.error as APIException;
+                      error: (error: unknown) => {
                         this.messageService.add({
                           severity: 'error',
                           summary: this.t.translate('book.menuService.toast.updateFailedSummary'),
-                          detail: apiError?.message || this.t.translate('book.menuService.toast.ageRatingFailedDetail'),
+                          detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.ageRatingFailedDetail')),
                           life: 3000
                         });
                       }
@@ -209,12 +212,11 @@ export class BookMenuService {
                           life: 2000
                         });
                       },
-                      error: (err: HttpErrorResponse) => {
-                        const apiError = err.error as APIException;
+                      error: (error: unknown) => {
                         this.messageService.add({
                           severity: 'error',
                           summary: this.t.translate('book.menuService.toast.updateFailedSummary'),
-                          detail: apiError?.message || this.t.translate('book.menuService.toast.clearAgeRatingFailedDetail'),
+                          detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.clearAgeRatingFailedDetail')),
                           life: 3000
                         });
                       }
@@ -254,12 +256,11 @@ export class BookMenuService {
                           life: 2000
                         });
                       },
-                      error: (err: HttpErrorResponse) => {
-                        const apiError = err.error as APIException;
+                      error: (error: unknown) => {
                         this.messageService.add({
                           severity: 'error',
                           summary: this.t.translate('book.menuService.toast.updateFailedSummary'),
-                          detail: apiError?.message || this.t.translate('book.menuService.toast.contentRatingFailedDetail'),
+                          detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.contentRatingFailedDetail')),
                           life: 3000
                         });
                       }
@@ -296,12 +297,11 @@ export class BookMenuService {
                           life: 2000
                         });
                       },
-                      error: (err: HttpErrorResponse) => {
-                        const apiError = err.error as APIException;
+                      error: (error: unknown) => {
                         this.messageService.add({
                           severity: 'error',
                           summary: this.t.translate('book.menuService.toast.updateFailedSummary'),
-                          detail: apiError?.message || this.t.translate('book.menuService.toast.clearContentRatingFailedDetail'),
+                          detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.clearContentRatingFailedDetail')),
                           life: 3000
                         });
                       }
@@ -381,12 +381,11 @@ export class BookMenuService {
                       life: 1500
                     });
                   },
-                  error: (err: HttpErrorResponse) => {
-                    const apiError = err.error as APIException;
+                  error: (error: unknown) => {
                     this.messageService.add({
                       severity: 'error',
                       summary: this.t.translate('book.menuService.toast.failedSummary'),
-                      detail: apiError?.message || this.t.translate('book.menuService.toast.progressResetFailedDetail'),
+                      detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.progressResetFailedDetail')),
                       life: 3000
                     });
                   }
@@ -422,12 +421,11 @@ export class BookMenuService {
                       life: 1500
                     });
                   },
-                  error: (err: HttpErrorResponse) => {
-                    const apiError = err.error as APIException;
+                  error: (error: unknown) => {
                     this.messageService.add({
                       severity: 'error',
                       summary: this.t.translate('book.menuService.toast.failedSummary'),
-                      detail: apiError?.message || this.t.translate('book.menuService.toast.progressResetFailedDetail'),
+                      detail: getApiErrorMessage(error, this.t.translate('book.menuService.toast.progressResetFailedDetail')),
                       life: 3000
                     });
                   }

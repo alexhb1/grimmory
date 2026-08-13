@@ -5,10 +5,13 @@ import {Book, ReadStatus} from '../../../model/book.model';
 // ============================================================================
 
 export interface FilterValue {
-  id?: string | number;
-  name?: string;
+  id: string | number;
+  name: string;
   sortIndex?: number;
 }
+
+export type BookFilterValue = FilterValue['id'];
+export type BookFilters = Record<string, BookFilterValue[]>;
 
 export interface Filter<T extends FilterValue = FilterValue> {
   value: T;
@@ -132,12 +135,14 @@ export const pageCountRanges = PAGE_COUNT_RANGES;
 export const matchScoreRanges = MATCH_SCORE_RANGES;
 export const ageRatingRanges = AGE_RATING_OPTIONS;
 
-export const NUMERIC_ID_FILTER_TYPES = new Set<FilterType>([
+const NUMERIC_ID_FILTER_TYPE_VALUES = [
   'personalRating', 'matchScore', 'fileSize', 'amazonRating',
   'goodreadsRating', 'hardcoverRating', 'lubimyczytacRating', 'ranobedbRating',
   'audibleRating', 'pageCount', 'library', 'shelf',
   'ageRating'
-]);
+] as const satisfies readonly FilterType[];
+
+export const NUMERIC_ID_FILTER_TYPES: ReadonlySet<string> = new Set(NUMERIC_ID_FILTER_TYPE_VALUES);
 
 export const FILTER_LABELS: Readonly<Record<FilterType, string>> = {
   author: 'Author',
@@ -218,7 +223,9 @@ export const FILTER_EXTRACTORS: Readonly<Record<Exclude<FilterType, 'library'>, 
   personalRating: (book) => findExactRating10(book.personalRating ?? undefined),
   publisher: (book) => extractSingleString(book.metadata?.publisher),
   matchScore: (book) => findInRange(normalizeMatchScore(book.metadataMatchScore), MATCH_SCORE_RANGES),
-  shelf: (book) => book.shelves?.map(s => ({id: s.id, name: s.name})) ?? [],
+  shelf: (book) => book.shelves?.flatMap(shelf =>
+    shelf.id === undefined ? [] : [{id: shelf.id, name: shelf.name}]
+  ) ?? [],
   shelfStatus: (book) => {
     const isShelved = (book.shelves?.length ?? 0) > 0;
     return [{id: isShelved ? 'shelved' : 'unshelved', name: isShelved ? 'Shelved' : 'Unshelved'}];

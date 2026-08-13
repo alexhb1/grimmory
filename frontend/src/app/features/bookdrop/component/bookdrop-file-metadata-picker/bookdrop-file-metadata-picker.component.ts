@@ -133,14 +133,14 @@ export class BookdropFileMetadataPickerComponent {
   }
 
   dropAuthor(event: CdkDragDrop<string[]>) {
-    const authors = [...(this.metadataForm.get('authors')?.value ?? [])];
+    const authors = [...this.getAuthorValues()];
     moveItemInArray(authors, event.previousIndex, event.currentIndex);
     this.metadataForm.get('authors')?.setValue(authors);
     this.metadataForm.get('authors')?.markAsDirty();
   }
 
   removeAuthor(index: number) {
-    const authors = [...(this.metadataForm.get('authors')?.value ?? [])];
+    const authors = [...this.getAuthorValues()];
     authors.splice(index, 1);
     this.metadataForm.get('authors')?.setValue(authors);
     this.metadataForm.get('authors')?.markAsDirty();
@@ -150,7 +150,7 @@ export class BookdropFileMetadataPickerComponent {
     if (event.key === 'Enter') {
       const value = this.authorInputValue?.trim();
       if (value) {
-        const authors = this.metadataForm.get('authors')?.value || [];
+        const authors = this.getAuthorValues();
         if (!authors.includes(value)) {
           this.metadataForm.get('authors')?.setValue([...authors, value]);
           this.metadataForm.get('authors')?.markAsDirty();
@@ -161,8 +161,12 @@ export class BookdropFileMetadataPickerComponent {
   }
 
   onAuthorInputSelect(event: AutoCompleteSelectEvent) {
-    const authors = (this.metadataForm.get('authors')?.value as string[]) || [];
-    const value = event.value as string;
+    const value: unknown = event.value;
+    if (typeof value !== 'string') {
+      return;
+    }
+
+    const authors = this.getAuthorValues();
     if (!authors.includes(value)) {
       this.metadataForm.get('authors')?.setValue([...authors, value]);
       this.metadataForm.get('authors')?.markAsDirty();
@@ -171,20 +175,36 @@ export class BookdropFileMetadataPickerComponent {
   }
 
   onAutoCompleteBlur(fieldName: string, event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const inputValue = target?.value?.trim();
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const target = event.target;
+    const inputValue = target.value.trim();
     if (inputValue) {
-      const currentValue = this.metadataForm.get(fieldName)?.value || [];
-      const values = Array.isArray(currentValue) ? currentValue :
-        typeof currentValue === 'string' && currentValue ? currentValue.split(',').map((v: string) => v.trim()) : [];
+      const currentValue: unknown = this.metadataForm.get(fieldName)?.value;
+      const values = Array.isArray(currentValue) && currentValue.every(item => typeof item === 'string')
+        ? [...currentValue]
+        : typeof currentValue === 'string' && currentValue
+          ? currentValue.split(',').map(item => item.trim())
+          : [];
       if (!values.includes(inputValue)) {
         values.push(inputValue);
         this.metadataForm.get(fieldName)?.setValue(values);
       }
-      if (target) {
-        target.value = '';
-      }
+      target.value = '';
     }
+  }
+
+  private getAuthorValues(): string[] {
+    const value: unknown = this.metadataForm.get('authors')?.value;
+    if (Array.isArray(value) && value.every(item => typeof item === 'string')) {
+      return [...value];
+    }
+    if (typeof value === 'string' && value) {
+      return value.split(',').map(item => item.trim());
+    }
+    return [];
   }
 
   confirmReset(): void {

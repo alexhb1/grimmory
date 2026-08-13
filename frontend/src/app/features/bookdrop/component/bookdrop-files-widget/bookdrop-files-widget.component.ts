@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, ErrorHandler, inject} from '@angular/core';
 import {BookdropFileService} from '../../service/bookdrop-file.service';
 import {DatePipe} from '@angular/common';
 import {Router} from '@angular/router';
@@ -20,11 +20,14 @@ import {TranslocoDirective} from '@jsverse/transloco';
 export class BookdropFilesWidgetComponent {
   private readonly bookdropFileService = inject(BookdropFileService);
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
   private readonly summary = this.bookdropFileService.summary;
   protected readonly pendingCount = computed(() => this.summary().pendingCount);
   protected readonly lastUpdatedAt = computed(() => this.summary().lastUpdatedAt);
 
   openReviewDialog(): void {
-    this.router.navigate(['/bookdrop'], {queryParams: {reload: Date.now()}});
+    this.router.navigate(['/bookdrop'], {queryParams: {reload: Date.now()}}).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 }

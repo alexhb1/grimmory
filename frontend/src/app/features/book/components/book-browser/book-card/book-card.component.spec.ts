@@ -180,7 +180,7 @@ describe('BookCardComponent', () => {
       add: vi.fn(),
     };
     router = {
-      navigate: vi.fn(),
+      navigate: vi.fn(() => Promise.resolve(true)),
     };
     urlHelper = {
       getThumbnailUrl: vi.fn((bookId: number, coverUpdatedOn?: string) => `thumb:${bookId}:${coverUpdatedOn ?? 'none'}`),

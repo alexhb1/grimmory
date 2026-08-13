@@ -90,6 +90,7 @@ describe('AuthorCardComponent', () => {
 
   it('resets photo state only for meaningful author changes and later cache busters', () => {
     const component = createComponent();
+    component.ngOnChanges({author: new SimpleChange(undefined, baseAuthor, true)});
 
     component.hasPhoto = false;
     component.ngOnChanges({

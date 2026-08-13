@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, Input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, ErrorHandler, inject, Input} from '@angular/core';
 import {Book} from '../../model/book.model';
 import {UrlHelperService} from '../../../../shared/service/url-helper.service';
 import {CoverComponent} from '../../../../shared/components/cover/cover.component';
@@ -30,6 +30,7 @@ export class BookCardLiteComponent {
   protected urlHelper = inject(UrlHelperService);
   private userService = inject(UserService);
   private bookMetadataHostService = inject(BookMetadataHostService);
+  private errorHandler = inject(ErrorHandler);
 
   private metadataCenterViewMode = computed(() =>
     this.userService.currentUser()?.userSettings.metadataCenterViewMode ?? 'route'
@@ -53,6 +54,8 @@ export class BookCardLiteComponent {
     if (this.metadataCenterViewMode() === 'route') {
       this.router.navigate(['/book', book.id], {
         queryParams: {tab: 'view'}
+      }).catch((error: unknown) => {
+        this.errorHandler.handleError(error);
       });
     } else {
       this.bookMetadataHostService.requestBookSwitch(book.id);

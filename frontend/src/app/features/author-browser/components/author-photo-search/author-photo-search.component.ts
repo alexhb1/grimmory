@@ -1,5 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
-import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from '@openng/optimus-ui/button';
 import {InputText} from '@openng/optimus-ui/inputtext';
 import {ProgressSpinner} from '@openng/optimus-ui/progressspinner';
@@ -11,6 +11,11 @@ import {MessageService} from '@openng/optimus-ui/api';
 import {finalize} from 'rxjs/operators';
 import {AuthorService} from '../../service/author.service';
 import {AuthorPhotoResult} from '../../model/author.model';
+
+export interface AuthorPhotoSearchDialogData {
+  authorId: number;
+  authorName?: string;
+}
 
 @Component({
   selector: 'app-author-photo-search',
@@ -27,29 +32,29 @@ import {AuthorPhotoResult} from '../../model/author.model';
   ]
 })
 export class AuthorPhotoSearchComponent implements OnInit {
-  searchForm: FormGroup;
+  readonly searchForm = new FormGroup({
+    query: new FormControl('', {nonNullable: true, validators: [Validators.required]})
+  });
   photos: AuthorPhotoResult[] = [];
   searching = false;
   hasSearched = false;
 
-  private fb = inject(FormBuilder);
   private authorService = inject(AuthorService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<AuthorPhotoSearchDialogData>>(DynamicDialogConfig);
   protected dynamicDialogRef = inject(DynamicDialogRef);
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
 
   private authorId!: number;
 
-  constructor() {
-    this.searchForm = this.fb.group({
-      query: ['', Validators.required]
-    });
-  }
-
   ngOnInit(): void {
-    this.authorId = this.dynamicDialogConfig.data.authorId;
-    const authorName = this.dynamicDialogConfig.data.authorName;
+    const dialogData = this.dynamicDialogConfig.data;
+    if (!dialogData) {
+      throw new Error('Author photo search requires dialog data');
+    }
+
+    this.authorId = dialogData.authorId;
+    const authorName = dialogData.authorName;
 
     if (authorName) {
       this.searchForm.patchValue({query: authorName});
@@ -64,7 +69,7 @@ export class AuthorPhotoSearchComponent implements OnInit {
     this.searching = true;
     this.photos = [];
 
-    this.authorService.searchAuthorPhotos(this.authorId, this.searchForm.value.query)
+    this.authorService.searchAuthorPhotos(this.authorId, this.searchForm.controls.query.value)
       .pipe(finalize(() => {
         this.searching = false;
         this.hasSearched = true;

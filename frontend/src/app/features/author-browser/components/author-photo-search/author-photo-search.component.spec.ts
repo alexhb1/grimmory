@@ -77,7 +77,7 @@ describe('AuthorPhotoSearchComponent', () => {
 
     component.onClear();
 
-    expect(component.searchForm.value.query).toBeNull();
+    expect(component.searchForm.value.query).toBe('');
     expect(component.photos).toEqual([]);
     expect(component.hasSearched).toBe(false);
   });

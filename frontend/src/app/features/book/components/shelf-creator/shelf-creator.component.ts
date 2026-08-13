@@ -62,14 +62,14 @@ export class ShelfCreatorComponent {
     const iconValue = this.selectedIcon?.value ?? null;
     const iconType = this.selectedIcon?.type ?? null;
 
-    const newShelf: Partial<Shelf> = {
+    const newShelf: Shelf = {
       name: this.shelfName,
       icon: iconValue,
       iconType: iconType,
       publicShelf: this.isPublic
     };
 
-    this.shelfService.createShelf(newShelf as Shelf).subscribe({
+    this.shelfService.createShelf(newShelf).subscribe({
       next: () => {
         this.messageService.add({severity: 'info', summary: this.t.translate('common.success'), detail: this.t.translate('book.shelfCreator.toast.createSuccessDetail', { name: this.shelfName })});
         this.dynamicDialogRef.close(true);

@@ -74,7 +74,7 @@ export class BookBrowserEntityService {
   }
 
   isLibrary(entity: Library | Shelf | MagicShelf): entity is Library {
-    return (entity as Library).paths !== undefined;
+    return 'paths' in entity;
   }
 
   isMagicShelf(entity: Library | Shelf | MagicShelf | null): entity is MagicShelf {

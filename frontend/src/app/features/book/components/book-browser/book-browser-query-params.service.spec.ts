@@ -27,7 +27,7 @@ describe('BookBrowserQueryParamsService', () => {
   ];
 
   beforeEach(() => {
-    routerNavigate = vi.fn();
+    routerNavigate = vi.fn(() => Promise.resolve(true));
     routeSnapshot = {
       queryParams: {},
       queryParamMap: convertToParamMap({})

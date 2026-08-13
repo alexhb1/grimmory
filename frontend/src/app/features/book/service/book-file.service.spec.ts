@@ -232,7 +232,7 @@ describe('BookFileService', () => {
     });
 
     const request = httpTestingController.expectOne(req => req.url.endsWith('/api/v1/books/11/files/111'));
-    request.flush({message: 'cannot delete'}, {status: 500, statusText: 'Server Error'});
+    request.flush({status: 500, message: 'cannot delete'}, {status: 500, statusText: 'Server Error'});
 
     expect(thrown).toBeTruthy();
     expect(queryClient.getQueryData<Book[]>(BOOKS_QUERY_KEY)).toEqual([cachedBook]);

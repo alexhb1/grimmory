@@ -14,7 +14,7 @@ import {UserService} from '../../../settings/user-management/user.service';
 import {FormsModule} from '@angular/forms';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {BookService} from '../../service/book.service';
-import {BookMetadataManageService} from '../../service/book-metadata-manage.service';
+import {BookMetadataManageService, MetadataLockActions} from '../../service/book-metadata-manage.service';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
 
 @Component({
@@ -72,8 +72,8 @@ export class BookReviewsComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['bookId'] && changes['bookId'].currentValue) {
-      this.bookIdState.set(changes['bookId'].currentValue);
+    if (changes['bookId'] && this.bookId) {
+      this.bookIdState.set(this.bookId);
       this.loadReviews();
     }
   }
@@ -238,8 +238,8 @@ export class BookReviewsComponent implements OnInit, OnChanges {
     if (!this.bookId) return;
 
     const newLockState = !this.reviewsLocked;
-    const fieldActions: Record<string, 'LOCK' | 'UNLOCK'> = {
-      'reviewsLocked': newLockState ? 'LOCK' : 'UNLOCK'
+    const fieldActions: MetadataLockActions = {
+      reviewsLocked: newLockState ? 'LOCK' : 'UNLOCK'
     };
 
     this.bookMetadataManageService.toggleFieldLocks([this.bookId], fieldActions)

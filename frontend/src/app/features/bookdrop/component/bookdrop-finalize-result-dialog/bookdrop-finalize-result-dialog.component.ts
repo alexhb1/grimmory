@@ -5,6 +5,10 @@ import {DynamicDialogConfig, DynamicDialogRef} from "@openng/optimus-ui/dynamicd
 import {Button} from '@openng/optimus-ui/button';
 import {TranslocoDirective} from '@jsverse/transloco';
 
+export interface BookdropFinalizeResultDialogData {
+  result: BookdropFinalizeResult;
+}
+
 @Component({
   selector: 'app-bookdrop-finalize-result-dialog',
   imports: [
@@ -18,9 +22,17 @@ import {TranslocoDirective} from '@jsverse/transloco';
 })
 export class BookdropFinalizeResultDialogComponent implements OnDestroy {
   public ref = inject(DynamicDialogRef);
-  public config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<BookdropFinalizeResultDialogData>>(DynamicDialogConfig);
 
-  result: BookdropFinalizeResult = this.config.data.result;
+  readonly result: BookdropFinalizeResult;
+
+  constructor() {
+    const result = this.config.data?.result;
+    if (!result) {
+      throw new Error('Bookdrop finalize result dialog requires result data');
+    }
+    this.result = result;
+  }
 
   ngOnDestroy(): void {
     this.ref?.close();

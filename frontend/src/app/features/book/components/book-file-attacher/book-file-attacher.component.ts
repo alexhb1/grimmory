@@ -12,6 +12,10 @@ import { MessageService } from '@openng/optimus-ui/api';
 import { TranslocoDirective, TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AppSettingsService } from '../../../../shared/service/app-settings.service';
 
+export type BookFileAttacherDialogData =
+  | {sourceBook: Book}
+  | {sourceBooks: Book[]};
+
 @Component({
   selector: 'app-book-file-attacher',
   standalone: true,
@@ -27,7 +31,7 @@ import { AppSettingsService } from '../../../../shared/service/app-settings.serv
   styleUrls: ['./book-file-attacher.component.scss']
 })
 export class BookFileAttacherComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('autocompleteWrapper') autocompleteWrapper!: ElementRef;
+  @ViewChild('autocompleteWrapper') autocompleteWrapper!: ElementRef<HTMLElement>;
 
   sourceBooks: Book[] = [];
   targetBook: Book | null = null;
@@ -43,7 +47,7 @@ export class BookFileAttacherComponent implements OnInit, AfterViewInit, OnDestr
   private readonly t = inject(TranslocoService);
   private readonly appSettingsService = inject(AppSettingsService);
   private dialogRef = inject(DynamicDialogRef);
-  private config = inject(DynamicDialogConfig);
+  private config = inject<DynamicDialogConfig<BookFileAttacherDialogData>>(DynamicDialogConfig);
   private bookService = inject(BookService);
   private bookFileService = inject(BookFileService);
   private messageService = inject(MessageService);
@@ -58,11 +62,11 @@ export class BookFileAttacherComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnInit(): void {
-    // Support both single book and multiple books
-    if (this.config.data.sourceBook) {
-      this.sourceBooks = [this.config.data.sourceBook];
-    } else if (this.config.data.sourceBooks) {
-      this.sourceBooks = this.config.data.sourceBooks;
+    const data = this.config.data;
+    if (data && 'sourceBook' in data) {
+      this.sourceBooks = [data.sourceBook];
+    } else if (data && 'sourceBooks' in data) {
+      this.sourceBooks = data.sourceBooks;
     }
 
     if (this.sourceBooks.length === 0) {
@@ -115,7 +119,7 @@ export class BookFileAttacherComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onBookSelect(event: AutoCompleteSelectEvent): void {
-    this.targetBook = event.value as Book;
+    this.targetBook = this.allBooks().find(book => book === event.value) ?? null;
   }
 
   onBookClear(): void {

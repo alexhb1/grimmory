@@ -4,11 +4,15 @@ import {FormsModule} from '@angular/forms';
 
 import {DynamicDialogConfig, DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {MessageService} from '@openng/optimus-ui/api';
-import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';
+import {BookMetadataManageService, MetadataLockActions, MetadataLockField} from '../../../service/book-metadata-manage.service';
 import {Divider} from '@openng/optimus-ui/divider';
 import {LoadingService} from '../../../../../core/services/loading.service';
 import {finalize} from 'rxjs';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+
+export interface LockUnlockMetadataDialogData {
+  bookIds: number[];
+}
 
 @Component({
   selector: 'app-lock-unlock-metadata-dialog',
@@ -24,23 +28,23 @@ import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 })
 export class LockUnlockMetadataDialogComponent implements OnInit {
   private bookMetadataManageService = inject(BookMetadataManageService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<LockUnlockMetadataDialogData>>(DynamicDialogConfig);
   dialogRef = inject(DynamicDialogRef);
   private messageService = inject(MessageService);
   private loadingService = inject(LoadingService);
   private readonly t = inject(TranslocoService);
-  fieldLocks: Record<string, boolean | undefined> = {};
+  fieldLocks: Partial<Record<MetadataLockField, boolean | undefined>> = {};
 
-  bookIds: Set<number> = this.dynamicDialogConfig.data.bookIds;
+  bookIds: Set<number>;
 
-  lockableFields: string[] = [
+  readonly lockableFields = [
     'titleLocked', 'subtitleLocked', 'publisherLocked', 'publishedDateLocked', 'descriptionLocked',
     'isbn13Locked', 'isbn10Locked', 'asinLocked', 'pageCountLocked', 'thumbnailLocked', 'languageLocked', 'coverLocked',
     'seriesNameLocked', 'seriesNumberLocked', 'seriesTotalLocked', 'authorsLocked', 'categoriesLocked', 'moodsLocked', 'tagsLocked',
     'amazonRatingLocked', 'amazonReviewCountLocked', 'goodreadsRatingLocked', 'goodreadsReviewCountLocked',
     'hardcoverRatingLocked', 'hardcoverReviewCountLocked', 'goodreadsIdLocked', 'hardcoverIdLocked', 'hardcoverBookIdLocked', 'googleIdLocked', 'comicvineIdLocked',
     'ranobedbIdLocked', 'ranobedbRatingLocked'
-  ];
+  ] as const satisfies readonly MetadataLockField[];
 
   fieldLabels: Record<string, string> = {
     titleLocked: 'Title',
@@ -79,6 +83,14 @@ export class LockUnlockMetadataDialogComponent implements OnInit {
 
   isSaving = false;
 
+  constructor() {
+    const data = this.dynamicDialogConfig.data;
+    if (!data) {
+      throw new Error('Lock/unlock metadata dialog requires book ids.');
+    }
+    this.bookIds = new Set(data.bookIds);
+  }
+
   ngOnInit(): void {
     this.lockableFields.forEach(field => this.fieldLocks[field] = undefined);
   }
@@ -90,13 +102,13 @@ export class LockUnlockMetadataDialogComponent implements OnInit {
     });
   }
 
-  getLockLabel(field: string): string {
+  getLockLabel(field: MetadataLockField): string {
     const state = this.fieldLocks[field];
     if (state === undefined) return this.t.translate('book.lockUnlockDialog.unselected');
     return state ? this.t.translate('book.lockUnlockDialog.locked') : this.t.translate('book.lockUnlockDialog.unlocked');
   }
 
-  getLockIcon(field: string): string {
+  getLockIcon(field: MetadataLockField): string {
     const state = this.fieldLocks[field];
     return state === undefined ? '' : state ? 'pi pi-lock' : 'pi pi-lock-open';
   }
@@ -107,7 +119,7 @@ export class LockUnlockMetadataDialogComponent implements OnInit {
     });
   }
 
-  cycleLockState(field: string): void {
+  cycleLockState(field: MetadataLockField): void {
     const current = this.fieldLocks[field];
     if (current === undefined) {
       this.fieldLocks[field] = true;
@@ -119,8 +131,9 @@ export class LockUnlockMetadataDialogComponent implements OnInit {
   }
 
   applyFieldLocks(): void {
-    const fieldActions: Record<string, 'LOCK' | 'UNLOCK'> = {};
-    for (const [field, locked] of Object.entries(this.fieldLocks)) {
+    const fieldActions: MetadataLockActions = {};
+    for (const field of this.lockableFields) {
+      const locked = this.fieldLocks[field];
       if (locked !== undefined) {
         fieldActions[field] = locked ? 'LOCK' : 'UNLOCK';
       }

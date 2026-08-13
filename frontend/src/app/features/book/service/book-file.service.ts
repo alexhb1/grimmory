@@ -11,6 +11,7 @@ import {LocalSettingsService} from '../../../shared/service/local-settings.servi
 import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
 import {patchBookInCacheWith, patchBooksInCache, removeBooksFromCache} from './book-query-cache';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 @Injectable({
   providedIn: 'root',
@@ -34,7 +35,7 @@ export class BookFileService {
     }
     if (this.localSettingsService.get().cacheStorageEnabled)
       return from(this.cacheStorageService.getCache(url).then(response => response.blob()));
-    return this.http.get<Blob>(url, {responseType: 'blob' as 'json'});
+    return this.http.get(url, {responseType: 'blob'});
   }
 
   downloadFile(book: Book): void {
@@ -64,11 +65,11 @@ export class BookFileService {
           detail: this.t.translate('book.bookService.toast.additionalFileDeletedDetail')
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.fileDeleteFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.fileDeleteFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('book.bookService.toast.fileDeleteFailedDetail'))
         });
         return throwError(() => error);
       })
@@ -95,11 +96,11 @@ export class BookFileService {
           detail: this.t.translate('book.bookService.toast.bookFileDeletedDetail')
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.fileDeleteFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.fileDeleteFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('book.bookService.toast.fileDeleteFailedDetail'))
         });
         return throwError(() => error);
       })
@@ -145,11 +146,11 @@ export class BookFileService {
           detail: this.t.translate('book.bookService.toast.fileUploadedDetail')
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.uploadFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.uploadFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('book.bookService.toast.uploadFailedDetail'))
         });
         return throwError(() => error);
       })
@@ -175,11 +176,11 @@ export class BookFileService {
           detail: this.t.translate('metadata.viewer.toast.detachFileSuccessDetail')
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('metadata.viewer.toast.detachFileErrorSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('metadata.viewer.toast.detachFileErrorDetail')
+          detail: getApiErrorMessage(error, this.t.translate('metadata.viewer.toast.detachFileErrorDetail'))
         });
         return throwError(() => error);
       })
@@ -204,11 +205,11 @@ export class BookFileService {
           detail: this.t.translate('book.bookService.toast.filesAttachedDetail', {count: sourceBookIds.length})
         });
       }),
-      catchError(error => {
+      catchError((error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.bookService.toast.attachmentFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.attachmentFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('book.bookService.toast.attachmentFailedDetail'))
         });
         return throwError(() => error);
       })

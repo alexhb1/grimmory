@@ -25,6 +25,13 @@ interface PreviewResult {
   errorMessage?: string;
 }
 
+export interface BookdropPatternExtractDialogData {
+  fileCount: number;
+  selectAll: boolean;
+  excludedIds: number[];
+  selectedIds: number[];
+}
+
 @Component({
   selector: 'app-bookdrop-pattern-extract-dialog',
   standalone: true,
@@ -46,7 +53,7 @@ interface PreviewResult {
 export class BookdropPatternExtractDialogComponent implements OnInit {
 
   private readonly dialogRef = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<BookdropPatternExtractDialogData>>(DynamicDialogConfig);
   private readonly bookdropService = inject(BookdropService);
   private readonly messageService = inject(MessageService);
   private readonly t = inject(TranslocoService);
@@ -251,7 +258,7 @@ export class BookdropPatternExtractDialogComponent implements OnInit {
   }
 
   get patternControl(): FormControl {
-    return this.patternForm.get('pattern') as FormControl;
+    return this.patternForm.controls.pattern;
   }
 
   getPlaceholderLabel(name: string): string {

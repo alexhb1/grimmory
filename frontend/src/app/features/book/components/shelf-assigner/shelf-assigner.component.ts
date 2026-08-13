@@ -19,6 +19,10 @@ import {IconField} from '@openng/optimus-ui/iconfield';
 import {InputIcon} from '@openng/optimus-ui/inputicon';
 import {IconSelection, toIconSelection} from '../../../../shared/icons/icon-selection';
 
+export type ShelfAssignerDialogData =
+  | {isMultiBooks: false; book: Book}
+  | {isMultiBooks: true; bookIds: Set<number>};
+
 @Component({
   selector: 'app-shelf-assigner',
   standalone: true,
@@ -38,7 +42,7 @@ import {IconSelection, toIconSelection} from '../../../../shared/icons/icon-sele
 export class ShelfAssignerComponent {
 
   private shelfService = inject(ShelfService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<ShelfAssignerDialogData>>(DynamicDialogConfig);
   private dynamicDialogRef = inject(DynamicDialogRef);
   private messageService = inject(MessageService);
   private bookService = inject(BookService);
@@ -50,10 +54,10 @@ export class ShelfAssignerComponent {
   searchQuery = '';
   private currentUser = this.userService.currentUser;
 
-  book: Book = this.dynamicDialogConfig.data.book;
+  book!: Book;
   selectedShelves: Shelf[] = [];
-  bookIds: Set<number> = this.dynamicDialogConfig.data.bookIds;
-  isMultiBooks: boolean = this.dynamicDialogConfig.data.isMultiBooks;
+  bookIds!: Set<number>;
+  isMultiBooks!: boolean;
   private readonly shelfSortField = computed<'name' | 'id'>(() => {
     const sorting = this.currentUser()?.userSettings.sidebarShelfSorting;
     return sorting ? this.validateSortField(sorting.field) : 'name';
@@ -68,29 +72,46 @@ export class ShelfAssignerComponent {
     return this.sortShelves(filteredShelves);
   });
   private hasInitializedSelectedShelves = false;
-  private readonly initializeSelectedShelvesEffect = effect(() => {
-    if (this.isMultiBooks || this.hasInitializedSelectedShelves || !this.book.shelves?.length) {
+
+  constructor() {
+    const data = this.dynamicDialogConfig.data;
+    if (!data) {
+      throw new Error('Shelf assigner dialog requires book data.');
+    }
+    this.isMultiBooks = data.isMultiBooks;
+    if (data.isMultiBooks) {
+      this.bookIds = data.bookIds;
+    } else {
+      this.book = data.book;
+    }
+
+    effect(() => {
+      if (this.isMultiBooks || this.hasInitializedSelectedShelves || !this.book.shelves?.length) {
+        return;
+      }
+
+      const selectedShelves = this.shelves().filter(shelf =>
+        this.book.shelves?.some(bookShelf => bookShelf.id === shelf.id)
+      );
+
+      if (selectedShelves.length > 0 || this.shelfService.shelves().length > 0) {
+        this.selectedShelves = selectedShelves;
+        this.hasInitializedSelectedShelves = true;
+      }
+    });
+  }
+
+  updateBooksShelves(): void {
+    const idsToAssign = new Set(this.selectedShelves.flatMap(shelf => shelf.id === undefined ? [] : [shelf.id]));
+    if (this.isMultiBooks) {
+      this.updateBookShelves(this.bookIds, idsToAssign, new Set<number>());
       return;
     }
 
-    const selectedShelves = this.shelves().filter(shelf =>
-      this.book.shelves?.some(bookShelf => bookShelf.id === shelf.id)
-    );
-
-    if (selectedShelves.length > 0 || this.shelfService.shelves().length > 0) {
-      this.selectedShelves = selectedShelves;
-      this.hasInitializedSelectedShelves = true;
-    }
-  });
-
-  updateBooksShelves(): void {
-    const idsToAssign = new Set<number | undefined>(this.selectedShelves.map(shelf => shelf.id));
-    const idsToUnassign: Set<number> = this.isMultiBooks ? new Set() : this.getIdsToUnAssign(this.book, idsToAssign);
-    const bookIds = this.isMultiBooks ? this.bookIds : new Set([this.book.id]);
-    this.updateBookShelves(bookIds, idsToAssign, idsToUnassign);
+    this.updateBookShelves(new Set([this.book.id]), idsToAssign, this.getIdsToUnAssign(this.book, idsToAssign));
   }
 
-  private updateBookShelves(bookIds: Set<number>, idsToAssign: Set<number | undefined>, idsToUnassign: Set<number>): void {
+  private updateBookShelves(bookIds: Set<number>, idsToAssign: Set<number>, idsToUnassign: Set<number>): void {
     const loader = this.loadingService.show(this.t.translate('book.shelfAssigner.loading.updatingShelves', { count: bookIds.size }));
 
     this.bookService.updateBookShelves(bookIds, idsToAssign, idsToUnassign)
@@ -107,11 +128,11 @@ export class ShelfAssignerComponent {
       });
   }
 
-  private getIdsToUnAssign(book: Book, idsToAssign: Set<number | undefined>): Set<number> {
+  private getIdsToUnAssign(book: Book, idsToAssign: Set<number>): Set<number> {
     const idsToUnassign = new Set<number>();
     book.shelves?.forEach(shelf => {
-      if (!idsToAssign.has(shelf.id)) {
-        idsToUnassign.add(shelf.id!);
+      if (shelf.id !== undefined && !idsToAssign.has(shelf.id)) {
+        idsToUnassign.add(shelf.id);
       }
     });
     return idsToUnassign;
@@ -145,14 +166,9 @@ export class ShelfAssignerComponent {
     const sortField = this.shelfSortField();
     const sortOrder = this.shelfSortOrder();
     return [...shelves].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortField] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortField] ?? '';
-      let comparison = 0;
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        comparison = aVal.localeCompare(bVal);
-      } else if (typeof aVal === 'number' && typeof bVal === 'number') {
-        comparison = aVal - bVal;
-      }
+      const comparison = sortField === 'name'
+        ? a.name.localeCompare(b.name)
+        : a.id !== undefined && b.id !== undefined ? a.id - b.id : 0;
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   }

@@ -209,7 +209,7 @@
 
       <div class="isbn-progress-list">
         @for (entry of entries(); track entry.isbn) {
-          <div class="progress-item" [class]="'status-' + entry.status">
+          <div [class]="'progress-item status-' + entry.status">
             <div class="progress-item-icon">
               @switch (entry.status) {
                 @case ('pending') { <i class="pi pi-clock"></i> }
@@ -307,7 +307,7 @@
       <div class="summary-detail-list">
         @for (entry of entries(); track entry.isbn) {
           @if (entry.status !== 'pending') {
-            <div class="summary-detail-item" [class]="'status-' + entry.status">
+            <div [class]="'summary-detail-item status-' + entry.status">
               <div class="summary-detail-icon">
                 @switch (entry.status) {
                   @case ('created') { <i class="pi pi-check-circle"></i> }
