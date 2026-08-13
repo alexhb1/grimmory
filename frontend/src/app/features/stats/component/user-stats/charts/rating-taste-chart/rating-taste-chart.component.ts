@@ -6,6 +6,7 @@ import {BookService} from '../../../../../book/service/book.service';
 import {LibraryFilterService} from '../../../library-stats/service/library-filter.service';
 import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 interface TasteQuadrant {
   name: string;
@@ -134,11 +135,13 @@ export class RatingTasteChartComponent {
         bodyFont: {size: 11},
         callbacks: {
           title: (context) => {
-            const point = context[0].raw as BookDataPoint;
+            const point = getChartDataPoint(this.chartData(), context[0]);
+            if (!point) return this.t.translate('statsUser.ratingTaste.tooltipUnknownBook');
             return point.bookTitle || this.t.translate('statsUser.ratingTaste.tooltipUnknownBook');
           },
           label: (context) => {
-            const point = context.raw as BookDataPoint;
+            const point = getChartDataPoint(this.chartData(), context);
+            if (!point) return [];
             const diff = point.personalRatingNormalized - point.externalRating;
             const diffText = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
             return [

@@ -1,4 +1,4 @@
-import {Component, effect, inject, OnDestroy, OnInit, signal} from '@angular/core';
+import {Component, effect, ErrorHandler, inject, OnDestroy, OnInit, signal} from '@angular/core';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from '@openng/optimus-ui/tabs';
 import {TableModule} from '@openng/optimus-ui/table';
 import {Button} from '@openng/optimus-ui/button';
@@ -18,6 +18,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {Subscription} from 'rxjs';
 import {ExternalDocLinkComponent} from '../../../../shared/components/external-doc-link/external-doc-link.component';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../../shared/models/api-exception.model';
 
 interface MetadataItem {
   value: string;
@@ -68,6 +69,7 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
   private bookMetadataManageService = inject(BookMetadataManageService);
   private messageService = inject(MessageService);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
   private route = inject(ActivatedRoute);
   private pageTitle = inject(PageTitleService);
   private readonly t = inject(TranslocoService);
@@ -128,7 +130,7 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
       relativeTo: this.route,
       queryParams: {tab: value},
       queryParamsHandling: 'merge'
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   tabConfigs: TabConfig[] = [
@@ -143,8 +145,8 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.routeSub = this.route.queryParams.subscribe(params => {
-      const tabParam = params['tab'] as MetadataType;
-      if (this.validTabs.includes(tabParam)) {
+      const tabParam: unknown = params['tab'];
+      if (this.isMetadataType(tabParam)) {
         this._activeTab = tabParam;
       } else {
         this._activeTab = 'authors';
@@ -153,7 +155,7 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
           queryParams: {tab: this._activeTab},
           queryParamsHandling: 'merge',
           replaceUrl: true
-        });
+        }).catch((error: unknown) => this.errorHandler.handleError(error));
       }
       this.updatePageTitle();
     });
@@ -342,13 +344,13 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
         this.mergingInProgress.set(false);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: action === 'renamed'
             ? this.t.translate('metadata.manager.toast.renameFailedSummary')
             : this.t.translate('metadata.manager.toast.splitFailedSummary'),
-          detail: error?.error?.message || (action === 'renamed'
+          detail: getApiErrorMessage(error, action === 'renamed'
             ? this.t.translate('metadata.manager.toast.renameFailedDetail')
             : this.t.translate('metadata.manager.toast.splitFailedDetail'))
         });
@@ -417,13 +419,13 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
         this.mergingInProgress.set(false);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: operation === 'merge'
             ? this.t.translate('metadata.manager.toast.mergeFailedSummary')
             : this.t.translate('metadata.manager.toast.mergeSplitFailedSummary'),
-          detail: error?.error?.message || (operation === 'merge'
+          detail: getApiErrorMessage(error, operation === 'merge'
             ? this.t.translate('metadata.manager.toast.mergeFailedDetail')
             : this.t.translate('metadata.manager.toast.mergeSplitFailedDetail'))
         });
@@ -472,11 +474,11 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
         this.deletingInProgress.set(false);
         this.loading.set(false);
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('metadata.manager.toast.deleteFailedSummary'),
-          detail: error?.error?.message || this.t.translate('metadata.manager.toast.deleteFailedDetail')
+          detail: getApiErrorMessage(error, this.t.translate('metadata.manager.toast.deleteFailedDetail'))
         });
         this.loading.set(false);
         this.deletingInProgress.set(false);
@@ -571,9 +573,8 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
   }
 
   filterGlobal(event: Event, dt: { filterGlobal: (value: string, matchMode: string) => void }): void {
-    const target = event.target as HTMLInputElement;
-    if (target) {
-      dt.filterGlobal(target.value, 'contains');
+    if (event.target instanceof HTMLInputElement) {
+      dt.filterGlobal(event.target.value, 'contains');
     }
   }
 
@@ -600,7 +601,11 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
         sidebar: true,
         filter: `${filterKey}:${encodeURIComponent(filterValue)}`
       }
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
+  }
+
+  private isMetadataType(value: unknown): value is MetadataType {
+    return typeof value === 'string' && this.validTabs.some(tab => tab === value);
   }
 
   protected getTypeLabel(type: MetadataType, plural: boolean): string {

@@ -20,3 +20,13 @@ export interface MetadataBatchProgressNotification {
   status: MetadataBatchStatus;
   review: boolean;
 }
+
+export function isMetadataBatchProgressNotification(value: unknown): value is MetadataBatchProgressNotification {
+  return typeof value === 'object' && value !== null
+    && 'taskId' in value && typeof value.taskId === 'string'
+    && 'completed' in value && typeof value.completed === 'number'
+    && 'total' in value && typeof value.total === 'number'
+    && 'message' in value && typeof value.message === 'string'
+    && 'status' in value && Object.values(MetadataBatchStatus).some(status => status === value.status)
+    && 'review' in value && typeof value.review === 'boolean';
+}

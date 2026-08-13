@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, effect, EffectRef, EventEmitter, inject, Input, OnInit, Output,} from "@angular/core";
+import {Component, computed, DestroyRef, effect, EffectRef, ErrorHandler, EventEmitter, inject, Input, OnInit, Output,} from "@angular/core";
 import {InputText} from "@openng/optimus-ui/inputtext";
 import {Button} from "@openng/optimus-ui/button";
 import {Divider} from "@openng/optimus-ui/divider";
@@ -32,6 +32,7 @@ import {AppSettingsService} from '../../../../../shared/service/app-settings.ser
 import {MetadataProviderSpecificFields} from '../../../../../shared/model/app-settings.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/drag-drop';
+import {getApiErrorMessage} from '../../../../../shared/models/api-exception.model';
 
 @Component({
   selector: "app-metadata-editor",
@@ -98,6 +99,7 @@ export class MetadataEditorComponent implements OnInit {
   private bookNavigationService = inject(BookNavigationService);
   private metadataHostService = inject(BookMetadataHostService);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
   private userService = inject(UserService);
   private destroyRef = inject(DestroyRef);
   private appSettingsService = inject(AppSettingsService);
@@ -592,16 +594,20 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   onAutoCompleteSelect(fieldName: string, event: AutoCompleteSelectEvent) {
+    if (typeof event.value !== "string") return;
+
     const values = (this.metadataForm.get(fieldName)?.value as string[]) || [];
-    if (!values.includes(event.value as string)) {
-      this.metadataForm.get(fieldName)?.setValue([...values, event.value as string]);
+    if (!values.includes(event.value)) {
+      this.metadataForm.get(fieldName)?.setValue([...values, event.value]);
     }
-    (event.originalEvent.target as HTMLInputElement).value = "";
+    if (event.originalEvent.target instanceof HTMLInputElement) {
+      event.originalEvent.target.value = "";
+    }
   }
 
   onAutoCompleteKeyUp(fieldName: string, event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      const input = event.target as HTMLInputElement;
+    if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+      const input = event.target;
       const value = input.value?.trim();
       if (value) {
         const values = this.metadataForm.get(fieldName)?.value || [];
@@ -819,13 +825,13 @@ export class MetadataEditorComponent implements OnInit {
     for (const [modelKey, value] of Object.entries(lockGroups)) {
       comicMetadata[modelKey] = value;
     }
-    metadata.comicMetadata = comicMetadata as ComicMetadata;
+    metadata.comicMetadata = comicMetadata;
 
     const original = this.originalMetadata;
 
     const wasCleared = (key: keyof BookMetadata): boolean => {
-      const current = (metadata[key] as unknown) ?? null;
-      const prev = (original[key] as unknown) ?? null;
+      const current = metadata[key] ?? null;
+      const prev = original[key] ?? null;
 
       const isEmpty = (val: unknown): boolean =>
         val === null || val === "" || (Array.isArray(val) && val.length === 0);
@@ -918,9 +924,8 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   onUpload(event: FileUploadEvent): void {
-    const response: HttpResponse<unknown> =
-      event.originalEvent as HttpResponse<unknown>;
-    if (response && response.status === 200) {
+    const response = event.originalEvent;
+    if (response instanceof HttpResponse && response.status === 200) {
       this.isUploading = false;
       this.bookService.handleBookMetadataUpdate(this.currentBookId);
     } else {
@@ -1006,11 +1011,11 @@ export class MetadataEditorComponent implements OnInit {
           detail: this.t.translate('metadata.editor.toast.audiobookCoverRegenerated'),
         });
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: "error",
           summary: this.t.translate('metadata.editor.toast.errorSummary'),
-          detail: err?.error?.message || this.t.translate('metadata.editor.toast.audiobookCoverRegenFailed'),
+          detail: getApiErrorMessage(error, this.t.translate('metadata.editor.toast.audiobookCoverRegenFailed')),
         });
       }
     });
@@ -1080,11 +1085,11 @@ export class MetadataEditorComponent implements OnInit {
           detail: this.t.translate('metadata.editor.toast.fileMetadataLoaded'),
         });
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('metadata.editor.toast.errorSummary'),
-          detail: err?.error?.message || this.t.translate('metadata.editor.toast.fileMetadataFailed'),
+          detail: getApiErrorMessage(error, this.t.translate('metadata.editor.toast.fileMetadataFailed')),
         });
       }
     });
@@ -1146,7 +1151,7 @@ export class MetadataEditorComponent implements OnInit {
     if (this.metadataCenterViewMode === 'route') {
       this.router.navigate(['/book', bookId], {
         queryParams: {tab: 'edit'}
-      });
+      }).catch((error: unknown) => this.errorHandler.handleError(error));
     } else {
       this.metadataHostService.switchBook(bookId);
     }
@@ -1210,9 +1215,8 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   onAudiobookCoverUpload(event: FileUploadEvent): void {
-    const response: HttpResponse<unknown> =
-      event.originalEvent as HttpResponse<unknown>;
-    if (response && response.status === 200) {
+    const response = event.originalEvent;
+    if (response instanceof HttpResponse && response.status === 200) {
       this.isUploading = false;
       this.bookService.handleBookMetadataUpdate(this.currentBookId);
     } else {

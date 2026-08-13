@@ -177,7 +177,10 @@ describe('MetadataManagerComponent', () => {
     expect(component.authors[1].selected).toBe(true);
     expect(component.authors[2].selected).toBe(false);
 
-    component.filterGlobal({target: {value: 'magic'}} as unknown as Event, {filterGlobal});
+    const input = document.createElement('input');
+    input.value = 'magic';
+    input.addEventListener('input', event => component.filterGlobal(event, {filterGlobal}));
+    input.dispatchEvent(new Event('input'));
     expect(filterGlobal).toHaveBeenCalledWith('magic', 'contains');
 
     component.onMetadataClick('authors', 'A&B');

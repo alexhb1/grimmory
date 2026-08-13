@@ -8,6 +8,12 @@ import {MetadataAdvancedFetchOptionsComponent} from '../metadata-advanced-fetch-
 import {TaskHelperService} from '../../../../settings/task-management/task-helper.service';
 import {TranslocoDirective} from '@jsverse/transloco';
 
+export interface MetadataRefreshDialogData {
+  libraryId?: number | null;
+  bookIds?: number[];
+  metadataRefreshType?: MetadataRefreshType;
+}
+
 @Component({
   selector: 'app-metadata-fetch-options',
   standalone: true,
@@ -19,18 +25,14 @@ import {TranslocoDirective} from '@jsverse/transloco';
   styleUrl: './metadata-fetch-options.component.scss'
 })
 export class MetadataFetchOptionsComponent implements OnInit, OnChanges {
-  @Input() dialogData?: {
-    libraryId?: number | null;
-    bookIds?: number[];
-    metadataRefreshType?: MetadataRefreshType;
-  };
+  @Input() dialogData?: MetadataRefreshDialogData;
 
   libraryId?: number;
   bookIds: number[] = [];
   metadataRefreshType: MetadataRefreshType = MetadataRefreshType.BOOKS;
   currentMetadataOptions!: MetadataRefreshOptions;
 
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<MetadataRefreshDialogData>>(DynamicDialogConfig);
   dynamicDialogRef = inject(DynamicDialogRef);
   private taskHelperService = inject(TaskHelperService);
   private appSettingsService = inject(AppSettingsService);
@@ -48,7 +50,7 @@ export class MetadataFetchOptionsComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if ('dialogData' in changes) {
-      this.applyContext(changes['dialogData'].currentValue ?? {});
+      this.applyContext(this.dialogData ?? {});
     }
   }
 
@@ -63,11 +65,7 @@ export class MetadataFetchOptionsComponent implements OnInit, OnChanges {
     this.dynamicDialogRef.close();
   }
 
-  private applyContext(context: {
-    libraryId?: number | null;
-    bookIds?: number[];
-    metadataRefreshType?: MetadataRefreshType;
-  }): void {
+  private applyContext(context: MetadataRefreshDialogData): void {
     this.libraryId = context.libraryId ?? undefined;
     this.bookIds = context.bookIds ?? [];
     this.metadataRefreshType = context.metadataRefreshType ?? MetadataRefreshType.BOOKS;

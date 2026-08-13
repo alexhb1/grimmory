@@ -8,6 +8,7 @@ import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {GenreStatsResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {AsyncPipe} from '@angular/common';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 type GenreChartData = ChartData<'bar', number[], string>;
 
@@ -24,7 +25,7 @@ export class GenreStatsChartComponent implements OnInit {
 
   public readonly chartType = 'bar' as const;
   public readonly chartData$: Observable<GenreChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+  public readonly chartOptions: ChartConfiguration<'bar'>['options'];
 
   private readonly userStatsService = inject(UserStatsService);
   private readonly t = inject(TranslocoService);
@@ -57,9 +58,9 @@ export class GenreStatsChartComponent implements OnInit {
           callbacks: {
             label: (context) => {
               const dataIndex = context.dataIndex;
-              const dataset = context.dataset;
-              const label = context.chart.data.labels?.[dataIndex] as string;
-              const minutes = Math.floor((dataset.data[dataIndex] as number) / 60);
+              const label = this.chartDataSubject.value.labels?.[dataIndex] ?? '';
+              const seconds = getChartDataPoint(this.chartDataSubject.value, {datasetIndex: 0, dataIndex}) ?? 0;
+              const minutes = Math.floor(seconds / 60);
               const hours = Math.floor(minutes / 60);
               const mins = minutes % 60;
 
@@ -87,7 +88,7 @@ export class GenreStatsChartComponent implements OnInit {
             maxRotation: 90,
             minRotation: 90,
             callback: (value, index) => {
-              const label = this.chartDataSubject.value.labels?.[index] as string;
+              const label = this.chartDataSubject.value.labels?.[index] ?? '';
               const maxLength = 12;
               if (label && label.length > maxLength) {
                 return label.substring(0, maxLength) + '...';
@@ -111,7 +112,8 @@ export class GenreStatsChartComponent implements OnInit {
           ticks: {
             font: {family: "'Inter', sans-serif", size: 11},
             callback: (value) => {
-              const seconds = value as number;
+              if (typeof value !== 'number') return '';
+              const seconds = value;
               const minutes = Math.floor(seconds / 60);
               const hours = Math.floor(minutes / 60);
               const days = Math.floor(hours / 24);

@@ -9,6 +9,7 @@ import {Tag} from '@openng/optimus-ui/tag';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {DatePipe, JsonPipe} from '@angular/common';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {HttpErrorResponse} from '@angular/common/http';
 
 @Component({
   selector: 'app-sidecar-viewer',
@@ -63,11 +64,11 @@ export class SidecarViewerComponent implements OnDestroy {
           this.loading.set(false);
         }
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.syncStatus = 'NOT_APPLICABLE';
         this.sidecarContent = null;
         this.loading.set(false);
-        console.error('Failed to get sync status:', err);
+        console.error('Failed to get sync status:', error);
       }
     });
   }
@@ -80,11 +81,11 @@ export class SidecarViewerComponent implements OnDestroy {
         this.sidecarContent = content;
         this.loading.set(false);
       },
-      error: (err) => {
+      error: (error: unknown) => {
         this.sidecarContent = null;
         this.loading.set(false);
-        if (err.status !== 404) {
-          console.error('Failed to load sidecar content:', err);
+        if (!(error instanceof HttpErrorResponse && error.status === 404)) {
+          console.error('Failed to load sidecar content:', error);
         }
       }
     });

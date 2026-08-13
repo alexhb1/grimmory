@@ -37,7 +37,7 @@ export class MetadataProviderFieldSelectorComponent {
     return this.t.translate('settingsMeta.fieldSelector.fields.' + field);
   }
 
-  private readonly allFieldNames: (keyof MetadataProviderSpecificFields)[] = [
+  private readonly allFieldNames = [
     'asin', 'amazonRating', 'amazonReviewCount',
     'googleId',
     'goodreadsId', 'goodreadsRating', 'goodreadsReviewCount',
@@ -46,7 +46,7 @@ export class MetadataProviderFieldSelectorComponent {
     'lubimyczytacId', 'lubimyczytacRating',
     'ranobedbId', 'ranobedbRating',
     'audibleId', 'audibleRating', 'audibleReviewCount'
-  ];
+  ] as const satisfies readonly (keyof MetadataProviderSpecificFields)[];
 
   private readonly syncSettingsEffect = effect(() => {
     const settings = this.appSettingsService.appSettings();
@@ -77,10 +77,9 @@ export class MetadataProviderFieldSelectorComponent {
   }
 
   private toFieldState(selectedFields: string[]): MetadataProviderSpecificFields {
-    const fieldState = {} as MetadataProviderSpecificFields;
-    for (const field of this.allFieldNames) {
+    return this.allFieldNames.reduce((fieldState, field) => {
       fieldState[field] = selectedFields.includes(field);
-    }
-    return fieldState;
+      return fieldState;
+    }, {} as MetadataProviderSpecificFields);
   }
 }

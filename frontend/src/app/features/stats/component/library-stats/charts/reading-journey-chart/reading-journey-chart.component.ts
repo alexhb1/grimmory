@@ -5,6 +5,7 @@ import {LibraryFilterService} from '../../service/library-filter.service';
 import {BookService} from '../../../../../book/service/book.service';
 import {Book, ReadStatus} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 interface MonthlyData {
   month: string;
@@ -188,8 +189,9 @@ export class ReadingJourneyChartComponent {
             title: (context) => context[0].label,
             afterBody: (context) => {
               const dataIndex = context[0].dataIndex;
-              const addedValue = context[0].chart.data.datasets[0].data[dataIndex] as number;
-              const finishedValue = context[0].chart.data.datasets[1].data[dataIndex] as number;
+              const chartData = this.chartData();
+              const addedValue = getChartDataPoint(chartData, {datasetIndex: 0, dataIndex}) ?? 0;
+              const finishedValue = getChartDataPoint(chartData, {datasetIndex: 1, dataIndex}) ?? 0;
               const backlog = addedValue - finishedValue;
               return [`\n${this.t.translate('statsLibrary.readingJourney.tooltipBacklog', {count: backlog})}`];
             }

@@ -165,14 +165,17 @@ describe('MetadataPickerComponent', () => {
     expect(component.metadataForm.get('authors')?.value).toEqual(['Bob', 'Cara']);
     expect(component.authorInputValue).toBe('');
 
+    const autocompleteInput = document.createElement('input');
+    autocompleteInput.value = 'Fantasy';
     component.onAutoCompleteSelect('categories', {
       value: 'Fantasy',
-      originalEvent: {target: {value: 'Fantasy'}},
+      originalEvent: {target: autocompleteInput},
     } as unknown as AutoCompleteSelectEvent);
-    component.onAutoCompleteKeyUp('categories', {
-      key: 'Enter',
-      target: {value: 'History'},
-    } as unknown as KeyboardEvent);
+
+    const keyupInput = document.createElement('input');
+    keyupInput.value = 'History';
+    keyupInput.addEventListener('keyup', event => component.onAutoCompleteKeyUp('categories', event));
+    keyupInput.dispatchEvent(new KeyboardEvent('keyup', {key: 'Enter'}));
 
     expect(component.metadataForm.get('categories')?.value).toEqual(['Fantasy', 'History']);
   });

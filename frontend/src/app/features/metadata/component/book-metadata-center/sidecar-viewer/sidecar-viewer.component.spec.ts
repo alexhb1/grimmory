@@ -1,4 +1,5 @@
 import {TestBed} from '@angular/core/testing';
+import {HttpErrorResponse} from '@angular/common/http';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {of, throwError} from 'rxjs';
 import {MessageService} from '@openng/optimus-ui/api';
@@ -130,14 +131,14 @@ describe('SidecarViewerComponent', () => {
     const component = TestBed.runInInjectionContext(() => new SidecarViewerComponent());
 
     getSyncStatus.mockReturnValue(of({status: 'OUTDATED'}));
-    getSidecarContent.mockReturnValue(throwError(() => ({status: 404})));
+    getSidecarContent.mockReturnValue(throwError(() => new HttpErrorResponse({status: 404})));
     component.book = createBook(6);
 
     expect(component.sidecarContent).toBeNull();
     expect(component.loading()).toBe(false);
     expect(consoleError).not.toHaveBeenCalled();
 
-    getSidecarContent.mockReturnValue(throwError(() => ({status: 500})));
+    getSidecarContent.mockReturnValue(throwError(() => new HttpErrorResponse({status: 500})));
     component.loadSidecarData(6);
 
     expect(consoleError).toHaveBeenCalledOnce();

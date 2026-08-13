@@ -12,6 +12,10 @@ import {MetadataProgressService} from '../../../../shared/service/metadata-progr
 import {MetadataPickerComponent} from '../book-metadata-center/metadata-picker/metadata-picker.component';
 import {DecimalPipe} from '@angular/common';
 
+export interface MetadataReviewDialogData {
+  taskId: string;
+}
+
 @Component({
   selector: 'app-metadata-review-dialog-component',
   standalone: true,
@@ -25,7 +29,7 @@ export class MetadataReviewDialogComponent implements OnInit {
   @ViewChild(MetadataPickerComponent)
   pickerComponent!: MetadataPickerComponent;
 
-  private config = inject(DynamicDialogConfig);
+  private config = inject<DynamicDialogConfig<MetadataReviewDialogData>>(DynamicDialogConfig);
   private dialogRef = inject(DynamicDialogRef);
   private metadataTaskService = inject(MetadataTaskService);
   private bookService = inject(BookService);

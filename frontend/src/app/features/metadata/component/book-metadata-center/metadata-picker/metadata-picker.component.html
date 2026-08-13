@@ -491,7 +491,7 @@
             @if (!hasAnyFetchedComicData() && !hasAnyCurrentComicData()) {
               <span class="section-empty-badge">{{ t('nonePresent') }}</span>
             }
-            <i [class]="comicSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-toggle"></i>
+            <i [class]="'section-toggle ' + (comicSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down')"></i>
           </div>
 
           @if (comicSectionExpanded) {
