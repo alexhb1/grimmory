@@ -105,7 +105,9 @@ export class CbxQuickSettingsComponent {
   }
 
   onStripMaxWidthInput(event: Event): void {
-    const value = +(event.target as HTMLInputElement).value;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const value = Number.parseFloat(event.target.value);
+    if (!Number.isFinite(value)) return;
     this.quickSettingsService.setStripMaxWidthPercent(value);
   }
 
@@ -163,7 +165,9 @@ export class CbxQuickSettingsComponent {
   }
 
   onBrightnessChange(event: Event): void {
-    const value = +(event.target as HTMLInputElement).value;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const value = Number.parseFloat(event.target.value);
+    if (!Number.isFinite(value)) return;
     this.quickSettingsService.emitBrightnessChange(value);
   }
 

@@ -10,6 +10,7 @@ import {
   ViewChild
 } from '@angular/core';
 import {Location} from '@angular/common';
+import {HttpErrorResponse} from '@angular/common/http';
 import {ActivatedRoute} from '@angular/router';
 import {FormsModule} from '@angular/forms';
 import {from, Observable, of} from 'rxjs';
@@ -509,6 +510,33 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
     }
   }
 
+  private playAudio(
+    audio: HTMLAudioElement,
+    positionMs: number,
+    trackIndex?: number,
+    onStarted?: () => void
+  ): void {
+    audio.play().catch(() => this.onAudioError());
+    this.isPlaying = true;
+    this.startProgressSaveInterval();
+
+    if (!this.audiobookSessionService.isSessionActive()) {
+      this.audiobookSessionService.startSession(
+        this.bookId,
+        positionMs,
+        this.playbackRate,
+        this.audiobookInfo?.bookFileId,
+        trackIndex
+      );
+    } else if (!this.audiobookSessionService.isPlaying()) {
+      this.audiobookSessionService.resumeSession(positionMs);
+    }
+
+    onStarted?.();
+    this.updateMediaSessionPlaybackState();
+    this.cdr.markForCheck();
+  }
+
   togglePlay(): void {
     const audio = this.audioElement?.nativeElement;
     if (!audio) return;
@@ -520,25 +548,13 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
       audio.src = this.audioSrc;
       audio.load();
 
-      // Wait for enough data to play
       const playWhenReady = () => {
         audio.removeEventListener('canplay', playWhenReady);
-        audio.play();
-        this.isPlaying = true;
-        this.startProgressSaveInterval();
-        this.updateMediaSessionPlaybackState();
-        if (this.audiobookSessionService.isSessionActive()) {
-          this.audiobookSessionService.resumeSession(Math.round(this.currentTime * 1000));
-        } else {
-          this.audiobookSessionService.startSession(
-            this.bookId,
-            Math.round(this.currentTime * 1000),
-            this.playbackRate,
-            this.audiobookInfo?.bookFileId,
-            this.audiobookInfo?.folderBased ? this.currentTrackIndex : undefined
-          );
-        }
-        this.cdr.markForCheck();
+        this.playAudio(
+          audio,
+          Math.round(this.currentTime * 1000),
+          this.audiobookInfo?.folderBased ? this.currentTrackIndex : undefined
+        );
       };
       audio.addEventListener('canplay', playWhenReady);
       return;
@@ -549,29 +565,21 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
       this.stopProgressSaveInterval();
       this.saveProgress();
       this.audiobookSessionService.pauseSession(Math.round(this.currentTime * 1000));
+      this.isPlaying = false;
+      this.updateMediaSessionPlaybackState();
+      this.cdr.markForCheck();
     } else {
-      audio.play();
-      this.startProgressSaveInterval();
-      if (this.audiobookSessionService.isSessionActive()) {
-        this.audiobookSessionService.resumeSession(Math.round(this.currentTime * 1000));
-      } else {
-        this.audiobookSessionService.startSession(
-          this.bookId,
-          Math.round(this.currentTime * 1000),
-          this.playbackRate,
-          this.audiobookInfo?.bookFileId,
-          this.audiobookInfo?.folderBased ? this.currentTrackIndex : undefined
-        );
-      }
+      this.playAudio(
+        audio,
+        Math.round(this.currentTime * 1000),
+        this.audiobookInfo?.folderBased ? this.currentTrackIndex : undefined
+      );
     }
-    this.isPlaying = !this.isPlaying;
-    this.updateMediaSessionPlaybackState();
-    this.cdr.markForCheck();
   }
 
   seek(event: SliderChangeEvent): void {
     if (this.duration > 0 && event.value !== undefined) {
-      const seekTime = event.value as number;
+      const seekTime = event.value;
       this.isSeeking = true;
       this.currentTime = seekTime;
       this.updateCurrentChapter();
@@ -603,7 +611,7 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
   setVolume(event: SliderChangeEvent): void {
     const audio = this.audioElement?.nativeElement;
     if (event.value !== undefined) {
-      this.volume = event.value as number;
+      this.volume = event.value;
       this.isMuted = this.volume === 0;
       if (audio) {
         audio.volume = this.volume;
@@ -646,9 +654,8 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
       this.updateCurrentChapter();
       if (this.isPlaying) {
         setTimeout(() => {
-          this.audioElement?.nativeElement?.play();
-          this.updateMediaSessionMetadata();
-          this.cdr.markForCheck();
+          const audio = this.audioElement?.nativeElement;
+          if (audio) this.playAudio(audio, 0, this.currentTrackIndex, () => this.updateMediaSessionMetadata());
         }, 100);
       }
     }
@@ -662,9 +669,8 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
       this.updateCurrentChapter();
       if (this.isPlaying) {
         setTimeout(() => {
-          this.audioElement?.nativeElement?.play();
-          this.updateMediaSessionMetadata();
-          this.cdr.markForCheck();
+          const audio = this.audioElement?.nativeElement;
+          if (audio) this.playAudio(audio, 0, this.currentTrackIndex, () => this.updateMediaSessionMetadata());
         }, 100);
       }
     }
@@ -692,20 +698,8 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
     }
 
     setTimeout(() => {
-      this.audioElement?.nativeElement?.play();
-      this.isPlaying = true;
-      this.startProgressSaveInterval();
-      this.updateMediaSessionMetadata();
-      this.updateMediaSessionPlaybackState();
-      if (this.audiobookSessionService.isSessionActive()) {
-        this.audiobookSessionService.resumeSession(0);
-      } else {
-        this.audiobookSessionService.startSession(
-          this.bookId, 0, this.playbackRate,
-          this.audiobookInfo?.bookFileId, track.index
-        );
-      }
-      this.cdr.markForCheck();
+      const currentAudio = this.audioElement?.nativeElement;
+      if (currentAudio) this.playAudio(currentAudio, 0, track.index, () => this.updateMediaSessionMetadata());
     }, 100);
   }
 
@@ -725,20 +719,7 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
         audio.currentTime = chapter.startTimeMs / 1000;
         this.currentTime = chapter.startTimeMs / 1000;
         this.updateCurrentChapter();
-        audio.play();
-        this.isPlaying = true;
-        this.startProgressSaveInterval();
-        this.updateMediaSessionMetadata();
-        this.updateMediaSessionPlaybackState();
-        if (this.audiobookSessionService.isSessionActive()) {
-          this.audiobookSessionService.resumeSession(chapter.startTimeMs);
-        } else {
-          this.audiobookSessionService.startSession(
-            this.bookId, chapter.startTimeMs, this.playbackRate,
-            this.audiobookInfo?.bookFileId
-          );
-        }
-        this.cdr.markForCheck();
+        this.playAudio(audio, chapter.startTimeMs, undefined, () => this.updateMediaSessionMetadata());
       };
       audio.addEventListener('canplay', seekAndPlay);
       this.showTrackList = false;
@@ -751,18 +732,7 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
     this.showTrackList = false;
     this.updateMediaSessionMetadata();
     if (!this.isPlaying) {
-      audio.play();
-      this.isPlaying = true;
-      this.startProgressSaveInterval();
-      this.updateMediaSessionPlaybackState();
-      if (this.audiobookSessionService.isSessionActive()) {
-        this.audiobookSessionService.resumeSession(chapter.startTimeMs);
-      } else {
-        this.audiobookSessionService.startSession(
-          this.bookId, chapter.startTimeMs, this.playbackRate,
-          this.audiobookInfo?.bookFileId
-        );
-      }
+      this.playAudio(audio, chapter.startTimeMs);
     }
   }
 
@@ -1096,11 +1066,11 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
           });
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: (error: unknown) => {
           if (requestId !== this.loadRequestId || requestBookId !== this.bookId) {
             return;
           }
-          const isDuplicate = err?.status === 409;
+          const isDuplicate = error instanceof HttpErrorResponse && error.status === 409;
           this.messageService.add({
             severity: isDuplicate ? 'warn' : 'error',
             summary: isDuplicate ? this.t.translate('readerAudiobook.toast.bookmarkExists') : this.t.translate('common.error'),
@@ -1133,20 +1103,12 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
         audio.currentTime = targetPosition;
         this.currentTime = targetPosition;
         this.updateCurrentChapter();
-        audio.play();
-        this.isPlaying = true;
-        this.startProgressSaveInterval();
         const positionMs = bookmark.positionMs || 0;
-        if (this.audiobookSessionService.isSessionActive()) {
-          this.audiobookSessionService.resumeSession(positionMs);
-        } else {
-          this.audiobookSessionService.startSession(
-            this.bookId, positionMs, this.playbackRate,
-            this.audiobookInfo?.bookFileId,
-            this.audiobookInfo?.folderBased ? bookmark.trackIndex : undefined
-          );
-        }
-        this.cdr.markForCheck();
+        this.playAudio(
+          audio,
+          positionMs,
+          this.audiobookInfo?.folderBased ? bookmark.trackIndex : undefined
+        );
       };
       audio.addEventListener('canplay', seekAndPlay);
       this.showBookmarkList = false;
@@ -1170,21 +1132,16 @@ export class AudiobookPlayerComponent implements OnInit, OnDestroy {
     this.showBookmarkList = false;
 
     if (!this.isPlaying) {
+      const positionMs = bookmark.positionMs || 0;
       setTimeout(() => {
-        this.audioElement?.nativeElement?.play();
-        this.isPlaying = true;
-        this.startProgressSaveInterval();
-        const positionMs = bookmark.positionMs || 0;
-        if (this.audiobookSessionService.isSessionActive()) {
-          this.audiobookSessionService.resumeSession(positionMs);
-        } else {
-          this.audiobookSessionService.startSession(
-            this.bookId, positionMs, this.playbackRate,
-            this.audiobookInfo?.bookFileId,
+        const audio = this.audioElement?.nativeElement;
+        if (audio) {
+          this.playAudio(
+            audio,
+            positionMs,
             this.audiobookInfo?.folderBased ? bookmark.trackIndex : undefined
           );
         }
-        this.cdr.markForCheck();
       }, 100);
     }
   }

@@ -39,8 +39,11 @@ export class ReaderBookmarkService {
         });
         return true;
       }),
-      catchError(error => {
-        const isDuplicate = error?.status === 409;
+      catchError((error: unknown) => {
+        const isDuplicate = typeof error === 'object'
+          && error !== null
+          && 'status' in error
+          && error.status === 409;
         this.messageService.add(
           isDuplicate
             ? {

@@ -134,13 +134,11 @@ describe('EpubCustomFontService', () => {
     expect(stylesheet).not.toContain('Mono-Sans');
 
     const renderer = {
-      createElement: vi.fn(() => document.createElement('style')),
       appendChild: vi.fn(),
     } as unknown as Renderer2;
 
     service.injectCustomFontsStylesheet(renderer, document);
 
-    expect(renderer.createElement).toHaveBeenCalledWith('style');
     expect(renderer.appendChild).toHaveBeenCalledOnce();
   });
 

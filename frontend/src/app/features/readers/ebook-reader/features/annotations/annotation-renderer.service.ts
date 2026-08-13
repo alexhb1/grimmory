@@ -11,7 +11,7 @@ export interface Annotation {
 }
 
 interface AnnotationView {
-  addAnnotation(annotation: { value: string }): Promise<{ index: number; label: string } | undefined> | void;
+  addAnnotation(annotation: {value: string}): Promise<{index: number; label: string} | undefined>;
   deleteAnnotation(annotation: { value: string }): Promise<void>;
   showAnnotation(annotation: { value: string }): Promise<void>;
 }
@@ -38,7 +38,7 @@ export class ReaderAnnotationService {
       this.allAnnotations.push(annotation);
     }
 
-    return defer(() => from(view.addAnnotation({value: annotation.value}) as Promise<{ index: number; label: string } | undefined>));
+    return defer(() => from(view.addAnnotation({value: annotation.value})));
   }
 
   deleteAnnotation(view: AnnotationView | null | undefined, cfi: string): Observable<void> {
@@ -47,13 +47,13 @@ export class ReaderAnnotationService {
     this.annotationStyles.delete(cfi);
     this.allAnnotations = this.allAnnotations.filter(a => a.value !== cfi);
 
-    return defer(() => from(view.deleteAnnotation({value: cfi}) as Promise<void>));
+    return defer(() => from(view.deleteAnnotation({value: cfi})));
   }
 
   showAnnotation(view: AnnotationView | null | undefined, cfi: string): Observable<void> {
     if (!view) return of(undefined);
 
-    return defer(() => from(view.showAnnotation({value: cfi}) as Promise<void>));
+    return defer(() => from(view.showAnnotation({value: cfi})));
   }
 
   addAnnotations(view: AnnotationView | null | undefined, annotations: Annotation[]): void {
@@ -69,7 +69,8 @@ export class ReaderAnnotationService {
         this.allAnnotations.push(annotation);
       }
 
-      view?.addAnnotation({value: annotation.value});
+      view?.addAnnotation({value: annotation.value})
+        .catch((error: unknown) => console.error('Failed to render ebook annotation', error));
     });
   }
 
@@ -83,7 +84,7 @@ export class ReaderAnnotationService {
 
     switch (style) {
       case 'underline':
-        return (rects: DOMRectList, options: { color?: string; width?: number } = {}) => {
+        return (rects: DOMRectList, options: { color?: string; width?: number }) => {
           const {color = 'red', width: strokeWidth = 2} = options;
           const g = createSVGElement('g');
           g.setAttribute('fill', color);
@@ -99,7 +100,7 @@ export class ReaderAnnotationService {
         };
 
       case 'strikethrough':
-        return (rects: DOMRectList, options: { color?: string; width?: number } = {}) => {
+        return (rects: DOMRectList, options: { color?: string; width?: number }) => {
           const {color = 'red', width: strokeWidth = 2} = options;
           const g = createSVGElement('g');
           g.setAttribute('fill', color);
@@ -115,7 +116,7 @@ export class ReaderAnnotationService {
         };
 
       case 'squiggly':
-        return (rects: DOMRectList, options: { color?: string; width?: number } = {}) => {
+        return (rects: DOMRectList, options: { color?: string; width?: number }) => {
           const {color = 'red', width: strokeWidth = 2} = options;
           const g = createSVGElement('g');
           g.setAttribute('fill', 'none');
@@ -136,12 +137,12 @@ export class ReaderAnnotationService {
 
       case 'highlight':
       default:
-        return (rects: DOMRectList, options: { color?: string } = {}) => {
+        return (rects: DOMRectList, options: { color?: string }) => {
           const {color = 'yellow'} = options;
           const g = createSVGElement('g');
           g.setAttribute('fill', color);
-          (g as SVGElement).style.opacity = 'var(--overlayer-highlight-opacity, .3)';
-          (g as SVGElement).style.mixBlendMode = 'var(--overlayer-highlight-blend-mode, multiply)';
+          g.style.opacity = 'var(--overlayer-highlight-opacity, .3)';
+          g.style.mixBlendMode = 'var(--overlayer-highlight-blend-mode, multiply)';
           for (const {left, top, height, width} of Array.from(rects)) {
             const el = createSVGElement('rect');
             el.setAttribute('x', String(left));

@@ -1,19 +1,21 @@
 import {inject, Injectable} from '@angular/core';
 import {defer, from, Observable, of, throwError, timer} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
+import {map, switchMap} from 'rxjs/operators';
 import {ReaderAnnotationService, Annotation} from '../features/annotations/annotation-renderer.service';
 import {ReaderEventService, ViewEvent, TextSelection} from './event.service';
 import {PageInfo, ThemeInfo, PageDecorator} from '../shared/header-footer.util';
-import {EpubStreamingService, EpubBookInfo} from './epub-streaming.service';
+import {EpubStreamingService, type EpubBookInfo} from './epub-streaming.service';
+import {
+  FoliateBookMetadata,
+  FoliateRenderer,
+  FoliateSearchResult,
+  FoliateTocItem,
+  FoliateViewElement,
+} from './foliate-view.contract';
 
 export type {ViewEvent, TextSelection} from './event.service';
 export type {PageInfo, ThemeInfo} from '../shared/header-footer.util';
-
-interface FoliateTocItem {
-  label: string;
-  href: string;
-  subitems?: FoliateTocItem[];
-}
+export type {FoliateRenderer} from './foliate-view.contract';
 
 interface TocItem {
   label: string;
@@ -21,85 +23,6 @@ interface TocItem {
   subitems?: TocItem[];
 }
 
-export interface BookMetadata {
-  title?: string;
-  authors?: string[];
-  language?: string;
-  publisher?: string;
-  description?: string;
-  identifier?: string;
-  coverUrl?: string | null;
-
-  [key: string]: unknown;
-}
-
-interface RendererContent {
-  index: number;
-  doc: Document;
-}
-
-export interface FoliateRenderer {
-  heads?: HTMLElement[];
-  feet?: HTMLElement[];
-  getContents(): RendererContent[];
-  setAttribute(name: string, value: string | number): void;
-  removeAttribute(name: string): void;
-  setStyles?(css: string): void;
-}
-
-interface FoliateBook {
-  toc?: FoliateTocItem[];
-  metadata?: BookMetadata;
-  getCover?(): Promise<Blob | null> | null;
-}
-
-interface FoliateSearchSubitem {
-  cfi: string;
-  excerpt: {
-    pre: string;
-    match: string;
-    post: string;
-  };
-}
-
-interface FoliateSearchProgress {
-  progress: number;
-}
-
-interface FoliateSearchSectionResult {
-  label?: string;
-  subitems?: FoliateSearchSubitem[];
-}
-
-type FoliateSearchResult = FoliateSearchProgress | FoliateSearchSectionResult | 'done';
-
-interface FoliateViewElement extends HTMLElement {
-  renderer?: FoliateRenderer | null;
-  book?: FoliateBook;
-  open(target: File | object): Promise<void>;
-  goTo(target: string | number): Promise<void>;
-  goToFraction(fraction: number): Promise<void>;
-  prev(): void;
-  next(): void;
-  getCFI(index: number, range: Range): string | null;
-  deselect(): void;
-  addAnnotation(annotation: { value: string }): void;
-  deleteAnnotation(annotation: { value: string }): Promise<void>;
-  showAnnotation(annotation: { value: string }): Promise<void>;
-  getSectionFractions?(): number[];
-  search?(opts: { query: string; matchCase?: boolean; matchWholeWords?: boolean }): AsyncGenerator<FoliateSearchResult>;
-  clearSearch?(): void;
-}
-
-interface StreamingBookFactoryWindow extends Window {
-  makeStreamingBook?: (
-    bookId: number,
-    baseUrl: string,
-    bookInfo: EpubBookInfo,
-    authToken: string | null,
-    bookType?: string
-  ) => Promise<object>;
-}
 
 @Injectable({
   providedIn: 'root'
@@ -115,7 +38,7 @@ export class ReaderViewManagerService {
   }
 
   createView(container: HTMLElement): void {
-    this.view = document.createElement('foliate-view') as FoliateViewElement;
+    this.view = document.createElement('foliate-view');
     this.view.style.width = '100%';
     this.view.style.height = '100%';
     this.view.style.display = 'block';
@@ -147,10 +70,9 @@ export class ReaderViewManagerService {
         const file = new File([blob], epubPath.split('/').pop() || 'book.epub', {
           type: 'application/epub+zip'
         });
-        return from(view.open(file) as Promise<void>);
+        return from(view.open(file));
       }),
-      map(() => undefined),
-      catchError(err => throwError(() => err))
+      map(() => undefined)
     );
   }
 
@@ -161,13 +83,12 @@ export class ReaderViewManagerService {
 
     return this.epubStreamingService.getBookInfo(bookId, bookType).pipe(
       switchMap(bookInfo => from(this.openStreamingBook(bookId, bookInfo, bookType))),
-      map(() => undefined),
-      catchError(err => throwError(() => err))
+      map(() => undefined)
     );
   }
 
   private async openStreamingBook(bookId: number, bookInfo: EpubBookInfo, bookType?: string): Promise<void> {
-    const makeStreamingBook = (window as StreamingBookFactoryWindow).makeStreamingBook;
+    const makeStreamingBook = window.makeStreamingBook;
     if (!makeStreamingBook) {
       throw new Error('makeStreamingBook not available - Foliate script may not be loaded');
     }
@@ -194,7 +115,7 @@ export class ReaderViewManagerService {
     }
     const view = this.view;
     return defer(() =>
-      from(view.goTo(resolvedTarget) as Promise<void>)
+      from(view.goTo(resolvedTarget))
     ).pipe(
       map(() => undefined)
     );
@@ -209,17 +130,17 @@ export class ReaderViewManagerService {
       return of(undefined);
     }
     const view = this.view;
-    return defer(() => from(view.goToFraction(fraction) as Promise<void>)).pipe(
+    return defer(() => from(view.goToFraction(fraction))).pipe(
       map(() => undefined)
     );
   }
 
   prev(): void {
-    this.view?.prev();
+    this.view?.prev().catch((error: unknown) => console.error('Failed to navigate to the previous page', error));
   }
 
   next(): void {
-    this.view?.next();
+    this.view?.next().catch((error: unknown) => console.error('Failed to navigate to the next page', error));
   }
 
   getRenderer(): FoliateRenderer | null {
@@ -288,7 +209,7 @@ export class ReaderViewManagerService {
     return this.view.getSectionFractions();
   }
 
-  getMetadata(): Observable<BookMetadata> {
+  getMetadata(): Observable<FoliateBookMetadata> {
     if (!this.view?.book?.metadata) {
       return of({});
     }
@@ -316,7 +237,7 @@ export class ReaderViewManagerService {
     const book = this.view.book;
     return defer(() => {
       const coverPromise = book.getCover?.();
-      return coverPromise ? from(coverPromise as Promise<Blob | null>) : of(null);
+      return coverPromise ? from(coverPromise) : of(null);
     });
   }
 
@@ -327,9 +248,9 @@ export class ReaderViewManagerService {
   }
 
   async* search(opts: { query: string; matchCase?: boolean; matchWholeWords?: boolean }): AsyncGenerator<FoliateSearchResult> {
-    const search = this.view?.search;
-    if (!search) return;
-    yield* search.call(this.view, opts);
+    const view = this.view;
+    if (!view?.search) return;
+    yield* view.search(opts);
   }
 
   clearSearch(): void {

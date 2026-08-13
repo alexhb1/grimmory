@@ -87,7 +87,9 @@ describe('CbxFooterComponent', () => {
     component.onGoToPage();
     expect(goToPageSpy).toHaveBeenCalledTimes(1);
 
-    component.onSliderChange({target: {value: '7'}} as unknown as Event);
+    const input = document.createElement('input');
+    input.value = '7';
+    component.onSliderChange({target: input} as unknown as Event);
     expect(sliderSpy).toHaveBeenCalledWith(7);
   });
 });

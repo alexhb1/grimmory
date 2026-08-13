@@ -53,7 +53,8 @@ export class ReaderHeaderComponent {
 
   onClose(): void {
     if (window.history.length <= 2) {
-      this.router.navigate(['/dashboard']);
+      this.router.navigate(['/dashboard'])
+        .catch((error: unknown) => console.error('Failed to close the ebook reader', error));
     } else {
       this.headerService.close();
     }

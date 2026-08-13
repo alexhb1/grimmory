@@ -5,7 +5,7 @@ import {ReaderAnnotationService} from '../features/annotations/annotation-render
 import {ReaderEventService, ViewEvent} from './event.service';
 
 interface TestView extends HTMLDivElement {
-  addAnnotation: (annotation: {value: string}) => void;
+  addAnnotation: (annotation: {value: string}) => Promise<{index: number; label: string} | undefined>;
   addAnnotationSpy: (annotation: {value: string}) => void;
 }
 
@@ -81,8 +81,9 @@ describe('ReaderEventService', () => {
   function createView(width = 600): TestView {
     const element = document.createElement('div') as TestView;
     element.addAnnotationSpy = vi.fn();
-    element.addAnnotation = annotation => {
+    element.addAnnotation = async annotation => {
       element.addAnnotationSpy(annotation);
+      return undefined;
     };
     Object.defineProperty(element, 'getBoundingClientRect', {
       value: () => new DOMRect(20, 10, width, 400),

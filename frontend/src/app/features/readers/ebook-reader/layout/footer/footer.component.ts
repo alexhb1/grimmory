@@ -30,7 +30,8 @@ export class ReaderNavbarComponent {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    const target = event.target as HTMLElement;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
     const clickedInside = target.closest('.location-popover') || target.closest('.location-btn');
     if (!clickedInside && this.showLocationPopover) {
       this.showLocationPopover = false;
@@ -97,7 +98,8 @@ export class ReaderNavbarComponent {
   }
 
   onProgressChange(event: Event) {
-    const target = event.target as HTMLInputElement;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const target = event.target;
     const fraction = parseFloat(target.value) / 100;
     this.progressChange.emit(fraction);
   }

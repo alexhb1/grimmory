@@ -126,16 +126,15 @@ export class ReaderLeftSidebarService {
     this._notesSearchQuery.set(query);
   }
 
-  async search(query: string): Promise<void> {
+  search(query: string): void {
     if (!query.trim()) {
       this.clearSearch();
       return;
     }
 
-    if (this.searchAbortController) {
-      this.searchAbortController.abort();
-    }
-    this.searchAbortController = new AbortController();
+    this.searchAbortController?.abort();
+    const abortController = new AbortController();
+    this.searchAbortController = abortController;
 
     this._searchState.set({
       query,
@@ -144,54 +143,59 @@ export class ReaderLeftSidebarService {
       progress: 0
     });
 
-    try {
-      const results: SearchResult[] = [];
-      const searchGenerator = this.viewManager.search({ query });
-
-      for await (const result of searchGenerator) {
-        if (this.searchAbortController?.signal.aborted) break;
-
-        if (typeof result === 'string' && result === 'done') {
-          break;
+    void this.runSearch(query, abortController)
+      .catch(() => {
+        if (this.searchAbortController === abortController) {
+          this._searchState.update(current => ({...current, isSearching: false}));
         }
+      });
+  }
 
-        if ('progress' in result) {
-          this._searchState.update(current => ({
-            ...current,
-            progress: result.progress
-          }));
-        }
+  private async runSearch(query: string, abortController: AbortController): Promise<void> {
+    const results: SearchResult[] = [];
+    const searchGenerator = this.viewManager.search({ query });
 
-        if ('subitems' in result && result.subitems) {
-          const sectionResults = (result.subitems as ReaderSearchSubitem[]).map((item) => ({
-            cfi: item.cfi,
-            excerpt: item.excerpt,
-            sectionLabel: result.label
-          }));
-          results.push(...sectionResults);
-          this._searchState.update(current => ({
-            ...current,
-            results: [...results]
-          }));
-        }
+    for await (const result of searchGenerator) {
+      if (abortController.signal.aborted) return;
+
+      if (typeof result === 'string' && result === 'done') {
+        break;
       }
 
-      this._searchState.set({
-        query,
-        results,
-        isSearching: false,
-        progress: 1
-      });
-    } catch {
-      this._searchState.update(current => ({...current, isSearching: false}));
+      if ('progress' in result) {
+        this._searchState.update(current => ({
+          ...current,
+          progress: result.progress
+        }));
+      }
+
+      if ('subitems' in result && result.subitems) {
+        const sectionResults = (result.subitems as ReaderSearchSubitem[]).map((item) => ({
+          cfi: item.cfi,
+          excerpt: item.excerpt,
+          sectionLabel: result.label
+        }));
+        results.push(...sectionResults);
+        this._searchState.update(current => ({
+          ...current,
+          results: [...results]
+        }));
+      }
     }
+
+    if (abortController.signal.aborted) return;
+
+    this._searchState.set({
+      query,
+      results,
+      isSearching: false,
+      progress: 1
+    });
   }
 
   clearSearch(): void {
-    if (this.searchAbortController) {
-      this.searchAbortController.abort();
-      this.searchAbortController = null;
-    }
+    this.searchAbortController?.abort();
+    this.searchAbortController = null;
     this.viewManager.clearSearch();
     this._searchState.set({
       query: '',

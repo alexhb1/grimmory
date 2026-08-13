@@ -248,7 +248,7 @@ export class ReaderSidebarService {
 
     const existingBookmark = this._bookmarks().find(bookmark => bookmark.cfi === currentCfi);
     if (existingBookmark) {
-      this.deleteBookmark(existingBookmark.id!);
+      this.deleteBookmark(existingBookmark.id);
     } else {
       this.createBookmark();
     }

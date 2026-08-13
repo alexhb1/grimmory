@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PageTitleService } from "../../../shared/service/page-title.service";
 import { BookService } from '../../book/service/book.service';
 import { forkJoin, from, Observable, of, Subject } from "rxjs";
-import { debounceTime, filter, map, switchMap, take } from 'rxjs/operators';
+import { concatMap, debounceTime, filter, map, switchMap, take } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BookSetting } from '../../book/model/book.model';
 import { UserService } from '../../settings/user-management/user.service';
@@ -15,6 +15,7 @@ import { ReaderIconComponent } from '../../readers/ebook-reader/shared/icon.comp
 import { BookMark } from '../../../shared/service/book-mark.service';
 import { EmbedPdfBookService, PdfOutlineItem, PdfScrollLayout } from './services/embedpdf-book.service';
 import type { AnnotationTransferItem } from '@embedpdf/snippet';
+import { PdfAnnotationSubtype, type PdfAnnotationObject } from '@embedpdf/models';
 import { PdfBookmarkService } from './services/pdf-bookmark.service';
 import { PdfSidebarComponent, PdfAnnotationListItem } from './components/pdf-sidebar.component';
 import { parseStoredAnnotations, serializeAnnotations } from './utils/annotation-converter';
@@ -33,9 +34,23 @@ type EmbedPdfMessage =
   | { type: 'ready' }
   | { type: 'documentOpened'; pageCount?: number }
   | { type: 'documentError'; error: string }
-  | { type: 'saved'; buffer?: ArrayBuffer }
+  | { type: 'saved'; buffer?: ArrayBuffer | null }
   | { type: 'saveError'; error: string }
   | { type: 'pageChange'; pageNumber: number; totalPages: number };
+
+function normalizePdfSpread(value: string | undefined): 'none' | 'even' | 'odd' {
+  return value === 'even' || value === 'odd' ? value : 'none';
+}
+
+function getAnnotationColor(annotation: PdfAnnotationObject): string | undefined {
+  if ('strokeColor' in annotation && typeof annotation.strokeColor === 'string') {
+    return annotation.strokeColor;
+  }
+  if ('color' in annotation && typeof annotation.color === 'string') {
+    return annotation.color;
+  }
+  return undefined;
+}
 
 @Component({
   selector: 'app-pdf-reader',
@@ -115,7 +130,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
   // Doc mode (iframe) state
   private embedPdfIframe: HTMLIFrameElement | null = null;
-  private embedPdfMessageHandler?: (e: MessageEvent) => void;
+  private embedPdfMessageHandler?: (e: MessageEvent<EmbedPdfMessage>) => void;
   private embedPdfSaveResolve?: (buffer: ArrayBuffer | null) => void;
   private embedPdfSaveTimer?: ReturnType<typeof setTimeout>;
   private embedPdfSavePromise?: Promise<boolean>;
@@ -252,7 +267,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       const clickHandler = (e: MouseEvent) => {
         if (!this.isZoomMenuOpen()) return;
         const wrapper = document.querySelector('.zoom-menu-wrapper');
-        if (wrapper && !wrapper.contains(e.target as Node)) {
+        if (wrapper && e.target instanceof Node && !wrapper.contains(e.target)) {
           this.ngZone.run(() => {
             this.isZoomMenuOpen.set(false);
           });
@@ -265,15 +280,15 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       // instead close the reader via SPA navigation.
       const keydownHandler = (e: KeyboardEvent) => {
         const isEditing = e.composedPath().some((target) => {
-          const el = target as HTMLElement;
-          return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
+          return target instanceof HTMLElement
+            && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
         });
 
         if (e.key === 'x' || e.key === 'X') {
           if (isEditing) return;
           e.preventDefault();
           e.stopPropagation();
-          this.ngZone.run(() => this.closeReader());
+          this.ngZone.run(() => this.requestCloseReader());
         }
 
         // Search: Ctrl+F, Cmd+F, or "/"
@@ -329,9 +344,10 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     this.annotationSaveSubject
       .pipe(
         debounceTime(1500),
+        concatMap(() => from(this.persistAnnotations())),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.persistAnnotations());
+      .subscribe();
 
     // Debounced search
     this.searchQuery$.pipe(
@@ -395,12 +411,12 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
         let scrollLayoutVal: PdfScrollLayout;
         if (globalOrIndividual === 'Global') {
           zoomVal = myself.userSettings.pdfReaderSetting.pageZoom || 'page-fit';
-          spreadVal = (myself.userSettings.pdfReaderSetting.pageSpread || 'none') === 'off' ? 'none' : (myself.userSettings.pdfReaderSetting.pageSpread as 'none' | 'even' | 'odd') || 'none';
+          spreadVal = normalizePdfSpread(myself.userSettings.pdfReaderSetting.pageSpread);
           scrollLayoutVal = myself.userSettings.pdfReaderSetting.scrollLayout || 'vertical';
         } else {
           zoomVal = pdfPrefs.pdfSettings?.zoom || myself.userSettings.pdfReaderSetting.pageZoom || 'page-fit';
           const rawSpread = pdfPrefs.pdfSettings?.spread || myself.userSettings.pdfReaderSetting.pageSpread || 'none';
-          spreadVal = rawSpread === 'off' ? 'none' : rawSpread as 'none' | 'even' | 'odd';
+          spreadVal = rawSpread === 'off' ? 'none' : rawSpread;
           scrollLayoutVal = pdfPrefs.pdfSettings?.scrollLayout
             || myself.userSettings.pdfReaderSetting.scrollLayout
             || 'vertical';
@@ -419,7 +435,10 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
         // Schedule viewer initialization after the template renders the container
         afterNextRender(() => {
-          this.ngZone.runOutsideAngular(() => this.initBookViewer());
+          this.ngZone.runOutsideAngular(() => {
+            this.initBookViewer()
+              .catch((error: unknown) => console.error('[BookViewer] Unexpected init failure:', error));
+          });
         }, { injector: this.injector });
       },
       error: () => {
@@ -510,7 +529,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
             if (ev.type === 'create' || ev.type === 'update') {
               const id = ev.annotation?.id;
               // Only track specifically allowed user annotation types (exclude links, etc.)
-              const type = ev.annotation?.type as number;
+              const type = ev.annotation?.type;
               const isAllowed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15].includes(type);
 
               if (id && isAllowed) {
@@ -597,8 +616,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
         this.loadAnnotations();
       });
 
-    } catch (err) {
-      console.error('[BookViewer] Init failed:', err);
+    } catch (error: unknown) {
+      console.error('[BookViewer] Init failed:', error);
       this.suppressProgressSave = false;
       this.messageService.add({
         severity: 'error',
@@ -638,8 +657,13 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async loadOutline(): Promise<void> {
-    this.outline.set(await this.embedPdfBook.getOutline());
+  private loadOutline(): void {
+    this.embedPdfBook.getOutline()
+      .then(outline => this.outline.set(outline))
+      .catch((error: unknown) => {
+        console.warn('[PDF Reader] Failed to load outline:', error);
+        this.outline.set([]);
+      });
   }
 
   private loadBookmarks(): void {
@@ -649,88 +673,100 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   }
 
   private loadAnnotations(): void {
-    this.pdfAnnotationService.getAnnotations(this.bookId).subscribe({
-      next: async (response) => {
-        console.info('[PDF Annotations] GET response:', response);
-        if (response?.data) {
-          this.lastAnnotationData = response.data;
-          const allItems = parseStoredAnnotations(response.data);
-          this.dbAnnotationIds = new Set(allItems.map(i => i.annotation.id));
-
-          // Deduplicate items based on annotation ID to heal previous corruption
-          const seenIds = new Set<string>();
-          const items = allItems.filter(item => {
-            if (seenIds.has(item.annotation.id)) return false;
-            seenIds.add(item.annotation.id);
-            return true;
-          });
-
-          if (allItems.length !== items.length) {
-            console.warn('[PDF Annotations] Deduplicated from', allItems.length, 'to', items.length);
-          }
-
-          if (items.length > 0) {
-            this.isImportingAnnotations = true;
-            try {
-              // Chunk the import to prevent script timeout and keep UI responsive
-              const CHUNK_SIZE = 500;
-              for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-                const chunk = items.slice(i, i + CHUNK_SIZE);
-                await this.embedPdfBook.importAnnotations(chunk);
-                // Breathe to prevent long-task timeouts
-                if (items.length > CHUNK_SIZE) {
-                  await new Promise(r => setTimeout(r, 0));
-                }
-              }
-              console.info('[PDF Annotations] Import complete');
-            } catch (err) {
-              console.error('[PDF Annotations] Import failed:', err);
-            } finally {
-              this.isImportingAnnotations = false;
-              this.annotationsLoaded = true;
-              this.cacheAnnotationData();
-              this.refreshAnnotationList();
-            }
-            return;
-          }
-        }
-        console.info('[PDF Annotations] No stored annotations, annotationsLoaded=true');
-        this.annotationsLoaded = true;
-        this.refreshAnnotationList();
-      },
+    this.pdfAnnotationService.getAnnotations(this.bookId).pipe(
+      switchMap(response => from(this.importStoredAnnotations(response))),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       error: (err) => {
-        console.warn('[PDF Annotations] GET error:', err);
+        console.warn('[PDF Annotations] Load error:', err);
+        this.isImportingAnnotations = false;
         this.annotationsLoaded = true;
       }
     });
   }
 
-  private async refreshAnnotationList(): Promise<void> {
-    if (!this.annotationsLoaded || this.viewerMode() === 'document') return;
+  private async importStoredAnnotations(response: {data: string}): Promise<void> {
+    console.info('[PDF Annotations] GET response:', response);
+    const {data} = response;
+    if (!data) {
+      console.info('[PDF Annotations] No stored annotations, annotationsLoaded=true');
+      this.annotationsLoaded = true;
+      this.refreshAnnotationList();
+      return;
+    }
+
+    this.lastAnnotationData = data;
+    const allItems = parseStoredAnnotations(data);
+    this.dbAnnotationIds = new Set(allItems.map(i => i.annotation.id));
+
+    // Deduplicate items based on annotation ID to heal previous corruption
+    const seenIds = new Set<string>();
+    const items = allItems.filter(item => {
+      if (seenIds.has(item.annotation.id)) return false;
+      seenIds.add(item.annotation.id);
+      return true;
+    });
+
+    if (allItems.length !== items.length) {
+      console.warn('[PDF Annotations] Deduplicated from', allItems.length, 'to', items.length);
+    }
+
+    if (items.length === 0) {
+      console.info('[PDF Annotations] No stored annotations, annotationsLoaded=true');
+      this.annotationsLoaded = true;
+      this.refreshAnnotationList();
+      return;
+    }
+
+    this.isImportingAnnotations = true;
     try {
-      const allItems = await this.embedPdfBook.exportAnnotations();
-      const items = this.filterAndDeduplicateAnnotations(allItems);
-      console.info(`[PDF Annotations] refresh list: exported ${allItems.length}, kept ${items.length}`);
-      this.annotationListItems.set(items.map(item => {
-        const ann = item.annotation as unknown as Record<string, unknown>;
-        return {
-          id: String(ann['id'] || ''),
-          pageIndex: (ann['pageIndex'] as number) ?? 0,
-          type: this.getAnnotationTypeName(ann['type'] as number),
-          color: (ann['strokeColor'] ?? ann['color']) as string | undefined,
-          text: ann['contents'] as string | undefined,
-        };
-      }));
-    } catch {
-      this.annotationListItems.set([]);
+      // Chunk the import to prevent script timeout and keep UI responsive
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        const chunk = items.slice(i, i + CHUNK_SIZE);
+        this.embedPdfBook.importAnnotations(chunk);
+        // Breathe to prevent long-task timeouts
+        if (items.length > CHUNK_SIZE) {
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+      console.info('[PDF Annotations] Import complete');
+    } catch (err) {
+      console.error('[PDF Annotations] Import failed:', err);
+    } finally {
+      this.isImportingAnnotations = false;
+      this.annotationsLoaded = true;
+      this.cacheAnnotationData();
+      this.refreshAnnotationList();
     }
   }
 
-  private getAnnotationTypeName(type: number): string {
+  private refreshAnnotationList(): void {
+    if (!this.annotationsLoaded || this.viewerMode() === 'document') return;
+
+    this.embedPdfBook.exportAnnotations().then(allItems => {
+      const items = this.filterAndDeduplicateAnnotations(allItems);
+      console.info(`[PDF Annotations] refresh list: exported ${allItems.length}, kept ${items.length}`);
+      this.annotationListItems.set(items.map(item => {
+        const annotation = item.annotation;
+        return {
+          id: annotation.id,
+          pageIndex: annotation.pageIndex,
+          type: this.getAnnotationTypeName(annotation.type),
+          color: getAnnotationColor(annotation),
+          text: annotation.contents,
+        };
+      }));
+    }).catch(() => {
+      this.annotationListItems.set([]);
+    });
+  }
+
+  private getAnnotationTypeName(type: PdfAnnotationSubtype): string {
     switch (type) {
-      case 9: return 'Highlight';
-      case 15: return 'Ink';
-      case 3: return 'Text';
+      case PdfAnnotationSubtype.HIGHLIGHT: return 'Highlight';
+      case PdfAnnotationSubtype.INK: return 'Ink';
+      case PdfAnnotationSubtype.FREETEXT: return 'Text';
       default: return 'Annotation';
     }
   }
@@ -939,27 +975,33 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       this.viewerMode.set(mode);
       this.initTimeout = setTimeout(() => {
         this.initTimeout = undefined;
-        this.initDocViewerIframe();
+        this.initDocViewerIframe()
+          .catch((error: unknown) => console.error('[EmbedPDF] Unexpected init failure:', error));
       }, 100);
     } else {
       this.initialPage = this.page();
       this.pendingDocTargetPage = null;
       // Switching from doc to book — save in background, don't block the switch
       if (this.embedPdfIframe) {
-        this.saveEmbedPdfDocument().finally(() => this.destroyDocViewerIframe());
+        this.saveEmbedPdfDocument()
+          .finally(() => this.destroyDocViewerIframe())
+          .catch((error: unknown) => {
+            console.error('[PDF Reader] Failed to finish document viewer switch:', error);
+          });
       }
       this.viewerMode.set(mode);
       this.isInitialScrollDone.set(false);
       this.initTimeout = setTimeout(() => {
         this.initTimeout = undefined;
-        this.initBookViewer();
+        this.initBookViewer()
+          .catch((error: unknown) => console.error('[BookViewer] Unexpected init failure:', error));
       }, 150);
     }
   }
 
   // --- Doc viewer (iframe) ---
 
-  private async initDocViewerIframe() {
+  private async initDocViewerIframe(): Promise<void> {
     if (this.embedPdfIframe) return;
 
     const t0 = performance.now();
@@ -995,7 +1037,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       iframe.style.cssText = 'width:100%;height:100%;border:none;';
       iframe.setAttribute('allow', 'fullscreen');
 
-      this.embedPdfMessageHandler = (e: MessageEvent) => {
+      this.embedPdfMessageHandler = (e: MessageEvent<EmbedPdfMessage>) => {
         if (e.origin !== location.origin) return;
         if (e.source !== iframe.contentWindow) return;
         this.handleEmbedPdfMessage(e.data);
@@ -1010,15 +1052,14 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       this.embedPdfIframe = iframe;
       this.pendingPdfBuffer = pdfBuffer;
 
-      iframe.contentWindow!.postMessage({
+      iframe.contentWindow?.postMessage({
         type: 'init',
         wasmUrl: '/assets/pdfium/pdfium.wasm',
         theme: this.isDarkTheme() ? 'dark' : 'light',
         locale: this.t.getActiveLang()
       }, location.origin);
-
-    } catch (err) {
-      console.error('[EmbedPDF] FATAL:', err);
+    } catch (error: unknown) {
+      console.error('[EmbedPDF] FATAL:', error);
       this.messageService.add({
         severity: 'error',
         summary: this.t.translate('common.error'),
@@ -1177,7 +1218,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async destroyDocViewerIframe(): Promise<void> {
+  private destroyDocViewerIframe(): void {
     if (this.embedPdfMessageHandler) {
       window.removeEventListener('message', this.embedPdfMessageHandler);
       this.embedPdfMessageHandler = undefined;
@@ -1349,7 +1390,11 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     if (this.viewerMode() !== 'book') return;
 
     // Ignore touches on interactive elements
-    const target = e.target instanceof Element ? e.target : (e.target as Node)?.parentElement;
+    const target = e.target instanceof Element
+      ? e.target
+      : e.target instanceof Node
+        ? e.target.parentElement
+        : null;
     if (target instanceof Element && target.closest('.pdf-header-toolbar, .pdf-footer, .pdf-sidebar, .search-bar, .toolbar-overflow-menu, button, input, a')) return;
 
     const endX = e.changedTouches[0].clientX;
@@ -1427,11 +1472,13 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   // --- Fullscreen ---
 
   toggleFullscreen(): void {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.();
-    } else {
-      document.exitFullscreen?.();
-    }
+    const request = document.fullscreenElement
+      ? document.exitFullscreen?.()
+      : document.documentElement.requestFullscreen?.();
+
+    request?.catch((error: unknown) => {
+      console.warn('[PDF Reader] Fullscreen request failed:', error);
+    });
   }
 
   private onFullscreenChange = (): void => {
@@ -1487,7 +1534,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   }
 
   onSliderChange(event: Event): void {
-    const value = +(event.target as HTMLInputElement).value;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    const value = +event.target.value;
     if (this.viewerMode() === 'book') {
       this.embedPdfBook.scrollToPage(value, 'instant');
     } else if (this.embedPdfIframe?.contentWindow) {
@@ -1513,10 +1561,12 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   private requestCloseReader(): void {
     if (this.isClosingReader()) return;
     this.isClosingReader.set(true);
-    void this.closeReader();
+    this.closeReader().catch((error: unknown) => {
+      console.error('[PDF Reader] Failed to close reader:', error);
+    });
   }
 
-  closeReader = async (): Promise<void> => {
+  async closeReader(): Promise<void> {
     if (this.closeReaderPromise) return this.closeReaderPromise;
     this.closeReaderPromise = this.performCloseReader();
     return this.closeReaderPromise;
@@ -1527,7 +1577,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       try {
         if (this.viewerMode() === 'document' && this.embedPdfIframe) {
           await this.saveEmbedPdfDocument();
-          await this.destroyDocViewerIframe();
+          this.destroyDocViewerIframe();
         } else {
           await this.persistAnnotations();
         }
@@ -1544,7 +1594,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       if (window.history.length > 1) {
         this.location.back();
       } else {
-        this.router.navigate(['/']);
+        await this.router.navigate(['/']);
       }
     } finally {
       this.resetCloseReaderState();
@@ -1584,7 +1634,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       console.info(`[PDF Annotations] Initiating save: exported ${allItems.length}, kept ${items.length}`);
 
       this.lastAnnotationData = data;
-      this.annotationsDirty = false; // Speculatively clear to avoid double-save
+      this.annotationsDirty = false;
 
       // Use raw fetch() instead of HttpClient so the auth interceptor cannot
       // trigger forceLogout() on an expired token during viewer-mode switches.
@@ -1594,24 +1644,22 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       if (saveToken) {
         saveHeaders['Authorization'] = `Bearer ${saveToken}`;
       }
-      fetch(saveUrl, {
+      const response = await fetch(saveUrl, {
         method: 'PUT',
         headers: saveHeaders,
         credentials: 'include',
         body: JSON.stringify({ data }),
-      }).then(res => {
-        if (res.ok) {
-          console.info('[PDF Annotations] Saved', items.length, 'annotations for book', this.bookId);
-        } else {
-          this.annotationsDirty = true;
-          console.error('[PDF Annotations] Save failed:', res.status);
-        }
-      }).catch(err => {
-        this.annotationsDirty = true;
-        console.error('[PDF Annotations] Failed to save annotations:', err);
       });
-    } catch (e) {
-      console.error('[PDF Annotations] Failed to export annotations:', e);
+
+      if (response.ok) {
+        console.info('[PDF Annotations] Saved', items.length, 'annotations for book', this.bookId);
+      } else {
+        this.annotationsDirty = true;
+        console.error('[PDF Annotations] Save failed:', response.status);
+      }
+    } catch (error: unknown) {
+      this.annotationsDirty = true;
+      console.error('[PDF Annotations] Failed to save annotations:', error);
     }
   }
 
@@ -1635,7 +1683,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       credentials: 'include',
       body: JSON.stringify({ data: this.lastAnnotationData }),
       keepalive: true,
-    }).catch((err) => { console.error('[PDF Annotations Sync] Sync save failed:', err); });
+    }).catch((err: unknown) => { console.error('[PDF Annotations Sync] Sync save failed:', err); });
   }
 
   private cacheAnnotationData(): void {
@@ -1688,7 +1736,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       if (!id || seenIds.has(id)) return false;
 
       // Strict whitelist check
-      const type = ann?.type as number;
+      const type = ann?.type;
       if (!allowedSubtypes.has(type)) return false;
 
       // Only allow if it's in our DB-tracked set (for sync)

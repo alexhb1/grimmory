@@ -3,21 +3,32 @@ import {ReplaySubject, Subject, skip, take} from 'rxjs';
 import type {
   EmbedPdfContainer,
   PluginRegistry,
+  ScrollPlugin,
   ScrollCapability,
+  ZoomPlugin,
   ZoomCapability,
-  ZoomMode,
+  ZoomLevel,
+  AnnotationPlugin,
   AnnotationCapability,
   AnnotationTransferItem,
+  BookmarkPlugin,
   BookmarkCapability,
   PageChangeEvent,
   AnnotationEvent,
+  SearchPlugin,
   SearchCapability,
+  SpreadPlugin,
   SpreadCapability,
-  SpreadMode,
+  RotatePlugin,
   RotateCapability,
+  PanPlugin,
   PanCapability,
+  I18nPlugin,
   I18nCapability,
+  DocumentManagerPlugin,
 } from '@embedpdf/snippet';
+import {ScrollStrategy, SpreadMode, ZoomMode} from '@embedpdf/snippet';
+import {PdfActionType, type PdfBookmarkObject} from '@embedpdf/models';
 
 
 export interface PdfOutlineItem {
@@ -28,29 +39,40 @@ export interface PdfOutlineItem {
 
 export type PdfScrollLayout = 'vertical' | 'horizontal';
 
-type ScrollLayoutMethod = (layout: PdfScrollLayout) => void;
-type ReadScrollLayoutMethod = () => string;
+export function parsePdfZoomLevel(level: string): ZoomLevel | null {
+  switch (level) {
+    case 'automatic':
+      return ZoomMode.Automatic;
+    case 'fit-page':
+      return ZoomMode.FitPage;
+    case 'fit-width':
+      return ZoomMode.FitWidth;
+  }
 
-interface ScrollLayoutCapability extends Omit<ScrollCapability, 'onLayoutReady' | 'setScrollStrategy'> {
-  onLayoutReady?: (cb: () => void) => () => void;
-  setScrollStrategy?: ScrollLayoutMethod;
-  setScrollMode?: ScrollLayoutMethod;
-  setLayoutMode?: ScrollLayoutMethod;
-  getScrollStrategy?: ReadScrollLayoutMethod;
-  getScrollMode?: ReadScrollLayoutMethod;
-  getLayoutMode?: ReadScrollLayoutMethod;
+  const percentage = /^(\d+(?:\.\d+)?)%$/.exec(level);
+  if (!percentage) return null;
+
+  const numericLevel = Number(percentage[1]) / 100;
+  return numericLevel > 0 ? numericLevel : null;
 }
 
-interface DocumentOpenedEvent {
-  id: string;
-  document?: {
-    pageCount: number;
-  } | null;
-  pageCount?: number;
-}
+export function toPdfOutlineItems(items: readonly PdfBookmarkObject[]): PdfOutlineItem[] {
+  return items.map(entry => {
+    let pageIndex = 0;
 
-interface DocumentManagerCapability {
-  onDocumentOpened?: (cb: (ev: DocumentOpenedEvent) => void) => () => void;
+    const target = entry.target;
+    if (target?.type === 'destination') {
+      pageIndex = target.destination.pageIndex;
+    } else if (target?.type === 'action' && target.action.type === PdfActionType.Goto) {
+      pageIndex = target.action.destination.pageIndex;
+    }
+
+    return {
+      title: entry.title,
+      pageIndex,
+      children: toPdfOutlineItems(entry.children ?? []),
+    };
+  });
 }
 
 interface GrimmoryWindowState {
@@ -59,6 +81,11 @@ interface GrimmoryWindowState {
   __grimmoryOrigBlob?: typeof Blob;
   __grimmoryOrigWorker?: typeof Worker;
   __grimmoryOrigRelease?: typeof Element.prototype.releasePointerCapture;
+}
+
+function isWorkerStatusMessage(value: unknown): value is {type: 'ready' | 'wasmError'} {
+  if (typeof value !== 'object' || value === null || !('type' in value)) return false;
+  return value.type === 'ready' || value.type === 'wasmError';
 }
 
 @Injectable()
@@ -89,7 +116,7 @@ export class EmbedPdfBookService {
 
 
   private getMutableWindow(): Window & typeof globalThis & GrimmoryWindowState {
-    return window as Window & typeof globalThis & GrimmoryWindowState;
+    return window;
   }
 
   pageChange$ = new Subject<PageChangeEvent>();
@@ -160,7 +187,7 @@ export class EmbedPdfBookService {
         ],
       },
       zoom: {
-        defaultZoomLevel: 'fit-page' as ZoomMode,
+        defaultZoomLevel: ZoomMode.FitPage,
       },
       render: {
         // Keep book-viewer text crisp across viewport sizes.
@@ -180,33 +207,33 @@ export class EmbedPdfBookService {
 
     this.registry = await this.container.registry;
 
-    const scrollPlugin = this.registry.getPlugin('scroll');
-    this.scroll = scrollPlugin?.provides?.() as ScrollCapability ?? null;
+    const scrollPlugin = this.registry.getPlugin<ScrollPlugin>('scroll');
+    this.scroll = scrollPlugin?.provides() ?? null;
     this.applyScrollLayout(this.scrollLayout);
 
-    const zoomPlugin = this.registry.getPlugin('zoom');
-    this.zoom = zoomPlugin?.provides?.() as ZoomCapability ?? null;
+    const zoomPlugin = this.registry.getPlugin<ZoomPlugin>('zoom');
+    this.zoom = zoomPlugin?.provides() ?? null;
 
-    const annotationPlugin = this.registry.getPlugin('annotation');
-    this.annotation = annotationPlugin?.provides?.() as AnnotationCapability ?? null;
+    const annotationPlugin = this.registry.getPlugin<AnnotationPlugin>('annotation');
+    this.annotation = annotationPlugin?.provides() ?? null;
 
-    const bookmarkPlugin = this.registry.getPlugin('bookmark');
-    this.bookmark = bookmarkPlugin?.provides?.() as BookmarkCapability ?? null;
+    const bookmarkPlugin = this.registry.getPlugin<BookmarkPlugin>('bookmark');
+    this.bookmark = bookmarkPlugin?.provides() ?? null;
 
-    const searchPlugin = this.registry.getPlugin('search');
-    this.search = searchPlugin?.provides?.() as SearchCapability ?? null;
+    const searchPlugin = this.registry.getPlugin<SearchPlugin>('search');
+    this.search = searchPlugin?.provides() ?? null;
 
-    const spreadPlugin = this.registry.getPlugin('spread');
-    this.spread = spreadPlugin?.provides?.() as SpreadCapability ?? null;
+    const spreadPlugin = this.registry.getPlugin<SpreadPlugin>('spread');
+    this.spread = spreadPlugin?.provides() ?? null;
 
-    const rotatePlugin = this.registry.getPlugin('rotate');
-    this.rotate = rotatePlugin?.provides?.() as RotateCapability ?? null;
+    const rotatePlugin = this.registry.getPlugin<RotatePlugin>('rotate');
+    this.rotate = rotatePlugin?.provides() ?? null;
 
-    const panPlugin = this.registry.getPlugin('pan');
-    this.pan = panPlugin?.provides?.() as PanCapability ?? null;
+    const panPlugin = this.registry.getPlugin<PanPlugin>('pan');
+    this.pan = panPlugin?.provides() ?? null;
 
-    const i18nPlugin = this.registry.getPlugin('i18n');
-    this.i18n = i18nPlugin?.provides?.() as I18nCapability ?? null;
+    const i18nPlugin = this.registry.getPlugin<I18nPlugin>('i18n');
+    this.i18n = i18nPlugin?.provides() ?? null;
     this.applyLocale(requestedLocale);
 
     // wire events
@@ -215,22 +242,19 @@ export class EmbedPdfBookService {
         this.pageChange$.next(ev);
       });
 
-      const scrollWithLayoutReady = this.scroll as ScrollLayoutCapability;
-      if (typeof scrollWithLayoutReady.onLayoutReady === 'function') {
-        this.layoutReadyUnsub = scrollWithLayoutReady.onLayoutReady(() => {
-          this.zone.run(() => this.layoutReady$.next());
-        });
-      }
+      this.layoutReadyUnsub = this.scroll.onLayoutReady(() => {
+        this.zone.run(() => this.layoutReady$.next());
+      });
     }
 
     // Listen for document opened via document-manager plugin
-    const dmPlugin = this.registry.getPlugin('document-manager');
-    const dm = dmPlugin?.provides?.() as DocumentManagerCapability | null;
-    if (dm && typeof dm.onDocumentOpened === 'function') {
-      this.documentOpenedUnsub = dm.onDocumentOpened((ev: DocumentOpenedEvent) => {
+    const dmPlugin = this.registry.getPlugin<DocumentManagerPlugin>('document-manager');
+    const documentManager = dmPlugin?.provides() ?? null;
+    if (documentManager) {
+      this.documentOpenedUnsub = documentManager.onDocumentOpened(ev => {
         this.zone.run(() => {
           this.currentDocumentId = ev.id;
-          const pageCount = ev.document?.pageCount ?? ev.pageCount ?? this.scroll?.getTotalPages() ?? 0;
+          const pageCount = ev.document?.pageCount ?? this.scroll?.getTotalPages() ?? 0;
           this.documentOpened$.next({pageCount});
         });
       });
@@ -310,7 +334,10 @@ export class EmbedPdfBookService {
   }
 
   setZoomLevel(level: string): void {
-    this.zoom?.requestZoom(level as ZoomMode);
+    const zoomLevel = parsePdfZoomLevel(level);
+    if (zoomLevel !== null) {
+      this.zoom?.requestZoom(zoomLevel);
+    }
   }
 
   // --- Search ---
@@ -360,12 +387,17 @@ export class EmbedPdfBookService {
 
   // --- Spread/Layout ---
 
-  getSpreadMode(): string {
-    return this.spread?.getSpreadMode?.() ?? 'none';
+  getSpreadMode(): SpreadMode {
+    return this.spread?.getSpreadMode() ?? SpreadMode.None;
   }
 
-  setSpreadMode(mode: string): void {
-    this.spread?.setSpreadMode?.(mode as SpreadMode);
+  setSpreadMode(mode: 'none' | 'odd' | 'even'): void {
+    const spreadMode = {
+      none: SpreadMode.None,
+      odd: SpreadMode.Odd,
+      even: SpreadMode.Even,
+    }[mode];
+    this.spread?.setSpreadMode(spreadMode);
   }
 
   // --- Rotation ---
@@ -401,19 +433,9 @@ export class EmbedPdfBookService {
     return tool?.id ?? null;
   }
 
-  async importAnnotations(items: AnnotationTransferItem[]): Promise<void> {
+  importAnnotations(items: AnnotationTransferItem[]): void {
     if (!this.annotation || items.length === 0) return;
-    const result = this.annotation.importAnnotations(items) as unknown;
-    interface EpdfTask { wait: (res: (v?: unknown) => void, rej: (e?: unknown) => void) => void; }
-
-    if (result && typeof result === 'object' && 'wait' in result) {
-      const task = result as EpdfTask;
-      if (typeof task.wait === 'function') {
-        return new Promise<void>((resolve, reject) => {
-          task.wait(() => resolve(), (err) => reject(err));
-        });
-      }
-    }
+    this.annotation.importAnnotations(items);
   }
 
   deleteAnnotation(pageIndex: number, annotationId: string): void {
@@ -428,10 +450,10 @@ export class EmbedPdfBookService {
   async getOutline(): Promise<PdfOutlineItem[]> {
     if (!this.bookmark) return [];
     try {
-      const result = await new Promise<{bookmarks: unknown[]}>((resolve, reject) => {
+      const result = await new Promise<{bookmarks: PdfBookmarkObject[]}>((resolve, reject) => {
         this.bookmark!.getBookmarks().wait(resolve, reject);
       });
-      return this.convertBookmarks(result.bookmarks);
+      return toPdfOutlineItems(result.bookmarks);
     } catch {
       return [];
     }
@@ -486,59 +508,8 @@ export class EmbedPdfBookService {
 
   private applyScrollLayout(layout: PdfScrollLayout): void {
     if (!this.scroll) return;
-    const scrollLayoutCap = this.scroll as ScrollLayoutCapability;
-
-    if (typeof scrollLayoutCap.setScrollStrategy === 'function') {
-      scrollLayoutCap.setScrollStrategy(layout);
-      return;
-    }
-
-    if (typeof scrollLayoutCap.setScrollMode === 'function') {
-      scrollLayoutCap.setScrollMode(layout);
-      return;
-    }
-
-    if (typeof scrollLayoutCap.setLayoutMode === 'function') {
-      scrollLayoutCap.setLayoutMode(layout);
-    }
-  }
-
-  private convertBookmarks(items: unknown[]): PdfOutlineItem[] {
-    if (!Array.isArray(items)) return [];
-
-    interface EpdfBookmark {
-      title?: string;
-      target?: {
-        type?: 'destination' | 'action' | string;
-        destination?: {pageIndex?: number};
-        action?: {
-          type?: number;
-          destination?: {pageIndex?: number};
-        };
-      };
-      children?: unknown[];
-    }
-
-    return items.map((item: unknown) => {
-      const entry = item as EpdfBookmark;
-      let pageIndex = 0;
-
-      const target = entry.target;
-      if (target) {
-        if (target.type === 'destination') {
-          pageIndex = target.destination?.pageIndex ?? 0;
-        } else if (target.type === 'action' && target.action?.type === 1) {
-          // Type 1 is PdfActionType.Goto (internal to PDF viewer)
-          pageIndex = target.action.destination?.pageIndex ?? 0;
-        }
-      }
-
-      return {
-        title: String(entry.title || ''),
-        pageIndex: pageIndex,
-        children: this.convertBookmarks(entry.children || []),
-      };
-    });
+    const strategy = layout === 'vertical' ? ScrollStrategy.Vertical : ScrollStrategy.Horizontal;
+    this.scroll.setScrollStrategy(strategy);
   }
 
   /**
@@ -605,57 +576,58 @@ export class EmbedPdfBookService {
     // --- Blob shim ---
     const OrigBlob = window.Blob;
     w.__grimmoryOrigBlob = OrigBlob;
-    const PatchedBlob = function (parts: BlobPart[], opts?: BlobPropertyBag): Blob {
-      if (parts?.length >= 1 && typeof parts[0] === 'string') {
-        const src = parts[0] as string;
-        if (src.includes('wasmInit') && src.includes('runner.prepare()')) {
-          let patched = src;
-          patched = patched.replace(
-            'self.postMessage({ type: "wasmError", error: message });',
-            'console.error("[Worker] WASM init FAILED:", message);\n' +
-            '      self.postMessage({ type: "wasmError", error: message });'
-          );
-          patched = patched.replace(
-            'await runner.prepare();',
-            'await runner.prepare();\n' +
-            '      console.log("[Worker] prepare() OK, posting ready");\n' +
-            '      self.postMessage({ type: "ready" });'
-          );
-          parts = [patched];
+    class PatchedBlob extends OrigBlob {
+      constructor(parts?: BlobPart[], opts?: BlobPropertyBag) {
+        let patchedParts = parts;
+        if (parts?.length && typeof parts[0] === 'string') {
+          const src = parts[0];
+          if (src.includes('wasmInit') && src.includes('runner.prepare()')) {
+            let patched = src;
+            patched = patched.replace(
+              'self.postMessage({ type: "wasmError", error: message });',
+              'console.error("[Worker] WASM init FAILED:", message);\n' +
+              '      self.postMessage({ type: "wasmError", error: message });'
+            );
+            patched = patched.replace(
+              'await runner.prepare();',
+              'await runner.prepare();\n' +
+              '      console.log("[Worker] prepare() OK, posting ready");\n' +
+              '      self.postMessage({ type: "ready" });'
+            );
+            patchedParts = [patched];
+          }
         }
+        super(patchedParts, opts);
       }
-      return new OrigBlob(parts, opts);
-    } as unknown as typeof Blob;
-    PatchedBlob.prototype = OrigBlob.prototype;
-    Object.setPrototypeOf(PatchedBlob, OrigBlob);
+    }
     w.Blob = PatchedBlob;
 
     // --- Worker shim ---
     const OrigWorker = window.Worker;
     w.__grimmoryOrigWorker = OrigWorker;
-    const PatchedWorker = function (url: string | URL, opts?: WorkerOptions): Worker {
-      const worker = new OrigWorker(url, opts);
-      const urlStr = typeof url === 'string' ? url : url.toString();
-      if (urlStr.startsWith('blob:') && opts?.type === 'module') {
-        let readySent = false;
-        let wasmError = false;
-        setTimeout(() => {
-          if (!readySent && !wasmError) {
-            readySent = true;
-            worker.dispatchEvent(new MessageEvent('message', {
-              data: {type: 'ready'}
-            }));
-          }
-        }, 5000);
-        worker.addEventListener('message', (evt: MessageEvent) => {
-          if (evt.data?.type === 'ready') readySent = true;
-          if (evt.data?.type === 'wasmError') wasmError = true;
-        });
+    class PatchedWorker extends OrigWorker {
+      constructor(url: string | URL, opts?: WorkerOptions) {
+        super(url, opts);
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        if (urlStr.startsWith('blob:') && opts?.type === 'module') {
+          let readySent = false;
+          let wasmError = false;
+          setTimeout(() => {
+            if (!readySent && !wasmError) {
+              readySent = true;
+              this.dispatchEvent(new MessageEvent('message', {
+                data: {type: 'ready'}
+              }));
+            }
+          }, 5000);
+          this.addEventListener('message', (event: MessageEvent<unknown>) => {
+            if (!isWorkerStatusMessage(event.data)) return;
+            if (event.data.type === 'ready') readySent = true;
+            if (event.data.type === 'wasmError') wasmError = true;
+          });
+        }
       }
-      return worker;
-    } as unknown as typeof Worker;
-    PatchedWorker.prototype = OrigWorker.prototype;
-    Object.setPrototypeOf(PatchedWorker, OrigWorker);
+    }
     w.Worker = PatchedWorker;
   }
 
@@ -682,6 +654,9 @@ export class EmbedPdfBookService {
   private patchReleasePointerCapture(): void {
     const w = this.getMutableWindow();
     if (w.__grimmoryOrigRelease) return;
+    // EmbedPDF requires the original prototype method to be invoked with each
+    // active element as its receiver; the explicit call below preserves that.
+    // oxlint-disable-next-line typescript/unbound-method
     const orig = Element.prototype.releasePointerCapture;
     w.__grimmoryOrigRelease = orig;
     Element.prototype.releasePointerCapture = function (pointerId: number) {
@@ -820,15 +795,16 @@ export class EmbedPdfBookService {
     this.resizeObserver = new ResizeObserver(() => {
       // When the target container resizes (e.g. mobile chrome change),
       // some engines might need a nudge to recalculate "fit-page" zoom correctly.
-      if (this.zoom && this.getSpreadMode() === 'none') {
+      if (this.zoom && this.getSpreadMode() === SpreadMode.None) {
         const state = this.zoom.getState();
-        if (state.zoomLevel === 'fit-page') {
+        if (state.zoomLevel === ZoomMode.FitPage) {
           // Re-request same zoom mode to trigger recalculation
-          this.zoom.requestZoom('fit-page' as ZoomMode);
+          this.zoom.requestZoom(ZoomMode.FitPage);
         }
       }
     });
     this.resizeObserver.observe(target);
     this.layoutReady$.subscribe(() => this.resizeObserver?.disconnect());
   }
+
 }

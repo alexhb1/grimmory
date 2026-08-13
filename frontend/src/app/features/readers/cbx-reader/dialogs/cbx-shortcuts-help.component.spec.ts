@@ -37,12 +37,10 @@ describe('CbxShortcutsHelpComponent', () => {
     component.closed.subscribe(closeSpy);
 
     component.onClose();
+    const overlay = document.createElement('div');
+    overlay.classList.add('dialog-overlay');
     component.onOverlayClick({
-      target: {
-        classList: {
-          contains: vi.fn((value: string) => value === 'dialog-overlay'),
-        },
-      },
+      target: overlay,
     } as unknown as Event);
 
     expect(closeSpy).toHaveBeenCalledTimes(2);
