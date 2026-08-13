@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { API_CONFIG } from '../../../../core/config/api-config';
 import {EmailRecipient} from '../email-recipient.model';
 
+type EmailRecipientCreateRequest = Pick<EmailRecipient, 'name' | 'email' | 'defaultRecipient'>;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -16,7 +18,7 @@ export class EmailV2RecipientService {
     return this.http.get<EmailRecipient[]>(this.url);
   }
 
-  createRecipient(recipient: EmailRecipient): Observable<EmailRecipient> {
+  createRecipient(recipient: EmailRecipientCreateRequest): Observable<EmailRecipient> {
     return this.http.post<EmailRecipient>(this.url, recipient);
   }
 

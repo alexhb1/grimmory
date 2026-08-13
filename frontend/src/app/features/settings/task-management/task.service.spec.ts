@@ -78,21 +78,21 @@ describe('TaskService', () => {
   });
 
   it('updates cron config', async () => {
-    const requestPromise = firstValueFrom(service.updateCronConfig('task-type', {cronExpression: '0 0 * * *', enabled: true}));
+    const requestPromise = firstValueFrom(service.updateCronConfig(TaskType.CLEANUP_DELETED_BOOKS, {cronExpression: '0 0 * * *', enabled: true}));
 
-    const request = httpTestingController.expectOne(`${API_CONFIG.BASE_URL}/api/v1/tasks/task-type/cron`);
+    const request = httpTestingController.expectOne(`${API_CONFIG.BASE_URL}/api/v1/tasks/${TaskType.CLEANUP_DELETED_BOOKS}/cron`);
     expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({cronExpression: '0 0 * * *', enabled: true});
-    request.flush({id: 1, taskType: 'task-type', cronExpression: '0 0 * * *', enabled: true, options: null, createdAt: null, updatedAt: null});
+    request.flush({id: 1, taskType: TaskType.CLEANUP_DELETED_BOOKS, cronExpression: '0 0 * * *', enabled: true, options: null, createdAt: null, updatedAt: null});
 
-    await expect(requestPromise).resolves.toEqual({id: 1, taskType: 'task-type', cronExpression: '0 0 * * *', enabled: true, options: null, createdAt: null, updatedAt: null});
+    await expect(requestPromise).resolves.toEqual({id: 1, taskType: TaskType.CLEANUP_DELETED_BOOKS, cronExpression: '0 0 * * *', enabled: true, options: null, createdAt: null, updatedAt: null});
   });
 
   it('publishes task progress updates', async () => {
     const progressPromise = firstValueFrom(service.taskProgress$.pipe(skip(1)));
 
-    service.handleTaskProgress({taskId: 'task-1', taskType: 'refresh', message: 'working', progress: 25, taskStatus: TaskStatus.IN_PROGRESS});
+    service.handleTaskProgress({taskId: 'task-1', taskType: TaskType.REFRESH_LIBRARY_METADATA, message: 'working', progress: 25, taskStatus: TaskStatus.IN_PROGRESS});
 
-    await expect(progressPromise).resolves.toEqual({taskId: 'task-1', taskType: 'refresh', message: 'working', progress: 25, taskStatus: TaskStatus.IN_PROGRESS});
+    await expect(progressPromise).resolves.toEqual({taskId: 'task-1', taskType: TaskType.REFRESH_LIBRARY_METADATA, message: 'working', progress: 25, taskStatus: TaskStatus.IN_PROGRESS});
   });
 });

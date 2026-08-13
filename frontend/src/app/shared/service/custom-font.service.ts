@@ -64,7 +64,7 @@ export class CustomFontService {
         this.queryClient.setQueryData<CustomFont[]>(CUSTOM_FONTS_QUERY_KEY, current =>
           [...(current ?? []), font]
         );
-        this.loadFontFace(font).catch(err => {
+        this.loadFontFace(font).catch((err: unknown) => {
           console.error('Failed to load font after upload:', err);
         });
       })

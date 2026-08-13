@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, ErrorHandler, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, Router} from '@angular/router';
 import {TableLazyLoadEvent, TableModule} from '@openng/optimus-ui/table';
@@ -52,6 +52,7 @@ export class AuditLogsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly errorHandler = inject(ErrorHandler);
 
   logs = signal<AuditLog[]>([]);
   totalRecords = signal(0);
@@ -202,8 +203,10 @@ export class AuditLogsComponent implements OnInit {
   }
 
   countryCodeToFlag(code: string): string {
-    if (!code || code.length !== 2) return '';
-    return [...code.toUpperCase()]
+    const normalizedCode = code.toUpperCase();
+    if (!/^[A-Z]{2}$/.test(normalizedCode)) return '';
+
+    return Array.from(normalizedCode)
       .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65))
       .join('');
   }
@@ -236,8 +239,10 @@ export class AuditLogsComponent implements OnInit {
     const params = this.route.snapshot.queryParams;
     if (params['page']) this.currentPage = +params['page'];
     if (params['size']) this.rows = +params['size'];
-    if (params['action']) this.selectedAction = params['action'];
-    if (params['username']) this.selectedUsername = params['username'];
+    const action: unknown = params['action'];
+    const username: unknown = params['username'];
+    this.selectedAction = typeof action === 'string' ? action : null;
+    this.selectedUsername = typeof username === 'string' ? username : null;
     if (params['from'] || params['to']) {
       const from = params['from'] ? new Date(params['from'] + 'T00:00:00') : null;
       const to = params['to'] ? new Date(params['to'] + 'T00:00:00') : null;
@@ -254,7 +259,9 @@ export class AuditLogsComponent implements OnInit {
       from: this.dateRange?.[0] ? this.formatDate(this.dateRange[0]) : null,
       to: this.dateRange?.[1] ? this.formatDate(this.dateRange[1]) : null,
     };
-    this.router.navigate([], {queryParams, queryParamsHandling: 'merge', replaceUrl: true});
+    this.router.navigate([], {queryParams, queryParamsHandling: 'merge', replaceUrl: true}).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 
   private formatDate(date: Date): string {

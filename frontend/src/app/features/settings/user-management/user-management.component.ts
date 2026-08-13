@@ -18,6 +18,7 @@ import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {DialogLauncherService} from '../../../shared/services/dialog-launcher.service';
 import {ContentRestrictionsEditorComponent} from './content-restrictions-editor/content-restrictions-editor.component';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 export interface UserWithEditing extends User {
   isEditing?: boolean;
@@ -85,7 +86,7 @@ export class UserManagementComponent implements OnInit {
         this.users.set(data.map((user: UserWithEditing) => ({
           ...user,
           isEditing: false,
-          selectedLibraryIds: user.assignedLibraries?.map((lib) => lib.id!).filter(id => id !== undefined) as number[] || [],
+          selectedLibraryIds: user.assignedLibraries?.map(lib => lib.id).filter(id => id !== undefined) || [],
           libraryNames:
             user.assignedLibraries?.map((lib) => lib.name).join(', ') || '',
         })));
@@ -174,13 +175,14 @@ export class UserManagementComponent implements OnInit {
           });
           this.loadUsers();
         },
-        error: (err) => {
+        error: (error: unknown) => {
           this.messageService.add({
             severity: 'error',
             summary: this.t.translate('common.error'),
-            detail:
-              err.error?.message ||
+            detail: getApiErrorMessage(
+              error,
               this.t.translate('settingsUsers.deleteError', {username: user.username}),
+            ),
           });
         },
       });
@@ -218,8 +220,11 @@ export class UserManagementComponent implements OnInit {
             });
             this.isPasswordDialogVisible = false;
           },
-          error: (err) => {
-            this.passwordError = err;
+          error: (error: unknown) => {
+            this.passwordError = getApiErrorMessage(
+              error,
+              'An unexpected error occurred. Please try again.',
+            );
           }
         });
     }

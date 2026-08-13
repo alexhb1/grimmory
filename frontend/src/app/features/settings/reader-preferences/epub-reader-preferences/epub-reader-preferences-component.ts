@@ -57,7 +57,7 @@ export class EpubReaderPreferencesComponent {
     if (fonts.length === 0 && this.customFontService.isFontsLoading()) return;
 
     untracked(() => {
-      this.customFontService.loadAllFonts(fonts).catch(err => {
+      this.customFontService.loadAllFonts(fonts).catch((err: unknown) => {
         console.error('Failed to load custom fonts:', err);
       });
     });

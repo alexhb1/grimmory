@@ -264,7 +264,7 @@ export class AuthorBrowserComponent implements OnInit {
     ];
 
     const sortParam = this.activatedRoute.snapshot.queryParamMap.get('sort');
-    const dirParam = this.activatedRoute.snapshot.queryParamMap.get('dir') as SortDirection | null;
+    const dirParam = this.activatedRoute.snapshot.queryParamMap.get('dir');
     if (sortParam && this.validSortValues.includes(sortParam)) {
       this.sortBy.set(sortParam);
       this.sortDirection.set(dirParam === 'asc' || dirParam === 'desc' ? dirParam : DEFAULT_SORT_DIRECTIONS[sortParam]);

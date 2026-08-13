@@ -64,7 +64,7 @@ export enum TaskStatus {
 
 export interface CronConfig {
   id: number | null;
-  taskType: string;
+  taskType: TaskType;
   cronExpression: string | null;
   enabled: boolean;
   options: Record<string, unknown> | null;
@@ -73,7 +73,7 @@ export interface CronConfig {
 }
 
 export interface TaskInfo {
-  taskType: string;
+  taskType: TaskType;
   name: string;
   description: string;
   parallel: boolean;
@@ -85,7 +85,7 @@ export interface TaskInfo {
 
 export interface TaskHistory {
   id: string | null;
-  type: string;
+  type: TaskType;
   status: TaskStatus | null;
   progressPercentage: number | null;
   message: string | null;
@@ -107,7 +107,7 @@ export interface TaskCronConfigRequest {
 
 export interface TaskProgressPayload {
   taskId: string;
-  taskType: string;
+  taskType: TaskType;
   message: string;
   progress: number; // 0-100 percentage
   taskStatus: TaskStatus;
@@ -139,7 +139,7 @@ export class TaskService {
     return this.http.delete<TaskCancelResponse>(`${this.baseUrl}/${taskId}/cancel`);
   }
 
-  updateCronConfig(taskType: string, request: TaskCronConfigRequest): Observable<CronConfig> {
+  updateCronConfig(taskType: TaskType, request: TaskCronConfigRequest): Observable<CronConfig> {
     return this.http.patch<CronConfig>(`${this.baseUrl}/${taskType}/cron`, request);
   }
 
