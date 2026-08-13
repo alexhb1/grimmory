@@ -33,7 +33,7 @@ export class LibraryHealthService {
   }
 
   fetchHealth(): void {
-    void this.queryClient.fetchQuery(this.getHealthQueryOptions());
+    void this.queryClient.prefetchQuery(this.getHealthQueryOptions());
   }
 
   initWebsocket(): void {

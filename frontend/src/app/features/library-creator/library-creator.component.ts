@@ -41,7 +41,7 @@ export class LibraryCreatorComponent {
 
   private readonly dialogLauncherService = inject(DialogLauncherService);
   private readonly dynamicDialogRef = inject(DynamicDialogRef);
-  private readonly dynamicDialogConfig = inject(DynamicDialogConfig);
+  private readonly dynamicDialogConfig = inject<DynamicDialogConfig<LibraryCreatorDialogData>>(DynamicDialogConfig);
   private readonly libraryService = inject(LibraryService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -113,7 +113,7 @@ export class LibraryCreatorComponent {
   }
 
   private initFromDialogData(): void {
-    const data = this.dynamicDialogConfig?.data as LibraryCreatorDialogData;
+    const data = this.dynamicDialogConfig.data;
     if (data?.mode !== 'edit') {
       this.mode.set('create');
       return;
@@ -121,7 +121,9 @@ export class LibraryCreatorComponent {
 
     this.mode.set('edit');
 
-    const library = this.libraryService.findLibraryById(data.libraryId!);
+    const library = data.libraryId == null
+      ? undefined
+      : this.libraryService.findLibraryById(data.libraryId);
     if (!library) {
       this.messageService.add({
         severity: 'error',
@@ -274,7 +276,7 @@ export class LibraryCreatorComponent {
     };
 
     if (this.mode() === 'edit') {
-      const libraryId = (this.dynamicDialogConfig.data as LibraryCreatorDialogData)?.libraryId;
+      const libraryId = this.dynamicDialogConfig.data?.libraryId;
       if (libraryId == null) {
         this.messageService.add({
           severity: 'error',
@@ -312,7 +314,9 @@ export class LibraryCreatorComponent {
             if (count >= 500 && createdLibrary.id !== undefined) {
               this.libraryImportProgressService.attachLibrary(createdLibrary.id);
             }
-            this.router.navigate(['/library', createdLibrary.id, 'books']);
+            this.router.navigate(['/library', createdLibrary.id, 'books']).catch((error: unknown) => {
+              console.error('Created library navigation failed:', error);
+            });
             this.messageService.add({
               severity: 'success',
               summary: this.t.translate('libraryCreator.creator.toast.createdSummary'),

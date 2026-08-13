@@ -15,6 +15,7 @@ import {SelectButton} from '@openng/optimus-ui/selectbutton';
 import {DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {ProgressBar} from '@openng/optimus-ui/progressbar';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../models/api-exception.model';
 
 interface UploadingFile {
   file: File;
@@ -253,10 +254,13 @@ export class BookUploaderComponent {
             }
           }
         },
-        error: (err) => {
+        error: (err: unknown) => {
           uploadFile.status = 'Failed';
           uploadFile.progress = 0;
-          uploadFile.errorMessage = err?.error?.message || this.t.translate('shared.bookUploader.toast.uploadFailedDefault');
+          uploadFile.errorMessage = getApiErrorMessage(
+            err,
+            this.t.translate('shared.bookUploader.toast.uploadFailedDefault')
+          );
           this.cdr.detectChanges();
           if (--pending === 0) {
             setTimeout(() => {

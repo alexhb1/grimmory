@@ -166,8 +166,8 @@ const ACTION_DEFINITIONS: readonly ActionDefinition[] = [
   },
 ] as const;
 
-function isVisible<T extends { isVisible?: (permissions: ShellNavPermissions) => boolean }>(
-  definition: T,
+function isVisible(
+  definition: {isVisible?: (permissions: ShellNavPermissions) => boolean},
   permissions: ShellNavPermissions,
 ): boolean {
   return definition.isVisible ? definition.isVisible(permissions) : true;

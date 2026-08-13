@@ -11,10 +11,33 @@ export interface LogNotification {
 }
 
 export function parseLogNotification(messageBody: string): LogNotification {
-  const raw = JSON.parse(messageBody);
+  const raw: unknown = JSON.parse(messageBody);
+  if (!isRecord(raw) || typeof raw['message'] !== 'string') {
+    throw new TypeError('Invalid log WebSocket message');
+  }
+
+  const timestamp = parseTimestamp(raw['timestamp']);
+  const severity = parseSeverity(raw['severity']);
   return {
-    timestamp: raw.timestamp ? new Date(raw.timestamp).toLocaleTimeString() : undefined,
-    message: raw.message,
-    severity: raw.severity ? Severity[raw.severity as keyof typeof Severity] : undefined
+    timestamp,
+    message: raw['message'],
+    severity,
   };
+}
+
+function parseTimestamp(value: unknown): string | undefined {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value))
+    ? new Date(value).toLocaleTimeString()
+    : undefined;
+}
+
+function parseSeverity(value: unknown): Severity | undefined {
+  if (value === Severity.INFO || value === Severity.WARN || value === Severity.ERROR) {
+    return value;
+  }
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

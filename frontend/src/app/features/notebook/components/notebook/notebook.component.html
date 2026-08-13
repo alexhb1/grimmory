@@ -162,7 +162,7 @@
                     [style.border-left-color]="entry.color || 'var(--p-primary-color)'"
                   >
                     <div class="entry-top-row">
-                      <div class="entry-type-badge" [class]="'type-' + entry.type.toLowerCase()">
+                      <div [class]="'entry-type-badge type-' + entry.type.toLowerCase()">
                         <i [class]="getTypeIcon(entry.type)"></i>
                         <span>{{ getTypeLabel(entry.type) }}</span>
                       </div>

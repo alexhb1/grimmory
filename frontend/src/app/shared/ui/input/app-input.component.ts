@@ -152,7 +152,7 @@ export class AppInputComponent implements FormValueControl<string> {
   }
 
   protected onEnterKeyup(event: Event): void {
-    this.enterPressed.emit(event as KeyboardEvent);
+    if (event instanceof KeyboardEvent) this.enterPressed.emit(event);
   }
 
   focus(options?: FocusOptions): void {

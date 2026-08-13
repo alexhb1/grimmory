@@ -9,7 +9,7 @@ describe('EditMetadataGuard', () => {
   const route = {} as ActivatedRouteSnapshot;
   const state = {} as RouterStateSnapshot;
   const router = {
-    navigate: vi.fn(() => Promise.resolve(true)),
+    createUrlTree: vi.fn((commands: string[]) => ({commands})),
   };
   const userService = {
     currentUser: vi.fn<() => {permissions: {admin: boolean; canEditMetadata: boolean}} | null>(),
@@ -17,7 +17,7 @@ describe('EditMetadataGuard', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    router.navigate.mockClear();
+    router.createUrlTree.mockClear();
     userService.currentUser.mockReset();
 
     TestBed.resetTestingModule();
@@ -40,7 +40,7 @@ describe('EditMetadataGuard', () => {
     const result = TestBed.runInInjectionContext(() => EditMetadataGuard(route, state));
 
     expect(result).toBe(true);
-    expect(router.navigate).not.toHaveBeenCalled();
+    expect(router.createUrlTree).not.toHaveBeenCalled();
   });
 
   it('redirects users who lack metadata-edit permissions', () => {
@@ -53,7 +53,7 @@ describe('EditMetadataGuard', () => {
 
     const result = TestBed.runInInjectionContext(() => EditMetadataGuard(route, state));
 
-    expect(result).toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    expect(result).toEqual({commands: ['/dashboard']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
   });
 });

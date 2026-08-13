@@ -89,7 +89,7 @@ describe("AppComponent", () => {
     metadataProgressService = { handleIncomingProgress: vi.fn() };
     bookdropFileService = { handleIncomingFile: vi.fn() };
     taskService = { handleTaskProgress: vi.fn() };
-    libraryHealthService = { initWebsocket: vi.fn(), fetchHealth: vi.fn() };
+    libraryHealthService = { initWebsocket: vi.fn(), fetchHealth: vi.fn(() => Promise.resolve()) };
     authService = { forceLogout: vi.fn(), isAuthenticated: signal(auth.authenticated) };
     libraryImportProgressService = { recordBookAdded: vi.fn() };
     commandPaletteService = {

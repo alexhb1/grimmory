@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ErrorHandler, inject, signal } from '@angular/core';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
 import { email, form, FormField, minLength, required, validate } from '@angular/forms/signals';
@@ -137,9 +137,12 @@ interface ButtonExample {
 })
 export class DesignSystemComponent {
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
 
   openExample(path: string): void {
-    void this.router.navigate(['/design-system', 'form', path]);
+    this.router.navigate(['/design-system', 'form', path]).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 
   readonly buttonExamples: ButtonExample[] = [

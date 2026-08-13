@@ -75,17 +75,26 @@ export class MetadataUtilsService {
   }
 
   normalizeForComparison(field1: unknown, field2: unknown): [string | undefined, string | undefined] {
+    const compareValues = (a: unknown, b: unknown): number => {
+      const first = String(a);
+      const second = String(b);
+      return first < second ? -1 : first > second ? 1 : 0;
+    };
     let val1: string | undefined = undefined;
     let val2: string | undefined = undefined;
 
     if (Array.isArray(field1)) {
-      val1 = field1.length > 0 ? JSON.stringify([...field1].sort()) : undefined;
+      val1 = field1.length > 0
+        ? JSON.stringify([...field1].sort(compareValues))
+        : undefined;
     } else if (field1 != null && field1 !== '') {
       val1 = String(field1);
     }
 
     if (Array.isArray(field2)) {
-      val2 = field2.length > 0 ? JSON.stringify([...field2].sort()) : undefined;
+      val2 = field2.length > 0
+        ? JSON.stringify([...field2].sort(compareValues))
+        : undefined;
     } else if (field2 != null && field2 !== '') {
       val2 = String(field2);
     }

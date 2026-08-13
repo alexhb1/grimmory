@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ErrorHandler, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
@@ -70,10 +70,11 @@ function createInitialModel(): DeviceFormModel {
 })
 export class DeviceFormExampleComponent {
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
 
   readonly model = signal<DeviceFormModel>(createInitialModel());
   readonly deviceForm = form(this.model, path => {
-    hidden(path.hardcover.apiKey, ({ valueOf }) => !valueOf(path.hardcover.enabled));
+    hidden(path.hardcover.apiKey, context => !context.valueOf(path.hardcover.enabled));
     required(path.hardcover.apiKey, { message: 'Enter your Hardcover API key' });
     minLength(path.hardcover.apiKey, 20, { message: 'Hardcover keys are at least 20 characters' });
 
@@ -83,20 +84,20 @@ export class DeviceFormExampleComponent {
     max(path.kobo.markAsFinished, 100);
     min(path.kobo.conversionLimitMb, 1);
     max(path.kobo.conversionLimitMb, 250);
-    hidden(path.kobo.twoWaySync, ({ valueOf }) => !valueOf(path.kobo.enabled));
-    hidden(path.kobo.convertToKepub, ({ valueOf }) => !valueOf(path.kobo.enabled));
-    hidden(path.kobo.markAsReading, ({ valueOf }) => !valueOf(path.kobo.enabled));
-    hidden(path.kobo.markAsFinished, ({ valueOf }) => !valueOf(path.kobo.enabled));
-    hidden(path.kobo.conversionLimitMb, ({ valueOf }) => !valueOf(path.kobo.enabled));
-    validate(path.kobo.twoWaySync, ({ value, valueOf }) =>
-      value() && !valueOf(path.kobo.convertToKepub)
+    hidden(path.kobo.twoWaySync, context => !context.valueOf(path.kobo.enabled));
+    hidden(path.kobo.convertToKepub, context => !context.valueOf(path.kobo.enabled));
+    hidden(path.kobo.markAsReading, context => !context.valueOf(path.kobo.enabled));
+    hidden(path.kobo.markAsFinished, context => !context.valueOf(path.kobo.enabled));
+    hidden(path.kobo.conversionLimitMb, context => !context.valueOf(path.kobo.enabled));
+    validate(path.kobo.twoWaySync, context =>
+      context.value() && !context.valueOf(path.kobo.convertToKepub)
         ? { kind: 'needsKepub', message: 'Two-way sync needs KEPUB conversion turned on' }
         : null,
     );
 
-    hidden(path.koreader.syncWithWebReader, ({ valueOf }) => !valueOf(path.koreader.enabled));
-    hidden(path.koreader.username, ({ valueOf }) => !valueOf(path.koreader.enabled));
-    hidden(path.koreader.password, ({ valueOf }) => !valueOf(path.koreader.enabled));
+    hidden(path.koreader.syncWithWebReader, context => !context.valueOf(path.koreader.enabled));
+    hidden(path.koreader.username, context => !context.valueOf(path.koreader.enabled));
+    hidden(path.koreader.password, context => !context.valueOf(path.koreader.enabled));
     required(path.koreader.username, { message: 'Choose a sync username' });
     required(path.koreader.password, { message: 'Set a sync password' });
     minLength(path.koreader.password, 6, { message: 'Use at least 6 characters' });
@@ -137,7 +138,9 @@ export class DeviceFormExampleComponent {
   }
 
   back(): void {
-    void this.router.navigate(['/design-system']);
+    this.router.navigate(['/design-system']).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 }
 

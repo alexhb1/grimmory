@@ -8,6 +8,7 @@ import {MessageService} from '@openng/optimus-ui/api';
 import {UserService} from '../../../features/settings/user-management/user.service';
 import {AuthService} from '../../service/auth.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getApiErrorMessage} from '../../models/api-exception.model';
 
 @Component({
   selector: 'app-change-password',
@@ -63,12 +64,15 @@ export class ChangePasswordComponent {
         this.successMessage = this.t.translate('shared.changePassword.toast.success');
         this.logout();
       },
-      error: (err) => {
-        this.errorMessage = err.message;
+      error: (error: unknown) => {
+        this.errorMessage = getApiErrorMessage(
+          error,
+          this.t.translate('shared.changePassword.toast.failedDetailDefault')
+        );
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('shared.changePassword.toast.failedSummary'),
-          detail: this.errorMessage ?? this.t.translate('shared.changePassword.toast.failedDetailDefault')
+          detail: this.errorMessage
         });
       }
     });

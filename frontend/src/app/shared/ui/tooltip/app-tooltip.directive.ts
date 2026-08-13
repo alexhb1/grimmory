@@ -85,7 +85,7 @@ export class AppTooltipDirective {
   }
 
   private readonly onDocumentPointerDown = (event: PointerEvent): void => {
-    if (this.host.nativeElement.contains(event.target as Node)) return;
+    if (event.target instanceof Node && this.host.nativeElement.contains(event.target)) return;
     document.removeEventListener('pointerdown', this.onDocumentPointerDown, true);
     this.hide();
   };

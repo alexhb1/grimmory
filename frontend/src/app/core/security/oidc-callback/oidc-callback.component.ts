@@ -1,8 +1,9 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {Component, ErrorHandler, inject, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {TranslocoPipe} from '@jsverse/transloco';
 import {OidcService} from '../oidc.service';
 import {AuthService} from '../../../shared/service/auth.service';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 
 @Component({
   selector: 'app-oidc-callback',
@@ -14,6 +15,7 @@ export class OidcCallbackComponent implements OnInit {
   private router = inject(Router);
   private oidcService = inject(OidcService);
   private authService = inject(AuthService);
+  private errorHandler = inject(ErrorHandler);
 
   ngOnInit(): void {
     const params = new URLSearchParams(window.location.search);
@@ -22,7 +24,7 @@ export class OidcCallbackComponent implements OnInit {
     if (error) {
       const description = params.get('error_description') || error;
       console.error('[OIDC Callback] Provider returned error:', error, description);
-      this.router.navigate(['/login'], {queryParams: {oidcError: description}});
+      this.redirectToLogin(description);
       return;
     }
 
@@ -31,20 +33,20 @@ export class OidcCallbackComponent implements OnInit {
 
     if (!code || !returnedState) {
       console.error('[OIDC Callback] Missing code or state');
-      this.router.navigate(['/login'], {queryParams: {oidcError: 'missing_code'}});
+      this.redirectToLogin('missing_code');
       return;
     }
 
     const pkceState = this.oidcService.retrievePkceState(returnedState);
     if (!pkceState) {
       console.error('[OIDC Callback] No PKCE state found for state parameter');
-      this.router.navigate(['/login'], {queryParams: {oidcError: 'missing_pkce_state'}});
+      this.redirectToLogin('missing_pkce_state');
       return;
     }
 
     if (returnedState !== pkceState.state) {
       console.error('[OIDC Callback] State mismatch');
-      this.router.navigate(['/login'], {queryParams: {oidcError: 'state_mismatch'}});
+      this.redirectToLogin('state_mismatch');
       return;
     }
 
@@ -53,17 +55,19 @@ export class OidcCallbackComponent implements OnInit {
         sessionStorage.removeItem('oidc_redirect_count');
         this.authService.saveInternalTokens(response.accessToken, response.refreshToken, response.expires, response.isDefaultPassword);
         this.authService.initializeWebSocketConnection();
-        if (response.isDefaultPassword) {
-          this.router.navigate(['/change-password']);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
+        const destination = response.isDefaultPassword ? '/change-password' : '/dashboard';
+        void this.router.navigate([destination]).catch((error: unknown) => this.errorHandler.handleError(error));
       },
-      error: (err) => {
-        console.error('[OIDC Callback] Token exchange failed', err);
-        const errorMsg = err.error?.message || 'exchange_failed';
-        this.router.navigate(['/login'], {queryParams: {oidcError: errorMsg}});
+      error: (error: unknown) => {
+        console.error('[OIDC Callback] Token exchange failed', error);
+        const errorMessage = getApiErrorMessage(error, 'exchange_failed');
+        this.redirectToLogin(errorMessage);
       }
     });
+  }
+
+  private redirectToLogin(oidcError: string): void {
+    void this.router.navigate(['/login'], {queryParams: {oidcError}})
+      .catch((error: unknown) => this.errorHandler.handleError(error));
   }
 }

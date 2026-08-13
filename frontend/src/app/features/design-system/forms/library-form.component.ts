@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ErrorHandler, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
@@ -71,6 +71,7 @@ function createInitialModel(): LibraryFormModel {
 })
 export class LibraryFormExampleComponent {
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
 
   readonly submitState = signal<'idle' | 'saved'>('idle');
   readonly submitAttempted = signal(false);
@@ -89,8 +90,8 @@ export class LibraryFormExampleComponent {
       });
       minLength(path.folders, 1, { message: 'Add at least one folder' });
       minLength(path.allowedFormats, 1, { message: 'Allow at least one format' });
-      validate(path.watch, ({ value, valueOf }) =>
-        value() && valueOf(path.metadataSource) === 'NONE'
+      validate(path.watch, context =>
+        context.value() && context.valueOf(path.metadataSource) === 'NONE'
           ? { kind: 'watchWithoutMetadata', message: 'Pick a metadata source or turn watching off' }
           : null,
       );
@@ -162,7 +163,9 @@ export class LibraryFormExampleComponent {
   }
 
   back(): void {
-    void this.router.navigate(['/design-system']);
+    this.router.navigate(['/design-system']).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 }
 

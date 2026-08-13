@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { CanActivate, Router, UrlTree } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
 import { API_CONFIG } from '../../../core/config/api-config';
@@ -12,19 +12,15 @@ export class LoginGuard implements CanActivate {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  canActivate(): Observable<boolean> {
+  canActivate(): Observable<boolean | UrlTree> {
     return this.http.get<{ data: boolean }>(`${this.url}/status`).pipe(
       map(res => {
         if (!res.data) {
-          this.router.navigate(['/setup']);
-          return false;
+          return this.router.createUrlTree(['/setup']);
         }
         return true;
       }),
-      catchError(() => {
-        this.router.navigate(['/setup']);
-        return of(false);
-      })
+      catchError(() => of(this.router.createUrlTree(['/setup'])))
     );
   }
 }

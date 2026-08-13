@@ -124,7 +124,9 @@ export class CommandPaletteComponent {
       case 'Enter': {
         if (this.isMobileViewport()) {
           event.preventDefault();
-          (event.target as HTMLElement | null)?.blur?.();
+          if (event.target instanceof HTMLElement) {
+            event.target.blur();
+          }
           break;
         }
         const active = this.activeItem();

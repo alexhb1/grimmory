@@ -26,7 +26,6 @@ export class CacheStorageService {
     const res = new Response(httpResponse.body, {
       headers: headers,
       status: httpResponse.status,
-      statusText: httpResponse.statusText,
     });
 
     this.put(uri, res.clone());
@@ -51,8 +50,8 @@ export class CacheStorageService {
 
   private async fetchFromUri(uri: string): Promise<HttpResponse<ArrayBuffer>> {
     return firstValueFrom(
-      this.http.get<ArrayBuffer>(uri, {
-        responseType: "arraybuffer" as "json",
+      this.http.get(uri, {
+        responseType: "arraybuffer",
         observe: "response",
         cache: "no-store",
       }),
@@ -64,9 +63,9 @@ export class CacheStorageService {
     if (h == null) return false;
     try {
       const response = await firstValueFrom(
-        this.http.head<ArrayBuffer>(uri, {
+        this.http.head(uri, {
           observe: "response",
-          responseType: "arraybuffer" as "json",
+          responseType: "arraybuffer",
           headers: { "if-modified-since": h },
         }),
       );
@@ -94,13 +93,12 @@ export class CacheStorageService {
     return !!response;
   }
 
-  async put(uri: string, entry: Response): Promise<void> {
-    try {
-      const cache = await this.openCache();
-      if (cache) await cache.put(uri, entry);
-    } catch {
-      // Silently fail — caching is best-effort
-    }
+  private put(uri: string, entry: Response): void {
+    this.openCache()
+      .then(cache => cache?.put(uri, entry))
+      .catch((error: unknown) => {
+        console.warn('Failed to cache response:', error);
+      });
   }
 
   async delete(uri: string): Promise<boolean> {

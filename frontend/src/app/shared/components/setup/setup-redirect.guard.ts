@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { CanActivate, Router, UrlTree } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import {API_CONFIG} from '../../../core/config/api-config';
@@ -13,16 +13,9 @@ export class SetupRedirectGuard implements CanActivate {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  canActivate(): Observable<boolean> {
+  canActivate(): Observable<UrlTree> {
     return this.http.get<{ data: boolean }>(`${this.url}/status`).pipe(
-      map(res => {
-        if (!res.data) {
-          this.router.navigate(['/setup']);
-        } else {
-          this.router.navigate(['/dashboard']);
-        }
-        return false;
-      })
+      map(res => this.router.createUrlTree([res.data ? '/dashboard' : '/setup']))
     );
   }
 }

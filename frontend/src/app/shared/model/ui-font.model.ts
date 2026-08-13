@@ -6,5 +6,5 @@ export const DEFAULT_UI_FONT: UiFontPreference = 'default';
 export const ACCESSIBLE_UI_FONT: UiFontPreference = 'atkinson';
 
 export function normalizeUiFont(value: string | null | undefined): UiFontPreference {
-  return UI_FONT_VALUES.includes(value as UiFontPreference) ? value as UiFontPreference : DEFAULT_UI_FONT;
+  return value === DEFAULT_UI_FONT || value === ACCESSIBLE_UI_FONT ? value : DEFAULT_UI_FONT;
 }

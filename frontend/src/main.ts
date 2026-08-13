@@ -9,7 +9,7 @@ import { CustomReuseStrategy } from './app/core/custom-reuse-strategy';
 import { provideOptimus } from '@openng/optimus-ui/config';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
-import Aura from './app/shared/layout/theme/theme-palette-extend';
+import Aura, {AppOptimusThemeOptions} from './app/shared/layout/theme/theme-palette-extend';
 import { routes } from './app/app.routes';
 import { AuthInterceptorService } from './app/core/security/auth-interceptor.service';
 import { AuthService } from './app/shared/service/auth.service';
@@ -70,10 +70,7 @@ bootstrapApplication(AppComponent, {
     provideOptimus({
       theme: {
         preset: Aura,
-        options: {
-          darkModeSelector: '.dark',
-          cssLayer: { name: 'optimus', order: 'theme, base, optimus, components, utilities' }
-        }
+        options: AppOptimusThemeOptions
       }
     }), provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
@@ -84,4 +81,4 @@ bootstrapApplication(AppComponent, {
       inject(PwaUpdateService);
     })
   ]
-}).catch(err => console.error(err));
+}).catch((err: unknown) => console.error(err));

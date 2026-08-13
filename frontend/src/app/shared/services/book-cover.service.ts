@@ -6,9 +6,8 @@ import {AuthService} from '../service/auth.service';
 
 export interface CoverImage {
   url: string;
-  source?: string;
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
   index: number;
 }
 
@@ -17,6 +16,14 @@ export interface CoverFetchRequest {
   title?: string;
   author?: string;
   coverType?: 'ebook' | 'audiobook';
+}
+
+function isCoverImage(value: unknown): value is CoverImage {
+  return typeof value === 'object' && value !== null
+    && 'url' in value && typeof value.url === 'string'
+    && 'width' in value && typeof value.width === 'number'
+    && 'height' in value && typeof value.height === 'number'
+    && 'index' in value && typeof value.index === 'number';
 }
 
 @Injectable({
@@ -73,7 +80,8 @@ export class BookCoverService {
             }
 
             try {
-              const image = JSON.parse(data) as CoverImage;
+              const image: unknown = JSON.parse(data);
+              if (!isCoverImage(image)) throw new Error('Invalid cover image payload');
               subscriber.next(image);
             } catch (e) {
               console.error('Error parsing SSE data:', e);
@@ -107,7 +115,7 @@ export class BookCoverService {
             reader.releaseLock();
           }
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           if (error instanceof Error && error.name === 'AbortError') {
             return;
           }
@@ -120,4 +128,3 @@ export class BookCoverService {
     });
   }
 }
-

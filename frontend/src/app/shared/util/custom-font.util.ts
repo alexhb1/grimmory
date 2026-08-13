@@ -24,9 +24,19 @@ const MAX_FONT_DISPLAY_LENGTH = 12;
  * Adds custom fonts to a dropdown array with a separator.
  * Removes any existing separator before adding to prevent duplicates.
  */
-export function addCustomFontsToDropdown<T extends FontDropdownItem | FontPreferenceItem>(
+export function addCustomFontsToDropdown(
   fonts: CustomFont[],
-  targetArray: T[],
+  targetArray: FontDropdownItem[],
+  format: 'select'
+): void;
+export function addCustomFontsToDropdown(
+  fonts: CustomFont[],
+  targetArray: FontPreferenceItem[],
+  format: 'preference'
+): void;
+export function addCustomFontsToDropdown(
+  fonts: CustomFont[],
+  targetArray: (FontDropdownItem | FontPreferenceItem)[],
   format: 'select' | 'preference'
 ): void {
   if (fonts.length === 0) {
@@ -34,25 +44,25 @@ export function addCustomFontsToDropdown<T extends FontDropdownItem | FontPrefer
   }
 
   if (format === 'select') {
-    const separatorIndex = (targetArray as FontDropdownItem[]).findIndex(item => item.value === 'separator');
+    const separatorIndex = targetArray.findIndex(item => 'value' in item && item.value === 'separator');
     if (separatorIndex !== -1) {
       targetArray.splice(separatorIndex, 1);
     }
 
     fonts.forEach(font => {
-      (targetArray as FontDropdownItem[]).push({
+      targetArray.push({
         label: font.fontName,
         value: `custom:${font.id}`
       });
     });
   } else {
-    const separatorIndex = (targetArray as FontPreferenceItem[]).findIndex(item => item.key === 'separator');
+    const separatorIndex = targetArray.findIndex(item => 'key' in item && item.key === 'separator');
     if (separatorIndex !== -1) {
       targetArray.splice(separatorIndex, 1);
     }
 
     fonts.forEach(font => {
-      (targetArray as FontPreferenceItem[]).push({
+      targetArray.push({
         name: font.fontName,
         displayName: font.fontName.substring(0, MAX_FONT_DISPLAY_LENGTH),
         key: `custom:${font.id}`

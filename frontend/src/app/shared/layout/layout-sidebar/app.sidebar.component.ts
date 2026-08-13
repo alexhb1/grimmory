@@ -315,22 +315,24 @@ export class AppSidebarComponent {
   }
 
   protected openAccountSettings(): void {
-    void this.dialogLauncherService.openUserProfileDialog().catch(() => undefined);
+    void this.dialogLauncherService.openUserProfileDialog();
     this.closeUserPopover();
   }
 
   protected openChangelogDialog(): void {
-    void this.dialogLauncherService.openVersionChangelogDialog().catch(() => undefined);
+    void this.dialogLauncherService.openVersionChangelogDialog();
     this.closeUserPopover();
   }
 
   protected openReadingStats(): void {
-    this.router.navigate(['/reading-stats']);
+    this.router.navigate(['/reading-stats']).catch((error: unknown) => {
+      console.error('Reading statistics navigation failed:', error);
+    });
     this.closeUserPopover();
   }
 
   protected openUploadDialog(): void {
-    void this.dialogLauncherService.openFileUploadDialog().catch(() => undefined);
+    void this.dialogLauncherService.openFileUploadDialog();
   }
 
   protected logout(): void {

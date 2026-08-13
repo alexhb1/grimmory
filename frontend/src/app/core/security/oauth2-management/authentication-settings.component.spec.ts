@@ -348,7 +348,7 @@ describe('AuthenticationSettingsComponent', () => {
     appSettingsService.saveSettings.mockReturnValue(
       throwError(() => new HttpErrorResponse({
         status: 400,
-        error: {message: 'Wildcard redirect URI must be the only value'}
+        error: {status: 400, message: 'Wildcard redirect URI must be the only value'}
       }))
     );
 
@@ -518,7 +518,7 @@ describe('AuthenticationSettingsComponent', () => {
   it('reverts the force-only toggle when persistence fails', () => {
     component.oidcForceOnlyMode = true;
     appSettingsService.saveSettings.mockReturnValue(
-      throwError(() => ({error: {message: 'backend rejected'}}))
+      throwError(() => new HttpErrorResponse({status: 500, error: {status: 500, message: 'backend rejected'}}))
     );
 
     component.toggleOidcForceOnlyMode();

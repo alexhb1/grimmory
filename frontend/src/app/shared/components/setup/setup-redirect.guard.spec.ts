@@ -11,7 +11,7 @@ import {SetupRedirectGuard} from './setup-redirect.guard';
 describe('SetupRedirectGuard', () => {
   const setupStatusUrl = `${API_CONFIG.BASE_URL}/api/v1/setup/status`;
   const router = {
-    navigate: vi.fn(() => Promise.resolve(true)),
+    createUrlTree: vi.fn((commands: string[]) => ({commands})),
   };
 
   let guard: SetupRedirectGuard;
@@ -20,7 +20,7 @@ describe('SetupRedirectGuard', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     TestBed.resetTestingModule();
-    router.navigate.mockClear();
+    router.createUrlTree.mockClear();
 
     TestBed.configureTestingModule({
       providers: [
@@ -46,8 +46,8 @@ describe('SetupRedirectGuard', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush({data: false});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/setup']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/setup']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/setup']);
   });
 
   it('sends users to the dashboard when setup is complete', async () => {
@@ -56,7 +56,7 @@ describe('SetupRedirectGuard', () => {
     const request = httpTestingController.expectOne(setupStatusUrl);
     request.flush({data: true});
 
-    await expect(resultPromise).resolves.toBe(false);
-    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    await expect(resultPromise).resolves.toEqual({commands: ['/dashboard']});
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
   });
 });

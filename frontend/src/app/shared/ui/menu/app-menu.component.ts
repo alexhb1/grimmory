@@ -18,7 +18,7 @@ import {
 } from '@angular/core';
 import {
   type ConnectedPosition,
-  type FlexibleConnectedPositionStrategy,
+  FlexibleConnectedPositionStrategy,
   type FlexibleConnectedPositionStrategyOrigin,
   Overlay,
   type OverlayRef,
@@ -62,8 +62,12 @@ export interface ContextMenuRequest {
 
 export function contextMenuRequest(event: MouseEvent): ContextMenuRequest {
   const contextmenu = event.type === 'contextmenu';
+  const origin = event.currentTarget;
+  if (!(origin instanceof HTMLElement)) {
+    throw new Error('Context menu events require an HTML element origin');
+  }
   return {
-    origin: event.currentTarget as HTMLElement,
+    origin,
     cursor: contextmenu && (event.clientX !== 0 || event.clientY !== 0)
       ? {x: event.clientX, y: event.clientY}
       : null,
@@ -261,7 +265,9 @@ export class AppMenuComponent {
     const ref = this.overlayRef;
     if (!ref?.hasAttached() || !this.anchor || this.isSubmenu()) return;
     if (this.overlayIsSheet) return;
-    (ref.getConfig().positionStrategy as FlexibleConnectedPositionStrategy).setOrigin(this.anchor);
+    const strategy = ref.getConfig().positionStrategy;
+    if (!(strategy instanceof FlexibleConnectedPositionStrategy)) return;
+    strategy.setOrigin(this.anchor);
     ref.updatePosition();
   }
 
@@ -348,7 +354,8 @@ export class AppMenuComponent {
 
   private attachOverlay(): void {
     this.lazyContent()?.render();
-    const origin = this.isSubmenu() ? (this.menu.parent() as MenuItem<unknown>).element : this.anchor;
+    const parent = this.menu.parent();
+    const origin = parent instanceof MenuItem ? parent.element : this.anchor;
     if (!origin) return;
 
     if (this.presentation() === 'push') {
@@ -369,7 +376,8 @@ export class AppMenuComponent {
     if (sheet) {
       this.opensUpward.set(true);
     } else {
-      const strategy = this.overlayRef.getConfig().positionStrategy as FlexibleConnectedPositionStrategy;
+      const strategy = this.overlayRef.getConfig().positionStrategy;
+      if (!(strategy instanceof FlexibleConnectedPositionStrategy)) return;
       strategy.setOrigin(origin);
       this.positionSub ??= strategy.positionChanges.subscribe(change => {
         this.opensUpward.set(change.connectionPair.overlayY === 'bottom');

@@ -92,16 +92,8 @@ export class IconDisplayComponent implements OnInit, OnChanges {
     this.loadIconIfNeeded();
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['icon']) {
-      const currentIcon = changes['icon'].currentValue;
-      const previousIcon = changes['icon'].previousValue;
-
-      if (currentIcon?.type === 'CUSTOM_SVG' &&
-        currentIcon?.value !== previousIcon?.value) {
-        this.loadIconIfNeeded();
-      }
-    }
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.loadIconIfNeeded();
   }
 
   private loadIconIfNeeded(): void {

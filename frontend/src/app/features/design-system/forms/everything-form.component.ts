@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ErrorHandler, inject, signal } from '@angular/core';
 import { JsonPipe } from '@angular/common';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
@@ -96,6 +96,7 @@ function createInitialModel(): EverythingFormModel {
 })
 export class EverythingFormExampleComponent {
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
 
   readonly model = signal<EverythingFormModel>(createInitialModel());
   readonly everythingForm = form(this.model, path => {
@@ -178,7 +179,9 @@ export class EverythingFormExampleComponent {
   }
 
   back(): void {
-    void this.router.navigate(['/design-system']);
+    this.router.navigate(['/design-system']).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 }
 

@@ -16,11 +16,19 @@ import {
 const PRIMARY_COLOR_STOPS = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
 const DEFAULT_APPEARANCE_PREFERENCE: AppearancePreference = 'system';
 
-type StoredAppState = Partial<AppState> & {
+interface AppStateSource {
+  themePreference?: unknown;
+  appearancePreference?: unknown;
+  customPrimary?: unknown;
+  themeSyncEnabled?: unknown;
+  oledDarkMode?: unknown;
+}
+
+interface StoredAppState extends AppStateSource {
   preset?: unknown;
   primary?: unknown;
   surface?: unknown;
-};
+}
 
 type AppStatePatch = Partial<AppState>;
 
@@ -101,7 +109,10 @@ export class AppThemeService {
       const storedState = localStorage.getItem(this.STORAGE_KEY);
       if (storedState) {
         try {
-          const parsedState = JSON.parse(storedState) as StoredAppState;
+          const parsedState: unknown = JSON.parse(storedState);
+          if (!this.isStoredAppState(parsedState)) {
+            return {state: this.withDefaults({}), shouldPersist: false};
+          }
           return {
             state: this.normalizeStoredState(parsedState),
             shouldPersist: this.shouldRewriteStoredState(parsedState),
@@ -142,7 +153,11 @@ export class AppThemeService {
     return this.isLegacyPaletteState(state);
   }
 
-  private withDefaults(state: AppStatePatch): AppState {
+  private isStoredAppState(value: unknown): value is StoredAppState {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private withDefaults(state: AppStateSource): AppState {
     return {
       themePreference: this.resolveThemePreference(state.themePreference),
       appearancePreference: this.resolveAppearancePreference(state.appearancePreference),
@@ -152,22 +167,30 @@ export class AppThemeService {
     };
   }
 
-  private resolveCustomPrimary(customPrimary: AppStatePatch['customPrimary']): CustomPrimary {
-    if (customPrimary && CUSTOM_PRIMARY_OPTIONS.includes(customPrimary)) {
+  private resolveCustomPrimary(customPrimary: unknown): CustomPrimary {
+    if (this.isCustomPrimary(customPrimary)) {
       return customPrimary;
     }
     return DEFAULT_CUSTOM_PRIMARY;
   }
 
-  private resolveThemePreference(themePreference: AppStatePatch['themePreference']): AppTheme {
-    if (themePreference && this.themes.some((option) => option.name === themePreference)) {
+  private resolveThemePreference(themePreference: unknown): AppTheme {
+    if (this.isAppTheme(themePreference)) {
       return themePreference;
     }
 
     return DEFAULT_APP_THEME;
   }
 
-  private resolveAppearancePreference(appearancePreference: AppStatePatch['appearancePreference']): AppearancePreference {
+  private isCustomPrimary(value: unknown): value is CustomPrimary {
+    return CUSTOM_PRIMARY_OPTIONS.some(option => option === value);
+  }
+
+  private isAppTheme(value: unknown): value is AppTheme {
+    return this.themes.some(option => option.name === value);
+  }
+
+  private resolveAppearancePreference(appearancePreference: unknown): AppearancePreference {
     if (appearancePreference === 'light' || appearancePreference === 'dark' || appearancePreference === 'system') {
       return appearancePreference;
     }

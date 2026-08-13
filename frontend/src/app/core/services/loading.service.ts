@@ -29,7 +29,7 @@ export class LoadingService {
       backdrop-filter: blur(4px);
     `;
 
-    const content = loader.querySelector('.loader-content') as HTMLElement;
+    const content = loader.querySelector<HTMLElement>('.loader-content');
     if (content) {
       content.style.cssText = `
         text-align: center;
@@ -72,4 +72,3 @@ export class LoadingService {
     document.body.style.cursor = 'default';
   }
 }
-

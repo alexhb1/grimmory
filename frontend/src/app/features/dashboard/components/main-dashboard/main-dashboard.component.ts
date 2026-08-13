@@ -60,6 +60,6 @@ export class MainDashboardComponent {
   }
 
   createNewLibrary() {
-    void this.dialogLauncher.openLibraryCreateDialog().catch(() => undefined);
+    void this.dialogLauncher.openLibraryCreateDialog();
   }
 }

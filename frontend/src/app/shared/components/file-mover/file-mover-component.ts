@@ -41,7 +41,7 @@ interface FilePreview {
   styleUrl: './file-mover-component.scss'
 })
 export class FileMoverComponent implements OnDestroy {
-  private config = inject(DynamicDialogConfig);
+  private config = inject<DynamicDialogConfig<{bookIds: number[]}>>(DynamicDialogConfig);
   ref = inject(DynamicDialogRef);
   private bookService = inject(BookService);
   private libraryService = inject(LibraryService);
@@ -61,11 +61,7 @@ export class FileMoverComponent implements OnDestroy {
 
     const booksByLibrary = new Map<number | null, Book[]>();
     this.books.forEach(book => {
-      const libraryId =
-        book.libraryId ??
-        book.libraryPath?.id ??
-        (book as { library?: { id: number } }).library?.id ??
-        null;
+      const libraryId = book.libraryId;
       if (!booksByLibrary.has(libraryId)) {
         booksByLibrary.set(libraryId, []);
       }
@@ -140,7 +136,7 @@ export class FileMoverComponent implements OnDestroy {
 
       const relativeOriginalPath = `${fileSubPath}${fileName}`;
 
-      const currentLibraryId = book.libraryId ?? book.libraryPath?.id ?? (book as { library?: { id: number } }).library?.id ?? null;
+      const currentLibraryId = book.libraryId;
       const currentLibraryName = this.getLibraryNameById(currentLibraryId);
       const currentLibraryPath = this.getLibraryPathById(currentLibraryId);
 

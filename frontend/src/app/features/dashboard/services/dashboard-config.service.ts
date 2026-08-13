@@ -17,7 +17,7 @@ export class DashboardConfigService {
     effect(() => {
       const user = this.userService.currentUser();
       if (user) {
-        const dashboardConfig = user.userSettings?.dashboardConfig as DashboardConfig;
+        const dashboardConfig = user.userSettings?.dashboardConfig;
         this._config.set(this.normalizeConfig(dashboardConfig));
       }
     });

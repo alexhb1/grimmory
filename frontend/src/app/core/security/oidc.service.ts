@@ -17,6 +17,17 @@ interface OidcTokenResponse {
   expires?: number
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isPkceState(value: unknown): value is OidcPkceState {
+  return isRecord(value)
+    && typeof value['codeVerifier'] === 'string'
+    && typeof value['state'] === 'string'
+    && typeof value['nonce'] === 'string';
+}
+
 @Injectable({providedIn: 'root'})
 export class OidcService {
 
@@ -41,7 +52,7 @@ export class OidcService {
     return this.base64UrlEncode(array);
   }
 
-  buildAuthUrl(
+  async buildAuthUrl(
     issuerUri: string,
     clientId: string,
     codeChallenge: string,
@@ -54,19 +65,15 @@ export class OidcService {
     const scope = scopes?.trim() || 'openid profile email groups offline_access';
 
     if (authorizationEndpoint) {
-      return Promise.resolve(this.buildUrl(authorizationEndpoint, clientId, redirectUri, scope, codeChallenge, state, nonce));
+      return this.buildUrl(authorizationEndpoint, clientId, redirectUri, scope, codeChallenge, state, nonce);
     }
 
-    // Fetch from discovery if authorization_endpoint not provided
-    return fetch(`${issuerUri.replace(/\/+$/, '')}/.well-known/openid-configuration`)
-      .then(res => res.json())
-      .then(doc => {
-        const endpoint = doc.authorization_endpoint;
-        if (!endpoint) {
-          throw new Error('authorization_endpoint not found in discovery document');
-        }
-        return this.buildUrl(endpoint, clientId, redirectUri, scope, codeChallenge, state, nonce);
-      });
+    const response = await fetch(`${issuerUri.replace(/\/+$/, '')}/.well-known/openid-configuration`);
+    const document: unknown = await response.json();
+    if (!isRecord(document) || typeof document['authorization_endpoint'] !== 'string') {
+      throw new Error('authorization_endpoint not found in discovery document');
+    }
+    return this.buildUrl(document['authorization_endpoint'], clientId, redirectUri, scope, codeChallenge, state, nonce);
   }
 
   async fetchState(): Promise<string> {
@@ -97,7 +104,8 @@ export class OidcService {
     sessionStorage.removeItem(key);
     if (!stored) return null;
     try {
-      return JSON.parse(stored);
+      const parsed: unknown = JSON.parse(stored);
+      return isPkceState(parsed) ? parsed : null;
     } catch {
       return null;
     }

@@ -16,7 +16,7 @@ describe('AuthService', () => {
   };
   const rxStompService = {
     activate: vi.fn(),
-    deactivate: vi.fn(),
+    deactivate: vi.fn(() => Promise.resolve()),
     updateConfig: vi.fn(),
   };
   const postLoginInitializer = {

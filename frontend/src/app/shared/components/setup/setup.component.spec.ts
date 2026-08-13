@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {Router} from '@angular/router';
 import {of, throwError} from 'rxjs';
@@ -99,7 +100,7 @@ describe('SetupComponent', () => {
   it('surfaces backend error messages and clears loading', () => {
     fillValidForm();
     setupService.createAdmin.mockReturnValueOnce(
-      throwError(() => ({error: {message: 'Setup failed'}}))
+      throwError(() => new HttpErrorResponse({status: 500, error: {status: 500, message: 'Setup failed'}}))
     );
 
     component.onSubmit();
