@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, OnInit, signal, viewChild} from '@angular/core';
+import {Component, computed, DestroyRef, effect, ElementRef, ErrorHandler, HostListener, inject, OnInit, signal, viewChild} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ProgressSpinner} from '@openng/optimus-ui/progressspinner';
 import {InputText} from '@openng/optimus-ui/inputtext';
@@ -91,6 +91,7 @@ export class AuthorBrowserComponent implements OnInit {
   private scrollService = inject(RouteScrollPositionService);
   private t = inject(TranslocoService);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
   private activatedRoute = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
   private localStorageService = inject(LocalStorageService);
@@ -334,11 +335,13 @@ export class AuthorBrowserComponent implements OnInit {
   }
 
   navigateToAuthor(author: AuthorSummary): void {
-    this.router.navigate(['/author', author.id]);
+    this.router.navigate(['/author', author.id])
+      .catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   navigateToAuthorEdit(author: AuthorSummary): void {
-    this.router.navigate(['/author', author.id], {queryParams: {tab: 'edit'}});
+    this.router.navigate(['/author', author.id], {queryParams: {tab: 'edit'}})
+      .catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   deleteAuthor(author: AuthorSummary): void {
@@ -423,7 +426,7 @@ export class AuthorBrowserComponent implements OnInit {
       queryParams: {sort, dir},
       queryParamsHandling: 'merge',
       replaceUrl: true
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   private enrichAuthors(authors: AuthorSummary[], books: Book[]): EnrichedAuthor[] {

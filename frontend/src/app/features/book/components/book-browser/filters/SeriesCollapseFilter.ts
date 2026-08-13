@@ -46,20 +46,15 @@ export class SeriesCollapseFilter {
 
     if (prefs) {
       // Backward compatibility: check for old 'seriesCollapse' field
-      const legacyGlobalSeriesCollapse = (prefs.global as { seriesCollapse?: boolean }).seriesCollapse;
-      collapsed = prefs.global?.seriesCollapsed ?? legacyGlobalSeriesCollapse ?? false;
+      collapsed = prefs.global.seriesCollapsed ?? prefs.global.seriesCollapse ?? false;
 
       if (this.currentContext) {
         const override = prefs.overrides?.find(o =>
           o.entityType === this.currentContext?.type && o.entityId === this.currentContext?.id
         );
         if (override) {
-           const legacyOverrideSeriesCollapse = (override.preferences as { seriesCollapse?: boolean }).seriesCollapse;
-           if (override.preferences.seriesCollapsed !== undefined) {
-             collapsed = override.preferences.seriesCollapsed;
-           } else if (legacyOverrideSeriesCollapse !== undefined) {
-             collapsed = legacyOverrideSeriesCollapse;
-           }
+          const seriesCollapsed = override.preferences.seriesCollapsed ?? override.preferences.seriesCollapse;
+          if (seriesCollapsed !== undefined) collapsed = seriesCollapsed;
         }
       }
     }

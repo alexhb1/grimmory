@@ -14,6 +14,10 @@ import {UserService} from '../../../settings/user-management/user.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {IconSelection, toIconSelection} from '../../../../shared/icons/icon-selection';
 
+export interface ShelfEditDialogData {
+  shelfId: number;
+}
+
 @Component({
   selector: 'app-shelf-edit-dialog',
   imports: [
@@ -32,7 +36,7 @@ import {IconSelection, toIconSelection} from '../../../../shared/icons/icon-sele
 export class ShelfEditDialogComponent implements OnInit {
 
   private shelfService = inject(ShelfService);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<ShelfEditDialogData>>(DynamicDialogConfig);
   private dynamicDialogRef = inject(DynamicDialogRef);
   private messageService = inject(MessageService);
   private iconPickerService = inject(IconPickerService);
@@ -48,7 +52,11 @@ export class ShelfEditDialogComponent implements OnInit {
   isAdmin: boolean = this.userService.getCurrentUser()?.permissions.admin ?? false;
 
   ngOnInit(): void {
-    const shelfId = this.dynamicDialogConfig?.data.shelfId;
+    const data = this.dynamicDialogConfig.data;
+    if (!data) {
+      throw new Error('Shelf edit dialog requires a shelf id.');
+    }
+    const shelfId = data.shelfId;
     effect(() => {
       if (this.shelfInitialized) {
         return;

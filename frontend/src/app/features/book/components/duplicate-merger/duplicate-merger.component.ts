@@ -8,7 +8,7 @@ import {SelectButton} from '@openng/optimus-ui/selectbutton';
 import {ProgressBar} from '@openng/optimus-ui/progressbar';
 import {Tag} from '@openng/optimus-ui/tag';
 import {Paginator, PaginatorState} from '@openng/optimus-ui/paginator';
-import {Subject, takeUntil} from 'rxjs';
+import {lastValueFrom, Subject, takeUntil} from 'rxjs';
 import {BookFileService} from '../../service/book-file.service';
 import {BookService} from '../../service/book.service';
 import {Book, DuplicateDetectionRequest, DuplicateGroup} from '../../model/book.model';
@@ -17,6 +17,7 @@ import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/tran
 import {CoverComponent} from '../../../../shared/components/cover/cover.component';
 import {UrlHelperService} from '../../../../shared/service/url-helper.service';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
+import {getApiErrorMessage} from '../../../../shared/models/api-exception.model';
 
 type PresetMode = 'strict' | 'balanced' | 'aggressive' | 'custom';
 
@@ -24,6 +25,10 @@ interface DisplayGroup extends DuplicateGroup {
   selectedTargetBookId: number;
   dismissed: boolean;
   selectedForDeletion: Set<number>;
+}
+
+export interface DuplicateMergerDialogData {
+  libraryId: number;
 }
 
 @Component({
@@ -46,7 +51,7 @@ interface DisplayGroup extends DuplicateGroup {
   styleUrls: ['./duplicate-merger.component.scss']
 })
 export class DuplicateMergerComponent implements OnInit, OnDestroy {
-  libraryId!: number;
+  libraryId: number;
   presetMode: PresetMode = 'balanced';
   showAdvanced = false;
 
@@ -75,15 +80,21 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogRef = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<DuplicateMergerDialogData>>(DynamicDialogConfig);
   private readonly t = inject(TranslocoService);
   readonly urlHelper = inject(UrlHelperService);
   private readonly appSettingsService = inject(AppSettingsService);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
-  ngOnInit(): void {
-    this.libraryId = this.config.data.libraryId;
+  constructor() {
+    const data = this.config.data;
+    if (!data) {
+      throw new Error('Duplicate merger dialog requires a library id.');
+    }
+    this.libraryId = data.libraryId;
+  }
 
+  ngOnInit(): void {
     const settings = this.appSettingsService.appSettings();
     if (settings) {
       this.moveFiles = settings.metadataPersistenceSettings?.moveFilesToLibraryPattern ?? false;
@@ -167,13 +178,14 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
         this.isScanning.set(false);
         this.hasScanned.set(true);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         this.isScanning.set(false);
         this.hasScanned.set(true);
+        const fallback = this.t.translate('book.duplicateMerger.toast.scanFailedDetail');
         this.messageService.add({
           severity: 'error',
           summary: this.t.translate('book.duplicateMerger.toast.scanFailedSummary'),
-          detail: err?.error?.message || this.t.translate('book.duplicateMerger.toast.scanFailedDetail'),
+          detail: getApiErrorMessage(err, fallback),
         });
       }
     });
@@ -298,9 +310,11 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
 
     group.dismissed = true;
     try {
-      await this.bookFileService.attachBookFiles(targetId, sourceIds, this.moveFiles)
-        .pipe(takeUntil(this.destroy$))
-        .toPromise();
+      await lastValueFrom(
+        this.bookFileService.attachBookFiles(targetId, sourceIds, this.moveFiles)
+          .pipe(takeUntil(this.destroy$)),
+        {defaultValue: undefined},
+      );
     } catch {
       group.dismissed = false;
       this.messageService.add({
@@ -335,9 +349,11 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
       }
 
       try {
-        await this.bookFileService.attachBookFiles(targetId, sourceIds, this.moveFiles)
-          .pipe(takeUntil(this.destroy$))
-          .toPromise();
+        await lastValueFrom(
+          this.bookFileService.attachBookFiles(targetId, sourceIds, this.moveFiles)
+            .pipe(takeUntil(this.destroy$)),
+          {defaultValue: undefined},
+        );
         group.dismissed = true;
         successCount++;
       } catch {

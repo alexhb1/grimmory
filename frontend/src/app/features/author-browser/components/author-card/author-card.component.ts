@@ -38,6 +38,7 @@ export class AuthorCardComponent implements OnChanges {
   private t = inject(TranslocoService);
   private cdr = inject(ChangeDetectorRef);
   private lastShiftKey = false;
+  private previousAuthor?: AuthorSummary;
 
   hasPhoto = false;
   quickMatching = false;
@@ -47,11 +48,12 @@ export class AuthorCardComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['author']) {
-      const prev = changes['author'].previousValue as AuthorSummary | undefined;
-      const curr = changes['author'].currentValue as AuthorSummary;
+      const prev = this.previousAuthor;
+      const curr = this.author;
       if (!prev || prev.id !== curr.id || prev.hasPhoto !== curr.hasPhoto || prev.asin !== curr.asin) {
         this.hasPhoto = curr.hasPhoto;
       }
+      this.previousAuthor = curr;
     }
     if (changes['cacheBuster'] && !changes['cacheBuster'].firstChange) {
       this.hasPhoto = true;
@@ -67,8 +69,8 @@ export class AuthorCardComponent implements OnChanges {
   }
 
   onCardClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (target.closest('.menu-button-container')) {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.menu-button-container')) {
       return;
     }
     const isModifierClick = (event instanceof MouseEvent || event instanceof KeyboardEvent) && (event.ctrlKey || event.metaKey);
@@ -93,7 +95,7 @@ export class AuthorCardComponent implements OnChanges {
   }
 
   toggleSelection(event: CheckboxChangeEvent): void {
-    this.checkboxClick.emit({index: this.index, author: this.author, selected: event.checked, shiftKey: this.lastShiftKey});
+    this.checkboxClick.emit({index: this.index, author: this.author, selected: event.checked === true, shiftKey: this.lastShiftKey});
   }
 
   toggleCardSelection(selected: boolean): void {

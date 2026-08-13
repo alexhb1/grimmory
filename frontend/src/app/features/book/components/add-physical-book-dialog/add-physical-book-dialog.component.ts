@@ -15,6 +15,10 @@ import {Library} from '../../model/library.model';
 import {CreatePhysicalBookRequest} from '../../model/book.model';
 import {TranslocoDirective} from '@jsverse/transloco';
 
+export interface AddPhysicalBookDialogData {
+  libraryId?: number;
+}
+
 @Component({
   selector: 'app-add-physical-book-dialog',
   standalone: true,
@@ -34,7 +38,7 @@ import {TranslocoDirective} from '@jsverse/transloco';
 })
 export class AddPhysicalBookDialogComponent {
   private dynamicDialogRef = inject(DynamicDialogRef);
-  private dialogConfig = inject(DynamicDialogConfig);
+  private dialogConfig = inject<DynamicDialogConfig<AddPhysicalBookDialogData>>(DynamicDialogConfig);
   private bookService = inject(BookService);
   private bookMetadataService = inject(BookMetadataService);
   private libraryService = inject(LibraryService);
@@ -95,8 +99,12 @@ export class AddPhysicalBookDialogComponent {
 
   onAutoCompleteKeyUp(fieldName: 'authors' | 'categories', event: KeyboardEvent): void {
     if (event.key === 'Enter') {
-      const input = event.target as HTMLInputElement;
-      const value = input.value?.trim();
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) {
+        return;
+      }
+
+      const value = input.value.trim();
       if (value) {
         const values = this[fieldName];
         if (!values.includes(value)) {
@@ -112,7 +120,10 @@ export class AddPhysicalBookDialogComponent {
     if (!values.includes(event.value)) {
       this[fieldName] = [...values, event.value];
     }
-    (event.originalEvent.target as HTMLInputElement).value = '';
+    const input = event.originalEvent.target;
+    if (input instanceof HTMLInputElement) {
+      input.value = '';
+    }
   }
 
   fetchMetadataByIsbn(): void {
@@ -148,12 +159,13 @@ export class AddPhysicalBookDialogComponent {
   }
 
   createBook(): void {
-    if (!this.canCreate() || this.isLoading()) return;
+    const libraryId = this.selectedLibraryId;
+    if (!libraryId || !this.canCreate() || this.isLoading()) return;
 
     this.isLoading.set(true);
 
     const request: CreatePhysicalBookRequest = {
-      libraryId: this.selectedLibraryId!,
+      libraryId,
       title: this.title.trim() || undefined,
       isbn: this.isbn.trim() || undefined,
       authors: this.authors.length > 0 ? this.authors : undefined,

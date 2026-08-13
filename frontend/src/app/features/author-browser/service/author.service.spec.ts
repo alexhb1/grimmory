@@ -65,7 +65,9 @@ describe('AuthorService', () => {
     httpClient.post.mockReturnValue(of({}));
     httpClient.put.mockReturnValue(of({}));
     httpClient.delete.mockReturnValue(of(undefined));
-    sseClient.stream.mockReturnValue(of({type: 'message', data: '{"id":7,"name":"Ada"}'}));
+    sseClient.stream.mockReturnValue(of(new MessageEvent('message', {
+      data: JSON.stringify({id: 7, name: 'Ada', bookCount: 1, hasPhoto: false}),
+    })));
 
     TestBed.configureTestingModule({
       providers: [
@@ -155,7 +157,9 @@ describe('AuthorService', () => {
   });
 
   it('maps SSE auto-match responses and throws on error events', () => {
-    sseClient.stream.mockReturnValueOnce(of({type: 'message', data: '{"id":3,"name":"Grace"}'}));
+    sseClient.stream.mockReturnValueOnce(of(new MessageEvent('message', {
+      data: JSON.stringify({id: 3, name: 'Grace', bookCount: 2, hasPhoto: false}),
+    })));
 
     const results: unknown[] = [];
     service.autoMatchAuthors([1, 2]).subscribe(value => results.push(value));
@@ -169,9 +173,9 @@ describe('AuthorService', () => {
       }),
       'POST',
     );
-    expect(results).toEqual([{id: 3, name: 'Grace'}]);
+    expect(results).toEqual([{id: 3, name: 'Grace', bookCount: 2, hasPhoto: false}]);
 
-    sseClient.stream.mockReturnValueOnce(of({type: 'error', message: 'boom'}));
+    sseClient.stream.mockReturnValueOnce(of(new ErrorEvent('error', {message: 'boom'})));
 
     const errors: Error[] = [];
     service.autoMatchAuthors([7]).subscribe({

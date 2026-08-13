@@ -8,9 +8,9 @@ import {LibraryService} from '../../../service/library.service';
 import {BookRuleEvaluatorService} from '../../../../magic-shelf/service/book-rule-evaluator.service';
 import {GroupRule} from '../../../../magic-shelf/component/magic-shelf-component';
 import {EntityType} from '../book-browser.component';
-import {Filter, FILTER_CONFIGS, FILTER_EXTRACTORS, FilterType, FilterValue, NUMERIC_ID_FILTER_TYPES, registerLanguageDisplayName, SortMode} from './book-filter.config';
+import {BookFilters, BookFilterValue, Filter, FILTER_CONFIGS, FILTER_EXTRACTORS, FilterType, FilterValue, NUMERIC_ID_FILTER_TYPES, registerLanguageDisplayName, SortMode} from './book-filter.config';
 import {filterBooksByFilters} from '../filters/sidebar-filter';
-import {BookFilterMode} from '../../../../settings/user-management/user.service';
+import {ALL_FILTER_OPTION_VALUES, BookFilterMode} from '../../../../settings/user-management/user.service';
 import {LanguageResolverService} from '../../../../../shared/service/language-resolver.service';
 
 const MAX_FILTER_ITEMS = 100;
@@ -29,7 +29,7 @@ export class BookFilterService {
   createFilterSignals(
     entity: Signal<Library | Shelf | MagicShelf | null>,
     entityType: Signal<EntityType>,
-    activeFilters: Signal<Record<string, unknown[]> | null>,
+    activeFilters: Signal<BookFilters | null>,
     filterMode: Signal<BookFilterMode>
   ): Record<FilterType, Signal<Filter[]>> {
     const filteredBooks = computed(() =>
@@ -38,8 +38,9 @@ export class BookFilterService {
 
     const signals = {} as Record<FilterType, Signal<Filter[]>>;
 
-    for (const [type, config] of Object.entries(FILTER_CONFIGS)) {
-      const filterType = type as Exclude<FilterType, 'library'>;
+    for (const filterType of ALL_FILTER_OPTION_VALUES) {
+      if (filterType === 'library') continue;
+      const config = FILTER_CONFIGS[filterType];
       signals[filterType] = computed(() => {
         const books = filterBooksByFilters(filteredBooks(), activeFilters(), filterMode(), filterType);
         return this.buildAndSortFilters(books, FILTER_EXTRACTORS[filterType], config.sortMode);
@@ -88,15 +89,15 @@ export class BookFilterService {
 
     switch (entityType) {
       case EntityType.LIBRARY:
-        return books.filter(book => book.libraryId === (entity as Library).id);
+        return 'paths' in entity ? books.filter(book => book.libraryId === entity.id) : books;
 
-      case EntityType.SHELF: {
-        const shelfId = (entity as Shelf).id;
-        return books.filter(book => book.shelves?.some(s => s.id === shelfId));
-      }
+      case EntityType.SHELF:
+        return !('paths' in entity) && !('filterJson' in entity)
+          ? books.filter(book => book.shelves?.some(shelf => shelf.id === entity.id))
+          : books;
 
       case EntityType.MAGIC_SHELF:
-        return this.filterByMagicShelf(books, entity as MagicShelf);
+        return 'filterJson' in entity ? this.filterByMagicShelf(books, entity) : books;
 
       case EntityType.UNSHELVED:
         return books.filter(book => !book.shelves || book.shelves.length === 0);
@@ -106,15 +107,15 @@ export class BookFilterService {
     }
   }
 
-  processFilterValue(key: string, value: unknown): unknown {
-    if (NUMERIC_ID_FILTER_TYPES.has(key as FilterType) && typeof value === 'string') {
+  processFilterValue(key: string, value: BookFilterValue): BookFilterValue {
+    if (NUMERIC_ID_FILTER_TYPES.has(key) && typeof value === 'string') {
       return Number(value);
     }
     return value;
   }
 
   isNumericFilter(filterType: string): boolean {
-    return NUMERIC_ID_FILTER_TYPES.has(filterType as FilterType);
+    return NUMERIC_ID_FILTER_TYPES.has(filterType);
   }
 
   private buildAndSortFilters(
@@ -151,16 +152,16 @@ export class BookFilterService {
 
   private sortFiltersBySortIndex(filters: Filter[]): Filter[] {
     return filters.sort((a, b) => {
-      const aIndex = (a.value as { sortIndex?: number }).sortIndex ?? 999;
-      const bIndex = (b.value as { sortIndex?: number }).sortIndex ?? 999;
+      const aIndex = a.value.sortIndex ?? 999;
+      const bIndex = b.value.sortIndex ?? 999;
       if (aIndex !== bIndex) return aIndex - bIndex;
       return this.compareNames(a, b);
     });
   }
 
   private compareNames(a: Filter, b: Filter): number {
-    const aName = String((a.value as { name?: string }).name ?? '');
-    const bName = String((b.value as { name?: string }).name ?? '');
+    const aName = a.value.name;
+    const bName = b.value.name;
     return aName.localeCompare(bName);
   }
 

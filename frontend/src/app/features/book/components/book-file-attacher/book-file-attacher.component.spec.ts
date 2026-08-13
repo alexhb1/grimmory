@@ -183,7 +183,12 @@ describe('BookFileAttacherComponent', () => {
       primaryFile: {id: 301, bookId: 30, extension: 'epub', fileName: 'left-hand.epub'},
     });
     const untitledBook = buildBook({id: 31, metadata: undefined, primaryFile: undefined});
-    const {component, translocoService} = setup();
+    const {component, translocoService} = setup({
+      dialogData: {sourceBook: buildBook({id: 1})},
+      books: [buildBook({id: 1}), selectedBook],
+    });
+
+    component.ngOnInit();
 
     component.onBookSelect({value: selectedBook} as never);
     expect(component.targetBook).toEqual(selectedBook);

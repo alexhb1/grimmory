@@ -108,6 +108,7 @@ interface FullFieldConfig {
 type FieldType = 'number' | 'decimal' | 'date' | 'boolean' | undefined;
 
 export interface Rule {
+  type?: 'rule';
   field: RuleField;
   operator: RuleOperator;
   value: unknown;
@@ -557,7 +558,7 @@ export class MagicShelfComponent implements OnInit {
       if ('type' in rule && rule.type === 'group') {
         rulesArray.push(this.buildGroupFromData(rule));
       } else {
-        rulesArray.push(this.buildRuleFromData(rule as Rule));
+        rulesArray.push(this.buildRuleFromData(rule));
       }
     });
 
@@ -681,15 +682,15 @@ export class MagicShelfComponent implements OnInit {
       value: new FormControl<string | null>(null),
       valueStart: new FormControl<string | null>(null),
       valueEnd: new FormControl<string | null>(null),
-    }) as RuleFormGroup;
+    });
   }
 
   createGroup(): GroupFormGroup {
     return new FormGroup({
-      type: new FormControl<'group'>('group' as const),
-      join: new FormControl<'and' | 'or'>('and' as 'and' | 'or'),
-      rules: new FormArray([] as (GroupFormGroup | RuleFormGroup)[]),
-    }) as GroupFormGroup;
+      type: new FormControl<'group'>('group', {nonNullable: true}),
+      join: new FormControl<'and' | 'or'>('and', {nonNullable: true}),
+      rules: new FormArray<GroupFormGroup | RuleFormGroup>([]),
+    });
   }
 
   addGroup(group: GroupFormGroup) {

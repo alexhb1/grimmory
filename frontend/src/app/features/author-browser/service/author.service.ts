@@ -10,6 +10,7 @@ import {AuthService} from '../../../shared/service/auth.service';
 import {injectQuery, queryOptions, QueryClient} from '@tanstack/angular-query-experimental';
 import {AUTHORS_QUERY_KEY} from './author-query-keys';
 import {invalidateAuthorsQuery, patchAuthorInCache} from './author-query-cache';
+import {parseAuthorPhotoMessage, parseAuthorSummaryMessage} from './author-sse-message';
 
 @Injectable({
   providedIn: 'root'
@@ -126,12 +127,7 @@ export class AuthorService {
       {headers, body: authorIds, withCredentials: true},
       'POST'
     ).pipe(
-      map(event => {
-        if (event.type === 'error') {
-          throw new Error((event as ErrorEvent).message);
-        }
-        return JSON.parse((event as MessageEvent).data) as AuthorSummary;
-      })
+      map(parseAuthorSummaryMessage)
     );
   }
 
@@ -159,12 +155,7 @@ export class AuthorService {
       {headers, params: {q: query}, withCredentials: true},
       'GET'
     ).pipe(
-      map(event => {
-        if (event.type === 'error') {
-          throw new Error((event as ErrorEvent).message);
-        }
-        return JSON.parse((event as MessageEvent).data) as AuthorPhotoResult;
-      })
+      map(parseAuthorPhotoMessage)
     );
   }
 

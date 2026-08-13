@@ -172,6 +172,7 @@ export interface BookMetadata {
   comicvineId?: string;
   hardcoverId?: string;
   hardcoverBookId?: number | null;
+  doubanId?: string;
   googleId?: string;
   pageCount?: number | null;
   language?: string;
@@ -413,7 +414,7 @@ export enum ReadStatus {
 
 export function computeSeriesReadStatus(books: Book[]): ReadStatus {
   if (!books || books.length === 0) return ReadStatus.UNREAD;
-  const statuses = books.map(b => (b.readStatus as ReadStatus) ?? ReadStatus.UNREAD);
+  const statuses = books.map(b => b.readStatus ?? ReadStatus.UNREAD);
 
   if (statuses.includes(ReadStatus.WONT_READ)) return ReadStatus.WONT_READ;
   if (statuses.includes(ReadStatus.ABANDONED)) return ReadStatus.ABANDONED;

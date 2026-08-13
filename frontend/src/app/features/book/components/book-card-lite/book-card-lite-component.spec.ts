@@ -24,7 +24,7 @@ describe('BookCardLiteComponent', () => {
   let hostService: {requestBookSwitch: ReturnType<typeof vi.fn>};
 
   beforeEach(async () => {
-    router = {navigate: vi.fn()};
+    router = {navigate: vi.fn(() => Promise.resolve(true))};
     urlHelper = {
       getThumbnailUrl: vi.fn(() => '/covers/1'),
       getAudiobookThumbnailUrl: vi.fn(() => '/covers/audio/1'),

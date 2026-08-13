@@ -14,8 +14,6 @@ import {
 import {Book, BOOK_TYPES, BookFile, BookType, ReadStatus} from '../model/book.model';
 
 const PAGE_SIZE = 50;
-const BOOK_TYPE_SET = new Set<BookType>(BOOK_TYPES);
-const READ_STATUSES = new Set<ReadStatus>(Object.values(ReadStatus) as ReadStatus[]);
 
 @Injectable({providedIn: 'root'})
 export class AppBooksApiService {
@@ -143,10 +141,6 @@ export class AppBooksApiService {
       .set('size', Math.max(1, size).toString());
 
     return this.http.get<AppPageResponse<AppBookSummary>>(`${this.booksUrl}/search`, {params});
-  }
-
-  fetchNextPage(): void {
-    this.booksQuery.fetchNextPage();
   }
 
   /** Fetch all book IDs matching the current filters (no pagination). */
@@ -307,12 +301,11 @@ function summaryToPrimaryFile(summary: AppBookSummary): BookFile | undefined {
 }
 
 function summaryToBookType(value: string | null): BookType | undefined {
-  return value != null && BOOK_TYPE_SET.has(value as BookType) ? value as BookType : undefined;
+  return BOOK_TYPES.find(bookType => bookType === value);
 }
 
 function summaryToReadStatus(value: string | null): ReadStatus {
-  const readStatus = value as ReadStatus;
-  return value != null && READ_STATUSES.has(readStatus) ? readStatus : ReadStatus.UNREAD;
+  return Object.values(ReadStatus).find(readStatus => readStatus === value) ?? ReadStatus.UNREAD;
 }
 
 function summaryToPrimaryFileExtension(summary: AppBookSummary): string | undefined {

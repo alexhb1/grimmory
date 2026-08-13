@@ -25,7 +25,7 @@
           [chooseStyleClass]="'p-button-sm p-button-outlined p-button-danger'"
           [pTooltip]="t('uploadPhotoTooltip')"
           tooltipPosition="top"
-          [disabled]="form.get('photoLocked')?.value"
+          [disabled]="form.controls.photoLocked.value"
           name="file"
           [url]="uploadUrl"
           mode="basic"
@@ -43,12 +43,12 @@
           size="small"
           icon="pi pi-search"
           [outlined]="true"
-          [disabled]="form.get('photoLocked')?.value"
+          [disabled]="form.controls.photoLocked.value"
           (onClick)="openPhotoSearch()"
           severity="info">
         </p-button>
 
-        @if (!form.get('photoLocked')?.value) {
+        @if (!form.controls.photoLocked.value) {
           <p-button
             [pTooltip]="t('lockField')"
             tooltipPosition="top"
@@ -59,7 +59,7 @@
             severity="success">
           </p-button>
         }
-        @if (form.get('photoLocked')?.value) {
+        @if (form.controls.photoLocked.value) {
           <p-button
             [pTooltip]="t('unlockField')"
             tooltipPosition="top"
@@ -78,10 +78,10 @@
         <label for="authorName">{{ t('nameLabel') }}</label>
         <div class="field-with-lock">
           <input pInputText id="authorName" formControlName="name"/>
-          @if (!form.get('nameLocked')?.value) {
+          @if (!form.controls.nameLocked.value) {
             <p-button icon="pi pi-lock-open" [outlined]="true" (onClick)="toggleLock('name')" severity="success"></p-button>
           }
-          @if (form.get('nameLocked')?.value) {
+          @if (form.controls.nameLocked.value) {
             <p-button icon="pi pi-lock" [outlined]="true" (onClick)="toggleLock('name')" severity="warn"></p-button>
           }
         </div>
@@ -91,10 +91,10 @@
         <label for="authorAsin">{{ t('asinLabel') }}</label>
         <div class="field-with-lock">
           <input pInputText id="authorAsin" formControlName="asin"/>
-          @if (!form.get('asinLocked')?.value) {
+          @if (!form.controls.asinLocked.value) {
             <p-button icon="pi pi-lock-open" [outlined]="true" (onClick)="toggleLock('asin')" severity="success"></p-button>
           }
-          @if (form.get('asinLocked')?.value) {
+          @if (form.controls.asinLocked.value) {
             <p-button icon="pi pi-lock" [outlined]="true" (onClick)="toggleLock('asin')" severity="warn"></p-button>
           }
         </div>
@@ -105,10 +105,10 @@
         <div class="field-with-lock description-with-lock">
           <textarea pTextarea id="authorDescription" formControlName="description"
             [rows]="8" [autoResize]="true"></textarea>
-          @if (!form.get('descriptionLocked')?.value) {
+          @if (!form.controls.descriptionLocked.value) {
             <p-button icon="pi pi-lock-open" [outlined]="true" (onClick)="toggleLock('description')" severity="success" size="small"></p-button>
           }
-          @if (form.get('descriptionLocked')?.value) {
+          @if (form.controls.descriptionLocked.value) {
             <p-button icon="pi pi-lock" [outlined]="true" (onClick)="toggleLock('description')" severity="warn" size="small"></p-button>
           }
         </div>

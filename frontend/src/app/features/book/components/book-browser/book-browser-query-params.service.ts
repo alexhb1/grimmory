@@ -1,8 +1,9 @@
-import {Injectable, inject} from '@angular/core';
+import {ErrorHandler, Injectable, inject} from '@angular/core';
 import {ActivatedRoute, ParamMap, Router} from '@angular/router';
 import {SortDirection, SortOption} from '../../model/sort.model';
 import {BookFilterMode, EntityViewPreference, EntityViewPreferences, SortCriterion} from '../../../settings/user-management/user.service';
 import {EntityType} from './book-browser.component';
+import {BookFilters} from './book-filter/book-filter.config';
 
 export const QUERY_PARAMS = {
   VIEW: 'view',
@@ -28,7 +29,7 @@ export interface BookBrowserQueryState {
   viewMode: 'grid' | 'table';
   sortField: string;
   sortDirection: SortDirection;
-  filters: Record<string, string[]>;
+  filters: BookFilters;
   filterMode: BookFilterMode;
 }
 
@@ -36,7 +37,7 @@ export interface QueryParseResult {
   viewMode: string;
   sortOption: SortOption;
   sortCriteria: SortOption[];
-  filters: Record<string, string[]>;
+  filters: BookFilters;
   filterMode: BookFilterMode;
   viewModeFromToggle: boolean;
 }
@@ -45,6 +46,7 @@ export interface QueryParseResult {
 export class BookBrowserQueryParamsService {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
+  private errorHandler = inject(ErrorHandler);
 
   parseQueryParams(
     queryParamMap: ParamMap,
@@ -61,7 +63,7 @@ export class BookBrowserQueryParamsService {
     const filterModeParam = queryParamMap.get(QUERY_PARAMS.FMODE);
     const fromParam = queryParamMap.get(QUERY_PARAMS.FROM);
 
-    const filterMode = (filterModeParam || defaultFilterMode) as BookFilterMode;
+    const filterMode = this.isBookFilterMode(filterModeParam) ? filterModeParam : defaultFilterMode;
 
     // Parse filters
     const filters = this.deserializeFilters(filterParams);
@@ -166,7 +168,7 @@ export class BookBrowserQueryParamsService {
       },
       queryParamsHandling: 'merge',
       replaceUrl: true
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   updateSort(sortOption: SortOption): void {
@@ -178,13 +180,13 @@ export class BookBrowserQueryParamsService {
     const newParams = {
       ...currentParams,
       [QUERY_PARAMS.SORT]: this.serializeSort(sortCriteria),
-      [QUERY_PARAMS.DIRECTION]: null  // Remove legacy direction param
+      [QUERY_PARAMS.DIRECTION]: null
     };
 
     this.router.navigate([], {
       queryParams: newParams,
       replaceUrl: true
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   serializeSort(criteria: SortOption[]): string {
@@ -213,7 +215,7 @@ export class BookBrowserQueryParamsService {
     return criteria;
   }
 
-  updateFilters(filters: Record<string, string[]> | null): void {
+  updateFilters(filters: BookFilters | null): void {
     const queryParam = filters && Object.keys(filters).length > 0
       ? this.serializeFilters(filters)
       : null;
@@ -224,11 +226,11 @@ export class BookBrowserQueryParamsService {
         queryParams: {[QUERY_PARAMS.FILTER]: queryParam},
         queryParamsHandling: 'merge',
         replaceUrl: false
-      });
+      }).catch((error: unknown) => this.errorHandler.handleError(error));
     }
   }
 
-  updateFilterMode(mode: BookFilterMode, currentFilters: Record<string, string[]>): void {
+  updateFilterMode(mode: BookFilterMode, currentFilters: BookFilters): void {
     const params: Record<string, string | null> = {[QUERY_PARAMS.FMODE]: mode};
 
     // Clear filters if switching from multiple selected to single mode
@@ -244,17 +246,17 @@ export class BookBrowserQueryParamsService {
       queryParams: params,
       queryParamsHandling: 'merge',
       replaceUrl: false
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
-  serializeFilters(filters: Record<string, string[]>): string {
+  serializeFilters(filters: BookFilters): string {
     return Object.entries(filters)
-      .map(([k, v]) => `${k}:${v.map(val => encodeURIComponent(val)).join('|')}`)
+      .map(([k, v]) => `${k}:${v.map(val => encodeURIComponent(String(val))).join('|')}`)
       .join(',');
   }
 
-  deserializeFilters(filterParam: string | null): Record<string, string[]> {
-    const parsedFilters: Record<string, string[]> = {};
+  deserializeFilters(filterParam: string | null): BookFilters {
+    const parsedFilters: BookFilters = {};
 
     if (!filterParam) return parsedFilters;
 
@@ -272,7 +274,7 @@ export class BookBrowserQueryParamsService {
   syncQueryParams(
     viewMode: string,
     filterMode: BookFilterMode,
-    filters: Record<string, string[]>
+    filters: BookFilters
   ): void {
     const queryParams: Record<string, string | number | null | undefined> = {
       [QUERY_PARAMS.VIEW]: viewMode,
@@ -287,12 +289,15 @@ export class BookBrowserQueryParamsService {
     const changed = Object.keys(queryParams).some(k => (queryParams[k] ?? undefined) !== (currentParams[k] ?? undefined));
 
     if (changed) {
-      const mergedParams = {...currentParams, ...queryParams};
       this.router.navigate([], {
-        queryParams: mergedParams,
+        queryParams: {...currentParams, ...queryParams},
         replaceUrl: true
-      });
+      }).catch((error: unknown) => this.errorHandler.handleError(error));
     }
+  }
+
+  private isBookFilterMode(value: string | null): value is BookFilterMode {
+    return value === 'and' || value === 'or' || value === 'not' || value === 'single';
   }
 
   shouldForceExpandSeries(queryParamMap: ParamMap): boolean {

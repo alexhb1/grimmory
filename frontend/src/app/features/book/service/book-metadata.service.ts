@@ -90,7 +90,7 @@ export class BookMetadataService {
             reader.releaseLock();
           }
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           if (error instanceof Error && error.name === 'AbortError') {
             return;
           }

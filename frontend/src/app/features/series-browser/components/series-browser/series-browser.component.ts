@@ -1,4 +1,4 @@
-import {Component, DestroyRef, ElementRef, HostListener, computed, inject, OnInit, signal, viewChild} from '@angular/core';
+import {Component, DestroyRef, ElementRef, ErrorHandler, HostListener, computed, inject, OnInit, signal, viewChild} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ProgressSpinner} from '@openng/optimus-ui/progressspinner';
 import {InputText} from '@openng/optimus-ui/inputtext';
@@ -72,6 +72,7 @@ export class SeriesBrowserComponent implements OnInit {
   private scrollService = inject(RouteScrollPositionService);
   private localStorageService = inject(LocalStorageService);
   private layoutService = inject(LayoutService);
+  private errorHandler = inject(ErrorHandler);
 
   readonly isBooksLoading = this.bookService.isBooksLoading;
   private readonly searchTerm = signal('');
@@ -207,7 +208,9 @@ export class SeriesBrowserComponent implements OnInit {
   }
 
   navigateToSeries(series: SeriesSummary): void {
-    this.router.navigate(['/series', series.seriesName]);
+    this.router.navigate(['/series', series.seriesName]).catch((error: unknown) => {
+      this.errorHandler.handleError(error);
+    });
   }
 
   private applyStatusFilter(series: SeriesSummary[], filterValue: string): SeriesSummary[] {

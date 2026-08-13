@@ -8,7 +8,6 @@ import {BookMetadataManageService} from '../../service/book-metadata-manage.serv
 import {debounceTime, distinctUntilChanged, filter, map, skip, take} from 'rxjs/operators';
 import {combineLatest, finalize} from 'rxjs';
 import {DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
-import {Library} from '../../model/library.model';
 import {SortDirection, SortOption} from '../../model/sort.model';
 import {Book} from '../../model/book.model';
 import {
@@ -63,6 +62,7 @@ import {LayoutService} from '../../../../shared/layout/layout.service';
 import {createGridDensity} from '../../../../shared/util/grid-density.util';
 import {DeferredRenderState} from './deferred-render-state';
 import {AppMenuTriggerDirective} from '../../../../shared/ui/menu/app-menu-trigger.directive';
+import {BookFilters} from './book-filter/book-filter.config';
 
 export enum EntityType {
   LIBRARY = 'Library',
@@ -161,7 +161,7 @@ export class BookBrowserComponent implements AfterViewInit {
     ),
     {initialValue: this.searchTerm()}
   );
-  private readonly selectedFilter = signal<Record<string, string[]> | null>(null);
+  private readonly selectedFilter = signal<BookFilters | null>(null);
   private readonly selectedFilterMode = signal<BookFilterMode>('and');
   private readonly sortCriteria = signal<SortOption[]>(this.defaultSortCriteria);
 
@@ -339,7 +339,7 @@ export class BookBrowserComponent implements AfterViewInit {
   });
   readonly isFetchingNextBooksPage = this.bookService.isBooksLoading;
 
-  parsedFilters: Record<string, string[]> = {};
+  parsedFilters: BookFilters = {};
   dynamicDialogRef: DynamicDialogRef | undefined | null;
   EntityType = EntityType;
   private readonly activeLang = toSignal(this.t.langChanges$, {
@@ -512,9 +512,8 @@ export class BookBrowserComponent implements AfterViewInit {
 
   readonly isAudiobookOnlyLibrary = computed(() => {
     const entity = this.entity();
-    if (!entity || this.entityType() !== EntityType.LIBRARY) return false;
-    const library = entity as Library;
-    return !!library.allowedFormats && library.allowedFormats.length === 1 && library.allowedFormats[0] === 'AUDIOBOOK';
+    if (!entity || this.entityType() !== EntityType.LIBRARY || !this.entityService.isLibrary(entity)) return false;
+    return !!entity.allowedFormats && entity.allowedFormats.length === 1 && entity.allowedFormats[0] === 'AUDIOBOOK';
   });
 
   readonly seriesViewEnabled = computed(() => Boolean(this.userService.getCurrentUser()?.userSettings?.enableSeriesView));
@@ -647,10 +646,10 @@ export class BookBrowserComponent implements AfterViewInit {
     });
   }
 
-  onFilterSelected(filters: Record<string, unknown> | null): void {
+  onFilterSelected(filters: BookFilters | null): void {
     if (this.settingFiltersFromUrl) return;
 
-    const normalizedFilters = filters
+    const normalizedFilters: BookFilters | null = filters
       ? Object.fromEntries(
           Object.entries(filters).map(([key, value]) => [
             key,
@@ -870,13 +869,13 @@ export class BookBrowserComponent implements AfterViewInit {
   toggleTableGrid(): void {
     const newMode = this.currentViewMode() === VIEW_MODES.GRID ? VIEW_MODES.TABLE : VIEW_MODES.GRID;
     this.currentViewMode.set(newMode);
-    this.queryParamsService.updateViewMode(newMode as 'grid' | 'table');
+    this.queryParamsService.updateViewMode(newMode);
   }
 
   onViewModeChange(mode: string): void {
-    if (mode && mode !== this.currentViewMode()) {
+    if ((mode === VIEW_MODES.GRID || mode === VIEW_MODES.TABLE) && mode !== this.currentViewMode()) {
       this.currentViewMode.set(mode);
-      this.queryParamsService.updateViewMode(mode as 'grid' | 'table');
+      this.queryParamsService.updateViewMode(mode);
     }
   }
 
@@ -903,8 +902,8 @@ export class BookBrowserComponent implements AfterViewInit {
   async openShelfAssigner() {
     this.dynamicDialogRef = await this.dialogHelperService.openShelfAssignerDialog(null, this.selectedBooks());
     if (this.dynamicDialogRef) {
-      this.dynamicDialogRef.onClose.pipe(take(1)).subscribe(result => {
-        if (result?.assigned) {
+      this.dynamicDialogRef.onClose.pipe(take(1)).subscribe((result: unknown) => {
+        if (typeof result === 'object' && result !== null && 'assigned' in result && result.assigned === true) {
           this.bookSelectionService.deselectAll();
         }
       });
@@ -1065,8 +1064,8 @@ export class BookBrowserComponent implements AfterViewInit {
 
     this.dynamicDialogRef = await this.dialogHelperService.openBulkBookFileAttacherDialog(sourceBooks);
     if (this.dynamicDialogRef) {
-      this.dynamicDialogRef.onClose.pipe(take(1)).subscribe(result => {
-        if (result?.success) {
+      this.dynamicDialogRef.onClose.pipe(take(1)).subscribe((result: unknown) => {
+        if (typeof result === 'object' && result !== null && 'success' in result && result.success === true) {
           this.bookSelectionService.deselectAll();
         }
       });

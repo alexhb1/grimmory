@@ -22,6 +22,10 @@ interface EmailableFile {
 
 const LARGE_FILE_THRESHOLD_KB = 25 * 1024; // 25MB
 
+export interface BookSenderDialogData {
+  book: Book;
+}
+
 @Component({
   selector: 'app-book-sender',
   imports: [
@@ -42,9 +46,9 @@ export class BookSenderComponent implements OnInit {
   private messageService = inject(MessageService);
   private readonly t = inject(TranslocoService);
   dynamicDialogRef = inject(DynamicDialogRef);
-  private dynamicDialogConfig = inject(DynamicDialogConfig);
+  private dynamicDialogConfig = inject<DynamicDialogConfig<BookSenderDialogData>>(DynamicDialogConfig);
 
-  book: Book = this.dynamicDialogConfig.data.book;
+  book: Book;
 
   emailProviders: { label: string, value: EmailProvider }[] = [];
   emailRecipients: { label: string, value: EmailRecipient }[] = [];
@@ -53,6 +57,14 @@ export class BookSenderComponent implements OnInit {
 
   emailableFiles: EmailableFile[] = [];
   selectedFileId?: number;
+
+  constructor() {
+    const data = this.dynamicDialogConfig.data;
+    if (!data) {
+      throw new Error('Book sender dialog requires a book.');
+    }
+    this.book = data.book;
+  }
 
   ngOnInit(): void {
     this.buildEmailableFiles();

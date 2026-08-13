@@ -7,20 +7,28 @@ import {InputText} from '@openng/optimus-ui/inputtext';
 import {AutoComplete} from '@openng/optimus-ui/autocomplete';
 import {Divider} from '@openng/optimus-ui/divider';
 import {SelectButton} from '@openng/optimus-ui/selectbutton';
+import type {Observable} from 'rxjs';
 import {BookMetadata} from '../../../book/model/book.model';
 import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 
 export interface BulkEditResult {
   fields: Partial<BookMetadata>;
-  enabledFields: Set<string>;
+  enabledFields: Set<BulkEditFieldName>;
   mergeArrays: boolean;
 }
 
-interface BulkEditField {
-  name: string;
+export interface BookdropBulkEditDialogData {
+  fileCount: number;
+}
+
+export type BulkEditFieldName = 'seriesName' | 'seriesTotal' | 'authors' | 'publisher' | 'language' | 'categories' | 'moods' | 'tags';
+type BulkEditArrayFieldName = 'authors' | 'categories' | 'moods' | 'tags';
+
+interface BulkEditField<T extends BulkEditFieldName = BulkEditFieldName> {
+  name: T;
   label: string;
   type: 'text' | 'chips' | 'number';
-  controlName: string;
+  controlName: T;
 }
 
 @Component({
@@ -44,24 +52,24 @@ interface BulkEditField {
 export class BookdropBulkEditDialogComponent implements OnInit {
 
   private readonly dialogRef = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<BookdropBulkEditDialogData>>(DynamicDialogConfig);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly t = inject(TranslocoService);
 
   fileCount: number = 0;
   mergeArrays = true;
 
-  enabledFields = new Set<string>();
+  enabledFields = new Set<BulkEditFieldName>();
 
   bulkEditForm = new FormGroup({
-    seriesName: new FormControl(''),
+    seriesName: new FormControl('', {nonNullable: true}),
     seriesTotal: new FormControl<number | null>(null),
-    authors: new FormControl<string[]>([]),
-    publisher: new FormControl(''),
-    language: new FormControl(''),
-    categories: new FormControl<string[]>([]),
-    moods: new FormControl<string[]>([]),
-    tags: new FormControl<string[]>([]),
+    authors: new FormControl<string[]>([], {nonNullable: true}),
+    publisher: new FormControl('', {nonNullable: true}),
+    language: new FormControl('', {nonNullable: true}),
+    categories: new FormControl<string[]>([], {nonNullable: true}),
+    moods: new FormControl<string[]>([], {nonNullable: true}),
+    tags: new FormControl<string[]>([], {nonNullable: true}),
   });
 
   textFields: BulkEditField[] = [
@@ -74,7 +82,7 @@ export class BookdropBulkEditDialogComponent implements OnInit {
     {name: 'seriesTotal', label: this.t.translate('bookdrop.bulkEdit.seriesTotal'), type: 'number', controlName: 'seriesTotal'},
   ];
 
-  chipFields: BulkEditField[] = [
+  chipFields: BulkEditField<BulkEditArrayFieldName>[] = [
     {name: 'authors', label: this.t.translate('bookdrop.bulkEdit.authors'), type: 'chips', controlName: 'authors'},
     {name: 'categories', label: this.t.translate('bookdrop.bulkEdit.genres'), type: 'chips', controlName: 'categories'},
     {name: 'moods', label: this.t.translate('bookdrop.bulkEdit.moods'), type: 'chips', controlName: 'moods'},
@@ -92,43 +100,55 @@ export class BookdropBulkEditDialogComponent implements OnInit {
   }
 
   private setupFormValueChangeListeners(): void {
-    Object.keys(this.bulkEditForm.controls).forEach(fieldName => {
-      const control = this.bulkEditForm.get(fieldName);
-      control?.valueChanges.subscribe(value => {
-        const hasValue = Array.isArray(value) ? value.length > 0 : (value !== null && value !== '' && value !== undefined);
-        if (hasValue && !this.enabledFields.has(fieldName)) {
-          this.enabledFields.add(fieldName);
-          this.cdr.detectChanges();
-        }
-      });
-    });
+    const enableWhenPopulated = (fieldName: BulkEditFieldName, value: unknown): void => {
+      const hasValue = Array.isArray(value) ? value.length > 0 : value !== null && value !== '' && value !== undefined;
+      if (hasValue && !this.enabledFields.has(fieldName)) {
+        this.enabledFields.add(fieldName);
+        this.cdr.detectChanges();
+      }
+    };
+
+    const fields: readonly [BulkEditFieldName, Observable<unknown>][] = [
+      ['seriesName', this.bulkEditForm.controls.seriesName.valueChanges],
+      ['publisher', this.bulkEditForm.controls.publisher.valueChanges],
+      ['language', this.bulkEditForm.controls.language.valueChanges],
+      ['authors', this.bulkEditForm.controls.authors.valueChanges],
+      ['categories', this.bulkEditForm.controls.categories.valueChanges],
+      ['moods', this.bulkEditForm.controls.moods.valueChanges],
+      ['tags', this.bulkEditForm.controls.tags.valueChanges],
+      ['seriesTotal', this.bulkEditForm.controls.seriesTotal.valueChanges],
+    ];
+
+    for (const [fieldName, valueChanges] of fields) {
+      valueChanges.subscribe(value => enableWhenPopulated(fieldName, value));
+    }
   }
 
-  onAutoCompleteBlur(fieldName: string, event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const inputValue = target?.value?.trim();
+  onAutoCompleteBlur(fieldName: BulkEditArrayFieldName, event: Event): void {
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const target = event.target;
+    const inputValue = target.value.trim();
+    const control = this.bulkEditForm.controls[fieldName];
     if (inputValue) {
-      const control = this.bulkEditForm.get(fieldName);
-      const currentValue = (control?.value as string[]) || [];
+      const currentValue = control.value;
       if (!currentValue.includes(inputValue)) {
-        control?.setValue([...currentValue, inputValue]);
+        control.setValue([...currentValue, inputValue]);
       }
-      if (target) {
-        target.value = '';
-      }
+      target.value = '';
     }
 
     if (!this.enabledFields.has(fieldName)) {
-      const control = this.bulkEditForm.get(fieldName);
-      const value = control?.value;
-      if (Array.isArray(value) && value.length > 0) {
+      if (control.value.length > 0) {
         this.enabledFields.add(fieldName);
         this.cdr.detectChanges();
       }
     }
   }
 
-  toggleField(fieldName: string): void {
+  toggleField(fieldName: BulkEditFieldName): void {
     if (this.enabledFields.has(fieldName)) {
       this.enabledFields.delete(fieldName);
     } else {
@@ -136,12 +156,12 @@ export class BookdropBulkEditDialogComponent implements OnInit {
     }
   }
 
-  isFieldEnabled(fieldName: string): boolean {
+  isFieldEnabled(fieldName: BulkEditFieldName): boolean {
     return this.enabledFields.has(fieldName);
   }
 
-  getControl(controlName: string): FormControl {
-    return this.bulkEditForm.get(controlName) as FormControl;
+  getControl<T extends BulkEditFieldName>(controlName: T): typeof this.bulkEditForm.controls[T] {
+    return this.bulkEditForm.controls[controlName];
   }
 
   get hasEnabledFields(): boolean {
@@ -153,16 +173,17 @@ export class BookdropBulkEditDialogComponent implements OnInit {
   }
 
   apply(): void {
-    const formValue = this.bulkEditForm.value;
-    const fields: Partial<BookMetadata> = {};
-
-    this.enabledFields.forEach(fieldName => {
-      const value = formValue[fieldName as keyof typeof formValue];
-
-      if (value !== undefined && value !== null) {
-        (fields as Record<string, unknown>)[fieldName] = value;
-      }
-    });
+    const values = this.bulkEditForm.getRawValue();
+    const fields: Partial<BookMetadata> = {
+      ...(this.enabledFields.has('seriesName') ? {seriesName: values.seriesName} : {}),
+      ...(this.enabledFields.has('seriesTotal') && values.seriesTotal !== null ? {seriesTotal: values.seriesTotal} : {}),
+      ...(this.enabledFields.has('authors') ? {authors: values.authors} : {}),
+      ...(this.enabledFields.has('publisher') ? {publisher: values.publisher} : {}),
+      ...(this.enabledFields.has('language') ? {language: values.language} : {}),
+      ...(this.enabledFields.has('categories') ? {categories: values.categories} : {}),
+      ...(this.enabledFields.has('moods') ? {moods: values.moods} : {}),
+      ...(this.enabledFields.has('tags') ? {tags: values.tags} : {}),
+    };
 
     const result: BulkEditResult = {
       fields,

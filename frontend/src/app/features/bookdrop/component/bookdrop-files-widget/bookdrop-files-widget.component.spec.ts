@@ -19,7 +19,7 @@ describe('BookdropFilesWidgetComponent', () => {
       totalCount: 0,
     });
     router = {
-      navigate: vi.fn(),
+      navigate: vi.fn(() => Promise.resolve(true)),
     };
 
     await TestBed.configureTestingModule({

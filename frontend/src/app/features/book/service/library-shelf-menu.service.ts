@@ -1,4 +1,4 @@
-import {inject, Injectable} from '@angular/core';
+import {ErrorHandler, inject, Injectable} from '@angular/core';
 import {Router} from '@angular/router';
 import {TranslocoService} from '@jsverse/transloco';
 import {ConfirmationService, MessageService} from '@openng/optimus-ui/api';
@@ -23,6 +23,7 @@ export class LibraryShelfMenuService {
   private readonly shelfService = inject(ShelfService);
   private readonly taskHelperService = inject(TaskHelperService);
   private readonly router = inject(Router);
+  private readonly errorHandler = inject(ErrorHandler);
   private readonly dialogLauncherService = inject(DialogLauncherService);
   private readonly magicShelfService = inject(MagicShelfService);
   private readonly loadingService = inject(LoadingService);
@@ -224,7 +225,9 @@ export class LibraryShelfMenuService {
   private navigateHomeIfViewing(deletedTargetUrl: string): void {
     const currentPath = this.router.url.replace(/[?#].*$/, '');
     if (currentPath === deletedTargetUrl) {
-      void this.router.navigate(['/']);
+      this.router.navigate(['/']).catch((error: unknown) => {
+        this.errorHandler.handleError(error);
+      });
     }
   }
 }

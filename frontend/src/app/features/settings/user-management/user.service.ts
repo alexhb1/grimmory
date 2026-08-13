@@ -28,6 +28,7 @@ export interface EntityViewPreference {
   view: 'GRID' | 'TABLE';
   coverSize: number;
   seriesCollapsed: boolean;
+  seriesCollapse?: boolean;
   overlayBookType: boolean;
 }
 

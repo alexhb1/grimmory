@@ -88,13 +88,13 @@ describe('BookMetadataManageService', () => {
       makeBook(1, {titleLocked: false, authorsLocked: false}),
     ]);
 
-    service.toggleFieldLocks([1], {title: 'LOCK', authorsLocked: 'LOCK'}).subscribe();
+    service.toggleFieldLocks([1], {titleLocked: 'LOCK', authorsLocked: 'LOCK'}).subscribe();
 
     const request = httpTestingController.expectOne(req => req.url.endsWith('/api/v1/books/metadata/toggle-field-locks'));
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({
       bookIds: [1],
-      fieldActions: {title: 'LOCK', authorsLocked: 'LOCK'},
+      fieldActions: {titleLocked: 'LOCK', authorsLocked: 'LOCK'},
     });
     request.flush(null);
 
@@ -107,7 +107,7 @@ describe('BookMetadataManageService', () => {
   it('shows an error toast when toggleFieldLocks fails', () => {
     let thrown: unknown;
 
-    service.toggleFieldLocks(new Set([2]), {title: 'UNLOCK'}).subscribe({
+    service.toggleFieldLocks(new Set([2]), {titleLocked: 'UNLOCK'}).subscribe({
       error: error => {
         thrown = error;
       },

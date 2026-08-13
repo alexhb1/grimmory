@@ -9,6 +9,22 @@ import {TranslocoService} from '@jsverse/transloco';
 import {QueryClient} from '@tanstack/angular-query-experimental';
 import {invalidateBookQueries, invalidateBooksQuery, patchBookInCacheWith, patchBookMetadataInCache} from './book-query-cache';
 
+export const METADATA_LOCK_FIELDS = [
+  'titleLocked', 'subtitleLocked', 'publisherLocked', 'publishedDateLocked', 'descriptionLocked',
+  'seriesNameLocked', 'seriesNumberLocked', 'seriesTotalLocked', 'isbn13Locked', 'isbn10Locked',
+  'asinLocked', 'comicvineIdLocked', 'goodreadsIdLocked', 'hardcoverIdLocked', 'hardcoverBookIdLocked',
+  'googleIdLocked', 'pageCountLocked', 'languageLocked', 'amazonRatingLocked', 'amazonReviewCountLocked',
+  'goodreadsRatingLocked', 'goodreadsReviewCountLocked', 'hardcoverRatingLocked', 'hardcoverReviewCountLocked',
+  'lubimyczytacIdLocked', 'lubimyczytacRatingLocked', 'ranobedbIdLocked', 'ranobedbRatingLocked',
+  'audibleIdLocked', 'audibleRatingLocked', 'audibleReviewCountLocked', 'authorsLocked', 'categoriesLocked',
+  'moodsLocked', 'tagsLocked', 'coverLocked', 'thumbnailLocked', 'audiobookCoverLocked', 'reviewsLocked',
+  'narratorLocked', 'abridgedLocked', 'ageRatingLocked', 'contentRatingLocked',
+] as const;
+
+export type MetadataLockField = typeof METADATA_LOCK_FIELDS[number];
+export type MetadataLockActions = Partial<Record<MetadataLockField, 'LOCK' | 'UNLOCK'>>;
+type MetadataCacheLockField = Exclude<MetadataLockField, 'thumbnailLocked'>;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -61,7 +77,7 @@ export class BookMetadataManageService {
     );
   }
 
-  toggleFieldLocks(bookIds: number[] | Set<number>, fieldActions: Record<string, 'LOCK' | 'UNLOCK'>): Observable<void> {
+  toggleFieldLocks(bookIds: number[] | Set<number>, fieldActions: MetadataLockActions): Observable<void> {
     const bookIdSet = bookIds instanceof Set ? bookIds : new Set(bookIds);
 
     return this.http.put<void>(`${this.url}/metadata/toggle-field-locks`, {
@@ -72,14 +88,15 @@ export class BookMetadataManageService {
         for (const bookId of bookIdSet) {
           patchBookInCacheWith(this.queryClient, bookId, book => {
             if (!book.metadata) return book;
-            const updatedMetadata = {...book.metadata} as Record<string, unknown>;
-            for (const [field, action] of Object.entries(fieldActions)) {
-              const lockField = field.endsWith('Locked') ? field : `${field}Locked`;
-              if (lockField in updatedMetadata) {
-                updatedMetadata[lockField] = action === 'LOCK';
-              }
+            const updatedMetadata: BookMetadata = {...book.metadata};
+            for (const field of METADATA_LOCK_FIELDS) {
+              const action = fieldActions[field];
+              if (!action) continue;
+
+              const lockField: MetadataCacheLockField = field === 'thumbnailLocked' ? 'coverLocked' : field;
+              updatedMetadata[lockField] = action === 'LOCK';
             }
-            return {...book, metadata: updatedMetadata as BookMetadata};
+            return {...book, metadata: updatedMetadata};
           });
         }
       }),

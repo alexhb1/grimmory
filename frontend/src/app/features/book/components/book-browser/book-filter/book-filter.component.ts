@@ -5,8 +5,8 @@ import {NgClass} from '@angular/common';
 import {Badge} from '@openng/optimus-ui/badge';
 import {FormsModule} from '@angular/forms';
 import {SelectButton} from '@openng/optimus-ui/selectbutton';
-import {BookFilterMode, DEFAULT_VISIBLE_FILTERS, UserService, VisibleFilterType} from '../../../../settings/user-management/user.service';
-import {Filter, FILTER_LABEL_KEYS, FilterType} from './book-filter.config';
+import {ALL_FILTER_OPTION_VALUES, BookFilterMode, DEFAULT_VISIBLE_FILTERS, UserService, VisibleFilterType} from '../../../../settings/user-management/user.service';
+import {BookFilters, BookFilterValue, Filter, FILTER_LABEL_KEYS, FilterType} from './book-filter.config';
 import {BookFilterService} from './book-filter.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Library} from '../../../model/library.model';
@@ -38,21 +38,21 @@ export class BookFilterComponent {
   readonly entity = input<Library | Shelf | MagicShelf | null>(null);
   readonly entityType = input<EntityType>(EntityType.ALL_BOOKS);
 
-  readonly filterSelected = output<Record<string, unknown> | null>();
+  readonly filterSelected = output<BookFilters | null>();
   readonly filterModeChanged = output<BookFilterMode>();
 
   private readonly filterService = inject(BookFilterService);
   private readonly userService = inject(UserService);
   private readonly t = inject(TranslocoService);
 
-  readonly activeFilters = signal<Record<string, unknown[]>>({});
+  readonly activeFilters = signal<BookFilters>({});
   readonly expandedPanels = signal<number[]>([]);
 
   private readonly visibleFilters = signal<VisibleFilterType[]>([...DEFAULT_VISIBLE_FILTERS]);
 
   readonly visibleFilterTypes = computed(() => {
     const vf = this.visibleFilters();
-    return vf.filter(f => this.filterTypes.includes(f as FilterType)) as FilterType[];
+    return vf.filter(f => this.filterTypes.includes(f));
   });
 
   readonly filterLabelKeys = FILTER_LABEL_KEYS;
@@ -74,7 +74,7 @@ export class BookFilterComponent {
     this.selectedFilterMode
   );
   get filterTypes(): FilterType[] {
-    return Object.keys(this.filterSignals) as FilterType[];
+    return ALL_FILTER_OPTION_VALUES;
   }
 
   private readonly syncUserSettings = effect(() => {
@@ -95,7 +95,7 @@ export class BookFilterComponent {
     return key ? this.t.translate(key) : type;
   }
 
-  handleFilterClick(filterType: string, value: unknown): void {
+  handleFilterClick(filterType: string, value: BookFilterValue): void {
     if (this._selectedFilterMode() === 'single') {
       this.handleSingleMode(filterType, value);
     } else {
@@ -104,11 +104,10 @@ export class BookFilterComponent {
     this.emitFilters();
   }
 
-  setFilters(filters: Record<string, unknown>): void {
-    const result: Record<string, unknown[]> = {};
-    for (const [key, value] of Object.entries(filters)) {
-      const values = Array.isArray(value) ? value : [value];
-      result[key] = values.map(v => this.filterService.processFilterValue(key, v));
+  setFilters(filters: BookFilters): void {
+    const result: BookFilters = {};
+    for (const [key, values] of Object.entries(filters)) {
+      result[key] = values.map(value => this.filterService.processFilterValue(key, value));
     }
     this.activeFilters.set(result);
     this.emitFilters();
@@ -133,38 +132,29 @@ export class BookFilterComponent {
     return Math.min(itemCount * 28, 440);
   }
 
-  trackByFilter = (_: number, f: Filter): unknown => this.getFilterValueId(f);
+  trackByFilter = (_: number, f: Filter): BookFilterValue => this.getFilterValueId(f);
 
-  getFilterValueId(f: Filter): unknown {
-    const value = f.value;
-    return typeof value === 'object' && value !== null && 'id' in value
-      ? value.id
-      : f.value;
+  getFilterValueId(f: Filter): BookFilterValue {
+    return f.value.id;
   }
 
   getFilterValueDisplay(f: Filter): string {
-    const value = f.value;
-    if (typeof value === 'object' && value !== null && 'name' in value) {
-      return String(value.name ?? '');
-    }
-    return String(value ?? '');
+    return f.value.name;
   }
 
-  isActive(filterType: string, filterId: unknown): boolean {
+  isActive(filterType: string, filterId: BookFilterValue): boolean {
     const active = this.activeFilters()[filterType];
     if (!active) return false;
     return active.some(v => v === filterId || String(v) === String(filterId));
   }
 
-  private handleSingleMode(filterType: string, value: unknown): void {
-    const id = this.extractId(value);
+  private handleSingleMode(filterType: string, id: BookFilterValue): void {
     const current = this.activeFilters()[filterType];
     const isSame = current?.length === 1 && this.valuesMatch(current[0], id);
     this.activeFilters.set(isSame ? {} : {[filterType]: [id]});
   }
 
-  private handleMultiMode(filterType: string, value: unknown): void {
-    const id = this.extractId(value);
+  private handleMultiMode(filterType: string, id: BookFilterValue): void {
     const current = {...this.activeFilters()};
     const arr = [...(current[filterType] ?? [])];
 
@@ -182,13 +172,7 @@ export class BookFilterComponent {
     this.activeFilters.set(current);
   }
 
-  private extractId(value: unknown): unknown {
-    return typeof value === 'object' && value !== null && 'id' in value
-      ? (value as {id: unknown}).id
-      : value;
-  }
-
-  private valuesMatch(a: unknown, b: unknown): boolean {
+  private valuesMatch(a: BookFilterValue, b: BookFilterValue): boolean {
     return a === b || String(a) === String(b);
   }
 
