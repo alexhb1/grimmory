@@ -72,7 +72,7 @@ export class CbxNoteDialogComponent implements OnChanges {
   }
 
   onOverlayClick(event: Event): void {
-    if ((event.target as HTMLElement).classList.contains('dialog-overlay')) {
+    if (event.target instanceof Element && event.target.classList.contains('dialog-overlay')) {
       this.onCancel();
     }
   }

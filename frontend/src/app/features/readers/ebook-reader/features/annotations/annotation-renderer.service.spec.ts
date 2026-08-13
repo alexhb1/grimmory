@@ -96,7 +96,7 @@ describe('ReaderAnnotationService', () => {
 
   it('adds batches with default styles, replaces duplicates, and tolerates missing views', () => {
     const view = {
-      addAnnotation: vi.fn(),
+      addAnnotation: vi.fn().mockResolvedValue(undefined),
       deleteAnnotation: vi.fn().mockResolvedValue(undefined),
       showAnnotation: vi.fn().mockResolvedValue(undefined),
     };

@@ -1,6 +1,12 @@
 import {inject, Injectable} from '@angular/core';
 import {Subject} from 'rxjs';
 import {ReaderAnnotationService} from '../features/annotations/annotation-renderer.service';
+import {
+  FoliateDrawAnnotationEventDetail,
+  FoliateEventTarget,
+  FoliateLoadEventDetail,
+  FoliateRelocateEventDetail,
+} from './foliate-view.contract';
 
 export interface TextSelection {
   text: string;
@@ -16,31 +22,6 @@ interface PopupPosition {
   showBelow?: boolean;
 }
 
-interface LoadEventDetail {
-  doc?: Document;
-}
-
-interface RelocateEventItem {
-  href?: string;
-  label?: string;
-}
-
-interface RelocateEventDetail {
-  cfi?: string | null;
-  fraction?: number;
-  tocItem?: RelocateEventItem;
-  pageItem?: RelocateEventItem;
-  section?: { current: number; total: number };
-  time?: { section?: number; total?: number };
-}
-
-interface DrawAnnotationEventDetail {
-  draw: (overlayer: (rects: DOMRectList, options: { color?: string }) => SVGElement, options: { color: string }) => void;
-  annotation: { value: string };
-  doc: Document;
-  range: Range;
-}
-
 interface IframeClickMessage {
   type: 'iframe-click';
   clientX: number;
@@ -51,16 +32,12 @@ interface IframeClickMessage {
   target?: string;
 }
 
-interface EventServiceView extends HTMLElement {
-  addAnnotation(annotation: { value: string }): void;
-}
-
 export type ViewEvent =
-  | { type: 'load'; detail?: LoadEventDetail }
-  | { type: 'relocate'; detail: RelocateEventDetail }
+  | { type: 'load'; detail?: FoliateLoadEventDetail }
+  | { type: 'relocate'; detail: FoliateRelocateEventDetail }
   | { type: 'error'; detail?: unknown }
   | { type: 'middle-single-tap' }
-  | { type: 'draw-annotation'; detail: DrawAnnotationEventDetail }
+  | { type: 'draw-annotation'; detail: FoliateDrawAnnotationEventDetail }
   | { type: 'show-annotation'; detail?: unknown }
   | { type: 'text-selected'; detail: TextSelection; popupPosition: PopupPosition }
   | { type: 'toggle-fullscreen' }
@@ -80,6 +57,10 @@ interface ViewCallbacks {
   getContents: () => { index: number; doc: Document }[] | null;
 }
 
+function isElementNode(value: EventTarget | null | undefined): value is Element {
+  return typeof value === 'object' && value !== null && 'nodeType' in value && value.nodeType === Node.ELEMENT_NODE;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -92,7 +73,7 @@ export class ReaderEventService {
 
   private annotationService = inject(ReaderAnnotationService);
 
-  private view: EventServiceView | null = null;
+  private view: FoliateEventTarget | null = null;
   private viewCallbacks: ViewCallbacks | null = null;
   private isNavigating = false;
   private lastClickTime = 0;
@@ -112,7 +93,7 @@ export class ReaderEventService {
   private eventSubject = new Subject<ViewEvent>();
   public events$ = this.eventSubject.asObservable();
 
-  initialize(view: EventServiceView, callbacks: ViewCallbacks): void {
+  initialize(view: FoliateEventTarget, callbacks: ViewCallbacks): void {
     this.view = view;
     this.viewCallbacks = callbacks;
     this.attachViewEventListeners();
@@ -151,41 +132,39 @@ export class ReaderEventService {
   private attachViewEventListeners(): void {
     if (!this.view) return;
 
-    this.view.addEventListener('load', (event: Event) => {
-      const e = event as CustomEvent<LoadEventDetail>;
-      this.eventSubject.next({type: 'load', detail: e.detail});
-      if (e.detail?.doc) {
+    this.view.addEventListener('load', event => {
+      this.eventSubject.next({type: 'load', detail: event.detail});
+      const doc = event.detail?.doc;
+      if (doc) {
         if (this.keydownHandler) {
           const handler = this.keydownHandler;
-          e.detail.doc.addEventListener('keydown', handler);
-          this.iframeCleanupFns.push(() => e.detail?.doc?.removeEventListener('keydown', handler));
+          doc.addEventListener('keydown', handler);
+          this.iframeCleanupFns.push(() => doc.removeEventListener('keydown', handler));
         }
-        this.attachIframeEventHandlers(e.detail.doc);
+        this.attachIframeEventHandlers(doc);
       }
 
       const allAnnotations = this.annotationService.getAllAnnotations();
       if (allAnnotations.length > 0 && this.view) {
         setTimeout(() => {
           allAnnotations.forEach(annotation => {
-            this.view?.addAnnotation({value: annotation.value});
+            this.view?.addAnnotation({value: annotation.value})
+              .catch((error: unknown) => console.error('Failed to restore ebook annotation', error));
           });
         }, 100);
       }
     });
 
-    this.view.addEventListener('relocate', (event: Event) => {
-      const e = event as CustomEvent<RelocateEventDetail>;
-      this.eventSubject.next({type: 'relocate', detail: e.detail});
+    this.view.addEventListener('relocate', event => {
+      this.eventSubject.next({type: 'relocate', detail: event.detail});
     });
 
-    this.view.addEventListener('error', (event: Event) => {
-      const e = event as CustomEvent<unknown>;
-      this.eventSubject.next({type: 'error', detail: e.detail});
+    this.view.addEventListener('error', event => {
+      this.eventSubject.next({type: 'error', detail: event.detail});
     });
 
-    this.view.addEventListener('draw-annotation', (event: Event) => {
-      const e = event as CustomEvent<DrawAnnotationEventDetail>;
-      const {draw, annotation, doc, range} = e.detail;
+    this.view.addEventListener('draw-annotation', event => {
+      const {draw, annotation, doc, range} = event.detail;
       const storedStyle = this.annotationService.getAnnotationStyle(annotation.value);
       if (storedStyle) {
         const overlayerStyle = this.annotationService.getOverlayerDrawFunction(storedStyle.style);
@@ -194,16 +173,21 @@ export class ReaderEventService {
       this.eventSubject.next({type: 'draw-annotation', detail: {draw, annotation, doc, range}});
     });
 
-    this.view.addEventListener('show-annotation', (event: Event) => {
-      const e = event as CustomEvent<unknown>;
-      this.eventSubject.next({type: 'show-annotation', detail: e.detail});
+    this.view.addEventListener('show-annotation', event => {
+      this.eventSubject.next({type: 'show-annotation', detail: event.detail});
     });
   }
 
   private attachKeyboardHandler(): void {
     this.keydownHandler = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+      const target = event.target;
+      const contentEditable = isElementNode(target) ? target.closest('[contenteditable]') : null;
+      if (isElementNode(target) && (
+        target.tagName === 'INPUT'
+        || target.tagName === 'TEXTAREA'
+        || (contentEditable !== null
+          && contentEditable.getAttribute('contenteditable')?.toLowerCase() !== 'false')
+      )) {
         return;
       }
       const k = event.key;
@@ -251,7 +235,7 @@ export class ReaderEventService {
     document.addEventListener('keydown', this.keydownHandler);
   }
 
-  private readonly windowMessageHandler = (event: MessageEvent): void => {
+  private readonly windowMessageHandler = (event: MessageEvent<unknown>): void => {
     if (this.isIframeClickMessage(event.data)) {
       this.handleIframeClickMessage(event.data);
     }
@@ -262,7 +246,10 @@ export class ReaderEventService {
   }
 
   private isIframeClickMessage(value: unknown): value is IframeClickMessage {
-    return !!value && typeof value === 'object' && 'type' in value && value.type === 'iframe-click';
+    return typeof value === 'object'
+      && value !== null
+      && 'type' in value
+      && value.type === 'iframe-click';
   }
 
   private attachIframeEventHandlers(doc: Document): void {
@@ -271,28 +258,32 @@ export class ReaderEventService {
     }
     this.clickedDocs.add(doc);
 
-    const track = (target: EventTarget, type: string, handler: EventListenerOrEventListenerObject, options?: AddEventListenerOptions | boolean): void => {
-      target.addEventListener(type, handler, options);
-      this.iframeCleanupFns.push(() => target.removeEventListener(type, handler, options));
+    const track = <K extends keyof DocumentEventMap>(
+      type: K,
+      handler: (this: Document, event: DocumentEventMap[K]) => void,
+      options?: AddEventListenerOptions | boolean,
+    ): void => {
+      doc.addEventListener(type, handler, options);
+      this.iframeCleanupFns.push(() => doc.removeEventListener(type, handler, options));
     };
 
-    track(doc, 'mousedown', () => {
+    track('mousedown', () => {
       this.longHoldTimeout = setTimeout(() => {
         this.longHoldTimeout = null;
       }, this.LONG_HOLD_THRESHOLD_MS);
     }, {capture: true});
 
-    track(doc, 'mouseup', () => {
+    track('mouseup', () => {
       this.handleSelectionEnd(doc);
     });
 
-    track(doc, 'click', ((event: MouseEvent) => {
+    track('click', event => {
       // Ignore synthesized mouse events that follow touch events
       if (Date.now() - this.lastTouchTime < 500) {
         return;
       }
 
-      const iframe = doc.defaultView?.frameElement as HTMLIFrameElement | null;
+      const iframe = doc.defaultView?.frameElement;
       if (!iframe) return;
 
       const iframeRect = iframe.getBoundingClientRect();
@@ -306,23 +297,23 @@ export class ReaderEventService {
         iframeLeft: iframeRect.left,
         iframeWidth: iframeRect.width,
         eventClientX: event.clientX,
-        target: (event.target as HTMLElement)?.tagName
+        target: isElementNode(event.target) ? event.target.tagName : undefined
       }, '*');
-    }) as EventListener, {capture: true});
+    }, {capture: true});
 
-    track(doc, 'touchstart', ((event: TouchEvent) => {
+    track('touchstart', event => {
       this.handleTouchStart(event, doc);
-    }) as EventListener, {passive: true});
+    }, {passive: true});
 
-    track(doc, 'touchmove', ((event: TouchEvent) => {
+    track('touchmove', event => {
       this.handleTouchMove(event, doc);
-    }) as EventListener, {passive: false});
+    }, {passive: false});
 
-    track(doc, 'touchend', ((event: TouchEvent) => {
+    track('touchend', event => {
       this.handleTouchEnd(event, doc);
-    }) as EventListener, {passive: false});
+    }, {passive: false});
 
-    track(doc, 'selectionchange', () => {
+    track('selectionchange', () => {
       this.handleSelectionChange(doc);
     });
 
@@ -437,7 +428,7 @@ export class ReaderEventService {
       }
 
       if (touchDuration < this.LONG_HOLD_THRESHOLD_MS && Math.abs(deltaX) < 10 && deltaY < 10) {
-        const iframe = doc.defaultView?.frameElement as HTMLIFrameElement | null;
+        const iframe = doc.defaultView?.frameElement;
         if (!iframe) return;
 
         const iframeRect = iframe.getBoundingClientRect();
@@ -450,7 +441,7 @@ export class ReaderEventService {
           iframeLeft: iframeRect.left,
           iframeWidth: iframeRect.width,
           eventClientX: touch.clientX,
-          target: (event.target as HTMLElement)?.tagName
+          target: isElementNode(event.target) ? event.target.tagName : undefined
         }, '*');
       }
     }
@@ -476,7 +467,7 @@ export class ReaderEventService {
       const cfi = this.viewCallbacks?.getCFI(index, range);
 
       if (cfi) {
-        const iframe = doc.defaultView?.frameElement as HTMLIFrameElement | null;
+        const iframe = doc.defaultView?.frameElement;
         const rangeRect = range.getBoundingClientRect();
         let popupX = rangeRect.left + (rangeRect.width / 2);
         let selectionTop = rangeRect.top;
@@ -516,15 +507,12 @@ export class ReaderEventService {
     const getLinkFromNode = (node: Node | null | undefined): string | undefined => {
       let current: Node | null | undefined = node;
       while (current && current.nodeType !== Node.DOCUMENT_NODE) {
-        if (current.nodeType === Node.ELEMENT_NODE) {
-          const element = current as HTMLElement;
-          if (element.tagName?.toLowerCase() === 'a') {
-            return element.getAttribute('href') || undefined;
+        if (isElementNode(current)) {
+          if (current.tagName.toLowerCase() === 'a') {
+            return current.getAttribute('href') || undefined;
           }
-          const closestLink = typeof element.closest === 'function' ? element.closest('a') : null;
-          if (closestLink?.getAttribute('href')) {
-            return closestLink.getAttribute('href')!;
-          }
+          const href = current.closest('a')?.getAttribute('href');
+          if (href) return href;
         }
         current = current.parentNode;
       }
@@ -539,15 +527,10 @@ export class ReaderEventService {
                  getLinkFromNode(selection.focusNode);
 
     // If still not found, check if the range contains any links
-    if (!linkUrl && range.commonAncestorContainer?.nodeType === Node.ELEMENT_NODE) {
-      const containerElement = range.commonAncestorContainer as HTMLElement;
-      // Find all links in the container
-      if (typeof containerElement.querySelectorAll === 'function') {
-        const links = Array.from(containerElement.querySelectorAll('a'));
-        // Find the first link that intersects with the selection range
-        const internalLink = links.find(link => typeof range.intersectsNode === 'function' && range.intersectsNode(link));
-        linkUrl = internalLink?.getAttribute('href') || undefined;
-      }
+    if (!linkUrl && isElementNode(range.commonAncestorContainer)) {
+      const links = Array.from(range.commonAncestorContainer.querySelectorAll('a'));
+      const internalLink = links.find(link => range.intersectsNode(link));
+      linkUrl = internalLink?.getAttribute('href') || undefined;
     }
 
     return linkUrl;

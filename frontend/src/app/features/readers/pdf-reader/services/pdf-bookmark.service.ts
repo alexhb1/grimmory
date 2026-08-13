@@ -4,6 +4,7 @@ import {catchError, map, tap} from 'rxjs/operators';
 import {BookMark, BookMarkService, CreateBookMarkRequest} from '../../../../shared/service/book-mark.service';
 import {MessageService} from '@openng/optimus-ui/api';
 import {TranslocoService} from '@jsverse/transloco';
+import {HttpErrorResponse} from '@angular/common/http';
 
 @Injectable()
 export class PdfBookmarkService {
@@ -73,8 +74,8 @@ export class PdfBookmarkService {
         });
         return true;
       }),
-      catchError(error => {
-        const isDuplicate = error?.status === 409;
+      catchError((error: unknown) => {
+        const isDuplicate = error instanceof HttpErrorResponse && error.status === 409;
         if (isDuplicate) {
           // Hydrate cache: server already has this bookmark
           this.loadBookmarks().subscribe();

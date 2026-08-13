@@ -64,12 +64,10 @@ describe('CbxNoteDialogComponent', () => {
     component.noteContent = '   ';
     component.onSave();
     component.onCancel();
+    const overlay = document.createElement('div');
+    overlay.classList.add('dialog-overlay');
     component.onOverlayClick({
-      target: {
-        classList: {
-          contains: vi.fn((value: string) => value === 'dialog-overlay'),
-        },
-      },
+      target: overlay,
     } as unknown as Event);
 
     expect(savedSpy).not.toHaveBeenCalled();

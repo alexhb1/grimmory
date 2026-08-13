@@ -1,4 +1,10 @@
-import type {AnnotationTransferItem} from '@embedpdf/snippet';
+import {PdfAnnotationSubtype, PdfStandardFont, PdfTextAlignment, PdfVerticalAlignment} from '@embedpdf/models';
+import {
+  type AnnotationTransferItem,
+  type PdfFreeTextAnnoObject,
+  type PdfHighlightAnnoObject,
+  type PdfInkAnnoObject,
+} from '@embedpdf/snippet';
 
 /**
  * Stored annotation wrapper format.
@@ -157,17 +163,16 @@ function convertHighlight(legacy: Record<string, unknown>): AnnotationTransferIt
   const rawOpacity = (legacy['opacity'] as number) ?? 0.4;
   const opacity = Math.min(rawOpacity, 0.6);
 
-  return {
-    annotation: {
-      type: 9, // PdfAnnotationSubtype.HIGHLIGHT
-      pageIndex,
-      rect: {origin: {x, y}, size: {width: w, height: h}},
-      segmentRects: [{origin: {x, y}, size: {width: w, height: h}}],
-      color: hexColor,
-      opacity,
-      id: crypto.randomUUID(),
-    } as never,
+  const annotation: PdfHighlightAnnoObject = {
+    type: PdfAnnotationSubtype.HIGHLIGHT,
+    pageIndex,
+    rect: {origin: {x, y}, size: {width: w, height: h}},
+    segmentRects: [{origin: {x, y}, size: {width: w, height: h}}],
+    strokeColor: hexColor,
+    opacity,
+    id: crypto.randomUUID(),
   };
+  return {annotation};
 }
 
 function convertInk(legacy: Record<string, unknown>): AnnotationTransferItem | null {
@@ -200,18 +205,17 @@ function convertInk(legacy: Record<string, unknown>): AnnotationTransferItem | n
 
   if (inkList.length === 0) return null;
 
-  return {
-    annotation: {
-      type: 15, // PdfAnnotationSubtype.INK
-      pageIndex,
-      rect: {origin: {x: 0, y: 0}, size: {width: 0, height: 0}},
-      color: hexColor,
-      strokeWidth: thickness,
-      opacity: 1,
-      inkList,
-      id: crypto.randomUUID(),
-    } as never,
+  const annotation: PdfInkAnnoObject = {
+    type: PdfAnnotationSubtype.INK,
+    pageIndex,
+    rect: {origin: {x: 0, y: 0}, size: {width: 0, height: 0}},
+    strokeColor: hexColor,
+    strokeWidth: thickness,
+    opacity: 1,
+    inkList,
+    id: crypto.randomUUID(),
   };
+  return {annotation};
 }
 
 function convertFreeText(legacy: Record<string, unknown>): AnnotationTransferItem | null {
@@ -228,17 +232,20 @@ function convertFreeText(legacy: Record<string, unknown>): AnnotationTransferIte
   const w = rect[2] - rect[0];
   const h = rect[3] - rect[1];
 
-  return {
-    annotation: {
-      type: 3, // PdfAnnotationSubtype.FREETEXT
-      pageIndex,
-      rect: {origin: {x, y}, size: {width: w, height: h}},
-      contents: value,
-      fontSize,
-      fontColor: color ? rgbArrayToHex(color) : '#000000',
-      id: crypto.randomUUID(),
-    } as never,
+  const annotation: PdfFreeTextAnnoObject = {
+    type: PdfAnnotationSubtype.FREETEXT,
+    pageIndex,
+    rect: {origin: {x, y}, size: {width: w, height: h}},
+    contents: value,
+    fontFamily: PdfStandardFont.Helvetica,
+    fontSize,
+    fontColor: color ? rgbArrayToHex(color) : '#000000',
+    textAlign: PdfTextAlignment.Left,
+    verticalAlign: PdfVerticalAlignment.Top,
+    opacity: 1,
+    id: crypto.randomUUID(),
   };
+  return {annotation};
 }
 
 function rgbArrayToHex(rgb: number[]): string {
@@ -281,7 +288,6 @@ function restoreArrayBuffers(item: SerializableAnnotationTransferItem): Annotati
   }
 
   if (next.ctx?._dataEncoding === 'base64' && typeof next.ctx.data === 'string') {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {_dataEncoding: _, ...rest} = next.ctx;
     return toAnnotationTransferItem({
       ...next,

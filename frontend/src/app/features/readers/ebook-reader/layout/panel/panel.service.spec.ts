@@ -98,7 +98,8 @@ describe('ReaderLeftSidebarService', () => {
   });
 
   it('searches, tracks progress, and clears when the query is blank', async () => {
-    await service.search('magic');
+    service.search('magic');
+    await vi.waitFor(() => expect(service.searchState().isSearching).toBe(false));
 
     expect(viewManager.search).toHaveBeenCalledWith({query: 'magic'});
     expect(service.searchState()).toEqual({
@@ -114,7 +115,7 @@ describe('ReaderLeftSidebarService', () => {
       progress: 1,
     });
 
-    await service.search('   ');
+    service.search('   ');
     expect(viewManager.clearSearch).toHaveBeenCalledOnce();
     expect(service.searchState()).toEqual({
       query: '',
@@ -130,7 +131,8 @@ describe('ReaderLeftSidebarService', () => {
       throw new Error('search failed');
     });
 
-    await service.search('broken');
+    service.search('broken');
+    await vi.waitFor(() => expect(service.searchState().isSearching).toBe(false));
 
     expect(service.searchState()).toEqual({
       query: 'broken',

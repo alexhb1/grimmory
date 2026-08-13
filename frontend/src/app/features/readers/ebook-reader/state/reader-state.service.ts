@@ -21,10 +21,6 @@ export interface ReaderState {
   flow: 'paginated' | 'scrolled';
 }
 
-interface LegacyViewerSetting {
-  customFontId?: string | number | null;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -118,9 +114,9 @@ export class ReaderStateService {
             }
           }
         } else {
-          const legacySettings = settings as LegacyViewerSetting;
-          if (legacySettings.customFontId != null) {
-            newState.fontFamily = `custom:${legacySettings.customFontId}`;
+          const legacyCustomFontId = 'customFontId' in settings ? settings.customFontId : undefined;
+          if (typeof legacyCustomFontId === 'string' || typeof legacyCustomFontId === 'number') {
+            newState.fontFamily = `custom:${legacyCustomFontId}`;
           }
         }
 

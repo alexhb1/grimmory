@@ -43,6 +43,8 @@ interface PendingInitialChapterRestore {
   attempts: number;
 }
 
+const EBOOK_BOOK_TYPES = ['EPUB', 'FB2', 'MOBI', 'AZW3'] as const satisfies readonly BookType[];
+
 @Component({
   selector: 'app-ebook-reader',
   standalone: true,
@@ -105,7 +107,7 @@ export class EbookReaderComponent implements OnInit {
   public stateService = inject(ReaderStateService);
 
   protected bookId!: number;
-  protected altBookType?: string;
+  protected altBookType?: BookType;
 
   private hasLoadedOnce = false;
   private _fileUrl: string | null = null;
@@ -164,13 +166,10 @@ export class EbookReaderComponent implements OnInit {
       this.applyStyles();
     });
 
-    effect(
-      () => {
-        this.sidebarService.bookmarks();
-        this.updateBookmarkIndicator();
-      },
-      {allowSignalWrites: true}
-    );
+    effect(() => {
+      this.sidebarService.bookmarks();
+      this.updateBookmarkIndicator();
+    });
   }
 
   ngOnInit() {
@@ -207,7 +206,8 @@ export class EbookReaderComponent implements OnInit {
     this.isLoading.set(true);
 
     this.bookId = +this.route.snapshot.paramMap.get('bookId')!;
-    this.altBookType = this.route.snapshot.queryParamMap.get('bookType') ?? undefined;
+    const requestedBookType = this.route.snapshot.queryParamMap.get('bookType');
+    this.altBookType = EBOOK_BOOK_TYPES.find(bookType => bookType === requestedBookType);
 
     // Parallelize Foliate script loading and initial book detail fetch
     forkJoin([
@@ -217,7 +217,7 @@ export class EbookReaderComponent implements OnInit {
       switchMap(([, book]) => {
         this.book.set(book);
         this.pageTitle.setBookPageTitle(book);
-        const bookType = (this.altBookType as BookType | undefined) ?? book.primaryFile?.bookType;
+        const bookType = this.altBookType ?? book.primaryFile?.bookType;
         if (!bookType) {
           return throwError(() => new Error('Book type not found'));
         }
@@ -551,11 +551,13 @@ export class EbookReaderComponent implements OnInit {
   }
 
   private enterFullscreen(): void {
-    document.documentElement.requestFullscreen?.();
+    document.documentElement.requestFullscreen?.()
+      .catch((error: unknown) => console.error('Failed to enter fullscreen mode', error));
   }
 
   private exitFullscreen(): void {
-    document.exitFullscreen?.();
+    document.exitFullscreen?.()
+      .catch((error: unknown) => console.error('Failed to exit fullscreen mode', error));
   }
 
   onProgressChange(fraction: number): void {

@@ -11,7 +11,7 @@ import { CbxPageDimensionService } from './core/cbx-page-dimension.service';
 import { CbxPageDimension } from './models/cbx-page-dimension.model';
 import { MessageService } from '@openng/optimus-ui/api';
 import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
-import { Book, BookSetting, BookType } from '../../book/model/book.model';
+import { Book, BookSetting, BookType, BOOK_TYPES } from '../../book/model/book.model';
 import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { FormsModule } from "@angular/forms";
 import { ReadingSessionService } from '../../../shared/service/reading-session.service';
@@ -31,6 +31,7 @@ import { CbxShortcutsHelpComponent } from './dialogs/cbx-shortcuts-help.componen
 import { CanvasRendererComponent } from './renderers/canvas-renderer.component';
 import { BookNoteV2 } from '../../../shared/service/book-note-v2.service';
 import { ReaderPreferencesService } from '../../settings/reader-preferences/reader-preferences.service';
+import {getApiErrorMessage} from '../../../shared/models/api-exception.model';
 import {
   clampStripMaxWidthPercent,
   dismissWebtoonHintForSession,
@@ -40,6 +41,9 @@ import {
   writeStripWidthPercentPerBook
 } from './core/cbx-reader-storage';
 import {computeCbxSpreads, findCbxSpreadForPage} from './core/cbx-spread.util';
+function readValue<T>(values: readonly T[], value: unknown): T | undefined {
+  return values.find(candidate => candidate === value);
+}
 
 
 @Component({
@@ -87,7 +91,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   bookType = signal<BookType | null>(null);
   bookId = signal<number | null>(null);
   bookFileId = signal<number | null>(null);
-  altBookType = signal<string | undefined>(undefined);
+  altBookType = signal<BookType | undefined>(undefined);
   pages = signal<number[]>([]);
   currentPage = signal(0);
   isLoading = signal(true);
@@ -321,7 +325,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
       switchMap((params: ParamMap) => {
         this.isLoading.set(true);
         this.bookId.set(+params.get('bookId')!);
-        this.altBookType.set(this.route.snapshot.queryParamMap.get('bookType') ?? undefined);
+        this.altBookType.set(readValue(BOOK_TYPES, this.route.snapshot.queryParamMap.get('bookType')));
 
         this.showWebtoonSuggestion.set(false);
         this.continuationHintVisible.set(false);
@@ -338,7 +342,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
         return from(this.bookService.fetchFreshBookDetail(this.bookId()!, false)).pipe(
           switchMap((book) => {
             // Use alternative bookType from query param if provided, otherwise use primary
-            const resolvedBookType = (this.altBookType() as BookType | undefined) ?? book.primaryFile?.bookType;
+            const resolvedBookType = this.altBookType() ?? readValue(BOOK_TYPES, book.primaryFile?.bookType);
             if (!resolvedBookType) {
               throw new Error(this.t.translate('shared.reader.failedToLoadBook'));
             }
@@ -398,25 +402,27 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
             userSettings.cbxReaderSetting.stripMaxWidthPercent,
             myself.id
           ));
+          const globalPageViewMode = readValue(Object.values(CbxPageViewMode), userSettings.cbxReaderSetting.pageViewMode) ?? CbxPageViewMode.SINGLE_PAGE;
+          const globalPageSpread = readValue(Object.values(CbxPageSpread), userSettings.cbxReaderSetting.pageSpread) ?? CbxPageSpread.EVEN;
+          const globalFitMode = readValue(Object.values(CbxFitMode), userSettings.cbxReaderSetting.fitMode) ?? CbxFitMode.FIT_PAGE;
+          const globalScrollMode = readValue(Object.values(CbxScrollMode), userSettings.cbxReaderSetting.scrollMode) ?? CbxScrollMode.PAGINATED;
+          const globalBackgroundColor = readValue(Object.values(CbxBackgroundColor), userSettings.cbxReaderSetting.backgroundColor) ?? CbxBackgroundColor.GRAY;
+
           this.pageViewMode.set(global
-            ? this.CbxPageViewMode[userSettings.cbxReaderSetting.pageViewMode as keyof typeof CbxPageViewMode] || this.CbxPageViewMode.SINGLE_PAGE
-            : this.CbxPageViewMode[bookSettings.cbxSettings?.pageViewMode as keyof typeof CbxPageViewMode] || this.CbxPageViewMode[userSettings.cbxReaderSetting.pageViewMode as keyof typeof CbxPageViewMode] || this.CbxPageViewMode.SINGLE_PAGE);
-
+            ? globalPageViewMode
+            : readValue(Object.values(CbxPageViewMode), bookSettings.cbxSettings?.pageViewMode) ?? globalPageViewMode);
           this.pageSpread.set(global
-            ? this.CbxPageSpread[userSettings.cbxReaderSetting.pageSpread as keyof typeof CbxPageSpread] || this.CbxPageSpread.EVEN
-            : this.CbxPageSpread[bookSettings.cbxSettings?.pageSpread as keyof typeof CbxPageSpread] || this.CbxPageSpread[userSettings.cbxReaderSetting.pageSpread as keyof typeof CbxPageSpread] || this.CbxPageSpread.EVEN);
-
+            ? globalPageSpread
+            : readValue(Object.values(CbxPageSpread), bookSettings.cbxSettings?.pageSpread) ?? globalPageSpread);
           this.fitMode.set(global
-            ? this.CbxFitMode[userSettings.cbxReaderSetting.fitMode as keyof typeof CbxFitMode] || this.CbxFitMode.FIT_PAGE
-            : this.CbxFitMode[bookSettings.cbxSettings?.fitMode as keyof typeof CbxFitMode] || this.CbxFitMode[userSettings.cbxReaderSetting.fitMode as keyof typeof CbxFitMode] || this.CbxFitMode.FIT_PAGE);
-
+            ? globalFitMode
+            : readValue(Object.values(CbxFitMode), bookSettings.cbxSettings?.fitMode) ?? globalFitMode);
           this.scrollMode.set(global
-            ? this.CbxScrollMode[userSettings.cbxReaderSetting.scrollMode as keyof typeof CbxScrollMode] || CbxScrollMode.PAGINATED
-            : this.CbxScrollMode[bookSettings.cbxSettings?.scrollMode as keyof typeof CbxScrollMode] || this.CbxScrollMode[userSettings.cbxReaderSetting.scrollMode as keyof typeof CbxScrollMode] || CbxScrollMode.PAGINATED);
-
+            ? globalScrollMode
+            : readValue(Object.values(CbxScrollMode), bookSettings.cbxSettings?.scrollMode) ?? globalScrollMode);
           this.backgroundColor.set(global
-            ? this.CbxBackgroundColor[userSettings.cbxReaderSetting.backgroundColor as keyof typeof CbxBackgroundColor] || CbxBackgroundColor.GRAY
-            : this.CbxBackgroundColor[bookSettings.cbxSettings?.backgroundColor as keyof typeof CbxBackgroundColor] || this.CbxBackgroundColor[userSettings.cbxReaderSetting.backgroundColor as keyof typeof CbxBackgroundColor] || CbxBackgroundColor.GRAY);
+            ? globalBackgroundColor
+            : readValue(Object.values(CbxBackgroundColor), bookSettings.cbxSettings?.backgroundColor) ?? globalBackgroundColor);
 
           // Restore new settings from per-book or global
           const cbxSrc = global ? userSettings.cbxReaderSetting : bookSettings.cbxSettings;
@@ -462,8 +468,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
         const percentage = this.pages().length > 0 ? Math.round(((this.currentPage() + 1) / this.pages().length) * 1000) / 10 : 0;
         this.readingSessionService.startSession(this.bookId()!, "CBX", (this.currentPage() + 1).toString(), percentage);
       },
-      error: (err) => {
-        const errorMessage = err?.error?.message || this.t.translate('shared.reader.failedToLoadBook');
+      error: (error: unknown) => {
+        const errorMessage = getApiErrorMessage(error, this.t.translate('shared.reader.failedToLoadBook'));
         this.messageService.add({ severity: 'error', summary: this.t.translate('common.error'), detail: errorMessage });
         this.isLoading.set(false);
       }
@@ -638,12 +644,12 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
     this.quickSettingsService.stripMaxWidthChange$
       .pipe(
         tap((value) => {
-          this.stripMaxWidthPercent.set(value as number);
+          this.stripMaxWidthPercent.set(value);
         }),
         debounceTime(CbxReaderComponent.STRIP_WIDTH_PERSIST_DEBOUNCE_MS),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((value) => this.persistStripMaxWidth(value as number));
+      .subscribe((value) => this.persistStripMaxWidth(value));
   }
 
   private updateServiceStates(): void {
@@ -1117,7 +1123,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   onScroll(event: Event): void {
     if (this.scrollMode() !== CbxScrollMode.INFINITE) return;
 
-    const container = event.target as HTMLElement;
+    if (!(event.target instanceof HTMLElement)) return;
+    const container = event.target;
     const scrollPosition = container.scrollTop + container.clientHeight;
     const scrollHeight = container.scrollHeight;
 
@@ -1178,7 +1185,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
 
     const anchorEl = container.querySelector(
       `.infinite-scroll-wrapper img.page-image[data-page="${first}"]`
-    ) as HTMLElement | null;
+    );
     if (!anchorEl) return;
 
     const beforeTop = anchorEl.getBoundingClientRect().top;
@@ -1218,13 +1225,13 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   private updateCurrentPageFromScroll(container: HTMLElement): void {
     const images = Array.from(
       container.querySelectorAll('.infinite-scroll-wrapper img.page-image[data-page]')
-    ) as HTMLElement[];
+    );
     if (!images.length) return;
 
     const containerRect = container.getBoundingClientRect();
     const midY = containerRect.top + containerRect.height / 2;
 
-    let best: HTMLElement | null = null;
+    let best: Element | null = null;
     let bestDist = Number.MAX_VALUE;
     for (const img of images) {
       const rect = img.getBoundingClientRect();
@@ -1325,7 +1332,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   }
 
   onLongStripImageLoad(event: Event, pageIndex: number): void {
-    const img = event.target as HTMLImageElement;
+    if (!(event.target instanceof HTMLImageElement)) return;
+    const img = event.target;
     if (!img.naturalWidth || !img.naturalHeight) return;
 
     // Cache dimensions
@@ -1358,8 +1366,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const img = container.querySelector(`img[data-page="${this.currentPage()}"]`) as HTMLImageElement | null;
-    if (!img) {
+    const img = container.querySelector(`img[data-page="${this.currentPage()}"]`);
+    if (!(img instanceof HTMLImageElement)) {
       if (attempt < 30) {
         requestAnimationFrame(() => this.longStripWaitForImagesAndScroll(attempt + 1, layoutGen));
       }
@@ -1519,7 +1527,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   private longStripOnScrollEnd(container: HTMLElement): void {
     if (this.longStripIsScrolling()) return;
 
-    const images = Array.from(container.querySelectorAll('.long-strip-wrapper img[data-page]')) as HTMLImageElement[];
+    const images = Array.from(container.querySelectorAll('.long-strip-wrapper img[data-page]'));
     const closest = this.longStripFindClosestImage(images, container);
 
     if (closest) {
@@ -1535,8 +1543,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
     this.updateContinuationHint(container);
   }
 
-  private longStripFindClosestImage(images: HTMLImageElement[], container: HTMLElement): HTMLImageElement | null {
-    let closest: HTMLImageElement | null = null;
+  private longStripFindClosestImage(images: Element[], container: HTMLElement): Element | null {
+    let closest: Element | null = null;
     let closestDist = Number.MAX_VALUE;
     const containerRect = container.getBoundingClientRect();
     const midY = containerRect.top + containerRect.height / 2;
@@ -1647,7 +1655,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
 
       const targetImage = container.querySelector(
         `.infinite-scroll-wrapper img.page-image[data-page="${pageIndex}"]`
-      ) as HTMLElement | null;
+      );
 
       if (targetImage) {
         targetImage.scrollIntoView({ behavior, block: 'start' });
@@ -1690,8 +1698,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
     // Ignore if typing in input/textarea
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    const target = event.target;
+    if (target instanceof Element && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       return;
     }
 
@@ -1916,17 +1924,25 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   }
 
   navigateToPreviousBook(): void {
-    if (this.previousBookInSeries()) {
-      this.endReadingSession();
-      this.router.navigate(['/cbx-reader/book', this.previousBookInSeries()?.id], { replaceUrl: true });
-    }
+    const previousBook = this.previousBookInSeries();
+    if (!previousBook) return;
+
+    this.endReadingSession();
+    this.router.navigate(['/cbx-reader/book', previousBook.id], {replaceUrl: true})
+      .catch((error: unknown) => {
+        console.error('[SeriesNav] Failed to navigate to previous book:', error);
+      });
   }
 
   navigateToNextBook(): void {
-    if (this.nextBookInSeries()) {
-      this.endReadingSession();
-      this.router.navigate(['/cbx-reader/book', this.nextBookInSeries()?.id], { replaceUrl: true });
-    }
+    const nextBook = this.nextBookInSeries();
+    if (!nextBook) return;
+
+    this.endReadingSession();
+    this.router.navigate(['/cbx-reader/book', nextBook.id], {replaceUrl: true})
+      .catch((error: unknown) => {
+        console.error('[SeriesNav] Failed to navigate to next book:', error);
+      });
   }
 
   private loadSeriesNavigation(book: Book): void {
@@ -2091,20 +2107,20 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   private cycleMagnifierZoom(direction: 1 | -1): void {
     const values = Object.values(CbxMagnifierZoom).filter(v => typeof v === 'number') as number[];
     values.sort((a, b) => a - b);
-    const currentIndex = values.indexOf(this.magnifierZoom() as number);
+    const currentIndex = values.indexOf(this.magnifierZoom());
     const newIndex = currentIndex + direction;
     if (newIndex >= 0 && newIndex < values.length) {
-      this.onMagnifierZoomChange(values[newIndex] as CbxMagnifierZoom);
+      this.onMagnifierZoomChange(values[newIndex]);
     }
   }
 
   private cycleMagnifierLensSize(direction: 1 | -1): void {
     const values = Object.values(CbxMagnifierLensSize).filter(v => typeof v === 'number') as number[];
     values.sort((a, b) => a - b);
-    const currentIndex = values.indexOf(this.magnifierLensSize() as number);
+    const currentIndex = values.indexOf(this.magnifierLensSize());
     const newIndex = currentIndex + direction;
     if (newIndex >= 0 && newIndex < values.length) {
-      this.onMagnifierLensSizeChange(values[newIndex] as CbxMagnifierLensSize);
+      this.onMagnifierLensSizeChange(values[newIndex]);
     }
   }
 
@@ -2116,14 +2132,15 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
       this.onFitModeChange(CbxFitMode.ACTUAL_SIZE);
     } else {
       // Restore original fit mode
-      this.onFitModeChange(this.originalFitMode as CbxFitMode);
+      this.onFitModeChange(this.originalFitMode);
       this.originalFitMode = null;
     }
   }
 
   // Double page detection
   onPageImageLoad(event: Event, pageIndex: number): void {
-    const img = event.target as HTMLImageElement;
+    if (!(event.target instanceof HTMLImageElement)) return;
+    const img = event.target;
     if (img.naturalWidth && img.naturalHeight) {
       this.pageDimensionsCache.set(pageIndex, {
         width: img.naturalWidth,
@@ -2187,8 +2204,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
     const el = this.magnifierLensRef()?.nativeElement;
     if (!el) return;
 
-    const lensSize = this.magnifierLensSize() as number;
-    const zoom = this.magnifierZoom() as number;
+    const lensSize = this.magnifierLensSize();
+    const zoom = this.magnifierZoom();
 
     const target = document.elementFromPoint(event.clientX, event.clientY);
     if (!(target instanceof HTMLImageElement) || !target.classList.contains('page-image')) {

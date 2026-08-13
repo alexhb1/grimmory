@@ -115,7 +115,7 @@ export class EpubCustomFontService {
   injectCustomFontsStylesheet(renderer: Renderer2, document: Document): void {
     const css = this.generateCustomFontsStylesheet();
     if (css) {
-      const styleEl = renderer.createElement('style');
+      const styleEl = document.createElement('style');
       styleEl.textContent = css;
       renderer.appendChild(document.head, styleEl);
     }

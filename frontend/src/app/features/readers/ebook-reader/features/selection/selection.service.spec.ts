@@ -84,7 +84,7 @@ describe('ReaderSelectionService', () => {
   });
 
   it('previews, selects, searches, and dismisses the active selection', () => {
-    const clipboardWrite = vi.fn();
+    const clipboardWrite = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {writeText: clipboardWrite},

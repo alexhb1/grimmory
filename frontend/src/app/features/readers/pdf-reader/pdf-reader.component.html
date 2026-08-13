@@ -324,7 +324,6 @@
         title: isCurrentPageBookmarked() ? 'readerPdf.toolbar.removeBookmark' : 'readerPdf.toolbar.addBookmark',
         active: isCurrentPageBookmarked(),
         pressed: isCurrentPageBookmarked(),
-        className: 'bookmark-btn',
         isOverflow: isOverflow,
         size: size
       }"></ng-container>
@@ -405,14 +404,14 @@
   }
 </ng-template>
 
-<ng-template #btnBase let-id="id" let-icon="icon" let-title="title" let-active="active" let-pressed="pressed" let-className="className" let-isOverflow="isOverflow" let-size="size">
+<ng-template #btnBase let-id="id" let-icon="icon" let-title="title" let-active="active" let-pressed="pressed" let-isOverflow="isOverflow" let-size="size">
   @if (isOverflow) {
     <button class="overflow-item" [class.active]="active" (click)="performAction(id); closeToolbarOverflow()">
       <app-reader-icon [name]="icon" [size]="18" />
       <span>{{ title | transloco }}</span>
     </button>
   } @else {
-    <button class="icon-btn" [class]="className" [class.active]="active" [class.bookmarked]="icon === 'bookmark' && active"
+    <button class="icon-btn" [class.active]="active" [class.bookmark-btn]="icon === 'bookmark'" [class.bookmarked]="icon === 'bookmark' && active"
       [title]="title | transloco" [attr.aria-label]="title | transloco"
       [attr.aria-pressed]="pressed" (click)="performAction(id)">
       <app-reader-icon [name]="icon" [size]="size" />
