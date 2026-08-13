@@ -386,7 +386,7 @@
                   @for (file of currentBook.supplementaryFiles; track file.id) {
                     <div class="file-item">
                       <div class="file-info">
-                        <i [class]="getFileIcon(getFileExtension(file.filePath))" class="file-icon"></i>
+                        <i [class]="'file-icon ' + getFileIcon(getFileExtension(file.filePath))"></i>
                         <span class="file-name" [pTooltip]="file.filePath" tooltipPosition="top">{{ file.fileName }}</span>
                         <span class="file-size">{{ getFileSizeInMB(file) }}</span>
                       </div>

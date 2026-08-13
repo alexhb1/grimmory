@@ -38,6 +38,18 @@ interface SeriesStats {
 }
 
 type SeriesChartData = ChartData<'bar', number[], string>;
+const SERIES_FILTERS = ['all', 'completed', 'in-progress', 'not-started', 'paused', 'abandoned'] as const;
+const SERIES_SORTS = ['progress', 'rating', 'books', 'name'] as const;
+type SeriesFilter = (typeof SERIES_FILTERS)[number];
+type SeriesSort = (typeof SERIES_SORTS)[number];
+
+function isSeriesFilter(value: string): value is SeriesFilter {
+  return SERIES_FILTERS.some(filter => filter === value);
+}
+
+function isSeriesSort(value: string): value is SeriesSort {
+  return SERIES_SORTS.some(sort => sort === value);
+}
 
 @Component({
   selector: 'app-series-progress-chart',
@@ -71,8 +83,8 @@ export class SeriesProgressChartComponent {
   public currentPage = 0;
   public readonly PAGE_SIZE = 10;
   public readonly CHART_DISPLAY_COUNT = 8;
-  public sortBy: 'progress' | 'rating' | 'books' | 'name' = 'progress';
-  public filterStatus: 'all' | 'completed' | 'in-progress' | 'not-started' | 'paused' | 'abandoned' = 'all';
+  public sortBy: SeriesSort = 'progress';
+  public filterStatus: SeriesFilter = 'all';
 
   public readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
@@ -185,7 +197,9 @@ export class SeriesProgressChartComponent {
       return;
     }
 
-    this.onFilterChange(target.value as typeof this.filterStatus);
+    if (isSeriesFilter(target.value)) {
+      this.onFilterChange(target.value);
+    }
   }
 
   onSortSelect(event: Event): void {
@@ -194,7 +208,9 @@ export class SeriesProgressChartComponent {
       return;
     }
 
-    this.onSortChange(target.value as typeof this.sortBy);
+    if (isSeriesSort(target.value)) {
+      this.onSortChange(target.value);
+    }
   }
 
   onSearchChange(term: string): void {
@@ -203,13 +219,13 @@ export class SeriesProgressChartComponent {
     this.applyFiltersAndSort();
   }
 
-  onSortChange(sortBy: 'progress' | 'rating' | 'books' | 'name'): void {
+  onSortChange(sortBy: SeriesSort): void {
     this.sortBy = sortBy;
     this.currentPage = 0;
     this.applyFiltersAndSort();
   }
 
-  onFilterChange(status: 'all' | 'completed' | 'in-progress' | 'not-started' | 'paused' | 'abandoned'): void {
+  onFilterChange(status: SeriesFilter): void {
     this.filterStatus = status;
     this.currentPage = 0;
     this.applyFiltersAndSort();

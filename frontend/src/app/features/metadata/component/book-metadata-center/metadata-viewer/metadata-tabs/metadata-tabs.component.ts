@@ -232,8 +232,11 @@ export class MetadataTabsComponent {
   }
 
   onTabChange(value: string | number | undefined): void {
-    if (typeof value === 'string' && this.availableTabs().some(tab => tab.value === value)) {
-      this.activeTab.set(value as MetadataTabValue);
+    const selectedTab = typeof value === 'string'
+      ? this.availableTabs().find(tab => tab.value === value)
+      : undefined;
+    if (selectedTab) {
+      this.activeTab.set(selectedTab.value);
     }
   }
 

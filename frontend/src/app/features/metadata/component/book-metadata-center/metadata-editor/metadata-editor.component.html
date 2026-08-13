@@ -532,7 +532,7 @@
             (keydown.enter)="audiobookSectionExpanded = !audiobookSectionExpanded">
             <i class="pi pi-headphones"></i>
             <span>{{ t('audiobookDetails') }}</span>
-            <i [class]="audiobookSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-toggle"></i>
+            <i [class]="'section-toggle ' + (audiobookSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down')"></i>
           </div>
           @if (audiobookSectionExpanded) {
             <div class="collapsible-content">
@@ -572,7 +572,7 @@
             (keydown.enter)="comicSectionExpanded = !comicSectionExpanded">
             <i class="pi pi-bolt"></i>
             <span>{{ t('comicBookDetails') }}</span>
-            <i [class]="comicSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-toggle"></i>
+            <i [class]="'section-toggle ' + (comicSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down')"></i>
           </div>
           @if (comicSectionExpanded) {
             <div class="collapsible-content">
@@ -659,7 +659,7 @@
           (keydown.enter)="providerSectionExpanded = !providerSectionExpanded">
           <i class="pi pi-database"></i>
           <span>{{ t('providerMetadata') }}</span>
-          <i [class]="providerSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="section-toggle"></i>
+          <i [class]="'section-toggle ' + (providerSectionExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down')"></i>
         </div>
         @if (providerSectionExpanded) {
           <div class="collapsible-content">

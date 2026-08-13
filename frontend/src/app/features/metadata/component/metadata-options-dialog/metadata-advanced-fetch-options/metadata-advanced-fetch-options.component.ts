@@ -26,7 +26,7 @@ export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
   @Input() currentMetadataOptions!: MetadataRefreshOptions;
   @Input() submitButtonLabel!: string;
 
-  fields: (keyof FieldOptions)[] = [
+  readonly fields = [
     'title', 'subtitle', 'description', 'authors', 'publisher', 'publishedDate',
     'seriesName', 'seriesNumber', 'seriesTotal', 'isbn13', 'isbn10',
     'language', 'categories', 'cover', 'pageCount',
@@ -38,7 +38,7 @@ export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
     'lubimyczytacId', 'lubimyczytacRating',
     'ranobedbId', 'ranobedbRating',
     'audibleId', 'audibleRating', 'audibleReviewCount'
-  ];
+  ] as const satisfies readonly (keyof FieldOptions)[];
 
   providerSpecificFields: (keyof FieldOptions)[] = [
     'asin', 'amazonRating', 'amazonReviewCount',
@@ -116,16 +116,16 @@ export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
   ];
 
   private initializeFieldOptions(): FieldOptions {
-    return this.fields.reduce((acc, field) => {
-      acc[field] = {p1: null, p2: null, p3: null, p4: null};
-      return acc;
+    return this.fields.reduce((fieldOptions, field) => {
+      fieldOptions[field] = {p1: null, p2: null, p3: null, p4: null};
+      return fieldOptions;
     }, {} as FieldOptions);
   }
 
   private initializeEnabledFields(): Record<keyof FieldOptions, boolean> {
-    return this.fields.reduce((acc, field) => {
-      acc[field] = true;
-      return acc;
+    return this.fields.reduce((enabledFields, field) => {
+      enabledFields[field] = true;
+      return enabledFields;
     }, {} as Record<keyof FieldOptions, boolean>);
   }
 
@@ -155,16 +155,15 @@ export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
   }
 
   private deepCloneFieldOptions(fieldOptions: FieldOptions): FieldOptions {
-    const cloned = {} as FieldOptions;
-    for (const field of this.fields) {
-      cloned[field] = {
+    return this.fields.reduce((clonedFieldOptions, field) => {
+      clonedFieldOptions[field] = {
         p1: fieldOptions[field]?.p1 || null,
         p2: fieldOptions[field]?.p2 || null,
         p3: fieldOptions[field]?.p3 || null,
         p4: fieldOptions[field]?.p4 || null
       };
-    }
-    return cloned;
+      return clonedFieldOptions;
+    }, {} as FieldOptions);
   }
 
   submit() {
@@ -295,6 +294,6 @@ export class MetadataAdvancedFetchOptionsComponent implements OnChanges {
   }
 
   isProviderSpecificField(field: keyof FieldOptions): boolean {
-    return this.providerSpecificFieldsList.includes(field as string);
+    return this.providerSpecificFieldsList.includes(field);
   }
 }

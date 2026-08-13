@@ -78,9 +78,8 @@ export class ReadingDNAChartComponent {
           },
           padding: 25,
           callback: (label: string) => {
-            const traitKeys = ['adventurous', 'perfectionist', 'intellectual', 'emotional', 'patient', 'social', 'nostalgic', 'ambitious'];
             const icons = ['🌟', '💎', '🧠', '💖', '🕰️', '👥', '📚', '🚀'];
-            const translatedLabels = traitKeys.map(k => this.t.translate(`statsUser.readingDna.traits.${k}`));
+            const translatedLabels = this.traitKeys.map(k => this.t.translate(`statsUser.readingDna.traits.${k}`));
             const idx = translatedLabels.indexOf(label);
             return [idx >= 0 ? icons[idx] : '', label];
           }
@@ -134,7 +133,10 @@ export class ReadingDNAChartComponent {
     }
   };
 
-  private readonly traitKeys = ['adventurous', 'perfectionist', 'intellectual', 'emotional', 'patient', 'social', 'nostalgic', 'ambitious'];
+  private readonly traitKeys: (keyof ReadingDNAProfile)[] = [
+    'adventurous', 'perfectionist', 'intellectual', 'emotional',
+    'patient', 'social', 'nostalgic', 'ambitious'
+  ];
   public readonly chartData = computed<ReadingDNAChartData>(() => {
     const profile = this.profile();
     if (!profile) {
@@ -394,8 +396,8 @@ export class ReadingDNAChartComponent {
 
     return this.traitKeys.map((key, i) => ({
       trait: this.t.translate(`statsUser.readingDna.traits.${key}`),
-      score: profile[key as keyof ReadingDNAProfile],
-      description: this.getTraitDescription(key, profile[key as keyof ReadingDNAProfile]),
+      score: profile[key],
+      description: this.getTraitDescription(key, profile[key]),
       color: traitColors[i]
     }));
   }

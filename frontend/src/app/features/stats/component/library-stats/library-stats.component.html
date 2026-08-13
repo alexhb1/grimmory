@@ -157,10 +157,10 @@
          [cdkDropListData]="getEnabledChartsSorted()">
 
       @for (chartConfig of getEnabledChartsSorted(); track chartConfig.id) {
-        <div class="chart-container"
+        <div [class]="'chart-container chart-section ' + chartConfig.category"
              cdkDrag
              [cdkDragData]="chartConfig"
-             [class]="'chart-section ' + chartConfig.category">
+        >
 
           <div class="drag-handle" cdkDragHandle [title]="t('main.dragToReorder')">
             <i class="pi pi-bars"></i>

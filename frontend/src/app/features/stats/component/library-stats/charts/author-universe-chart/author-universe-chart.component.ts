@@ -8,6 +8,7 @@ import {Book, ReadStatus} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {AsyncPipe} from '@angular/common';
 import {StatsChartThemeService} from '../../../shared/stats-chart-theme.service';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 interface AuthorStats {
   name: string;
@@ -521,8 +522,12 @@ export class AuthorUniverseChartComponent {
       return;
     }
 
-    const raw = dataPoint.raw as BubbleDataPoint;
-    const stats = raw.authorStats;
+    const point = getChartDataPoint(this.chartDataSubject.value, dataPoint);
+    if (!point) {
+      tooltipEl.style.opacity = '0';
+      return;
+    }
+    const stats = point.authorStats;
 
     const ratingText = stats.avgRating > 0
       ? `${stats.avgRating.toFixed(2)} \u2605`

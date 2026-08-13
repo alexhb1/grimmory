@@ -8,6 +8,10 @@ import {MetadataSearcherComponent} from '../book-metadata-center/metadata-search
 import {Button} from '@openng/optimus-ui/button';
 import {injectQuery} from '@tanstack/angular-query-experimental';
 
+export interface MultiBookMetadataEditorDialogData {
+  bookIds: number[];
+}
+
 @Component({
   selector: 'app-multi-book-metadata-editor-component',
   imports: [
@@ -26,7 +30,7 @@ import {injectQuery} from '@tanstack/angular-query-experimental';
 })
 export class MultiBookMetadataEditorComponent {
 
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<MultiBookMetadataEditorDialogData>>(DynamicDialogConfig);
   readonly ref = inject(DynamicDialogRef);
   private readonly bookService = inject(BookService);
   private readonly userService = inject(UserService);

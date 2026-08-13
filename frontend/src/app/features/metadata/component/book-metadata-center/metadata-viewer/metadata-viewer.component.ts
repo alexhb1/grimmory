@@ -1,4 +1,4 @@
-import {AfterViewChecked, Component, computed, DestroyRef, ElementRef, inject, Input, OnInit, signal, ViewChild} from '@angular/core';
+import {AfterViewChecked, Component, computed, DestroyRef, ElementRef, ErrorHandler, inject, Input, OnInit, signal, ViewChild} from '@angular/core';
 import {Button} from '@openng/optimus-ui/button';
 import {DecimalPipe, NgClass} from '@angular/common';
 import {BookService} from '../../../../book/service/book.service';
@@ -40,6 +40,7 @@ import {AuthorService} from '../../../../author-browser/service/author.service';
 import {Dialog} from '@openng/optimus-ui/dialog';
 import {Checkbox} from '@openng/optimus-ui/checkbox';
 import DOMPurify from 'dompurify';
+import {getApiErrorMessage} from '../../../../../shared/models/api-exception.model';
 
 
 @Component({
@@ -114,6 +115,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
   private confirmationService = inject(ConfirmationService);
 
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
   private destroyRef = inject(DestroyRef);
   private dialogRef = inject(DynamicDialogRef, { optional: true });
   private userState = this.userService.currentUser;
@@ -265,7 +267,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
         label: this.t.translate('metadata.viewer.menuUploadFile'),
         icon: 'pi pi-upload',
         command: () => {
-          void this.bookDialogHelperService.openAdditionalFileUploaderDialog(book).catch(() => undefined);
+          void this.bookDialogHelperService.openAdditionalFileUploaderDialog(book);
         },
       });
     }
@@ -296,7 +298,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
             label: this.t.translate('metadata.viewer.menuCustomSend'),
             icon: 'pi pi-cog',
             command: () => {
-              void this.bookDialogHelperService.openCustomSendDialog(book).catch(() => undefined);
+              void this.bookDialogHelperService.openCustomSendDialog(book);
             }
           }
         ]
@@ -311,7 +313,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
         label: this.t.translate('metadata.viewer.menuAttachToAnotherBook'),
         icon: 'pi pi-link',
         command: () => {
-          void this.bookDialogHelperService.openBookFileAttacherDialog(book).catch(() => undefined);
+          void this.bookDialogHelperService.openBookFileAttacherDialog(book);
         },
       });
     }
@@ -413,7 +415,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
               this.bookService.deleteBooks(new Set([book.id])).subscribe({
                 next: () => {
                   if (this.metadataCenterViewMode === 'route') {
-                    this.router.navigate(['/dashboard']);
+                    this.router.navigate(['/dashboard']).catch((error: unknown) => this.errorHandler.handleError(error));
                   } else {
                     this.dialogRef?.close();
                   }
@@ -583,11 +585,13 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
               detail: this.t.translate('metadata.viewer.toast.deleteSupplementarySuccessDetail', { fileName })
             });
           },
-          error: (error) => {
+          error: (error: unknown) => {
             this.messageService.add({
               severity: 'error',
               summary: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorDetail', { error: error.message || 'Unknown error' })
+              detail: this.t.translate('metadata.viewer.toast.deleteSupplementaryErrorDetail', {
+                error: getApiErrorMessage(error, 'Unknown error')
+              })
             });
           }
         });
@@ -629,11 +633,13 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
               detail: this.t.translate('metadata.viewer.toast.deleteFormatSuccessDetail', { fileName })
             });
           },
-          error: (error) => {
+          error: (error: unknown) => {
             this.messageService.add({
               severity: 'error',
               summary: this.t.translate('metadata.viewer.toast.deleteFormatErrorSummary'),
-              detail: this.t.translate('metadata.viewer.toast.deleteFormatErrorDetail', { error: error.message || 'Unknown error' })
+              detail: this.t.translate('metadata.viewer.toast.deleteFormatErrorDetail', {
+                error: getApiErrorMessage(error, 'Unknown error')
+              })
             });
           }
         });
@@ -662,10 +668,10 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
           summary: this.t.translate('metadata.viewer.toast.quickSendSuccessSummary'),
           detail: this.t.translate('metadata.viewer.toast.quickSendSuccessDetail'),
         }),
-        error: (err) => this.messageService.add({
+        error: (error: unknown) => this.messageService.add({
           severity: 'error',
           summary: this.t.translate('metadata.viewer.toast.quickSendErrorSummary'),
-          detail: err?.error?.message || this.t.translate('metadata.viewer.toast.quickSendErrorDetail'),
+          detail: getApiErrorMessage(error, this.t.translate('metadata.viewer.toast.quickSendErrorDetail')),
         })
       });
     };
@@ -818,7 +824,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
   }
 
   goToSeries(seriesName: string): void {
-    this.router.navigate(['/series', seriesName]);
+    this.router.navigate(['/series', seriesName]).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   goToPublisher(publisher: string): void {
@@ -915,7 +921,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
         sidebar: true,
         filter: `${filterKey}:${encodeURIComponent(filterValue)}`
       }
-    });
+    }).catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   private handleMetadataClick(filterKey: string, filterValue: string): void {
@@ -1188,7 +1194,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
     command: () => this.updateReadStatus(option.value)
   }));
 
-  getStatusLabel(value: string): string {
+  getStatusLabel(value: ReadStatus | null | undefined): string {
     const option = this.readStatusOptions.find(o => o.value === value);
     return option ? this.t.translate(option.labelKey).toUpperCase() : 'UNSET';
   }
@@ -1272,7 +1278,7 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
     if (this.metadataCenterViewMode === 'route') {
       this.router.navigate(['/book', bookId], {
         queryParams: {tab: 'view'}
-      });
+      }).catch((error: unknown) => this.errorHandler.handleError(error));
     } else {
       this.metadataHostService.switchBook(bookId);
     }

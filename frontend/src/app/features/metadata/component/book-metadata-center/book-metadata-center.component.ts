@@ -1,4 +1,4 @@
-import {computed, Component, DestroyRef, inject, OnInit, signal} from '@angular/core';
+import {computed, Component, DestroyRef, ErrorHandler, inject, OnInit, signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, Router} from '@angular/router';
 import {UserService} from '../../../settings/user-management/user.service';
@@ -26,6 +26,10 @@ enum BookMetadataTab {
   Sidecar = 'sidecar',
 }
 
+export interface BookMetadataCenterDialogData {
+  bookId: number;
+}
+
 @Component({
   selector: 'app-book-metadata-center',
   standalone: true,
@@ -48,6 +52,7 @@ enum BookMetadataTab {
 export class BookMetadataCenterComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private errorHandler = inject(ErrorHandler);
   private bookService = inject(BookService);
   private userService = inject(UserService);
   private appSettingsService = inject(AppSettingsService);
@@ -55,7 +60,7 @@ export class BookMetadataCenterComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private pageTitle = inject(PageTitleService);
   private t = inject(TranslocoService);
-  readonly config = inject(DynamicDialogConfig, {optional: true});
+  readonly config = inject<DynamicDialogConfig<BookMetadataCenterDialogData> | null>(DynamicDialogConfig, {optional: true});
   readonly ref = inject(DynamicDialogRef, {optional: true});
   BookMetadataTab = BookMetadataTab;
 
@@ -66,7 +71,7 @@ export class BookMetadataCenterComponent implements OnInit {
     if (bookId == null) {
       return {
         queryKey: ['books', 'detail', -1, true] as const,
-        queryFn: async (): Promise<Book> => {
+        queryFn: (): Book => {
           throw new Error('No book selected');
         },
         enabled: false,
@@ -83,7 +88,7 @@ export class BookMetadataCenterComponent implements OnInit {
     if (bookId == null || !(settings?.similarBookRecommendation ?? false)) {
       return queryOptions({
         queryKey: bookRecommendationsQueryKey(-1, 20),
-        queryFn: async (): Promise<BookRecommendation[]> => [],
+        queryFn: (): BookRecommendation[] => [],
         enabled: false,
       });
     }
@@ -112,7 +117,7 @@ export class BookMetadataCenterComponent implements OnInit {
 
     return (this.admin() || this.canEditMetadata()) && !this.isPhysical && this.isLocalStorage() && sidecarEnabled;
   }
-  private validTabs = Object.values(BookMetadataTab);
+  private readonly validTabs: readonly string[] = Object.values(BookMetadataTab);
 
   get tab(): BookMetadataTab {
     return this._tab;
@@ -126,7 +131,7 @@ export class BookMetadataCenterComponent implements OnInit {
         relativeTo: this.route,
         queryParams: { tab: value },
         queryParamsHandling: 'merge'
-      });
+      }).catch((error: unknown) => this.errorHandler.handleError(error));
     }
   }
 
@@ -162,8 +167,8 @@ export class BookMetadataCenterComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(tabParam => {
-        if (this.validTabs.includes(tabParam as BookMetadataTab) && this.canOpenTab(tabParam as BookMetadataTab)) {
-          this._tab = tabParam as BookMetadataTab;
+        if (this.isBookMetadataTab(tabParam) && this.canOpenTab(tabParam)) {
+          this._tab = tabParam;
         } else {
           const defaultTab = BookMetadataTab.View;
           this._tab = defaultTab;
@@ -173,11 +178,15 @@ export class BookMetadataCenterComponent implements OnInit {
               queryParams: {tab: defaultTab},
               queryParamsHandling: 'merge',
               replaceUrl: true
-            });
+            }).catch((error: unknown) => this.errorHandler.handleError(error));
           }
         }
       });
 
+  }
+
+  private isBookMetadataTab(value: string | null): value is BookMetadataTab {
+    return value !== null && this.validTabs.includes(value);
   }
 
   protected canOpenTab(tab: BookMetadataTab): boolean {

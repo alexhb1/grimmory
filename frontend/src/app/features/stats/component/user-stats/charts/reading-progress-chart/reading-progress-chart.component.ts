@@ -5,6 +5,7 @@ import {ChartConfiguration, ChartData} from 'chart.js';
 import {BookService} from '../../../../../book/service/book.service';
 import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 interface ReadingProgressStats {
   progressRange: string;
@@ -74,14 +75,14 @@ export class ReadingProgressChartComponent {
             const data = chart.data;
             if (data.labels?.length && data.datasets?.length) {
               return data.labels.map((label, i) => {
-                const value = data.datasets[0].data[i] as number;
+                const value = getChartDataPoint(this.chartData(), {datasetIndex: 0, dataIndex: i}) ?? 0;
                 const isVisible = typeof chart.getDataVisibility === 'function'
                   ? chart.getDataVisibility(i)
                   : true;
 
                 return {
-                  text: `${label}: ${value}`,
-                  fillStyle: (data.datasets[0].backgroundColor as string[])[i],
+                  text: `${String(label)}: ${value}`,
+                  fillStyle: CHART_COLORS[i],
                   lineWidth: 1,
                   hidden: !isVisible,
                   index: i,
@@ -104,7 +105,7 @@ export class ReadingProgressChartComponent {
           title: (context) => context[0].label,
           label: (context) => {
             const value = context.parsed;
-            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1);
             const label = context.label;
             const rangeInfo = PROGRESS_RANGES.find(r => r.range === label);

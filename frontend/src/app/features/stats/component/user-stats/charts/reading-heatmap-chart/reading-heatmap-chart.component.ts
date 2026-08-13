@@ -8,6 +8,7 @@ import {Book} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {AsyncPipe} from '@angular/common';
 import {readStatsChartThemeColors} from '../../../shared/stats-chart-theme.service';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 interface MatrixDataPoint {
   x: number; // month (0-11)
@@ -19,10 +20,6 @@ interface YearMonthData {
   year: number;
   month: number;
   count: number;
-}
-
-interface YScaleWithMax {
-  max?: number;
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,7 +51,7 @@ export class ReadingHeatmapChartComponent {
   private yearLabels: string[] = [];
   private maxBookCount = 1;
 
-  public readonly chartOptions: ChartConfiguration['options'] = {
+  public readonly chartOptions: ChartConfiguration<'matrix'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -75,13 +72,15 @@ export class ReadingHeatmapChartComponent {
         bodyFont: {size: 13},
         callbacks: {
           title: (context) => {
-            const point = context[0].raw as MatrixDataPoint;
+            const point = getChartDataPoint(this.chartDataSubject.value, context[0]);
+            if (!point) return '';
             const year = this.yearLabels[point.y];
             const month = MONTH_NAMES[point.x];
             return `${month} ${year}`;
           },
           label: (context) => {
-            const point = context.raw as MatrixDataPoint;
+            const point = getChartDataPoint(this.chartDataSubject.value, context);
+            if (!point) return '';
             const key = point.v === 1 ? 'statsUser.readingHeatmap.tooltipBook' : 'statsUser.readingHeatmap.tooltipBooks';
             return this.t.translate(key, {value: point.v});
           }
@@ -94,7 +93,7 @@ export class ReadingHeatmapChartComponent {
         position: 'bottom',
         ticks: {
           stepSize: 1,
-          callback: (value) => MONTH_NAMES[value as number] || '',
+          callback: (value) => typeof value === 'number' ? MONTH_NAMES[value] || '' : '',
           font: {
             family: "'Inter', sans-serif",
             size: 11
@@ -107,7 +106,7 @@ export class ReadingHeatmapChartComponent {
         offset: true,
         ticks: {
           stepSize: 1,
-          callback: (value) => this.yearLabels[value as number] || '',
+          callback: (value) => typeof value === 'number' ? this.yearLabels[value] || '' : '',
           font: {
             family: "'Inter', sans-serif",
             size: 11
@@ -149,7 +148,7 @@ export class ReadingHeatmapChartComponent {
     });
 
     if (this.chartOptions?.scales?.['y']) {
-      (this.chartOptions.scales['y'] as YScaleWithMax).max = years.length - 1;
+      this.chartOptions.scales['y'].max = years.length - 1;
     }
 
     this.chartDataSubject.next({
@@ -158,7 +157,7 @@ export class ReadingHeatmapChartComponent {
         label: this.t.translate('statsUser.readingHeatmap.booksRead'),
         data: heatmapData,
         backgroundColor: (context) => {
-          const point = context.raw as MatrixDataPoint;
+          const point = heatmapData[context.dataIndex];
           if (!point?.v) return readStatsChartThemeColors().grid;
 
           const intensity = point.v / this.maxBookCount;

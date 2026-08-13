@@ -96,7 +96,7 @@
 
       <div class="series-list">
         @for (series of displayedSeries; track series.name) {
-          <div class="series-card" [class]="series.status">
+          <div [class]="'series-card ' + series.status">
             <div class="series-main">
               <div class="series-status-icon" [style.color]="getStatusColor(series.status)">
                 <i [class]="'pi ' + getStatusIcon(series.status)"></i>

@@ -23,14 +23,14 @@ export class ReadingDebtChartComponent {
     this.processData(this.bookService.books());
   });
 
-  public readonly chartType = 'bar' as const;
+  public readonly chartType: 'bar' | 'line' = 'bar';
   public hasData = false;
   public currentBacklog = 0;
   public trend = '';
 
-  public chartData: ChartData<'bar', number[], string> = {labels: [], datasets: []};
+  public chartData: ChartData<'bar' | 'line', number[], string> = {labels: [], datasets: []};
 
-  public chartOptions: ChartConfiguration<'bar'>['options'] = {
+  public chartOptions: ChartConfiguration<'bar' | 'line'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     animation: {duration: 400},
@@ -151,7 +151,7 @@ export class ReadingDebtChartComponent {
           tension: 0.3,
           yAxisID: 'y1',
           order: 1
-        } as unknown as ChartData<'bar', number[], string>['datasets'][number]
+        }
       ]
     };
     this.hasData = true;

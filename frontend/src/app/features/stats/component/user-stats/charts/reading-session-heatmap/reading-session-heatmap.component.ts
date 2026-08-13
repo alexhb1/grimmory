@@ -9,6 +9,7 @@ import {ReadingSessionHeatmapResponse, UserStatsService} from '../../../../../se
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {AsyncPipe} from '@angular/common';
 import {readStatsChartThemeColors} from '../../../shared/stats-chart-theme.service';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -44,7 +45,7 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
   public currentYear: number = new Date().getFullYear();
   public readonly chartType = 'matrix' as const;
   public readonly chartData$: Observable<SessionHeatmapChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+  public readonly chartOptions: ChartConfiguration<'matrix'>['options'];
 
   public currentStreak = 0;
   public longestStreak = 0;
@@ -84,7 +85,8 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
           bodyFont: {size: 13},
           callbacks: {
             title: (context) => {
-              const point = context[0].raw as MatrixDataPoint;
+              const point = getChartDataPoint(this.chartDataSubject.value, context[0]);
+              if (!point) return '';
               const date = new Date(point.date);
               return date.toLocaleDateString('en-US', {
                 timeZone: 'UTC',
@@ -95,7 +97,8 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
               });
             },
             label: (context) => {
-              const point = context.raw as MatrixDataPoint;
+              const point = getChartDataPoint(this.chartDataSubject.value, context);
+              if (!point) return '';
               return point.v === 1
                 ? this.translocoService.translate('statsUser.sessionHeatmap.readingSession', {count: point.v})
                 : this.translocoService.translate('statsUser.sessionHeatmap.readingSessions_plural', {count: point.v});
@@ -112,7 +115,8 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
           ticks: {
             stepSize: 4,
             callback: (value) => {
-              const weekNum = value as number;
+              if (typeof value !== 'number') return '';
+              const weekNum = value;
               if (weekNum % 4 === 0) {
                 const date = this.getDateFromWeek(this.currentYear, weekNum);
                 return MONTH_NAMES[date.getMonth()];
@@ -131,7 +135,8 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
           ticks: {
             stepSize: 1,
             callback: (value) => {
-              const dayIndex = value as number;
+              if (typeof value !== 'number') return '';
+              const dayIndex = value;
               return dayIndex >= 0 && dayIndex <= 6 ? DAY_NAMES[dayIndex] : '';
             },
             font: {family: "'Inter', sans-serif", size: 11}
@@ -227,7 +232,7 @@ export class ReadingSessionHeatmapComponent implements OnInit, OnDestroy {
         label: 'Reading Sessions',
         data: heatmapData,
         backgroundColor: (context) => {
-          const point = context.raw as MatrixDataPoint;
+          const point = heatmapData[context.dataIndex];
           if (!point?.v) return readStatsChartThemeColors().grid;
 
           const intensity = point.v / this.maxSessionCount;

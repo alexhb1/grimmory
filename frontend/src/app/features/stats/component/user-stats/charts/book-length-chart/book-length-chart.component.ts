@@ -5,12 +5,14 @@ import {ChartConfiguration, ChartData, ScatterDataPoint} from 'chart.js';
 import {BookService} from '../../../../../book/service/book.service';
 import {Book, ReadStatus} from '../../../../../book/model/book.model';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {getChartDataPoint} from '../../../shared/chart-data';
 
-interface BookScatterPoint extends ScatterDataPoint {
+interface BookDataPoint extends ScatterDataPoint {
   bookTitle: string;
   readStatus: string;
 }
 
+type BookScatterPoint = BookDataPoint | ScatterDataPoint;
 type LengthChartData = ChartData<'scatter', BookScatterPoint[], string>;
 
 interface BookLengthMetrics {
@@ -111,11 +113,13 @@ export class BookLengthChartComponent {
         bodyFont: {size: 11},
         callbacks: {
           title: (context) => {
-            const point = context[0].raw as BookScatterPoint;
+            const point = getChartDataPoint(this.chartData(), context[0]);
+            if (!point || !('bookTitle' in point)) return this.t.translate('statsUser.bookLength.tooltipUnknownBook');
             return point.bookTitle || this.t.translate('statsUser.bookLength.tooltipUnknownBook');
           },
           label: (context) => {
-            const point = context.raw as BookScatterPoint;
+            const point = getChartDataPoint(this.chartData(), context);
+            if (!point || !('readStatus' in point)) return [];
             return [
               this.t.translate('statsUser.bookLength.tooltipPages', {count: point.x}),
               this.t.translate('statsUser.bookLength.tooltipRating', {rating: point.y}),
@@ -151,7 +155,7 @@ export class BookLengthChartComponent {
       return this.emptyMetrics();
     }
 
-    const grouped = new Map<string, { label: string; points: BookScatterPoint[] }>();
+    const grouped = new Map<string, { label: string; points: BookDataPoint[] }>();
     for (const book of ratedBooks) {
       const statusKey = this.getStatusKey(book.readStatus);
       const statusLabel = this.getStatusLabel(book.readStatus);
@@ -164,7 +168,7 @@ export class BookLengthChartComponent {
       });
     }
 
-    const datasets = Array.from(grouped.entries()).map(([key, {label, points}]) => {
+    const datasets: LengthChartData['datasets'] = Array.from(grouped.entries()).map(([key, {label, points}]) => {
       const colors = STATUS_COLORS[key] || STATUS_COLORS['other'];
       return {
         label: `${label} (${points.length})`,
@@ -183,7 +187,7 @@ export class BookLengthChartComponent {
     if (trend) {
       datasets.push({
         label: this.t.translate('statsUser.bookLength.trend'),
-        data: trend as BookScatterPoint[],
+        data: trend,
         backgroundColor: 'transparent',
         borderColor: 'transparent',
         pointRadius: 0,

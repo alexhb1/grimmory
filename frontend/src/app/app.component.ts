@@ -19,7 +19,7 @@ import {CommandPaletteComponent} from './features/command-palette/command-palett
 import {CommandPaletteService} from './features/command-palette/command-palette.service';
 import {LibraryImportProgressService} from './shared/service/library-import-progress.service';
 import {AuthorService} from './features/author-browser/service/author.service';
-import {MetadataBatchProgressNotification} from './shared/model/metadata-batch-progress.model';
+import {isMetadataBatchProgressNotification} from './shared/model/metadata-batch-progress.model';
 
 @Component({
   selector: 'app-root',
@@ -140,9 +140,12 @@ export class AppComponent implements OnInit, OnDestroy {
       )
     );
     this.subscriptions.push(
-      this.rxStompService.watch('/user/queue/book-metadata-batch-progress').subscribe(msg =>
-        this.metadataProgressService.handleIncomingProgress(JSON.parse(msg.body) as MetadataBatchProgressNotification)
-      )
+      this.rxStompService.watch('/user/queue/book-metadata-batch-progress').subscribe(msg => {
+        const progress: unknown = JSON.parse(msg.body);
+        if (isMetadataBatchProgressNotification(progress)) {
+          this.metadataProgressService.handleIncomingProgress(progress);
+        }
+      })
     );
     this.subscriptions.push(
       this.rxStompService.watch('/user/queue/log').subscribe(msg => {

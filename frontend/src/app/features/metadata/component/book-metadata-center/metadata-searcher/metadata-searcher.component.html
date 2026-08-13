@@ -103,10 +103,7 @@
         </div>
         <div class="provider-pills">
           @for (tab of getProviderTabs(); track tab.provider) {
-            <div class="provider-pill"
-                 [class.has-results]="tab.count > 0"
-                 [class.active]="isProviderPillActive(tab.provider)"
-                 [class]="'provider-pill provider-' + tab.provider.toLowerCase() + (tab.count > 0 ? ' has-results' : '') + (isProviderPillActive(tab.provider) ? ' active' : '')"
+            <div [class]="'provider-pill provider-' + tab.provider.toLowerCase() + (tab.count > 0 ? ' has-results' : '') + (isProviderPillActive(tab.provider) ? ' active' : '')"
                  [attr.role]="tab.count > 0 ? 'button' : null"
                  [attr.tabindex]="tab.count > 0 ? '0' : null"
                  (click)="tab.count > 0 && onProviderPillClick(tab.provider, $event)"
@@ -176,7 +173,6 @@
                 <div class="card-header">
                   <h4 class="card-title">{{ truncateText(metadata.title!, 60) }}</h4>
                   <div
-                    class="card-provider"
                     [class]="'card-provider provider-' + getProviderClass(metadata)"
                     role="button"
                     tabindex="0"
