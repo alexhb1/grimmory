@@ -20,6 +20,7 @@ import { MessageService } from "@openng/optimus-ui/api";
 import { CommandPaletteService } from "./features/command-palette/command-palette.service";
 import { LibraryImportProgressService } from "./shared/service/library-import-progress.service";
 import { AuthorService } from "./features/author-browser/service/author.service";
+import { MetadataBatchProgressNotification, MetadataBatchStatus } from "./shared/model/metadata-batch-progress.model";
 
 interface StompMessage {
   body: string;
@@ -178,6 +179,14 @@ describe("AppComponent", () => {
 
   it("forwards websocket updates to the matching root services", () => {
     configureComponent();
+    const metadataProgress: MetadataBatchProgressNotification = {
+      taskId: "task-1",
+      completed: 1,
+      total: 2,
+      message: "Processing metadata",
+      status: MetadataBatchStatus.IN_PROGRESS,
+      review: false,
+    };
 
     topics
       .get("/user/queue/book-update")
@@ -196,7 +205,7 @@ describe("AppComponent", () => {
       ?.next({ body: JSON.stringify([{ id: 3 }]) });
     topics
       .get("/user/queue/book-metadata-batch-progress")
-      ?.next({ body: JSON.stringify({ taskId: "task-1" }) });
+      ?.next({ body: JSON.stringify(metadataProgress) });
     topics
       .get("/user/queue/log")
       ?.next({ body: JSON.stringify({ message: "info", severity: "INFO" }) });
@@ -214,7 +223,7 @@ describe("AppComponent", () => {
     expect(bookService.handleMultipleBookUpdates).toHaveBeenCalledWith([
       { id: 3 }]);
     expect(metadataProgressService.handleIncomingProgress).toHaveBeenCalledWith(
-      { taskId: "task-1" },
+      metadataProgress,
     );
     expect(notificationEventService.handleNewNotification).toHaveBeenCalledWith(
       {
