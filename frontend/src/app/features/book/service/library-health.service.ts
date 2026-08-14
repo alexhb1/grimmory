@@ -47,7 +47,12 @@ export class LibraryHealthService {
     this.rxStompService.watch('/topic/library-health')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(msg => {
-        const payload: unknown = JSON.parse(msg.body);
+        let payload: unknown;
+        try {
+          payload = JSON.parse(msg.body);
+        } catch {
+          return;
+        }
         if (typeof payload === 'object' && payload !== null && 'libraryHealth' in payload
           && isLibraryHealth(payload.libraryHealth)) {
           this.queryClient.setQueryData(LIBRARY_HEALTH_QUERY_KEY, payload.libraryHealth);
