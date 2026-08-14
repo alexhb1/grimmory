@@ -166,9 +166,12 @@ export class ShelfAssignerComponent {
     const sortField = this.shelfSortField();
     const sortOrder = this.shelfSortOrder();
     return [...shelves].sort((a, b) => {
-      const comparison = sortField === 'name'
-        ? a.name.localeCompare(b.name)
-        : a.id !== undefined && b.id !== undefined ? a.id - b.id : 0;
+      let comparison = 0;
+      if (sortField === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (a.id !== undefined && b.id !== undefined) {
+        comparison = a.id - b.id;
+      }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   }

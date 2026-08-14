@@ -183,11 +183,12 @@ export class BookdropFileMetadataPickerComponent {
     const inputValue = target.value.trim();
     if (inputValue) {
       const currentValue: unknown = this.metadataForm.get(fieldName)?.value;
-      const values = Array.isArray(currentValue) && currentValue.every(item => typeof item === 'string')
-        ? [...currentValue]
-        : typeof currentValue === 'string' && currentValue
-          ? currentValue.split(',').map(item => item.trim())
-          : [];
+      let values: string[] = [];
+      if (Array.isArray(currentValue) && currentValue.every(item => typeof item === 'string')) {
+        values = [...currentValue];
+      } else if (typeof currentValue === 'string' && currentValue) {
+        values = currentValue.split(',').map(item => item.trim()).filter(item => item.length > 0);
+      }
       if (!values.includes(inputValue)) {
         values.push(inputValue);
         this.metadataForm.get(fieldName)?.setValue(values);
@@ -202,7 +203,7 @@ export class BookdropFileMetadataPickerComponent {
       return [...value];
     }
     if (typeof value === 'string' && value) {
-      return value.split(',').map(item => item.trim());
+      return value.split(',').map(item => item.trim()).filter(item => item.length > 0);
     }
     return [];
   }

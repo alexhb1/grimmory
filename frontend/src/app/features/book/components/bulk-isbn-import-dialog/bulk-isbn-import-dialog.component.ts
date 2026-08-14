@@ -13,7 +13,7 @@ import {BookMetadataService} from '../../service/book-metadata.service';
 import {LibraryService} from '../../service/library.service';
 import {Library} from '../../model/library.model';
 import {BookMetadata, CreatePhysicalBookRequest} from '../../model/book.model';
-import {TranslocoDirective} from '@jsverse/transloco';
+import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Tabs, TabList, Tab, TabPanels, TabPanel} from '@openng/optimus-ui/tabs';
 
 const MAX_ISBN_COUNT = 500;
@@ -68,6 +68,7 @@ export class BulkIsbnImportDialogComponent {
   private bookService = inject(BookService);
   private bookMetadataService = inject(BookMetadataService);
   private libraryService = inject(LibraryService);
+  private readonly t = inject(TranslocoService);
 
   selectedLibraryId: number | null = null;
 
@@ -380,7 +381,7 @@ export class BulkIsbnImportDialogComponent {
         next: () => resolve(),
         error: err => reject(err instanceof Error
           ? err
-          : new Error('Failed to create physical book', {cause: err})),
+          : new Error(this.t.translate('book.bulkIsbnImport.unknownError'), {cause: err})),
       });
     });
   }

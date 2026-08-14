@@ -85,7 +85,7 @@ export class LockUnlockMetadataDialogComponent implements OnInit {
 
   constructor() {
     const data = this.dynamicDialogConfig.data;
-    if (!data) {
+    if (!data?.bookIds?.length) {
       throw new Error('Lock/unlock metadata dialog requires book ids.');
     }
     this.bookIds = new Set(data.bookIds);

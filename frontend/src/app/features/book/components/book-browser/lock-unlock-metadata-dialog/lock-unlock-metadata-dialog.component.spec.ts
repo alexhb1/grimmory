@@ -10,11 +10,14 @@ import {
   createMessageServiceSpy,
 } from '../../../../../core/testing/dialog-testing';
 import {BookMetadataManageService} from '../../../service/book-metadata-manage.service';
-import {LockUnlockMetadataDialogComponent} from './lock-unlock-metadata-dialog.component';
+import {
+  LockUnlockMetadataDialogComponent,
+  LockUnlockMetadataDialogData,
+} from './lock-unlock-metadata-dialog.component';
 
 describe('LockUnlockMetadataDialogComponent', () => {
   let toggleFieldLocks: ReturnType<typeof vi.fn>;
-  let dialogHarness: ReturnType<typeof createDynamicDialogHarness<{bookIds: Set<number>}>>;
+  let dialogHarness: ReturnType<typeof createDynamicDialogHarness<LockUnlockMetadataDialogData>>;
   let messageService: ReturnType<typeof createMessageServiceSpy>;
   let loadingService: {
     show: ReturnType<typeof vi.fn>;
@@ -24,7 +27,7 @@ describe('LockUnlockMetadataDialogComponent', () => {
 
   beforeEach(() => {
     toggleFieldLocks = vi.fn(() => of(void 0));
-    dialogHarness = createDynamicDialogHarness({bookIds: new Set([7, 9])});
+    dialogHarness = createDynamicDialogHarness({bookIds: [7, 9]});
     messageService = createMessageServiceSpy();
     loadingService = {
       show: vi.fn(() => 'loader-token'),

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, ErrorHandler, inject, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, output, signal} from '@angular/core';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {AdditionalFile, Book, BookType, ReadStatus} from '../../../model/book.model';
 import {ConfirmationService, MenuItem, MessageService} from '@openng/optimus-ui/api';
@@ -78,11 +78,10 @@ export class BookCardComponent {
   private appSettingsService = inject(AppSettingsService);
   private readonly t = inject(TranslocoService);
   private queryClient = inject(QueryClient);
-  private errorHandler = inject(ErrorHandler);
   protected readStatusHelper = inject(ReadStatusHelper);
 
   private readonly currentUser = computed(() => this.userService.currentUser());
-  private readonly metadataCenterViewMode = computed(() => this.currentUser()?.userSettings?.metadataCenterViewMode ?? 'route');
+  private readonly metadataCenterViewMode = computed(() => this.currentUser()?.userSettings?.metadataCenterViewMode ?? 'route' as 'route' | 'dialog');
   private readonly diskType = computed(() => this.appSettingsService.appSettings()?.diskType ?? 'LOCAL');
 
 
@@ -181,15 +180,15 @@ export class BookCardComponent {
   readonly readingUrl = computed(() => this.urlHelper.getBookPrimaryReadingUrl(this.book()));
 
   private buildReadStatusMenuItems(): void {
-    this.readStatusMenuItems.set(Object.values(ReadStatus).map(status => ({
-      label: readStatusLabels[status],
+    this.readStatusMenuItems.set(Object.entries(readStatusLabels).map(([status, label]) => ({
+      label,
       command: () => {
-        this.bookService.updateBookReadStatus(this.book().id, status).subscribe({
+        this.bookService.updateBookReadStatus(this.book().id, status as ReadStatus).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',
               summary: this.t.translate('book.card.toast.readStatusUpdatedSummary'),
-              detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label: readStatusLabels[status]}),
+              detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label}),
               life: 2000
             });
           },
@@ -243,7 +242,7 @@ export class BookCardComponent {
     this.menuToggled.emit(false);
   }
 
-  onMenuToggle(event: Event, menu: Pick<TieredMenu, 'toggle'>): void {
+  onMenuToggle(event: Event, menu: TieredMenu): void {
     const currentBookId = this.book().id;
 
     if (!this.menuInitialized || this.menuBookId !== currentBookId) {
@@ -258,7 +257,7 @@ export class BookCardComponent {
     if (!this.additionalFilesLoaded() && !this.isSubMenuLoading() && this.needsAdditionalFilesData()) {
       this.isSubMenuLoading.set(true);
       const requestedBookId = currentBookId;
-      this.queryClient.fetchQuery(this.bookService.bookDetailQueryOptions(requestedBookId, true))
+      void this.queryClient.fetchQuery(this.bookService.bookDetailQueryOptions(requestedBookId, true))
         .then((fetchedBook) => {
           if (this.book().id !== requestedBookId) return;
           this.additionalFilesLoaded.set(true);
@@ -268,15 +267,6 @@ export class BookCardComponent {
           if (this.book().id === requestedBookId) {
             this.isSubMenuLoading.set(false);
           }
-        })
-        .catch(() => {
-          if (this.book().id !== requestedBookId) return;
-          this.initMenu();
-          this.messageService.add({
-            severity: 'error',
-            summary: this.t.translate('common.error'),
-            detail: this.t.translate('book.browser.labels.failedBooks'),
-          });
         });
     }
   }
@@ -429,9 +419,7 @@ export class BookCardComponent {
           {
             label: this.t.translate('book.card.menu.customSend'),
             icon: 'pi pi-envelope',
-            command: () => {
-              void this.bookDialogHelperService.openCustomSendDialog(this.book());
-            },
+            command: () => void this.bookDialogHelperService.openCustomSendDialog(this.book()).catch(() => undefined)
           }
         ]
       });
@@ -447,9 +435,7 @@ export class BookCardComponent {
             icon: 'pi pi-sparkles',
             command: () => {
               setTimeout(() => {
-                this.router.navigate(['/book', this.book().id], {queryParams: {tab: 'match'}}).catch((error: unknown) => {
-                  this.errorHandler.handleError(error);
-                });
+                this.router.navigate(['/book', this.book().id], {queryParams: {tab: 'match'}});
               }, 150);
             },
           },
@@ -466,9 +452,7 @@ export class BookCardComponent {
           {
             label: this.t.translate('book.card.menu.customFetch'),
             icon: 'pi pi-sync',
-            command: () => {
-              void this.bookDialogHelperService.openMetadataRefreshDialog(new Set([this.book().id]));
-            },
+            command: () => void this.bookDialogHelperService.openMetadataRefreshDialog(new Set([this.book().id])).catch(() => undefined),
           },
           {
             label: this.t.translate('book.card.menu.regenerateCover'),
@@ -521,9 +505,7 @@ export class BookCardComponent {
       moreActions.push({
         label: this.t.translate('book.card.menu.organizeFile'),
         icon: 'pi pi-arrows-h',
-        command: () => {
-          void this.bookDialogHelperService.openFileMoverDialog(new Set([this.book().id]));
-        },
+        command: () => void this.bookDialogHelperService.openFileMoverDialog(new Set([this.book().id])).catch(() => undefined)
       });
     }
 
@@ -531,15 +513,15 @@ export class BookCardComponent {
       {
         label: this.t.translate('book.card.menu.readStatus'),
         icon: 'pi pi-book',
-        items: Object.values(ReadStatus).map(status => ({
-          label: readStatusLabels[status],
+        items: Object.entries(readStatusLabels).map(([status, label]) => ({
+          label,
           command: () => {
-            this.bookService.updateBookReadStatus(this.book().id, status).subscribe({
+            this.bookService.updateBookReadStatus(this.book().id, status as ReadStatus).subscribe({
               next: () => {
                 this.messageService.add({
                   severity: 'success',
                   summary: this.t.translate('book.card.toast.readStatusUpdatedSummary'),
-                  detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label: readStatusLabels[status]}),
+                  detail: this.t.translate('book.card.toast.readStatusUpdatedDetail', {label}),
                   life: 2000
                 });
               },
@@ -615,22 +597,20 @@ export class BookCardComponent {
   }
 
   private openShelfDialog(): void {
-    void this.bookDialogHelperService.openShelfAssignerDialog(this.book(), null);
+    void this.bookDialogHelperService.openShelfAssignerDialog(this.book(), null).catch(() => undefined);
   }
 
   openSeriesInfo(): void {
     const b = this.book();
     const seriesName = b.metadata?.seriesName;
     if (this.isSeriesCollapsed() && seriesName) {
-      this.router.navigate(['/series', seriesName]).catch((error: unknown) => {
-        this.errorHandler.handleError(error);
-      });
+      this.router.navigate(['/series', seriesName]);
     } else {
       this.openBookInfo(b);
     }
   }
 
-  openBookInfo(book: Book): void {
+  async openBookInfo(book: Book) {
     const allBookIds = this.bookNavigationService.availableBookIds();
     if (allBookIds.length > 0) {
       this.bookNavigationService.setNavigationContext(allBookIds, book.id);
@@ -639,11 +619,9 @@ export class BookCardComponent {
     if (this.metadataCenterViewMode() === 'route') {
       this.router.navigate(['/book', book.id], {
         queryParams: {tab: 'view'}
-      }).catch((error: unknown) => {
-        this.errorHandler.handleError(error);
       });
     } else {
-      void this.bookDialogHelperService.openBookDetailsDialog(book.id);
+      await this.bookDialogHelperService.openBookDetailsDialog(book.id).catch(() => undefined);
     }
   }
 
@@ -860,6 +838,6 @@ export class BookCardComponent {
   }
 
   toggleSelection(event: CheckboxChangeEvent): void {
-    this.toggleCardSelection(event.checked === true);
+    this.toggleCardSelection(event.checked);
   }
 }

@@ -75,6 +75,7 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
   pageSize = 20;
 
   private destroy$ = new Subject<void>();
+  private destroyed = false;
   private readonly bookFileService = inject(BookFileService);
   private readonly bookService = inject(BookService);
   private readonly messageService = inject(MessageService);
@@ -110,6 +111,7 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -337,6 +339,10 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
     let failCount = 0;
 
     for (const group of toMerge) {
+      if (this.destroyed) {
+        return;
+      }
+
       const targetId = group.selectedTargetBookId;
       const sourceIds = group.books
         .filter(b => b.id !== targetId)
@@ -354,6 +360,9 @@ export class DuplicateMergerComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$)),
           {defaultValue: undefined},
         );
+        if (this.destroyed) {
+          return;
+        }
         group.dismissed = true;
         successCount++;
       } catch {
