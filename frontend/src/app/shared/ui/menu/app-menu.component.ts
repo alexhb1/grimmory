@@ -64,7 +64,7 @@ export function contextMenuRequest(event: MouseEvent): ContextMenuRequest {
   const contextmenu = event.type === 'contextmenu';
   const origin = event.currentTarget;
   if (!(origin instanceof HTMLElement)) {
-    throw new Error('Context menu events require an HTML element origin');
+    throw new TypeError('Context menu events require an HTML element origin');
   }
   return {
     origin,

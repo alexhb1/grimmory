@@ -28,6 +28,14 @@ function isPkceState(value: unknown): value is OidcPkceState {
     && typeof value['nonce'] === 'string';
 }
 
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') {
+    end--;
+  }
+  return value.slice(0, end);
+}
+
 @Injectable({providedIn: 'root'})
 export class OidcService {
 
@@ -68,7 +76,7 @@ export class OidcService {
       return this.buildUrl(authorizationEndpoint, clientId, redirectUri, scope, codeChallenge, state, nonce);
     }
 
-    const response = await fetch(`${issuerUri.replace(/\/+$/, '')}/.well-known/openid-configuration`);
+    const response = await fetch(`${stripTrailingSlashes(issuerUri)}/.well-known/openid-configuration`);
     const document: unknown = await response.json();
     if (!isRecord(document) || typeof document['authorization_endpoint'] !== 'string') {
       throw new Error('authorization_endpoint not found in discovery document');

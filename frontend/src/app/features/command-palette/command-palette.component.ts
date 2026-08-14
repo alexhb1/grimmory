@@ -94,6 +94,14 @@ export class CommandPaletteComponent {
   }
 
   protected onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && this.isMobileViewport()) {
+      event.preventDefault();
+      if (event.target instanceof HTMLElement) {
+        event.target.blur();
+      }
+      return;
+    }
+
     const items = this.svc.visibleItems();
 
     switch (event.key) {
@@ -122,13 +130,6 @@ export class CommandPaletteComponent {
         }
         break;
       case 'Enter': {
-        if (this.isMobileViewport()) {
-          event.preventDefault();
-          if (event.target instanceof HTMLElement) {
-            event.target.blur();
-          }
-          break;
-        }
         const active = this.activeItem();
         if (active) {
           event.preventDefault();

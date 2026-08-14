@@ -78,7 +78,9 @@ export class MetadataUtilsService {
     const compareValues = (a: unknown, b: unknown): number => {
       const first = String(a);
       const second = String(b);
-      return first < second ? -1 : first > second ? 1 : 0;
+      if (first < second) return -1;
+      if (first > second) return 1;
+      return 0;
     };
     let val1: string | undefined = undefined;
     let val2: string | undefined = undefined;

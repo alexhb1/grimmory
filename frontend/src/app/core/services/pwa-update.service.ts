@@ -42,6 +42,8 @@ export class PwaUpdateService {
                 && guard.reason === reason
                 && 'timestamp' in guard
                 && typeof guard.timestamp === 'number'
+                && Number.isFinite(guard.timestamp)
+                && guard.timestamp <= now
                 && now - guard.timestamp < 10000) {
                 console.error(`PWA reload guard triggered for reason: ${reason}. Stopped reloading to avoid loop.`);
                 return false;
