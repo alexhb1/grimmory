@@ -20,6 +20,7 @@ import {AppSettingsService} from '../../../../../shared/service/app-settings.ser
 import {MetadataProviderSpecificFields} from '../../../../../shared/model/app-settings.model';
 import {ALL_COMIC_METADATA_FIELDS, ALL_METADATA_FIELDS, AUDIOBOOK_METADATA_FIELDS, COMIC_ARRAY_METADATA_FIELDS, COMIC_FORM_TO_MODEL_LOCK, COMIC_TEXT_METADATA_FIELDS, COMIC_TEXTAREA_METADATA_FIELDS, getArrayFields, getBookDetailsFields, getBottomFields, getProviderFields, getSeriesFields, getTextareaFields, getTopFields, MetadataFieldConfig, MetadataFormBuilder, MetadataUtilsService} from '../../../../../shared/metadata';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {addEnteredAutocompleteValue, addSelectedAutocompleteValue} from '../metadata-autocomplete.util';
 
 @Component({
   selector: 'app-metadata-picker',
@@ -239,29 +240,11 @@ export class MetadataPickerComponent {
   }
 
   onAutoCompleteSelect(fieldName: string, event: AutoCompleteSelectEvent) {
-    if (typeof event.value !== 'string') return;
-
-    const values = (this.metadataForm.get(fieldName)?.value as string[]) || [];
-    if (!values.includes(event.value)) {
-      this.metadataForm.get(fieldName)?.setValue([...values, event.value]);
-    }
-    if (event.originalEvent.target instanceof HTMLInputElement) {
-      event.originalEvent.target.value = '';
-    }
+    addSelectedAutocompleteValue(this.metadataForm.get(fieldName), event);
   }
 
   onAutoCompleteKeyUp(fieldName: string, event: KeyboardEvent) {
-    if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
-      const input = event.target;
-      const value = input.value?.trim();
-      if (value) {
-        const values = this.metadataForm.get(fieldName)?.value || [];
-        if (!values.includes(value)) {
-          this.metadataForm.get(fieldName)?.setValue([...values, value]);
-        }
-        input.value = '';
-      }
-    }
+    addEnteredAutocompleteValue(this.metadataForm.get(fieldName), event);
   }
 
   dropAuthor(event: CdkDragDrop<string[]>) {

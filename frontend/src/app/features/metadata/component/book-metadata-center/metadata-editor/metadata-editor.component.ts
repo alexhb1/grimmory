@@ -33,6 +33,7 @@ import {MetadataProviderSpecificFields} from '../../../../../shared/model/app-se
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/drag-drop';
 import {getApiErrorMessage} from '../../../../../shared/models/api-exception.model';
+import {addEnteredAutocompleteValue, addSelectedAutocompleteValue} from '../metadata-autocomplete.util';
 
 @Component({
   selector: "app-metadata-editor",
@@ -594,29 +595,11 @@ export class MetadataEditorComponent implements OnInit {
   }
 
   onAutoCompleteSelect(fieldName: string, event: AutoCompleteSelectEvent) {
-    if (typeof event.value !== "string") return;
-
-    const values = (this.metadataForm.get(fieldName)?.value as string[]) || [];
-    if (!values.includes(event.value)) {
-      this.metadataForm.get(fieldName)?.setValue([...values, event.value]);
-    }
-    if (event.originalEvent.target instanceof HTMLInputElement) {
-      event.originalEvent.target.value = "";
-    }
+    addSelectedAutocompleteValue(this.metadataForm.get(fieldName), event);
   }
 
   onAutoCompleteKeyUp(fieldName: string, event: KeyboardEvent) {
-    if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
-      const input = event.target;
-      const value = input.value?.trim();
-      if (value) {
-        const values = this.metadataForm.get(fieldName)?.value || [];
-        if (!values.includes(value)) {
-          this.metadataForm.get(fieldName)?.setValue([...values, value]);
-        }
-        input.value = "";
-      }
-    }
+    addEnteredAutocompleteValue(this.metadataForm.get(fieldName), event);
   }
 
   onSave(): void {
