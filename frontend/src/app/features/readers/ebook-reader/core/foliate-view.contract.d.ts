@@ -7,26 +7,14 @@ export interface FoliateTocItem {
 }
 
 export interface FoliateBookMetadata {
-  title?: string;
-  authors?: string[];
-  language?: string;
-  publisher?: string;
-  description?: string;
-  identifier?: string;
   coverUrl?: string | null;
-
   [key: string]: unknown;
-}
-
-export interface FoliateRendererContent {
-  index: number;
-  doc: Document;
 }
 
 export interface FoliateRenderer {
   heads?: HTMLElement[];
   feet?: HTMLElement[];
-  getContents(): FoliateRendererContent[];
+  getContents(): {index: number; doc: Document}[];
   setAttribute(name: string, value: string | number): void;
   removeAttribute(name: string): void;
   setStyles?(css: string): void;
@@ -63,7 +51,7 @@ export interface FoliateLoadEventDetail {
   index?: number;
 }
 
-export interface FoliateRelocateEventItem {
+interface FoliateRelocateEventItem {
   href?: string;
   label?: string;
 }
@@ -87,7 +75,7 @@ export interface FoliateDrawAnnotationEventDetail {
   range: Range;
 }
 
-export interface FoliateViewEventMap {
+interface FoliateViewEventMap {
   load: CustomEvent<FoliateLoadEventDetail>;
   relocate: CustomEvent<FoliateRelocateEventDetail>;
   error: CustomEvent<unknown>;

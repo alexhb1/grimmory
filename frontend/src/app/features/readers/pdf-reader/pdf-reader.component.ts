@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PageTitleService } from "../../../shared/service/page-title.service";
 import { BookService } from '../../book/service/book.service';
 import { forkJoin, from, Observable, of, Subject } from "rxjs";
-import { concatMap, debounceTime, filter, map, switchMap, take } from 'rxjs/operators';
+import { debounceTime, filter, map, switchMap, take } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BookSetting } from '../../book/model/book.model';
 import { UserService } from '../../settings/user-management/user.service';
@@ -40,6 +40,36 @@ type EmbedPdfMessage =
 
 function normalizePdfSpread(value: string | undefined): 'none' | 'even' | 'odd' {
   return value === 'even' || value === 'odd' ? value : 'none';
+}
+
+function isEmbedPdfMessage(value: unknown): value is EmbedPdfMessage {
+  if (typeof value !== 'object' || value === null || !('type' in value)) return false;
+
+  switch (value.type) {
+    case 'ready':
+      return true;
+    case 'documentOpened':
+      return !('pageCount' in value)
+        || value.pageCount === undefined
+        || (typeof value.pageCount === 'number' && Number.isFinite(value.pageCount));
+    case 'documentError':
+    case 'saveError':
+      return 'error' in value && typeof value.error === 'string';
+    case 'saved':
+      return !('buffer' in value)
+        || value.buffer === undefined
+        || value.buffer === null
+        || value.buffer instanceof ArrayBuffer;
+    case 'pageChange':
+      return 'pageNumber' in value
+        && typeof value.pageNumber === 'number'
+        && Number.isFinite(value.pageNumber)
+        && 'totalPages' in value
+        && typeof value.totalPages === 'number'
+        && Number.isFinite(value.totalPages);
+    default:
+      return false;
+  }
 }
 
 function getAnnotationColor(annotation: PdfAnnotationObject): string | undefined {
@@ -130,7 +160,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
   // Doc mode (iframe) state
   private embedPdfIframe: HTMLIFrameElement | null = null;
-  private embedPdfMessageHandler?: (e: MessageEvent<EmbedPdfMessage>) => void;
+  private embedPdfMessageHandler?: (e: MessageEvent<unknown>) => void;
   private embedPdfSaveResolve?: (buffer: ArrayBuffer | null) => void;
   private embedPdfSaveTimer?: ReturnType<typeof setTimeout>;
   private embedPdfSavePromise?: Promise<boolean>;
@@ -344,10 +374,11 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     this.annotationSaveSubject
       .pipe(
         debounceTime(1500),
-        concatMap(() => from(this.persistAnnotations())),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe();
+      .subscribe(() => {
+        void this.persistAnnotations();
+      });
 
     // Debounced search
     this.searchQuery$.pipe(
@@ -436,8 +467,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
         // Schedule viewer initialization after the template renders the container
         afterNextRender(() => {
           this.ngZone.runOutsideAngular(() => {
-            this.initBookViewer()
-              .catch((error: unknown) => console.error('[BookViewer] Unexpected init failure:', error));
+            void this.initBookViewer();
           });
         }, { injector: this.injector });
       },
@@ -975,8 +1005,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       this.viewerMode.set(mode);
       this.initTimeout = setTimeout(() => {
         this.initTimeout = undefined;
-        this.initDocViewerIframe()
-          .catch((error: unknown) => console.error('[EmbedPDF] Unexpected init failure:', error));
+        void this.initDocViewerIframe();
       }, 100);
     } else {
       this.initialPage = this.page();
@@ -993,8 +1022,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       this.isInitialScrollDone.set(false);
       this.initTimeout = setTimeout(() => {
         this.initTimeout = undefined;
-        this.initBookViewer()
-          .catch((error: unknown) => console.error('[BookViewer] Unexpected init failure:', error));
+        void this.initBookViewer();
       }, 150);
     }
   }
@@ -1037,10 +1065,12 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
       iframe.style.cssText = 'width:100%;height:100%;border:none;';
       iframe.setAttribute('allow', 'fullscreen');
 
-      this.embedPdfMessageHandler = (e: MessageEvent<EmbedPdfMessage>) => {
+      this.embedPdfMessageHandler = (e: MessageEvent<unknown>) => {
         if (e.origin !== location.origin) return;
         if (e.source !== iframe.contentWindow) return;
-        this.handleEmbedPdfMessage(e.data);
+        if (isEmbedPdfMessage(e.data)) {
+          this.handleEmbedPdfMessage(e.data);
+        }
       };
       window.addEventListener('message', this.embedPdfMessageHandler);
 

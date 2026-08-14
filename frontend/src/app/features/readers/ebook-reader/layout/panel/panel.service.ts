@@ -7,11 +7,6 @@ import {SearchResult, SearchState} from '../sidebar/sidebar.service';
 
 export type LeftSidebarTab = 'search' | 'notes';
 
-interface ReaderSearchSubitem {
-  cfi: string;
-  excerpt: SearchResult['excerpt'];
-}
-
 @Injectable()
 export class ReaderLeftSidebarService {
   private viewManager = inject(ReaderViewManagerService);
@@ -170,7 +165,7 @@ export class ReaderLeftSidebarService {
       }
 
       if ('subitems' in result && result.subitems) {
-        const sectionResults = (result.subitems as ReaderSearchSubitem[]).map((item) => ({
+        const sectionResults = result.subitems.map((item) => ({
           cfi: item.cfi,
           excerpt: item.excerpt,
           sectionLabel: result.label

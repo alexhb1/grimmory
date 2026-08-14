@@ -5,7 +5,7 @@ import {ReaderAnnotationService, Annotation} from '../features/annotations/annot
 import {ReaderEventService, ViewEvent, TextSelection} from './event.service';
 import {PageInfo, ThemeInfo, PageDecorator} from '../shared/header-footer.util';
 import {EpubStreamingService, type EpubBookInfo} from './epub-streaming.service';
-import {
+import type {
   FoliateBookMetadata,
   FoliateRenderer,
   FoliateSearchResult,
@@ -218,14 +218,8 @@ export class ReaderViewManagerService {
 
     return this.getCoverUrl().pipe(
       map(coverUrl => ({
-        title: metadata.title,
-        authors: metadata.authors,
-        language: metadata.language,
-        publisher: metadata.publisher,
-        description: metadata.description,
-        identifier: metadata.identifier,
+        ...metadata,
         coverUrl,
-        ...metadata
       }))
     );
   }

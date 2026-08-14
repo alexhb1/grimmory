@@ -41,7 +41,7 @@ import {
   writeStripWidthPercentPerBook
 } from './core/cbx-reader-storage';
 import {computeCbxSpreads, findCbxSpreadForPage} from './core/cbx-spread.util';
-function readValue<T>(values: readonly T[], value: unknown): T | undefined {
+function findAllowedValue<T>(values: readonly T[], value: unknown): T | undefined {
   return values.find(candidate => candidate === value);
 }
 
@@ -325,7 +325,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
       switchMap((params: ParamMap) => {
         this.isLoading.set(true);
         this.bookId.set(+params.get('bookId')!);
-        this.altBookType.set(readValue(BOOK_TYPES, this.route.snapshot.queryParamMap.get('bookType')));
+        this.altBookType.set(findAllowedValue(BOOK_TYPES, this.route.snapshot.queryParamMap.get('bookType')));
 
         this.showWebtoonSuggestion.set(false);
         this.continuationHintVisible.set(false);
@@ -342,7 +342,7 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
         return from(this.bookService.fetchFreshBookDetail(this.bookId()!, false)).pipe(
           switchMap((book) => {
             // Use alternative bookType from query param if provided, otherwise use primary
-            const resolvedBookType = this.altBookType() ?? readValue(BOOK_TYPES, book.primaryFile?.bookType);
+            const resolvedBookType = this.altBookType() ?? findAllowedValue(BOOK_TYPES, book.primaryFile?.bookType);
             if (!resolvedBookType) {
               throw new Error(this.t.translate('shared.reader.failedToLoadBook'));
             }
@@ -402,27 +402,27 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
             userSettings.cbxReaderSetting.stripMaxWidthPercent,
             myself.id
           ));
-          const globalPageViewMode = readValue(Object.values(CbxPageViewMode), userSettings.cbxReaderSetting.pageViewMode) ?? CbxPageViewMode.SINGLE_PAGE;
-          const globalPageSpread = readValue(Object.values(CbxPageSpread), userSettings.cbxReaderSetting.pageSpread) ?? CbxPageSpread.EVEN;
-          const globalFitMode = readValue(Object.values(CbxFitMode), userSettings.cbxReaderSetting.fitMode) ?? CbxFitMode.FIT_PAGE;
-          const globalScrollMode = readValue(Object.values(CbxScrollMode), userSettings.cbxReaderSetting.scrollMode) ?? CbxScrollMode.PAGINATED;
-          const globalBackgroundColor = readValue(Object.values(CbxBackgroundColor), userSettings.cbxReaderSetting.backgroundColor) ?? CbxBackgroundColor.GRAY;
+          const globalPageViewMode = findAllowedValue(Object.values(CbxPageViewMode), userSettings.cbxReaderSetting.pageViewMode) ?? CbxPageViewMode.SINGLE_PAGE;
+          const globalPageSpread = findAllowedValue(Object.values(CbxPageSpread), userSettings.cbxReaderSetting.pageSpread) ?? CbxPageSpread.EVEN;
+          const globalFitMode = findAllowedValue(Object.values(CbxFitMode), userSettings.cbxReaderSetting.fitMode) ?? CbxFitMode.FIT_PAGE;
+          const globalScrollMode = findAllowedValue(Object.values(CbxScrollMode), userSettings.cbxReaderSetting.scrollMode) ?? CbxScrollMode.PAGINATED;
+          const globalBackgroundColor = findAllowedValue(Object.values(CbxBackgroundColor), userSettings.cbxReaderSetting.backgroundColor) ?? CbxBackgroundColor.GRAY;
 
           this.pageViewMode.set(global
             ? globalPageViewMode
-            : readValue(Object.values(CbxPageViewMode), bookSettings.cbxSettings?.pageViewMode) ?? globalPageViewMode);
+            : findAllowedValue(Object.values(CbxPageViewMode), bookSettings.cbxSettings?.pageViewMode) ?? globalPageViewMode);
           this.pageSpread.set(global
             ? globalPageSpread
-            : readValue(Object.values(CbxPageSpread), bookSettings.cbxSettings?.pageSpread) ?? globalPageSpread);
+            : findAllowedValue(Object.values(CbxPageSpread), bookSettings.cbxSettings?.pageSpread) ?? globalPageSpread);
           this.fitMode.set(global
             ? globalFitMode
-            : readValue(Object.values(CbxFitMode), bookSettings.cbxSettings?.fitMode) ?? globalFitMode);
+            : findAllowedValue(Object.values(CbxFitMode), bookSettings.cbxSettings?.fitMode) ?? globalFitMode);
           this.scrollMode.set(global
             ? globalScrollMode
-            : readValue(Object.values(CbxScrollMode), bookSettings.cbxSettings?.scrollMode) ?? globalScrollMode);
+            : findAllowedValue(Object.values(CbxScrollMode), bookSettings.cbxSettings?.scrollMode) ?? globalScrollMode);
           this.backgroundColor.set(global
             ? globalBackgroundColor
-            : readValue(Object.values(CbxBackgroundColor), bookSettings.cbxSettings?.backgroundColor) ?? globalBackgroundColor);
+            : findAllowedValue(Object.values(CbxBackgroundColor), bookSettings.cbxSettings?.backgroundColor) ?? globalBackgroundColor);
 
           // Restore new settings from per-book or global
           const cbxSrc = global ? userSettings.cbxReaderSetting : bookSettings.cbxSettings;

@@ -39,7 +39,7 @@ export interface PdfOutlineItem {
 
 export type PdfScrollLayout = 'vertical' | 'horizontal';
 
-export function parsePdfZoomLevel(level: string): ZoomLevel | null {
+function parsePdfZoomLevel(level: string): ZoomLevel | null {
   switch (level) {
     case 'automatic':
       return ZoomMode.Automatic;
@@ -56,7 +56,7 @@ export function parsePdfZoomLevel(level: string): ZoomLevel | null {
   return numericLevel > 0 ? numericLevel : null;
 }
 
-export function toPdfOutlineItems(items: readonly PdfBookmarkObject[]): PdfOutlineItem[] {
+function toPdfOutlineItems(items: readonly PdfBookmarkObject[]): PdfOutlineItem[] {
   return items.map(entry => {
     let pageIndex = 0;
 
@@ -80,7 +80,7 @@ interface GrimmoryWindowState {
   __grimmoryShimsApplied?: boolean;
   __grimmoryOrigBlob?: typeof Blob;
   __grimmoryOrigWorker?: typeof Worker;
-  __grimmoryOrigRelease?: typeof Element.prototype.releasePointerCapture;
+  __grimmoryOrigReleaseDescriptor?: PropertyDescriptor;
 }
 
 function isWorkerStatusMessage(value: unknown): value is {type: 'ready' | 'wasmError'} {
@@ -653,15 +653,16 @@ export class EmbedPdfBookService {
    */
   private patchReleasePointerCapture(): void {
     const w = this.getMutableWindow();
-    if (w.__grimmoryOrigRelease) return;
-    // EmbedPDF requires the original prototype method to be invoked with each
-    // active element as its receiver; the explicit call below preserves that.
-    // oxlint-disable-next-line typescript/unbound-method
-    const orig = Element.prototype.releasePointerCapture;
-    w.__grimmoryOrigRelease = orig;
+    if (w.__grimmoryOrigReleaseDescriptor) return;
+
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'releasePointerCapture');
+    const original: unknown = descriptor?.value;
+    if (!descriptor || typeof original !== 'function') return;
+
+    w.__grimmoryOrigReleaseDescriptor = descriptor;
     Element.prototype.releasePointerCapture = function (pointerId: number) {
       try {
-        orig.call(this, pointerId);
+        Reflect.apply(original, this, [pointerId]);
       } catch (e) {
         if (!(e instanceof DOMException && e.message.includes('pointer'))) throw e;
       }
@@ -670,9 +671,13 @@ export class EmbedPdfBookService {
 
   private restoreReleasePointerCapture(): void {
     const w = this.getMutableWindow();
-    if (w.__grimmoryOrigRelease) {
-      Element.prototype.releasePointerCapture = w.__grimmoryOrigRelease;
-      delete w.__grimmoryOrigRelease;
+    if (w.__grimmoryOrigReleaseDescriptor) {
+      Object.defineProperty(
+        Element.prototype,
+        'releasePointerCapture',
+        w.__grimmoryOrigReleaseDescriptor,
+      );
+      delete w.__grimmoryOrigReleaseDescriptor;
     }
   }
 
@@ -786,8 +791,6 @@ export class EmbedPdfBookService {
     };
     waitForShadow();
   }
-
-
 
   private setupResizeObserver(target: HTMLElement): void {
     if (typeof ResizeObserver === 'undefined') return;

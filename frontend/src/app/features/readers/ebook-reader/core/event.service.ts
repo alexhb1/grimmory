@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {Subject} from 'rxjs';
 import {ReaderAnnotationService} from '../features/annotations/annotation-renderer.service';
-import {
+import type {
   FoliateDrawAnnotationEventDetail,
   FoliateEventTarget,
   FoliateLoadEventDetail,
@@ -25,11 +25,6 @@ interface PopupPosition {
 interface IframeClickMessage {
   type: 'iframe-click';
   clientX: number;
-  clientY: number;
-  iframeLeft: number;
-  iframeWidth: number;
-  eventClientX: number;
-  target?: string;
 }
 
 export type ViewEvent =
@@ -249,7 +244,10 @@ export class ReaderEventService {
     return typeof value === 'object'
       && value !== null
       && 'type' in value
-      && value.type === 'iframe-click';
+      && value.type === 'iframe-click'
+      && 'clientX' in value
+      && typeof value.clientX === 'number'
+      && Number.isFinite(value.clientX);
   }
 
   private attachIframeEventHandlers(doc: Document): void {
