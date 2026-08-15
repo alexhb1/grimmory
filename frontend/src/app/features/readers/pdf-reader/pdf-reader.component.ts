@@ -13,7 +13,7 @@ import { API_CONFIG } from '../../../core/config/api-config';
 import { PdfAnnotationService } from '../../../shared/service/pdf-annotation.service';
 import { ReaderIconComponent } from '../../readers/ebook-reader/shared/icon.component';
 import { BookMark } from '../../../shared/service/book-mark.service';
-import { EmbedPdfBookService, PdfOutlineItem, PdfScrollLayout } from './services/embedpdf-book.service';
+import { EmbedPdfBookService, PdfOutlineItem, PdfScrollLayout, type PdfSpread } from './services/embedpdf-book.service';
 import type { AnnotationTransferItem } from '@embedpdf/snippet';
 import { PdfAnnotationSubtype, type PdfAnnotationObject } from '@embedpdf/models';
 import { PdfBookmarkService } from './services/pdf-bookmark.service';
@@ -38,7 +38,7 @@ type EmbedPdfMessage =
   | { type: 'saveError'; error: string }
   | { type: 'pageChange'; pageNumber: number; totalPages: number };
 
-function normalizePdfSpread(value: string | undefined): 'none' | 'even' | 'odd' {
+function normalizePdfSpread(value: string | undefined): PdfSpread {
   return value === 'even' || value === 'odd' ? value : 'none';
 }
 
@@ -113,7 +113,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   readonly isToolbarOverflowOpen = signal(false);
   readonly isZoomMenuOpen = signal(false);
   readonly activeAnnotationTool = signal<string | null>(null);
-  readonly spreadMode = signal<'none' | 'odd' | 'even'>('none');
+  readonly spreadMode = signal<PdfSpread>('none');
   readonly scrollLayout = signal<PdfScrollLayout>('vertical');
   readonly goToPageInput = signal<number | null>(null);
   readonly outline = signal<PdfOutlineItem[]>([]);
@@ -155,7 +155,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   bookData!: string;
   bookId!: number;
   bookFileId?: number;
-  private spread!: 'none' | 'even' | 'odd';
+  private spread!: PdfSpread;
   private readonly DOC_VIEWER_DISMISSED_KEY = 'grimmory_doc_viewer_info_dismissed';
 
   // Doc mode (iframe) state
@@ -438,7 +438,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
         const globalOrIndividual = myself.userSettings.perBookSetting.pdf;
         let zoomVal: string;
-        let spreadVal: 'none' | 'even' | 'odd';
+        let spreadVal: PdfSpread;
         let scrollLayoutVal: PdfScrollLayout;
         if (globalOrIndividual === 'Global') {
           zoomVal = myself.userSettings.pdfReaderSetting.pageZoom || 'page-fit';
@@ -909,7 +909,7 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   // --- Spread ---
 
   cycleSpreadMode(): void {
-    const modes: ('none' | 'odd' | 'even')[] = ['none', 'odd', 'even'];
+    const modes: PdfSpread[] = ['none', 'odd', 'even'];
     const idx = modes.indexOf(this.spreadMode());
     const next = modes[(idx + 1) % modes.length];
     this.spreadMode.set(next);
@@ -1420,11 +1420,12 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     if (this.viewerMode() !== 'book') return;
 
     // Ignore touches on interactive elements
-    const target = e.target instanceof Element
-      ? e.target
-      : e.target instanceof Node
-        ? e.target.parentElement
-        : null;
+    let target: Element | null = null;
+    if (e.target instanceof Element) {
+      target = e.target;
+    } else if (e.target instanceof Node) {
+      target = e.target.parentElement;
+    }
     if (target instanceof Element && target.closest('.pdf-header-toolbar, .pdf-footer, .pdf-sidebar, .search-bar, .toolbar-overflow-menu, button, input, a')) return;
 
     const endX = e.changedTouches[0].clientX;

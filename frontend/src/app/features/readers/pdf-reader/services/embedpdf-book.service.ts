@@ -38,6 +38,7 @@ export interface PdfOutlineItem {
 }
 
 export type PdfScrollLayout = 'vertical' | 'horizontal';
+export type PdfSpread = 'none' | 'odd' | 'even';
 
 function parsePdfZoomLevel(level: string): ZoomLevel | null {
   switch (level) {
@@ -391,7 +392,7 @@ export class EmbedPdfBookService {
     return this.spread?.getSpreadMode() ?? SpreadMode.None;
   }
 
-  setSpreadMode(mode: 'none' | 'odd' | 'even'): void {
+  setSpreadMode(mode: PdfSpread): void {
     const spreadMode = {
       none: SpreadMode.None,
       odd: SpreadMode.Odd,

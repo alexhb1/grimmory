@@ -56,6 +56,15 @@ function isElementNode(value: EventTarget | null | undefined): value is Element 
   return typeof value === 'object' && value !== null && 'nodeType' in value && value.nodeType === Node.ELEMENT_NODE;
 }
 
+function isEditableTarget(value: EventTarget | null): boolean {
+  if (!isElementNode(value)) return false;
+  if (value.tagName === 'INPUT' || value.tagName === 'TEXTAREA') return true;
+
+  const contentEditable = value.closest('[contenteditable]');
+  return contentEditable !== null
+    && contentEditable.getAttribute('contenteditable')?.toLowerCase() !== 'false';
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -175,16 +184,8 @@ export class ReaderEventService {
 
   private attachKeyboardHandler(): void {
     this.keydownHandler = (event: KeyboardEvent) => {
-      const target = event.target;
-      const contentEditable = isElementNode(target) ? target.closest('[contenteditable]') : null;
-      if (isElementNode(target) && (
-        target.tagName === 'INPUT'
-        || target.tagName === 'TEXTAREA'
-        || (contentEditable !== null
-          && contentEditable.getAttribute('contenteditable')?.toLowerCase() !== 'false')
-      )) {
-        return;
-      }
+      if (isEditableTarget(event.target)) return;
+
       const k = event.key;
       if (k === 'ArrowLeft' || k === 'PageUp') {
         this.viewCallbacks?.prev();
