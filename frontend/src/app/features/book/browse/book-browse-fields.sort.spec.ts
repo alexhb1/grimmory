@@ -62,6 +62,7 @@ describe('book browse sort fields', () => {
         id: 'pageCount',
         labelKey: 'book.fields.pageCount',
         group: 'more',
+        kind: 'numeric',
         defaultDirection: 'desc',
         directions: ['desc'],
       },

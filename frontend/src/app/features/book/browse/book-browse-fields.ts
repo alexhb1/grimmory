@@ -1,68 +1,64 @@
-import {
-  LucideArrowDown10,
-  LucideArrowDownZA,
-  LucideArrowUp01,
-  LucideArrowUpAZ,
-  LucideCalendarArrowDown,
-  LucideCalendarArrowUp,
-  LucideClockArrowDown,
-  LucideClockArrowUp,
-  type LucideIconData,
-} from '@lucide/angular';
+import {type LucideIconData} from '@lucide/angular';
 
 import {type FilterRailGroup} from '../../../shared/components/browse/browse-filter-rail/browse-filter-rail.component';
+import {
+  buildBrowseRailGroups,
+  freezeBrowseFacetOrders,
+  orderedBrowseFacetVocabularyKeys,
+  type BrowseFacetVocabulary,
+  type FrozenFacetOrders,
+} from '../../../shared/components/browse/browse-facets';
+import {
+  buildBrowseFilterChips,
+  type BrowseFilterChip,
+} from '../../../shared/components/browse/browse-filter-chips.component';
+import {
+  browseSortDirectionIcon,
+  browseSortOption,
+  browseSortTerms,
+  buildBrowseSortOptions,
+  parseBrowseSortToken,
+  type BrowseSortField,
+  type BrowseSortKind,
+  type BrowseSortOption,
+  type BrowseSortSelection,
+  type BrowseSortVocabulary,
+} from '../../../shared/components/browse/browse-sort';
+
 import {type TableColumnPreference} from '../../settings/user-management/user.service';
 import {
   DEFAULT_BOOK_SORT_TERMS,
   isBookQueryFacetKey,
+  isBookQuerySortKey,
   parseSortTermsToken,
   type BookQueryFacetKey,
   type BookQuerySortKey,
   type BookSortTerm,
+  type FacetValueMap,
   type SortDirection,
 } from '../data/book-query-params';
 import {type BookFacetGroup} from '../data/book-query.models';
 import {type BookSummary} from '../data/book-response.models';
 
-export interface BookSortOption {
-  readonly id: BookQuerySortKey;
-  readonly labelKey: string;
-  readonly group: 'common' | 'more';
-  readonly defaultDirection: SortDirection;
-  readonly directions: readonly SortDirection[];
-}
+export {type FrozenFacetOrders} from '../../../shared/components/browse/browse-facets';
 
-export interface BookSortSelection {
-  readonly option: BookSortOption;
-  readonly direction: SortDirection;
-}
+export type BookSortOption = BrowseSortOption<BookQuerySortKey>;
+
+export type BookSortSelection = BrowseSortSelection<BookQuerySortKey>;
 
 type BookBrowseColumnGroupId =
   'reading' | 'publishing' | 'file' | 'categorization' | 'ratings';
-
-interface FrozenFacetValue {
-  readonly value: string;
-  readonly label: string;
-}
-
-interface FrozenFacetGroup {
-  readonly values: readonly FrozenFacetValue[];
-}
-
-export type FrozenFacetOrders = Readonly<Record<string, FrozenFacetGroup>>;
 
 interface BookBrowseFacetLink {
   readonly key: BookQueryFacetKey;
   readonly value: string;
 }
 
-type SortKind = 'alphabetical' | 'numeric' | 'calendar' | 'clock';
-
 interface SortField {
   readonly key: BookQuerySortKey;
   readonly group: 'common' | 'more';
   readonly defaultDirection: SortDirection;
-  readonly kind: SortKind;
+  readonly kind: BrowseSortKind;
   readonly showOnCard?: false;
 }
 
@@ -408,55 +404,46 @@ const FIELDS_BY_COLUMN = new Map<string, BookBrowseField>(
     field.column ? [[field.column.key, field] as const] : []),
 );
 
-function sortOption(
-  key: BookQuerySortKey,
-  directions: readonly SortDirection[],
-): BookSortOption {
+export function bookBrowseSortField(key: BookQuerySortKey): BrowseSortField {
   const field = FIELDS_BY_SORT.get(key)!;
-  const preferred = field.sort!.defaultDirection;
   return {
-    id: key,
     labelKey: field.labelKey,
     group: field.sort!.group,
-    defaultDirection: directions.includes(preferred) ? preferred : directions[0],
-    directions,
+    defaultDirection: field.sort!.defaultDirection,
+    kind: field.sort!.kind,
   };
 }
 
+// For sort terms outside the advertised options (e.g. a saved default the server stopped offering).
+export function bookBrowseSortFieldResolver(key: string): BrowseSortField | null {
+  return isBookQuerySortKey(key) ? bookBrowseSortField(key) : null;
+}
+
+const BOOK_SORT_VOCABULARY: BrowseSortVocabulary<BookQuerySortKey> = {
+  order: SORT_ORDER,
+  field: bookBrowseSortField,
+  parseToken: parseSortTermsToken,
+};
+
 export function buildSortOptions(serverSortTokens: readonly string[]): BookSortOption[] {
-  const directionsByKey = new Map<BookQuerySortKey, SortDirection[]>();
-  for (const token of serverSortTokens) {
-    const term = parseSortTermsToken(token)[0];
-    if (!term) {
-      continue;
-    }
-    const directions = directionsByKey.get(term.key) ?? [];
-    directions.push(term.direction);
-    directionsByKey.set(term.key, directions);
-  }
-  return SORT_ORDER.flatMap(key => {
-    const directions = directionsByKey.get(key);
-    return directions ? [sortOption(key, directions)] : [];
-  });
+  return buildBrowseSortOptions(serverSortTokens, BOOK_SORT_VOCABULARY);
 }
 
 export const DEFAULT_BOOK_SORT: BookSortSelection = {
-  option: sortOption(
+  option: browseSortOption(
     DEFAULT_BOOK_SORT_TERMS[0].key,
     [DEFAULT_BOOK_SORT_TERMS[0].direction],
+    BOOK_SORT_VOCABULARY,
   ),
   direction: DEFAULT_BOOK_SORT_TERMS[0].direction,
 };
 
 export function parseSortToken(token: string | null): BookSortSelection | null {
-  const first = parseSortTermsToken(token)[0];
-  return first
-    ? {option: sortOption(first.key, [first.direction]), direction: first.direction}
-    : null;
+  return parseBrowseSortToken(token, BOOK_SORT_VOCABULARY);
 }
 
 export function sortTerms(selection: BookSortSelection): BookSortTerm[] {
-  return [{key: selection.option.id, direction: selection.direction}];
+  return browseSortTerms(selection);
 }
 
 export function bookBrowseSortLabelKey(key: BookQuerySortKey): string {
@@ -468,19 +455,7 @@ export function sortDirectionIcon(
   key: BookQuerySortKey,
   direction: SortDirection,
 ): LucideIconData {
-  const ascending = direction === 'asc';
-  const kind = FIELDS_BY_SORT.get(key)!.sort!.kind;
-
-  switch (kind) {
-    case 'alphabetical':
-      return ascending ? LucideArrowUpAZ.icon : LucideArrowDownZA.icon;
-    case 'numeric':
-      return ascending ? LucideArrowUp01.icon : LucideArrowDown10.icon;
-    case 'calendar':
-      return ascending ? LucideCalendarArrowUp.icon : LucideCalendarArrowDown.icon;
-    case 'clock':
-      return ascending ? LucideClockArrowUp.icon : LucideClockArrowDown.icon;
-  }
+  return browseSortDirectionIcon(bookBrowseSortField(key).kind, direction);
 }
 
 export function bookBrowseSortLineAvailable(key: BookQuerySortKey): boolean {
@@ -509,90 +484,37 @@ export function bookReadStatusLabelKey(status: BookSummary['readStatus']): strin
   return key ? `book.filter.readStatus.${key}` : null;
 }
 
+const BOOK_FACET_VOCABULARY: BrowseFacetVocabulary<BookQueryFacetKey> = {
+  order: FACET_ORDER,
+  isKey: isBookQueryFacetKey,
+  labelKey: bookBrowseFacetLabelKey,
+  openByDefault: OPEN_RAIL_FACETS,
+};
+
+export function buildBookFilterChips(
+  selections: FacetValueMap,
+  served: readonly BookFacetGroup[],
+  frozen?: FrozenFacetOrders,
+): BrowseFilterChip<BookQueryFacetKey>[] {
+  return buildBrowseFilterChips(selections, served, frozen, BOOK_FACET_VOCABULARY);
+}
+
 export function freezeFacetOrders(served: readonly BookFacetGroup[]): FrozenFacetOrders {
-  return Object.fromEntries(
-    served
-      .filter(group => isBookQueryFacetKey(group.key))
-      .map(group => [group.key, {
-        values: group.values.map(value => ({value: value.value, label: value.title})),
-      }] as const),
-  );
+  return freezeBrowseFacetOrders(served, BOOK_FACET_VOCABULARY);
 }
 
 export function orderedFacetVocabularyKeys(
   served: readonly BookFacetGroup[],
   frozen?: FrozenFacetOrders,
 ): BookQueryFacetKey[] {
-  const available = new Set<string>(Object.keys(frozen ?? {}));
-  served.forEach(group => available.add(group.key));
-  return FACET_ORDER.filter(key => available.has(key));
+  return orderedBrowseFacetVocabularyKeys(served, frozen, BOOK_FACET_VOCABULARY);
 }
 
 export function buildRailGroups(
   served: readonly BookFacetGroup[],
   frozen?: FrozenFacetOrders,
 ): FilterRailGroup<BookQueryFacetKey>[] {
-  const byKey = new Map(
-    served
-      .filter(group => isBookQueryFacetKey(group.key))
-      .map(group => [group.key, group]),
-  );
-  const groups: FilterRailGroup<BookQueryFacetKey>[] = [];
-  for (const key of orderedFacetVocabularyKeys(served, frozen)) {
-    const servedGroup = byKey.get(key);
-    const frozenGroup = frozen && Object.hasOwn(frozen, key) ? frozen[key] : undefined;
-    const labelKey = bookBrowseFacetLabelKey(key);
-    if (!frozenGroup) {
-      if (!servedGroup) {
-        continue;
-      }
-      groups.push({
-        key,
-        labelKey,
-        defaultOpen: OPEN_RAIL_FACETS.has(key),
-        values: servedGroup.values.map(value => ({
-          value: value.value,
-          label: value.title,
-          count: value.count,
-          selected: value.selected,
-        })),
-      });
-      continue;
-    }
-
-    const counts = new Map((servedGroup?.values ?? []).map(value => [value.value, value.count]));
-    const selected = new Set(
-      (servedGroup?.values ?? []).filter(value => value.selected).map(value => value.value),
-    );
-    const known = new Set(frozenGroup.values.map(value => value.value));
-    const values = frozenGroup.values.map(frozenValue => ({
-      value: frozenValue.value,
-      label: frozenValue.label,
-      count: counts.get(frozenValue.value) ?? 0,
-      selected: selected.has(frozenValue.value),
-    }));
-    for (const value of servedGroup?.values ?? []) {
-      if (!known.has(value.value)) {
-        values.push({
-          value: value.value,
-          label: value.title,
-          count: value.count,
-          selected: value.selected,
-        });
-      }
-    }
-    const ordered = [
-      ...values.filter(item => item.count !== 0 || item.selected),
-      ...values.filter(item => item.count === 0 && !item.selected),
-    ];
-    groups.push({
-      key,
-      labelKey,
-      defaultOpen: OPEN_RAIL_FACETS.has(key),
-      values: ordered,
-    });
-  }
-  return groups;
+  return buildBrowseRailGroups(served, frozen, BOOK_FACET_VOCABULARY);
 }
 
 export function normalizeBookBrowseColumnPreferences(
