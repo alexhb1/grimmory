@@ -24,6 +24,7 @@ import {
 } from '@lucide/angular';
 
 import {type GridDensityDirection} from '../../../shared/components/grid-density-buttons/grid-density-buttons.component';
+import {SelectModeControlsComponent} from '../../../shared/components/bulk-actions/select-mode-controls.component';
 import {type BookSortTerm} from '../data/book-query-params';
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
 import {connectedGroupClass, connectedItemClass} from '../../../shared/ui/connected-group';
@@ -65,6 +66,7 @@ export interface BookBrowseColumnVisibilityChange {
   imports: [
     TranslocoPipe,
     AppButtonComponent,
+    SelectModeControlsComponent,
     AppRadioGroupComponent,
     AppMenuComponent,
     AppMenuCheckboxComponent,
@@ -83,21 +85,11 @@ export interface BookBrowseColumnVisibilityChange {
   host: {class: 'contents'},
   template: `
     @if (mobileSelectMode()) {
-      <span role="status" class="px-1 text-sm font-semibold tabular-nums text-text">
-        {{ 'shared.ui.select.selectedCount' | transloco: {count: selectionCountLabel()} }}
-      </span>
-      @if (showSelectAll()) {
-        <app-button
-          class="ml-auto"
-          variant="soft"
-          [label]="'shared.ui.bulkActions.selectAll' | transloco"
-          (clicked)="selectAllRequested.emit()" />
-      }
-      <app-button
-        [class]="showSelectAll() ? '' : 'ml-auto'"
-        variant="soft"
-        [label]="'common.cancel' | transloco"
-        (clicked)="mobileSelectToggle.emit()" />
+      <app-select-mode-controls
+        [count]="selectionCount()"
+        [total]="selectionTotal()"
+        (selectAll)="selectAllRequested.emit()"
+        (cancelled)="mobileSelectToggle.emit()" />
     } @else {
     <app-radio-group
       class="hidden sm:block"
@@ -409,11 +401,6 @@ export class BookBrowseToolbarComponent {
     this.sortOptions().length === 0 || this.activeSort().option.directions.length > 1);
   protected readonly activeSortIcon = computed(() =>
     sortDirectionIcon(this.activeSort().option.id, this.activeSort().direction));
-  protected readonly selectionCountLabel = computed(() => this.selectionCount().toLocaleString());
-  protected readonly showSelectAll = computed(() => {
-    const total = this.selectionTotal();
-    return total !== null && this.selectionCount() < total;
-  });
   protected readonly columnSections = computed<readonly BookBrowseColumnSection[]>(() => {
     return bookBrowseColumnSections(this.columnOptions());
   });

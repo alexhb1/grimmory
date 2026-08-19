@@ -1,15 +1,12 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked, viewChild} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
-import {ActivatedRoute, type ParamMap, Router} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 import {TranslocoPipe, TranslocoService} from '@jsverse/transloco';
-import {injectInfiniteQuery, injectQuery, keepPreviousData, QueryClient, type InfiniteData} from '@tanstack/angular-query-experimental';
+import {injectInfiniteQuery, injectQuery, keepPreviousData, QueryClient} from '@tanstack/angular-query-experimental';
 import {type SortingState} from '@tanstack/angular-table';
 import {take} from 'rxjs/operators';
 
-import {
-  BrowseGridComponent,
-  type BrowseGridStatus,
-} from '../../../shared/components/browse/browse-grid/browse-grid.component';
+import {BrowseGridComponent} from '../../../shared/components/browse/browse-grid/browse-grid.component';
 import {
   BrowseGridEmptyDef,
   BrowseGridItemDef,
@@ -28,9 +25,8 @@ import {LayoutService} from '../../../shared/layout/layout.service';
 import {LocalStorageService} from '../../../shared/service/local-storage.service';
 import {PageTitleService} from '../../../shared/service/page-title.service';
 import {createGridDensity} from '../../../shared/util/grid-density.util';
-import {debouncedSignal} from '../../../shared/util/debounced-signal';
 import {type ContextMenuRequest} from '../../../shared/ui/menu/app-menu.component';
-import {normalizeRemoteSearchTerm, SEARCH_DEBOUNCE_MS} from '../../../shared/util/search-terms';
+import {normalizeRemoteSearchTerm} from '../../../shared/util/search-terms';
 import {type GridDensityDirection} from '../../../shared/components/grid-density-buttons/grid-density-buttons.component';
 import {CoverScalePreferenceService} from '../../../shared/service/cover-scale-preference.service';
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
@@ -39,24 +35,26 @@ import {LibraryService} from '../service/library.service';
 import {BookNavigationService} from '../service/book-navigation.service';
 import {
   type EntityViewPreference,
-  type EntityViewPreferenceOverride,
-  type EntityViewPreferences,
   type SortCriterion,
   type TableColumnPreference,
   UserService,
 } from '../../settings/user-management/user.service';
-import {type MultiSortDialogResult} from './multi-sort-dialog.component';
+import {
+  entityViewPreferenceContext,
+  findEntityViewPreferenceOverride,
+  resolveEntityViewPreference,
+  upsertEntityViewPreference,
+} from '../../settings/user-management/entity-view-preferences';
+import {type MultiSortDialogResult} from '../../../shared/components/browse/multi-sort-dialog.component';
 import {DialogLauncherService} from '../../../shared/services/dialog-launcher.service';
 import {
   browseFacetQueryParams,
   countFacetSelections,
   EMPTY_FACET_SELECTION,
-  facetValuesForKey,
   type BookPageParams,
   type BookQuerySortKey,
   type BookSortTerm,
   type FacetValueMap,
-  isBookQueryFacetKey,
   type BookQueryFacetKey,
   isBookQuerySortKey,
   parseFacetParams,
@@ -64,22 +62,21 @@ import {
   sortTermsToken,
   toggleFacetSelection,
 } from '../data/book-query-params';
-import {findBrowsePageLink} from '../../../core/data/browse.models';
 import {bookBrowseCollection} from './book-browse-collection';
 import {bookBrowseScope, bookBrowseScopeTitle, scopedFacetSelection} from './book-browse-scope';
-import {type BookFacetResult, type BookPage, flattenBookPages} from '../data/book-query.models';
+import {type BookFacetResult} from '../data/book-query.models';
 import {
   bookBrowseColumnOptions,
-  bookBrowseFacetLabelKey,
+  bookBrowseSortFieldResolver,
   bookBrowseSortLineAvailable,
   bookBrowseSortableColumnFields,
   bookBrowseVisibleColumnOptions,
+  buildBookFilterChips,
   buildRailGroups,
   buildSortOptions,
   DEFAULT_BOOK_SORT,
   freezeFacetOrders,
   normalizeBookBrowseColumnPreferences,
-  orderedFacetVocabularyKeys,
   parseSortToken,
   sortTerms,
   type FrozenFacetOrders,
@@ -89,7 +86,6 @@ import {BookBrowseSortLineService} from './book-browse-sort-line.service';
 import {cn} from '../../../shared/ui/cn';
 import {AppButtonComponent} from '../../../shared/ui/button/app-button.component';
 import {AppInputComponent} from '../../../shared/ui/input/app-input.component';
-import {AppTagComponent} from '../../../shared/ui/tag/app-tag.component';
 import {LucideSearch, LucideX} from '@lucide/angular';
 import {
   BrowseFilterRailComponent,
@@ -107,7 +103,14 @@ import {
   overlayPendingBookState,
   type PendingBookOverlay,
 } from '../data/book-command-pending-state';
-import {createBookBrowseSelection} from './book-browse-selection';
+import {createBrowseSelection} from '../../../shared/components/browse/browse-selection';
+import {createBrowsePresentation, heldSignal} from '../../../shared/components/browse/browse-presentation';
+import {createBrowseSearchDraft} from '../../../shared/components/browse/browse-search-draft';
+import {installBrowseSelectionShortcuts} from '../../../shared/components/browse/browse-selection-shortcuts';
+import {
+  BrowseFilterChipsComponent,
+  type BrowseFilterChip,
+} from '../../../shared/components/browse/browse-filter-chips.component';
 import {
   BookBrowseTableComponent,
   type BookBrowseTableFacetRequest,
@@ -117,51 +120,11 @@ import {type BookBrowseViewMode} from './book-browse.models';
 import {type LibraryShelfMenuTarget} from '../components/library-shelf-menu/library-shelf-menu.component';
 
 const PAGE_SIZE = 60;
-const PAGE_PREFETCH_THRESHOLD = 12;
-const COVER_HOLD_MAX_MS = 400;
-const COLLECTION_HOLD_MAX_MS = 600;
-
-function preloadImage(url: string): Promise<void> {
-  return new Promise(resolve => {
-    const image = new Image();
-    image.onload = () => resolve();
-    image.onerror = () => resolve();
-    image.src = url;
-    if (image.complete) {
-      resolve();
-    }
-  });
-}
-
-type EntityViewPreferenceContext = Pick<EntityViewPreferenceOverride, 'entityType' | 'entityId'>;
-
-interface BrowseFilterChip {
-  key: BookQueryFacetKey;
-  value: string;
-  groupLabel: string;
-  valueLabel: string;
-}
 
 interface BrowseChipsBand {
   count: number;
   query: string;
-  chips: readonly BrowseFilterChip[];
-}
-
-export function entityViewPreferenceContext(paramMap: ParamMap): EntityViewPreferenceContext | null {
-  const candidates = [
-    {param: 'libraryId', entityType: 'LIBRARY'},
-    {param: 'shelfId', entityType: 'SHELF'},
-    {param: 'magicShelfId', entityType: 'MAGIC_SHELF'},
-  ] as const;
-
-  for (const candidate of candidates) {
-    const entityId = Number(paramMap.get(candidate.param));
-    if (Number.isSafeInteger(entityId) && entityId > 0) {
-      return {entityType: candidate.entityType, entityId};
-    }
-  }
-  return null;
+  chips: readonly BrowseFilterChip<BookQueryFacetKey>[];
 }
 
 const RAIL_OPEN_STORAGE_KEY = 'browseFilterRailOpen';
@@ -200,19 +163,13 @@ const BROWSE_PAGE_PARAMS: Omit<BookPageParams, 'sort'> = {
     BookBrowseTableComponent,
     BookBrowseBulkBarComponent,
     BrowseFilterRailComponent,
+    BrowseFilterChipsComponent,
     AppButtonComponent,
     AppInputComponent,
-    AppTagComponent,
     LucideSearch,
     LucideX,
   ],
   templateUrl: './book-browse-page.component.html',
-  host: {
-    '(document:keydown.escape)': 'onEscapeKey()',
-    '(document:keydown.control.a)': 'onSelectAllKey($event)',
-    '(document:keydown.meta.a)': 'onSelectAllKey($event)',
-    '(document:click)': 'onDocumentClick($event)',
-  },
 })
 export class BookBrowsePageComponent {
   private readonly bookQuery = inject(BookQueryService);
@@ -316,41 +273,12 @@ export class BookBrowsePageComponent {
       this.headerRef()?.isStuck() ? 'border-border/70' : 'border-transparent',
     ),
   );
-  protected readonly filterChips = computed(() => {
-    this.activeLang();
-    const selections = this.facetSelections();
-    const frozen = this.frozenFacets();
-    const vocabularyKeys = orderedFacetVocabularyKeys(
+  protected readonly filterChips = computed(() =>
+    buildBookFilterChips(
+      this.facetSelections(),
       this.unfilteredFacetsQuery.data()?.facets ?? [],
-      frozen ?? undefined,
-    );
-    const vocabularySet = new Set(vocabularyKeys);
-    const selectionKeys = Object.keys(selections).filter(isBookQueryFacetKey);
-    const keys = [
-      ...vocabularyKeys,
-      ...selectionKeys.filter(key => !vocabularySet.has(key)),
-    ];
-    return keys.flatMap(key => {
-      const values = facetValuesForKey(selections, key);
-      if (values.length === 0) {
-        return [];
-      }
-      const frozenGroup = frozen && Object.hasOwn(frozen, key) ? frozen[key] : undefined;
-      const frozenIndex = new Map((frozenGroup?.values ?? []).map((item, index) => [item.value, index]));
-      return [...values]
-        .sort((a, b) => {
-          const indexA = frozenIndex.get(a) ?? Number.MAX_SAFE_INTEGER;
-          const indexB = frozenIndex.get(b) ?? Number.MAX_SAFE_INTEGER;
-          return indexA - indexB || a.localeCompare(b);
-        })
-        .map(value => ({
-          key,
-          value,
-          groupLabel: this.transloco.translate(bookBrowseFacetLabelKey(key)),
-          valueLabel: frozenGroup?.values.find(item => item.value === value)?.label ?? value,
-        }));
-    });
-  });
+      this.frozenFacets() ?? undefined,
+    ));
 
   protected readonly menuOpenBookId = computed(() => this.bookMenu()?.openBookId() ?? null);
 
@@ -360,25 +288,17 @@ export class BookBrowsePageComponent {
   private readonly routeParamMap = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
   });
-  private readonly activeViewPreference = computed<EntityViewPreference | undefined>(() => {
-    const preferences = this.userService.currentUser()?.userSettings.entityViewPreferences;
-    const context = entityViewPreferenceContext(this.routeParamMap());
-    return context
-      ? preferences?.overrides.find(override =>
-          override.entityType === context.entityType && override.entityId === context.entityId,
-        )?.preferences ?? preferences?.global
-      : preferences?.global;
-  });
+  private readonly activeViewPreference = computed<EntityViewPreference | undefined>(() =>
+    resolveEntityViewPreference(
+      this.userService.currentUser()?.userSettings.entityViewPreferences,
+      entityViewPreferenceContext(this.routeParamMap()),
+    ));
   private readonly defaultSortTerms = computed<readonly BookSortTerm[]>(() => {
     const preferences = this.userService.currentUser()?.userSettings.entityViewPreferences;
     const available = this.availableSortKeys();
     const context = entityViewPreferenceContext(this.routeParamMap());
     const candidates = [
-      context
-        ? preferences?.overrides.find(override =>
-            override.entityType === context.entityType && override.entityId === context.entityId,
-          )?.preferences
-        : undefined,
+      context ? findEntityViewPreferenceOverride(preferences, context) : undefined,
       preferences?.global,
     ];
     for (const candidate of candidates) {
@@ -493,10 +413,19 @@ export class BookBrowsePageComponent {
   );
   protected readonly filterCount = computed(() => countFacetSelections(this.facetSelections()));
   protected readonly queryText = computed(() => (this.queryParamMap().get('query') ?? '').trim());
-  protected readonly queryDraft = signal(this.route.snapshot.queryParamMap.get('query') ?? '');
-  private readonly debouncedQueryDraft = debouncedSignal(
-    computed(() => this.queryDraft().trim()), SEARCH_DEBOUNCE_MS,
-  );
+  private readonly searchDraft = createBrowseSearchDraft({
+    initial: this.route.snapshot.queryParamMap.get('query') ?? '',
+    committed: this.queryText,
+    commit: term => {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {query: term || null},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    },
+  });
+  protected readonly queryDraft = this.searchDraft.value;
   protected readonly activeFilterCount = computed(() => this.filterCount() + (this.queryText() ? 1 : 0));
   private readonly params = computed<BookPageParams>(() => ({
     ...BROWSE_PAGE_PARAMS,
@@ -517,26 +446,31 @@ export class BookBrowsePageComponent {
     ...this.collection().infinitePage(this.params().size),
     placeholderData: keepPreviousData,
   }));
-  private readonly lastVisibleEnd = signal(0);
-  private readonly presentedData = signal<InfiniteData<BookPage> | undefined>(undefined);
-  private presentedIdentity: string | null = null;
-  private presentToken = 0;
-  private readonly holdingPresentation = computed(() =>
-    this.presentedData() !== undefined
-      && (this.booksQuery.isPlaceholderData() || this.presentedData() !== this.booksQuery.data()));
-  protected readonly chipsBand = linkedSignal<{stale: boolean; band: BrowseChipsBand}, BrowseChipsBand>({
-    source: () => ({
-      stale: this.holdingPresentation(),
-      band: {count: this.activeFilterCount(), query: this.queryText(), chips: this.filterChips()},
-    }),
-    computation: (source, previous) => (source.stale && previous ? previous.value : source.band),
+  private readonly presentation = createBrowsePresentation<BookSummary>({
+    query: this.booksQuery,
+    orderingIdentity: this.orderingIdentity,
+    artworkUrls: (books, lastVisibleIndex) => {
+      const square = this.squareCoversFor(books);
+      return books.slice(0, lastVisibleIndex + 1).flatMap(book => {
+        const url = bookCardCoverSrc(book, square, this.urlHelper);
+        return url ? [url] : [];
+      });
+    },
+    scrollToTop: () => {
+      this.tableRef()?.scrollToTop();
+      this.gridRef()?.scrollToTop();
+    },
   });
+  protected readonly chipsBand = heldSignal<BrowseChipsBand>(
+    () => ({count: this.activeFilterCount(), query: this.queryText(), chips: this.filterChips()}),
+    this.presentation.holding,
+  );
   private readonly activeLang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
 
   protected readonly books = computed<readonly BookSummary[]>(() => {
-    const books = flattenBookPages(this.presentedData());
+    const books = this.presentation.items();
     const overlay = this.pendingBookOverlay();
     if (overlay.readStatuses.size === 0
       && overlay.progressResets.size === 0) {
@@ -544,28 +478,15 @@ export class BookBrowsePageComponent {
     }
     return books.map(book => overlayPendingBookState(book, overlay));
   });
-  protected readonly total = computed<number | null>(() =>
-    this.presentedData()?.pages[0]?.page.totalElements ?? null,
-  );
-  protected readonly status = computed<BrowseGridStatus>(() => {
-    if (this.books().length > 0
-      || (this.presentedData() !== undefined && this.booksQuery.isSuccess())) {
-      return 'success';
-    }
-    return this.booksQuery.isError() ? 'error' : 'pending';
-  });
-  protected readonly nextPageError = computed(() =>
-    this.books().length > 0 && this.booksQuery.isFetchNextPageError(),
-  );
-  protected readonly hasNextPage = computed(() => {
-    const lastPage = this.presentedData()?.pages.at(-1);
-    return lastPage !== undefined && findBrowsePageLink(lastPage, 'next') !== undefined;
-  });
+  protected readonly total = this.presentation.total;
+  protected readonly status = this.presentation.status;
+  protected readonly nextPageError = this.presentation.nextPageError;
+  protected readonly hasNextPage = this.presentation.hasNextPage;
 
-  protected readonly selection = createBookBrowseSelection({
+  protected readonly selection = createBrowseSelection({
     membershipIdentity: this.membershipIdentity,
     orderingIdentity: this.orderingIdentity,
-    books: this.books,
+    items: this.books,
     totalElements: this.total,
   });
   protected readonly selectionEnabled = computed(() => !this.isMobile() || this.mobileSelectMode());
@@ -599,13 +520,9 @@ export class BookBrowsePageComponent {
     return null;
   });
 
-  private readonly detailLineKey = linkedSignal<
-    {stale: boolean; key: BookQuerySortKey | null},
-    BookQuerySortKey | null
-  >({
-    source: () => ({stale: this.holdingPresentation(), key: this.liveDetailLineKey()}),
-    computation: (source, previous) => (source.stale && previous ? previous.value : source.key),
-  });
+  private readonly detailLineKey = heldSignal<BookQuerySortKey | null>(
+    () => this.liveDetailLineKey(), this.presentation.holding,
+  );
 
   protected detailLineFor(book: BookSummary): string | null {
     const key = this.detailLineKey();
@@ -668,101 +585,33 @@ export class BookBrowsePageComponent {
     });
 
     effect(() => {
-      const query = this.queryText();
-      untracked(() => {
-        if (this.debouncedQueryDraft() === this.queryDraft().trim() && this.queryDraft().trim() !== query) {
-          this.queryDraft.set(query);
-        }
-      });
-    });
-
-    effect(() => {
-      const settled = this.debouncedQueryDraft();
-      untracked(() => {
-        if (settled !== this.queryDraft().trim() || settled === this.queryText()) {
-          return;
-        }
-        void this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: {query: settled || null},
-          queryParamsHandling: 'merge',
-          replaceUrl: true,
-        });
-      });
-    });
-
-    effect(() => {
-      const identity = this.orderingIdentity();
-      const data = this.booksQuery.data();
-      const ready = data !== undefined && !this.booksQuery.isPlaceholderData();
-      untracked(() => this.presentCollection(identity, ready ? data : undefined));
-    });
-
-    effect(() => {
       const title = this.pageHeader().title;
       if (title) {
         this.pageTitle.setPageTitle(title);
       }
     });
-  }
 
-  private presentCollection(identity: string, data: InfiniteData<BookPage> | undefined): void {
-    const token = ++this.presentToken;
-    const publish = (): void => {
-      if (token === this.presentToken && data) {
-        if (this.presentedIdentity !== null && this.presentedIdentity !== identity) {
-          this.tableRef()?.scrollToTop();
-          this.gridRef()?.scrollToTop();
+    installBrowseSelectionShortcuts({
+      enabled: () => this.selectionEnabled(),
+      active: () => this.selection.active(),
+      suspended: () => this.menuOpenBookId() !== null,
+      clear: () => this.selection.clear(),
+      selectAll: () => this.selection.selectAll(),
+      exemptSelector:
+        'app-book-card, app-bulk-actions-bar, app-menu, app-page-header, aside, ' +
+        'app-book-browse-table, ' +
+        '.cdk-overlay-container, .p-dialog-mask, [role="dialog"], ' +
+        'button, a, input, textarea, select, label',
+      onEscapeWhileInactive: () => {
+        if (this.mobileSelectMode()) {
+          this.mobileSelectMode.set(false);
         }
-        this.presentedIdentity = identity;
-        this.presentedData.set(data);
-      }
-    };
-
-    if (this.presentedIdentity === null
-      || this.presentedIdentity === identity
-      || this.presentedData() === undefined) {
-      publish();
-      return;
-    }
-
-    if (!data) {
-      setTimeout(() => {
-        if (token === this.presentToken) {
-          this.presentedData.set(undefined);
-        }
-      }, COLLECTION_HOLD_MAX_MS);
-      return;
-    }
-
-    const books = flattenBookPages(data);
-    const square = this.squareCoversFor(books);
-    const urls = books
-      .slice(0, this.lastVisibleEnd() + 1)
-      .flatMap(book => {
-        const url = bookCardCoverSrc(book, square, this.urlHelper);
-        return url ? [url] : [];
-      });
-    if (urls.length === 0) {
-      publish();
-      return;
-    }
-    const timer = setTimeout(publish, COVER_HOLD_MAX_MS);
-    void Promise.all(urls.map(preloadImage)).then(() => {
-      clearTimeout(timer);
-      publish();
+      },
     });
   }
 
   protected onRenderedRange(range: BrowseGridRenderedRange): void {
-    this.lastVisibleEnd.set(range.end);
-    if (
-      range.end >= this.books().length - PAGE_PREFETCH_THRESHOLD &&
-      this.booksQuery.hasNextPage() &&
-      !this.booksQuery.isFetching()
-    ) {
-      void this.booksQuery.fetchNextPage({cancelRefetch: false});
-    }
+    this.presentation.onRenderedRange(range);
   }
 
   protected onViewModeChange(view: BookBrowseViewMode): void {
@@ -830,47 +679,6 @@ export class BookBrowsePageComponent {
     }
   }
 
-  protected onEscapeKey(): void {
-    if (this.menuOpenBookId() === null && this.selection.active()) {
-      this.selection.clear();
-      return;
-    }
-    if (this.menuOpenBookId() === null && this.mobileSelectMode()) {
-      this.mobileSelectMode.set(false);
-    }
-  }
-
-  protected onDocumentClick(event: Event): void {
-    if (!this.selection.active()) {
-      return;
-    }
-    const target = event.target;
-    if (!(target instanceof Element)) {
-      return;
-    }
-    const exempt = target.closest(
-      'app-book-card, app-bulk-actions-bar, app-menu, app-page-header, aside, ' +
-      'app-book-browse-table, ' +
-      '.cdk-overlay-container, .p-dialog-mask, [role="dialog"], ' +
-      'button, a, input, textarea, select, label',
-    );
-    if (exempt === null) {
-      this.selection.clear();
-    }
-  }
-
-  protected onSelectAllKey(event: Event): void {
-    const target = event.target as HTMLElement | null;
-    const typing = target !== null && (
-      target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-    );
-    if (typing || !this.selectionEnabled()) {
-      return;
-    }
-    event.preventDefault();
-    this.selection.selectAll();
-  }
-
   protected onMenuRequested(book: BookSummary, request: ContextMenuRequest): void {
     this.bookMenu()?.openFor(book, request);
   }
@@ -907,11 +715,11 @@ export class BookBrowsePageComponent {
   }
 
   protected onQueryDraftChange(value: string): void {
-    this.queryDraft.set(value);
+    this.searchDraft.set(value);
   }
 
   protected onClearQuery(): void {
-    this.queryDraft.set('');
+    this.searchDraft.set('');
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {query: null},
@@ -920,7 +728,7 @@ export class BookBrowsePageComponent {
   }
 
   protected onClearAllFilters(): void {
-    this.queryDraft.set('');
+    this.searchDraft.set('');
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {facet: null, query: null},
@@ -941,14 +749,17 @@ export class BookBrowsePageComponent {
       terms: this.activeSortTerms(),
       options: this.sortOptions(),
       saveDefaultLabelKey: 'book.sorting.saveAsDefault',
+      resolveField: bookBrowseSortFieldResolver,
     });
     ref?.onClose.pipe(take(1)).subscribe((result?: MultiSortDialogResult) => {
       if (!result) {
         return;
       }
-      this.onTableSortChange(result.terms);
+      const terms = result.terms.flatMap((term): BookSortTerm[] =>
+        isBookQuerySortKey(term.key) ? [{key: term.key, direction: term.direction}] : []);
+      this.onTableSortChange(terms);
       if (result.saveAsDefault) {
-        this.saveSortDefault(result.terms);
+        this.saveSortDefault(terms);
       }
     });
   }
@@ -962,27 +773,15 @@ export class BookBrowsePageComponent {
       field: term.key,
       direction: term.direction === 'asc' ? 'ASC' as const : 'DESC' as const,
     }));
-    const sortFields = {
-      sortKey: sortCriteria[0]?.field ?? 'title',
-      sortDir: sortCriteria[0]?.direction ?? 'ASC' as const,
-      sortCriteria,
-    };
-    const prefs: EntityViewPreferences = structuredClone(user.userSettings.entityViewPreferences);
-    const context = entityViewPreferenceContext(this.routeParamMap());
-    if (context === null) {
-      prefs.global = {...prefs.global, ...sortFields};
-    } else {
-      const existing = prefs.overrides.find(override =>
-        override.entityType === context.entityType && override.entityId === context.entityId);
-      if (existing) {
-        existing.preferences = {...existing.preferences, ...sortFields};
-      } else {
-        prefs.overrides.push({
-          ...context,
-          preferences: {...prefs.global, ...sortFields},
-        });
-      }
-    }
+    const prefs = upsertEntityViewPreference(
+      user.userSettings.entityViewPreferences,
+      entityViewPreferenceContext(this.routeParamMap()),
+      {
+        sortKey: sortCriteria[0]?.field ?? 'title',
+        sortDir: sortCriteria[0]?.direction ?? 'ASC' as const,
+        sortCriteria,
+      },
+    );
     this.userService.updateUserSetting(user.id, 'entityViewPreferences', prefs);
   }
 
@@ -1014,11 +813,11 @@ export class BookBrowsePageComponent {
   }
 
   protected onRetryInitial(): void {
-    void this.booksQuery.refetch();
+    this.presentation.retryInitial();
   }
 
   protected onRetryNextPage(): void {
-    void this.booksQuery.fetchNextPage();
+    this.presentation.retryNextPage();
   }
 
 }

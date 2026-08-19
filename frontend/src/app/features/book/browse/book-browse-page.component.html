@@ -48,35 +48,12 @@
         : 'min-w-0 flex-1 pb-8'">
       @if (chipsBand().count > 0) {
         <div [class]="chipsBandClass()">
-          <div class="flex min-h-8 flex-wrap items-center gap-2">
-            @if (chipsBand().query; as query) {
-              <app-tag
-                color="neutral"
-                size="sm"
-                removable
-                [removeLabel]="'browse.chips.removeSearch' | transloco: {query}"
-                (remove)="onClearQuery()">
-                <span class="text-text-muted">{{ 'common.search' | transloco }}:</span>
-                <span class="max-w-48 truncate">{{ query }}</span>
-              </app-tag>
-            }
-            @for (chip of chipsBand().chips; track chip.key + ':' + chip.value) {
-              <app-tag
-                color="neutral"
-                size="sm"
-                removable
-                [removeLabel]="'shared.ui.tag.removeLabel' | transloco: {label: chip.valueLabel}"
-                (remove)="onToggleFacet({key: chip.key, value: chip.value, selected: false})">
-                <span class="text-text-muted">{{ chip.groupLabel }}:</span>
-                <span class="max-w-48 truncate">{{ chip.valueLabel }}</span>
-              </app-tag>
-            }
-            <app-button
-              variant="ghost"
-              size="sm"
-              [label]="'browse.chips.clearAll' | transloco"
-              (clicked)="onClearAllFilters()" />
-          </div>
+          <app-browse-filter-chips
+            [chips]="chipsBand().chips"
+            [query]="chipsBand().query"
+            (removeChip)="onToggleFacet({key: $event.key, value: $event.value, selected: false})"
+            (removeSearch)="onClearQuery()"
+            (clearAll)="onClearAllFilters()" />
         </div>
       } @else {
         <div [class]="hairlineStripClass()"></div>

@@ -33,7 +33,7 @@ import {
 import {type BookSummary} from '../data/book-response.models';
 import {ShelfDefinitionQueryService} from '../data/shelf-definition-query.service';
 import {UserService} from '../../settings/user-management/user.service';
-import {type BookBrowseSelection} from './book-browse-selection';
+import {type BrowseSelection} from '../../../shared/components/browse/browse-selection';
 import {BookBulkCommandsService} from './book-bulk-commands.service';
 
 const BULK_BAR_WIDTHS = {
@@ -251,7 +251,7 @@ const BULK_BAR_WIDTHS = {
   `,
 })
 export class BookBrowseBulkBarComponent {
-  readonly selection = input.required<BookBrowseSelection>();
+  readonly selection = input.required<BrowseSelection>();
   readonly books = input.required<readonly BookSummary[]>();
   readonly total = input.required<number | null>();
   readonly resolveIds = input.required<() => Promise<readonly number[]>>();

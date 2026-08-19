@@ -1,5 +1,6 @@
 import {type ParamMap} from '@angular/router';
 
+import {pinBrowseFacetValue} from '../../../shared/components/browse/browse-facets';
 import {type BookQueryFacetKey, type FacetValueMap} from '../data/book-query-params';
 
 export type BookBrowseScope =
@@ -50,7 +51,7 @@ export function scopedFacetSelection(
   if (!scope) {
     return selection;
   }
-  return {...omitKey(selection, scope.facetKey), [scope.facetKey]: [scope.facetValue]};
+  return pinBrowseFacetValue<BookQueryFacetKey>(selection, scope.facetKey, scope.facetValue);
 }
 
 export function bookBrowseScopeTitle(
@@ -77,13 +78,4 @@ export function bookBrowseScopeTitle(
 function positiveId(raw: string | null): number | null {
   const id = Number(raw);
   return raw !== null && Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
-function omitKey(facets: FacetValueMap, key: BookQueryFacetKey): FacetValueMap {
-  if (!Object.hasOwn(facets, key)) {
-    return facets;
-  }
-  const rest = {...facets};
-  delete rest[key];
-  return rest;
 }

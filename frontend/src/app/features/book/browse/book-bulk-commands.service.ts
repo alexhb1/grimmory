@@ -17,7 +17,7 @@ import {MetadataRefreshSubmissionService} from '../../metadata/data/metadata-ref
 import {type BookFileAttacherSourceBook} from '../components/book-file-attacher/book-file-attacher.component';
 import {BookDialogHelperService} from '../service/book-dialog-helper.service';
 import {legacyBookCachePatches, withLegacyBookCache} from '../service/book-command-legacy-adapter';
-import {resolveSelectedBookIds, type BookBrowseSelection} from './book-browse-selection';
+import {resolveSelectedIds, type BrowseSelection} from '../../../shared/components/browse/browse-selection';
 
 type ResolveSelectedIds = () => Promise<readonly number[]>;
 
@@ -49,7 +49,7 @@ export class BookBulkCommandsService {
 
   readonly isResolving = signal(false);
 
-  toggleShelf(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, shelfId: number, checked: boolean): void {
+  toggleShelf(selection: BrowseSelection, resolveIds: ResolveSelectedIds, shelfId: number, checked: boolean): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds =>
       this.shelfMembershipMutation.mutate({
         bookIds: [...bookIds],
@@ -58,7 +58,7 @@ export class BookBulkCommandsService {
       }));
   }
 
-  removeFromAllShelves(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, shelfIds: readonly number[]): void {
+  removeFromAllShelves(selection: BrowseSelection, resolveIds: ResolveSelectedIds, shelfIds: readonly number[]): void {
     if (shelfIds.length === 0) {
       return;
     }
@@ -70,25 +70,25 @@ export class BookBulkCommandsService {
       }));
   }
 
-  editAll(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  editAll(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds => void this.dialogHelper
       .openBulkMetadataEditDialog(new Set(bookIds))
       .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => selection.clear())));
   }
 
-  editOneByOne(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  editOneByOne(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds => void this.dialogHelper
       .openMultibookMetadataEditorDialog(new Set(bookIds))
       .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => selection.clear())));
   }
 
-  lockUnlockMetadata(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  lockUnlockMetadata(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds => void this.dialogHelper
       .openLockUnlockMetadataDialog(new Set(bookIds))
       .then(ref => ref?.onClose.pipe(take(1)).subscribe(() => selection.clear())));
   }
 
-  organizeFiles(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  organizeFiles(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds => void this.dialogHelper
       .openFileMoverDialog(new Set(bookIds)));
   }
@@ -97,7 +97,7 @@ export class BookBulkCommandsService {
     void this.dialogHelper.openShelfCreatorDialog();
   }
 
-  attachFiles(selection: BookBrowseSelection, books: readonly BookSummary[]): void {
+  attachFiles(selection: BrowseSelection, books: readonly BookSummary[]): void {
     const sourceBooks: BookFileAttacherSourceBook[] = books.filter(book => selection.isSelected(book.id));
     void this.dialogHelper.openBulkBookFileAttacherDialog(sourceBooks)
       .then(ref => ref?.onClose.pipe(take(1)).subscribe((result: {success?: boolean} | undefined) => {
@@ -107,17 +107,17 @@ export class BookBulkCommandsService {
       }));
   }
 
-  resetProgress(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, source: BookProgressSource): void {
+  resetProgress(selection: BrowseSelection, resolveIds: ResolveSelectedIds, source: BookProgressSource): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds =>
       this.resetProgressMutation.mutate({bookIds: [...bookIds], source}));
   }
 
-  setMetadataLocks(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, locked: boolean): void {
+  setMetadataLocks(selection: BrowseSelection, resolveIds: ResolveSelectedIds, locked: boolean): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds =>
       this.metadataLocksMutation.mutate({bookIds: [...bookIds], locked}));
   }
 
-  changeCovers(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, kind: 'regenerate' | 'generate'): void {
+  changeCovers(selection: BrowseSelection, resolveIds: ResolveSelectedIds, kind: 'regenerate' | 'generate'): void {
     const regenerate = kind === 'regenerate';
     this.confirmationService.confirm({
       message: this.transloco.translate(
@@ -136,17 +136,17 @@ export class BookBulkCommandsService {
     });
   }
 
-  fetchMetadata(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  fetchMetadata(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds =>
       this.refreshMetadataMutation.mutate({bookIds: [...bookIds]}));
   }
 
-  fetchMetadataWithOptions(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  fetchMetadataWithOptions(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     void this.withSelectedBookIds(selection, resolveIds, bookIds =>
       void this.dialogHelper.openMetadataRefreshDialog(new Set(bookIds)));
   }
 
-  delete(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds): void {
+  delete(selection: BrowseSelection, resolveIds: ResolveSelectedIds): void {
     this.confirmationService.confirm({
       message: this.transloco.translate('book.browser.confirm.deleteMessage', {
         count: selection.count().toLocaleString(),
@@ -170,7 +170,7 @@ export class BookBulkCommandsService {
     });
   }
 
-  markAs(selection: BookBrowseSelection, resolveIds: ResolveSelectedIds, status: KnownBookReadStatus): void {
+  markAs(selection: BrowseSelection, resolveIds: ResolveSelectedIds, status: KnownBookReadStatus): void {
     const statusLabel = this.transloco.translate(
       status === 'UNSET'
         ? CLEAR_BOOK_READ_STATUS_LABEL_KEY
@@ -192,7 +192,7 @@ export class BookBulkCommandsService {
   }
 
   private async withSelectedBookIds(
-    selection: BookBrowseSelection,
+    selection: BrowseSelection,
     resolveIds: ResolveSelectedIds,
     run: (bookIds: readonly number[]) => void,
   ): Promise<void> {
@@ -202,7 +202,7 @@ export class BookBulkCommandsService {
     this.isResolving.set(true);
     let bookIds: readonly number[];
     try {
-      bookIds = await resolveSelectedBookIds(selection.state(), resolveIds);
+      bookIds = await resolveSelectedIds(selection.state(), resolveIds);
     } catch {
       this.messageService.add({
         severity: 'error',

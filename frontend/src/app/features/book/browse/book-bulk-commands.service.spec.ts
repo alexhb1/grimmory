@@ -10,13 +10,13 @@ import {getTranslocoModule} from '../../../core/testing/transloco-testing';
 import {API_CONFIG} from '../../../core/config/api-config';
 import {type BookSummary} from '../data/book-response.models';
 import {BookDialogHelperService} from '../service/book-dialog-helper.service';
-import {type BookBrowseSelection, type BookSelectionState} from './book-browse-selection';
+import {type BrowseSelection, type BrowseSelectionState} from '../../../shared/components/browse/browse-selection';
 import {BookBulkCommandsService} from './book-bulk-commands.service';
 
-function selection(ids: readonly number[]): BookBrowseSelection {
+function selection(ids: readonly number[]): BrowseSelection {
   const selected = new Set(ids);
   return {
-    state: signal<BookSelectionState>({mode: 'explicit', ids: selected}),
+    state: signal<BrowseSelectionState>({mode: 'explicit', ids: selected}),
     count: signal(ids.length),
     active: signal(ids.length > 0),
     allCurrentResultsSelected: signal(false),
@@ -74,13 +74,13 @@ describe('BookBulkCommandsService', () => {
 
   it.each([
     {name: 'bulk metadata editor', clears: true, dialog: () => dialogHelper.openBulkMetadataEditDialog,
-      run: (selected: BookBrowseSelection) => service.editAll(selected, vi.fn())},
+      run: (selected: BrowseSelection) => service.editAll(selected, vi.fn())},
     {name: 'one-by-one metadata editor', clears: true, dialog: () => dialogHelper.openMultibookMetadataEditorDialog,
-      run: (selected: BookBrowseSelection) => service.editOneByOne(selected, vi.fn())},
+      run: (selected: BrowseSelection) => service.editOneByOne(selected, vi.fn())},
     {name: 'Lock/Unlock metadata dialog', clears: true, dialog: () => dialogHelper.openLockUnlockMetadataDialog,
-      run: (selected: BookBrowseSelection) => service.lockUnlockMetadata(selected, vi.fn())},
+      run: (selected: BrowseSelection) => service.lockUnlockMetadata(selected, vi.fn())},
     {name: 'file organizer', clears: false, dialog: () => dialogHelper.openFileMoverDialog,
-      run: (selected: BookBrowseSelection) => service.organizeFiles(selected, vi.fn())},
+      run: (selected: BrowseSelection) => service.organizeFiles(selected, vi.fn())},
   ])('opens the $name with resolved IDs', async ({clears, dialog, run}) => {
     const onClose = new Subject<void>();
     dialog().mockResolvedValue({onClose});
