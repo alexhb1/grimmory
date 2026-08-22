@@ -110,7 +110,7 @@ const FIELDS = [
     labelKey: 'book.fields.series',
     facetKey: 'series',
     sort: {key: 'seriesName', group: 'common', defaultDirection: 'asc', kind: 'alphabetical'},
-    column: {key: 'seriesName', order: 2, group: 'publishing', defaultVisible: true,
+    column: {key: 'seriesName', order: 3, group: 'publishing', defaultVisible: true,
       defaultWidth: 190, value: book => book.metadata?.seriesName ?? ''},
     facetValues: book => book.metadata?.seriesName ? [book.metadata.seriesName] : [],
   },
@@ -123,7 +123,7 @@ const FIELDS = [
       kind: 'numeric',
       showOnCard: false,
     },
-    column: {key: 'seriesNumber', order: 3, group: 'publishing', defaultVisible: true,
+    column: {key: 'seriesNumber', order: 4, group: 'publishing', defaultVisible: true,
       defaultWidth: 168, kind: 'number', value: book => book.metadata?.seriesNumber},
   },
   {
@@ -137,7 +137,7 @@ const FIELDS = [
   {
     labelKey: 'book.fields.genre',
     facetKey: 'genre',
-    column: {key: 'categories', order: 11, group: 'categorization', defaultVisible: false,
+    column: {key: 'categories', order: 11, group: 'categorization', defaultVisible: true,
       defaultWidth: 220, value: book => book.metadata?.categories?.join(', ') ?? ''},
     facetValues: book => book.metadata?.categories ?? [],
   },
@@ -153,7 +153,7 @@ const FIELDS = [
     labelKey: 'book.fields.language',
     facetKey: 'language',
     sort: {key: 'language', group: 'more', defaultDirection: 'asc', kind: 'alphabetical'},
-    column: {key: 'language', order: 6, group: 'publishing', defaultVisible: true,
+    column: {key: 'language', order: 7, group: 'publishing', defaultVisible: true,
       defaultWidth: 112, value: book => book.metadata?.language ?? ''},
     facetValues: book => book.metadata?.language ? [book.metadata.language] : [],
   },
@@ -169,7 +169,7 @@ const FIELDS = [
     labelKey: 'book.fields.readStatus',
     facetKey: 'read_status',
     sort: {key: 'readStatus', group: 'more', defaultDirection: 'asc', kind: 'alphabetical'},
-    column: {key: 'readStatus', order: 7, group: 'reading', defaultVisible: true,
+    column: {key: 'readStatus', order: 2, group: 'reading', defaultVisible: true,
       defaultWidth: 132, kind: 'readStatus', value: book => book.readStatus},
   },
   {
@@ -227,13 +227,13 @@ const FIELDS = [
     labelKey: 'book.fields.pageCount',
     facetKey: 'page_count',
     sort: {key: 'pageCount', group: 'more', defaultDirection: 'desc', kind: 'numeric'},
-    column: {key: 'pageCount', order: 5, group: 'publishing', defaultVisible: true,
+    column: {key: 'pageCount', order: 6, group: 'publishing', defaultVisible: true,
       defaultWidth: 104, kind: 'number', value: book => book.metadata?.pageCount},
   },
   {
     labelKey: 'book.fields.publishedDate',
     sort: {key: 'publishedDate', group: 'common', defaultDirection: 'desc', kind: 'calendar'},
-    column: {key: 'publishedDate', order: 4, group: 'publishing', defaultVisible: true,
+    column: {key: 'publishedDate', order: 5, group: 'publishing', defaultVisible: true,
       defaultWidth: 132, kind: 'date', value: book => book.metadata?.publishedDate},
   },
   {
@@ -381,7 +381,7 @@ const FACET_ORDER = [
 ] as const satisfies readonly BookQueryFacetKey[];
 
 const OPEN_RAIL_FACETS: ReadonlySet<BookQueryFacetKey> =
-  new Set(['author', 'genre', 'tag', 'series']);
+  new Set(['author', 'genre', 'tag']);
 
 const COLUMN_GROUP_ORDER: readonly BookBrowseColumnGroupId[] = [
   'reading',
@@ -605,6 +605,20 @@ export function bookBrowseColumnKind(field: string): BookBrowseColumnKind {
 
 export function bookBrowseColumnDefaultWidth(field: BookBrowseColumnKey): number {
   return FIELDS_BY_COLUMN.get(field)!.column!.defaultWidth;
+}
+
+const mediumDate = new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'});
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+export function formatMediumDate(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+  const parts = DATE_ONLY.exec(value);
+  const date = parts
+    ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+    : new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : mediumDate.format(date);
 }
 
 export function bookBrowseColumnValue(

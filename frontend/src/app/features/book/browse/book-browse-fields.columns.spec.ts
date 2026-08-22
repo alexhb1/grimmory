@@ -13,12 +13,13 @@ describe('book browse table fields', () => {
     expect(bookBrowseVisibleColumnOptions(preferences).map(column => column.field)).toEqual([
       'title',
       'authors',
+      'readStatus',
       'seriesName',
       'seriesNumber',
       'publishedDate',
       'pageCount',
       'language',
-      'readStatus',
+      'categories',
     ]);
 
     const hiddenTitle = preferences.map(preference =>

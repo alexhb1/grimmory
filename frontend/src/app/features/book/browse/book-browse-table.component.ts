@@ -1,4 +1,4 @@
-import {DatePipe, LocationStrategy} from '@angular/common';
+import {LocationStrategy} from '@angular/common';
 import {
   afterRenderEffect,
   ChangeDetectionStrategy,
@@ -33,7 +33,7 @@ import {
   tableFeatures,
 } from '@tanstack/angular-table';
 import {injectVirtualizer} from '@tanstack/angular-virtual';
-import {LucideEllipsisVertical} from '@lucide/angular';
+import {LucideArrowDown, LucideArrowUp, LucideEllipsisVertical} from '@lucide/angular';
 
 import {CoverComponent} from '../../../shared/components/cover/cover.component';
 import {UrlHelperService} from '../../../shared/service/url-helper.service';
@@ -59,6 +59,7 @@ import {
   bookBrowseColumnValue,
   bookBrowseFacetLinks,
   bookReadStatusLabelKey,
+  formatMediumDate,
 } from './book-browse-fields';
 import {BookBrowseColumnWidthPreferenceService} from './book-browse-column-width-preference.service';
 import {type BrowseGridRenderedRange} from '../../../shared/components/browse/browse-grid/browse-grid-viewport.component';
@@ -97,7 +98,6 @@ export type BookBrowseTableSelection =
 const ROW_HEIGHT = 54;
 const RENDER_OVERSCAN = 10;
 const SELECT_COLUMN_WIDTH = 44;
-const MENU_COLUMN_WIDTH = 44;
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -129,9 +129,10 @@ const BODY_CELL_CLASS =
     AppTagComponent,
     CoverComponent,
     TranslocoPipe,
+    LucideArrowDown,
+    LucideArrowUp,
     LucideEllipsisVertical,
   ],
-  providers: [DatePipe],
   templateUrl: './book-browse-table.component.html',
   host: {
     class: 'block max-h-full min-h-0 min-w-0 w-full',
@@ -163,7 +164,6 @@ export class BookBrowseTableComponent {
   readonly detailRequested = output<BookSummary>();
   readonly retryNextPage = output();
 
-  private readonly datePipe = inject(DatePipe);
   private readonly transloco = inject(TranslocoService);
   private readonly activeLang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
@@ -249,16 +249,6 @@ export class BookBrowseTableComponent {
       sortDescFirst: this.sortDescFirst(column.field),
       accessorFn: book => bookBrowseColumnValue(book, column.field),
     } satisfies ColumnDef<typeof features, BookSummary, BookBrowseColumnValue>)),
-    {
-      id: 'menu',
-      header: '',
-      size: MENU_COLUMN_WIDTH,
-      minSize: MENU_COLUMN_WIDTH,
-      maxSize: MENU_COLUMN_WIDTH,
-      enableResizing: false,
-      enableSorting: false,
-      accessorFn: () => undefined,
-    } satisfies ColumnDef<typeof features, BookSummary, BookBrowseColumnValue>,
     ];
   });
 
@@ -442,7 +432,7 @@ export class BookBrowseTableComponent {
       this.isPinned(field) && 'sticky z-[2]',
       this.isLastPinned(field) && this.hasHorizontalOverlap() && 'border-r border-border/70',
       this.isNumeric(field) && 'justify-end text-right tabular-nums',
-      empty && 'text-text-secondary',
+      empty && 'text-text-muted',
     );
   }
 
@@ -565,7 +555,7 @@ export class BookBrowseTableComponent {
     }
     switch (bookBrowseColumnKind(cell.column.id)) {
       case 'date':
-        return this.dateValue(String(value)) || '—';
+        return formatMediumDate(String(value)) || '—';
       case 'fileSize':
         return this.fileSize(Number(value)) || '—';
       case 'rating':
@@ -598,10 +588,6 @@ export class BookBrowseTableComponent {
 
   private sortDescFirst(field: string): boolean {
     return bookBrowseColumnSortDescFirst(field);
-  }
-
-  private dateValue(value: string | undefined): string {
-    return value ? this.datePipe.transform(value, 'mediumDate')! : '';
   }
 
   private numberValue(value: number | undefined): string {

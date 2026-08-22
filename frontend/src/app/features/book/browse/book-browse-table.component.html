@@ -30,11 +30,15 @@
             } @else if (header.column.getCanSort()) {
               <button
                 type="button"
-                class="sort-button -mx-3 flex min-h-[42px] w-[calc(100%+1.5rem)] cursor-pointer items-center gap-[0.3rem] border-0 bg-transparent px-3 text-left font-[inherit] text-[inherit] hover:bg-[color-mix(in_srgb,currentColor_5%,transparent)] hover:text-text focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                class="sort-button -mx-3 flex min-h-[42px] w-[calc(100%+1.5rem)] cursor-pointer items-center gap-1.5 border-0 bg-transparent px-3 text-left font-[inherit] text-[inherit] hover:bg-[color-mix(in_srgb,currentColor_5%,transparent)] hover:text-text focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                 (click)="header.column.getToggleSortingHandler()?.($event)">
                 <span>{{ header.column.columnDef.header }}</span>
                 @if (header.column.getIsSorted(); as direction) {
-                  <span class="sort-direction text-sm text-primary" aria-hidden="true">{{ direction === 'asc' ? '↑' : '↓' }}</span>
+                  @if (direction === 'asc') {
+                    <svg lucideArrowUp class="sort-direction size-3.5 shrink-0 text-primary" aria-hidden="true"></svg>
+                  } @else {
+                    <svg lucideArrowDown class="sort-direction size-3.5 shrink-0 text-primary" aria-hidden="true"></svg>
+                  }
                   @if (sorting().length > 1) {
                     <app-tag
                       color="primary"
@@ -87,7 +91,7 @@
                 @switch (cell.column.id) {
                   @case ('select') {
                     <span
-                      class="selection-control grid h-full w-full place-items-center opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 group-data-[selected=true]/row:opacity-100"
+                      class="selection-control grid h-full w-full place-items-center opacity-0 group-hover/row:opacity-100 group-has-[:focus-visible]/row:opacity-100 group-data-[selected=true]/row:opacity-100"
                       [class.opacity-100]="selectionActive()"
                       (pointerdown)="rememberSelectionPointer($event)">
                       <app-checkbox
@@ -116,20 +120,21 @@
                         (click)="onDetailClick(book, $event)">
                         {{ title(book) }}
                       </a>
+                      @if (!selectionActive()) {
+                        <span class="ml-auto hidden flex-none group-hover/row:block group-has-[:focus-visible]/row:block group-data-[menu-open=true]/row:block pointer-coarse:block">
+                          <app-button
+                            variant="ghost"
+                            size="sm"
+                            iconOnly
+                            ariaHasPopup="menu"
+                            [ariaExpanded]="book.id === openMenuBookId()"
+                            [ariaLabel]="'book.card.aria.bookMenu' | transloco: {title: title(book)}"
+                            (clicked)="onRowMenu(book, $event)">
+                            <svg lucideEllipsisVertical aria-hidden="true"></svg>
+                          </app-button>
+                        </span>
+                      }
                     </div>
-                  }
-                  @case ('menu') {
-                    @if (!selectionActive()) {
-                      <button
-                        type="button"
-                        class="inline-flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-text-muted hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-                        aria-haspopup="menu"
-                        [attr.aria-expanded]="book.id === openMenuBookId()"
-                        [attr.aria-label]="'book.card.aria.bookMenu' | transloco: {title: title(book)}"
-                        (click)="onRowMenu(book, $event)">
-                        <svg lucideEllipsisVertical class="size-4" aria-hidden="true"></svg>
-                      </button>
-                    }
                   }
                   @default {
                     @if (cellLinks(book, cell.column.id); as links) {
