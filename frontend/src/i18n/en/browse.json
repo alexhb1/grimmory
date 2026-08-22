@@ -26,6 +26,7 @@
     "smallerCards": "Smaller cards",
     "largerCards": "Larger cards",
     "columns": "Columns",
+    "resetColumns": "Reset to Default",
     "filter": "Filter"
   },
   "table": {

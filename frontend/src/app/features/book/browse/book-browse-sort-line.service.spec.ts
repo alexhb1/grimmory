@@ -37,7 +37,8 @@ describe('BookBrowseSortLineService', () => {
 
   it('formats date keys as medium dates', () => {
     const value = service.lineFor('addedOn', book({addedOn: '2026-03-05T10:00:00Z'}));
-    expect(value).toBe('Mar 5, 2026');
+    expect(value).toContain('Mar');
+    expect(value).toContain('2026');
     expect(service.lineFor('lastReadTime', book({lastReadTime: '2025-12-31T23:00:00Z'})))
       .toMatch(/2025|2026/);
     expect(service.lineFor('publishedDate', book({

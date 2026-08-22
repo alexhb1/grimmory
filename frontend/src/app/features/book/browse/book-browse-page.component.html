@@ -23,6 +23,7 @@
       (multiSortRequested)="onMultiSortRequested()"
       (viewModeChange)="onViewModeChange($event)"
       (columnVisibilityChange)="onTableColumnVisibilityChange($event)"
+      (columnsReset)="onTableColumnsReset()"
       (densityChange)="onDensityChange($event)"
       (filtersToggle)="onFiltersToggle()"
       (mobileSelectToggle)="onMobileSelectToggle()" />
@@ -51,6 +52,7 @@
           <app-browse-filter-chips
             [chips]="chipsBand().chips"
             [query]="chipsBand().query"
+            [mobile]="isMobile()"
             (removeChip)="onToggleFacet({key: $event.key, value: $event.value, selected: false})"
             (removeSearch)="onClearQuery()"
             (clearAll)="onClearAllFilters()" />
@@ -183,7 +185,7 @@
             }
           </app-input>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 [--page-stuck-offset:0px]">
           @if (railReady()) {
             <app-browse-filter-rail [groups]="railGroups()" (toggleValue)="onToggleFacet($event)" />
           }

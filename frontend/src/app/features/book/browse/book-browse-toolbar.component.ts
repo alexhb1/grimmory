@@ -322,6 +322,10 @@ export interface BookBrowseColumnVisibilityChange {
           </div>
         }
       </div>
+      <app-menu-separator />
+      <app-menu-item (selected)="columnsReset.emit()">
+        {{ 'browse.toolbar.resetColumns' | transloco }}
+      </app-menu-item>
     </app-menu>
     }
   `,
@@ -348,6 +352,7 @@ export class BookBrowseToolbarComponent {
   readonly multiSortRequested = output();
   readonly viewModeChange = output<BookBrowseViewMode>();
   readonly columnVisibilityChange = output<BookBrowseColumnVisibilityChange>();
+  readonly columnsReset = output();
   readonly densityChange = output<GridDensityDirection>();
   readonly filtersToggle = output();
   readonly mobileSelectToggle = output();

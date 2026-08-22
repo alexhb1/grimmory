@@ -1,17 +1,15 @@
-import {formatDate} from '@angular/common';
-import {Injectable, LOCALE_ID, inject} from '@angular/core';
+import {Injectable, inject} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {TranslocoService} from '@jsverse/transloco';
 
 import {type BookQuerySortKey} from '../data/book-query-params';
 import {type BookSummary} from '../data/book-response.models';
-import {bookReadStatusLabelKey} from './book-browse-fields';
+import {bookReadStatusLabelKey, formatMediumDate} from './book-browse-fields';
 
 const EMPTY_VALUE = '—';
 
 @Injectable({providedIn: 'root'})
 export class BookBrowseSortLineService {
-  private readonly locale = inject(LOCALE_ID);
   private readonly transloco = inject(TranslocoService);
   private readonly activeLang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
@@ -61,7 +59,7 @@ export class BookBrowseSortLineService {
   }
 
   private date(value: string | undefined): string {
-    return value ? formatDate(value, 'mediumDate', this.locale) : EMPTY_VALUE;
+    return formatMediumDate(value) || EMPTY_VALUE;
   }
 
   private text(value: string | undefined): string {

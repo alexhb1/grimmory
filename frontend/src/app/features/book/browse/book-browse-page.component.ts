@@ -207,7 +207,7 @@ export class BookBrowsePageComponent {
   private readonly gridRef = viewChild(BrowseGridComponent);
   private readonly tableRef = viewChild(BookBrowseTableComponent);
   private readonly bookMenu = viewChild(BookMenuComponent);
-  private readonly isMobile = computed(() => !this.layout.isDesktop());
+  protected readonly isMobile = computed(() => !this.layout.isDesktop());
   protected readonly mobileSelectMode = signal(false);
   private readonly screenWidth = signal(window.innerWidth);
   private readonly gridDensity = createGridDensity(this.localStorage, {
@@ -262,7 +262,8 @@ export class BookBrowsePageComponent {
   private readonly headerRef = viewChild(AppPageHeaderComponent);
   protected readonly chipsBandClass = computed(() =>
     cn(
-      'sticky top-[var(--page-stuck-offset)] z-10 -mx-4 bg-page px-4 pb-3',
+      'sticky top-[var(--page-stuck-offset)] z-10 -mx-4 bg-page px-4',
+      this.isMobile() ? 'pb-1.5' : 'pb-3',
       this.headerRef()?.isStuck() &&
         'shadow-[0_1px_0_0_color-mix(in_srgb,var(--color-border)_70%,transparent)]',
     ),
@@ -633,6 +634,18 @@ export class BookBrowsePageComponent {
         ? {...preference, visible: change.visible}
         : preference,
     ));
+    const user = this.userService.getCurrentUser();
+    if (user) {
+      this.userService.updateUserSetting(
+        user.id,
+        'tableColumnPreference',
+        this.tableColumnPreferences(),
+      );
+    }
+  }
+
+  protected onTableColumnsReset(): void {
+    this.tableColumnPreferences.set(normalizeBookBrowseColumnPreferences(undefined));
     const user = this.userService.getCurrentUser();
     if (user) {
       this.userService.updateUserSetting(
