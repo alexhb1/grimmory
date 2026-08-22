@@ -1,5 +1,5 @@
 import {NgTemplateOutlet} from '@angular/common';
-import {ChangeDetectionStrategy, Component, booleanAttribute, effect, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, Injector, afterNextRender, booleanAttribute, effect, inject, input, output, signal} from '@angular/core';
 import {TranslocoPipe} from '@jsverse/transloco';
 import {LucideCheck, LucideChevronDown, LucideSearch, LucideX} from '@lucide/angular';
 
@@ -46,14 +46,14 @@ const COLLAPSED_VALUE_COUNT = 8;
   host: {class: 'flex flex-col gap-1 text-[13px] [overflow-anchor:none] pointer-coarse:text-sm'},
   template: `
     @for (group of groups(); track group.key) {
-      <section class="border-t border-border/50 pt-2 first:border-t-0 first:pt-0">
-        <div class="group/ghead relative mb-1 flex items-center rounded-md px-1.5 hover:bg-surface-hover pointer-coarse:px-2">
+      <section class="scroll-mt-[calc(var(--page-stuck-offset,0px)+8px)] border-t border-border/50 pt-2 first:border-t-0 first:pt-0">
+        <div class="group/ghead relative mb-1 flex items-center rounded-md px-2 hover:bg-surface-hover">
           <button
             type="button"
-            class="flex min-h-8 flex-1 cursor-pointer items-center gap-1.5 pr-8 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary pointer-coarse:min-h-11 pointer-coarse:pr-12"
+            class="flex min-h-9 flex-1 cursor-pointer items-center gap-1.5 pr-8 text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary pointer-coarse:min-h-12 pointer-coarse:pr-12"
             [attr.aria-expanded]="isOpen(group)"
             (click)="toggleOpen(group.key)">
-            <h3 class="m-0 text-[13px] font-semibold text-text-secondary group-hover/ghead:text-text pointer-coarse:text-sm">{{ group.labelKey | transloco }}</h3>
+            <h3 class="m-0 text-[13px] font-semibold text-text-secondary group-hover/ghead:text-text pointer-coarse:text-base">{{ group.labelKey | transloco }}</h3>
             @if (!isOpen(group) && selectedCount(group) > 0) {
               <app-tag color="primary" size="sm" styleClass="min-w-4 justify-center px-1! py-px! text-[10px]! tabular-nums">
                 {{ selectedCount(group) }}
@@ -61,7 +61,7 @@ const COLLAPSED_VALUE_COUNT = 8;
             }
             <svg
               lucideChevronDown
-              class="size-3 text-text-muted transition-transform duration-200 motion-reduce:transition-none"
+              class="size-3.5 text-text-muted transition-transform duration-200 motion-reduce:transition-none"
               [class.-rotate-90]="!isOpen(group)"
               aria-hidden="true"></svg>
           </button>
@@ -70,7 +70,7 @@ const COLLAPSED_VALUE_COUNT = 8;
               variant="ghost"
               size="sm"
               iconOnly
-              styleClass="absolute inset-y-0 right-1 my-auto size-6 pointer-coarse:size-9 pointer-coarse:text-base"
+              styleClass="absolute inset-y-0 right-1 my-auto size-7 pointer-coarse:size-10 pointer-coarse:text-base"
               [ariaLabel]="'browse.rail.searchValues' | transloco"
               [ariaExpanded]="isSearching(group.key)"
               (clicked)="toggleSearch(group.key, $event)">
@@ -116,13 +116,13 @@ const COLLAPSED_VALUE_COUNT = 8;
               <li><ng-container *ngTemplateOutlet="row; context: {item, group}" /></li>
             }
           </ul>
-          <div [class]="extrasWrapClass(group.key)" [attr.inert]="isExpanded(group.key) ? null : ''">
-            <ul class="m-0 flex min-h-0 list-none flex-col overflow-hidden">
+          @if (isExpanded(group.key)) {
+            <ul class="m-0 flex list-none flex-col p-0">
               @for (item of extraValues(group); track item.value) {
                 <li><ng-container *ngTemplateOutlet="row; context: {item, group}" /></li>
               }
             </ul>
-          </div>
+          }
           @if (group.values.length > collapsedCount) {
             <button type="button" [class]="expandRowClass" (click)="onExpandToggle(group.key, $event)">
               {{ (isExpanded(group.key) ? 'browse.rail.showFewer' : 'browse.rail.showAll') | transloco }}
@@ -151,7 +151,7 @@ const COLLAPSED_VALUE_COUNT = 8;
         <span [class]="labelClass(item)">
           {{ item.label }}
         </span>
-        <span class="w-6 shrink-0 text-right text-[11.5px] tabular-nums text-text-muted pointer-coarse:text-xs">{{ item.count }}</span>
+        <span class="min-w-6 shrink-0 text-right text-[11.5px] tabular-nums text-text-muted pointer-coarse:text-xs">{{ item.count }}</span>
       </button>
     </ng-template>
   `,
@@ -161,11 +161,13 @@ export class BrowseFilterRailComponent<K extends string = string> {
   readonly alwaysShowBoxes = input(false, {transform: booleanAttribute});
   readonly toggleValue = output<FilterRailToggle<K>>();
 
+  private readonly injector = inject(Injector);
+
   protected readonly checkIconClass = checkIndicatorIconClass;
   protected readonly collapsedCount = COLLAPSED_VALUE_COUNT;
   protected readonly expandRowClass =
-    'mt-0.5 flex min-h-7 w-full cursor-pointer items-center rounded-md px-1.5 py-1 pl-7 ' +
-    'text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text ' +
+    'mt-0.5 flex min-h-7 w-full cursor-pointer items-center rounded-sm py-1 pl-7.5 ' +
+    'text-left text-xs text-text-muted hover:text-text ' +
     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary ' +
     'pointer-coarse:min-h-11 pointer-coarse:text-[13px] pointer-coarse:pl-9';
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set());
@@ -242,20 +244,8 @@ export class BrowseFilterRailComponent<K extends string = string> {
     const collapsing = this.isExpanded(key);
     this.expandedKeys.update(current => toggledSet(current, key));
     if (collapsing) {
-      this.reseatAtGroup((event.currentTarget as HTMLElement).closest<HTMLElement>('section')!);
-    }
-  }
-
-  private reseatAtGroup(section: HTMLElement): void {
-    const scroller = nearestScroller(section);
-    const stuckOffset =
-      scroller === document.scrollingElement
-        ? parseFloat(getComputedStyle(section).getPropertyValue('--page-stuck-offset'))
-        : scroller.getBoundingClientRect().top;
-    const viewportTop = stuckOffset + 8;
-    const sectionTop = section.getBoundingClientRect().top;
-    if (sectionTop < viewportTop) {
-      scroller.scrollTop += sectionTop - viewportTop;
+      const section = (event.currentTarget as HTMLElement).closest<HTMLElement>('section')!;
+      afterNextRender(() => section.scrollIntoView({block: 'nearest'}), {injector: this.injector});
     }
   }
 
@@ -306,15 +296,7 @@ export class BrowseFilterRailComponent<K extends string = string> {
   }
 
   protected extraValues(group: FilterRailGroup): FilterRailValue[] {
-    const rest = group.values.slice(COLLAPSED_VALUE_COUNT);
-    return this.isExpanded(group.key) ? rest : rest.filter(item => !item.selected);
-  }
-
-  protected extrasWrapClass(key: string): string {
-    return cn(
-      'grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none',
-      this.isExpanded(key) ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-    );
+    return group.values.slice(COLLAPSED_VALUE_COUNT);
   }
 
   protected labelClass(item: FilterRailValue): string {
@@ -326,7 +308,7 @@ export class BrowseFilterRailComponent<K extends string = string> {
 
   protected rowClass(item: FilterRailValue): string {
     return cn(
-      'group/frow flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-left text-text-secondary pointer-coarse:min-h-11 pointer-coarse:gap-2.5 pointer-coarse:px-2',
+      'group/frow flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-text-secondary pointer-coarse:min-h-11 pointer-coarse:gap-2.5',
       'hover:bg-surface-hover hover:text-text',
       'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary',
       this.isZero(item) && 'opacity-45',
@@ -340,16 +322,6 @@ export class BrowseFilterRailComponent<K extends string = string> {
       !this.alwaysShowBoxes() && (item.selected ? 'opacity-100' : 'opacity-0 group-hover/frow:opacity-100'),
     );
   }
-}
-
-function nearestScroller(element: HTMLElement): HTMLElement {
-  for (let node = element.parentElement; node; node = node.parentElement) {
-    const overflowY = getComputedStyle(node).overflowY;
-    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
-      return node;
-    }
-  }
-  return document.scrollingElement as HTMLElement;
 }
 
 function toggledSet(current: ReadonlySet<string>, key: string): ReadonlySet<string> {
