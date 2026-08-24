@@ -7,12 +7,13 @@ import {
   LucideCalendarArrowUp,
   LucideClockArrowDown,
   LucideClockArrowUp,
+  LucideShuffle,
   type LucideIconData,
 } from '@lucide/angular';
 
 import {type BrowseSortDirection, type BrowseSortTerm} from '../../../core/data/browse.models';
 
-export type BrowseSortKind = 'alphabetical' | 'numeric' | 'calendar' | 'clock';
+export type BrowseSortKind = 'alphabetical' | 'numeric' | 'calendar' | 'clock' | 'random';
 
 export interface BrowseSortField {
   readonly labelKey: string;
@@ -110,5 +111,7 @@ export function browseSortDirectionIcon(
       return ascending ? LucideCalendarArrowUp.icon : LucideCalendarArrowDown.icon;
     case 'clock':
       return ascending ? LucideClockArrowUp.icon : LucideClockArrowDown.icon;
+    case 'random':
+      return LucideShuffle.icon;
   }
 }

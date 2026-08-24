@@ -1,5 +1,6 @@
 {
   "fields": {
+    "random": "Random",
     "title": "Title",
     "author": "Author",
     "genre": "Genre",

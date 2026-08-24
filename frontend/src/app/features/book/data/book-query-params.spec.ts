@@ -112,4 +112,15 @@ describe('book query parameters', () => {
     expect(params.get('sort')).toBe('-title');
     expect(params.has('size')).toBe(false);
   });
+
+  it('serializes random sort using the paged browse API key', () => {
+    const params = toPageHttpParams(normalizeBookPageParams({
+      facets: {},
+      facetLogic: 'or',
+      sort: [{key: 'random', direction: 'asc'}],
+      size: 60,
+    }));
+
+    expect(params.get('sort')).toBe('random');
+  });
 });

@@ -92,6 +92,16 @@ interface BookBrowseField {
 
 const FIELDS = [
   {
+    labelKey: 'book.fields.random',
+    sort: {
+      key: 'random',
+      group: 'common',
+      defaultDirection: 'asc',
+      kind: 'random',
+      showOnCard: false,
+    },
+  },
+  {
     labelKey: 'book.fields.title',
     sort: {
       key: 'title',
@@ -332,6 +342,7 @@ export type AssertAllBookBrowseFieldsRegistered = [
 ];
 
 const SORT_ORDER = [
+  'random',
   'title',
   'seriesName',
   'addedOn',
@@ -439,7 +450,10 @@ const BOOK_SORT_VOCABULARY: BrowseSortVocabulary<BookQuerySortKey> = {
 };
 
 export function buildSortOptions(serverSortTokens: readonly string[]): BookSortOption[] {
-  return buildBrowseSortOptions(serverSortTokens, BOOK_SORT_VOCABULARY);
+  return buildBrowseSortOptions(
+    serverSortTokens.filter(token => token !== '-random'),
+    BOOK_SORT_VOCABULARY,
+  );
 }
 
 export const DEFAULT_BOOK_SORT: BookSortSelection = {

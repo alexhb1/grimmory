@@ -110,12 +110,13 @@ export interface BookBrowseColumnVisibilityChange {
       [attr.aria-label]="'browse.toolbar.sort' | transloco">
       <app-button
         variant="soft"
-        [styleClass]="sortFieldButtonClass"
+        [styleClass]="sortFieldButtonClass()"
         [label]="(activeSort().option.labelKey | transloco) + multiSortSuffix()"
         [ariaLabel]="'browse.toolbar.sortAria' | transloco: {
           field: activeSort().option.labelKey | transloco
         }"
         [appMenuTriggerFor]="sortMenu" />
+      @if (activeSortCanToggle()) {
       <app-button
         variant="soft"
         iconOnly
@@ -126,6 +127,7 @@ export interface BookBrowseColumnVisibilityChange {
         (clicked)="toggleSortDirection()">
         <svg [lucideIcon]="activeSortIcon()" aria-hidden="true"></svg>
       </app-button>
+      }
     </span>
     <app-menu #sortMenu menuClass="w-60" [ariaLabel]="'browse.toolbar.sort' | transloco" (opened)="onSortMenuOpened()">
       @for (option of commonOptions(); track option.id) {
@@ -397,7 +399,10 @@ export class BookBrowseToolbarComponent {
     'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary ' +
     'pointer-coarse:h-10 pointer-coarse:w-12 [&>svg]:size-4';
   protected readonly sortGroupClass = connectedGroupClass;
-  protected readonly sortFieldButtonClass = connectedItemClass({first: true, last: false});
+  protected readonly sortFieldButtonClass = computed(() => connectedItemClass({
+    first: true,
+    last: !this.activeSortCanToggle(),
+  }));
   protected readonly sortDirectionButtonClass = connectedItemClass({first: false, last: true});
 
   protected readonly commonOptions = computed(() =>

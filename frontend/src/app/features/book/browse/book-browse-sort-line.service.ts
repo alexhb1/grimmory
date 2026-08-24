@@ -54,6 +54,7 @@ export class BookBrowseSortLineService {
         return this.readStatus(book.readStatus);
       case 'title':
       case 'seriesNumber':
+      case 'random':
         return EMPTY_VALUE;
     }
   }

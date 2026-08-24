@@ -13,6 +13,7 @@ import {
 describe('book browse sort fields', () => {
   it('groups exact server tokens in the browser order without inventing sort terms', () => {
     const options = buildSortOptions([
+      'random', '-random',
       'pageCount', '-pageCount',
       'title', '-title',
       'seriesName', '-seriesName',
@@ -20,24 +21,32 @@ describe('book browse sort fields', () => {
     ]);
 
     expect(options.map(option => option.id)).toEqual([
+      'random',
       'title',
       'seriesName',
       'pageCount',
       'amazonReviewCount',
     ]);
     expect(options[0]).toMatchObject({
+      labelKey: 'book.fields.random',
+      group: 'common',
+      kind: 'random',
+      defaultDirection: 'asc',
+      directions: ['asc'],
+    });
+    expect(options[1]).toMatchObject({
       group: 'common',
       defaultDirection: 'asc',
       directions: ['asc', 'desc'],
     });
-    expect(options[1]).toMatchObject({directions: ['asc', 'desc']});
-    expect(options[2]).toMatchObject({
+    expect(options[2]).toMatchObject({directions: ['asc', 'desc']});
+    expect(options[3]).toMatchObject({
       labelKey: 'book.fields.pageCount',
       group: 'more',
       defaultDirection: 'desc',
       directions: ['asc', 'desc'],
     });
-    expect(options[3]).toMatchObject({
+    expect(options[4]).toMatchObject({
       labelKey: 'book.fields.amazonReviewCount',
       defaultDirection: 'desc',
       directions: ['asc', 'desc'],

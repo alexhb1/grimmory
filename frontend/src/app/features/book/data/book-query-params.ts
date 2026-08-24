@@ -36,6 +36,7 @@ export const BOOK_QUERY_FACET_KEYS = [
 ] as const;
 
 export const BOOK_QUERY_SORT_KEYS = [
+  'random',
   'addedOn',
   'title',
   'seriesName',
