@@ -1,7 +1,9 @@
 import {HttpClient, HttpParams} from '@angular/common/http';
 import {effect, inject, Injectable} from '@angular/core';
 import {
+  type InfiniteData,
   infiniteQueryOptions,
+  type QueryKey,
   queryOptions,
   QueryClient,
 } from '@tanstack/angular-query-experimental';
@@ -58,10 +60,22 @@ export class BookQueryService {
 
     return infiniteQueryOptions({
       queryKey: bookQueryKeys.infinitePage(normalized),
-      queryFn: ({pageParam, signal}) => this.fetchPage(normalized, pageParam, signal),
+      queryFn: ({pageParam, queryKey, signal}) => this.fetchPage(
+        normalized,
+        pageParam ?? this.cachedSelfHref(queryKey),
+        signal,
+      ),
       initialPageParam: null as string | null,
       getNextPageParam: page => findBrowsePageLink(page, 'next')?.href,
       ...QUERY_DEFAULTS,
+    });
+  }
+
+  restartInfinitePage(params: BookPageParams): Promise<void> {
+    const normalized = normalizeBookPageParams(params);
+    return this.queryClient.resetQueries({
+      queryKey: bookQueryKeys.infinitePage(normalized),
+      exact: true,
     });
   }
 
@@ -139,6 +153,11 @@ export class BookQueryService {
       mapBrowsePage<BookSummary>,
       toPageHttpParams(params),
     );
+  }
+
+  private cachedSelfHref(queryKey: QueryKey): string | null {
+    const firstPage = this.queryClient.getQueryData<InfiniteData<BookPage>>(queryKey)?.pages[0];
+    return firstPage ? findBrowsePageLink(firstPage, 'self')?.href ?? null : null;
   }
 
   private get<T>(url: string, signal: AbortSignal, params?: HttpParams): Promise<T> {

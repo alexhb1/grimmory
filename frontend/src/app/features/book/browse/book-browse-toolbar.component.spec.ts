@@ -183,12 +183,14 @@ describe('BookBrowseToolbarComponent', () => {
     expect(directionChanges).toEqual([{option: title, direction: 'desc'}]);
   });
 
-  it('offers an advertised random sort and emits the API selection', async () => {
+  it('offers an advertised random sort and shuffle action', async () => {
     const [random, title] = buildSortOptions(['random', '-random', 'title', '-title']);
     fixture.componentRef.setInput('activeSort', {option: title, direction: 'asc'});
     fixture.componentRef.setInput('sortOptions', [random, title]);
     const changes: unknown[] = [];
+    let shuffleRequests = 0;
     fixture.componentInstance.sortChange.subscribe(change => changes.push(change));
+    fixture.componentInstance.randomSortRequested.subscribe(() => shuffleRequests += 1);
     await fixture.whenStable();
 
     buttonByText('Title').click();
@@ -200,7 +202,8 @@ describe('BookBrowseToolbarComponent', () => {
     fixture.componentRef.setInput('activeSort', {option: random, direction: 'asc'});
     await fixture.whenStable();
 
-    expect(host().querySelector('button[aria-label="Sort descending"]')).toBeNull();
+    buttonByLabel('Shuffle again').click();
+    expect(shuffleRequests).toBe(1);
   });
 
   it('marks no simple option active during multi-sort and treats picks as fresh sorts', async () => {

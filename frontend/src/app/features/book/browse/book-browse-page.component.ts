@@ -448,7 +448,9 @@ export class BookBrowsePageComponent {
   }));
   protected readonly railReady = computed(() => this.railVisible() && !this.facetsQuery.isPending());
   private readonly membershipIdentity = computed(() => this.collection().membershipIdentity);
-  private readonly orderingIdentity = computed(() => this.collection().orderingIdentity);
+  private readonly orderingSession = signal(0);
+  private readonly orderingIdentity = computed(() =>
+    `${this.collection().orderingIdentity}:${this.orderingSession()}`);
   private readonly booksQuery = injectInfiniteQuery(() => ({
     ...this.collection().infinitePage(this.params().size),
     placeholderData: keepPreviousData,
@@ -774,6 +776,11 @@ export class BookBrowsePageComponent {
 
   protected onSortDirectionChange(selection: BookSortSelection): void {
     this.navigateToSortTerms([...sortTerms(selection), ...this.activeSortTerms().slice(1)]);
+  }
+
+  protected onRandomSortRequested(): void {
+    this.orderingSession.update(session => session + 1);
+    void this.bookQuery.restartInfinitePage(this.params());
   }
 
   protected async onMultiSortRequested(): Promise<void> {

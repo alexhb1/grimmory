@@ -116,15 +116,14 @@ export interface BookBrowseColumnVisibilityChange {
           field: activeSort().option.labelKey | transloco
         }"
         [appMenuTriggerFor]="sortMenu" />
-      @if (activeSortCanToggle()) {
+      @if (activeSortHasSecondaryAction()) {
       <app-button
         variant="soft"
         iconOnly
         [styleClass]="sortDirectionButtonClass"
-        [disabled]="!activeSortCanToggle()"
-        [ariaLabel]="(activeSort().direction === 'asc' ? 'browse.toolbar.sortDescending' : 'browse.toolbar.sortAscending') | transloco"
-        [title]="(activeSort().direction === 'asc' ? 'browse.toolbar.sortDescending' : 'browse.toolbar.sortAscending') | transloco"
-        (clicked)="toggleSortDirection()">
+        [ariaLabel]="secondarySortActionLabelKey() | transloco"
+        [title]="secondarySortActionLabelKey() | transloco"
+        (clicked)="activateSecondarySortAction()">
         <svg [lucideIcon]="activeSortIcon()" aria-hidden="true"></svg>
       </app-button>
       }
@@ -373,6 +372,7 @@ export class BookBrowseToolbarComponent {
 
   readonly sortChange = output<BookSortSelection>();
   readonly sortDirectionChange = output<BookSortSelection>();
+  readonly randomSortRequested = output();
   readonly multiSortRequested = output();
   readonly viewModeChange = output<BookBrowseViewMode>();
   readonly columnVisibilityChange = output<BookBrowseColumnVisibilityChange>();
@@ -401,7 +401,7 @@ export class BookBrowseToolbarComponent {
   protected readonly sortGroupClass = connectedGroupClass;
   protected readonly sortFieldButtonClass = computed(() => connectedItemClass({
     first: true,
-    last: !this.activeSortCanToggle(),
+    last: !this.activeSortHasSecondaryAction(),
   }));
   protected readonly sortDirectionButtonClass = connectedItemClass({first: false, last: true});
 
@@ -433,6 +433,16 @@ export class BookBrowseToolbarComponent {
   protected readonly activeId = computed(() => this.activeSort().option.id);
   protected readonly activeSortCanToggle = computed(() =>
     this.sortOptions().length === 0 || this.activeSort().option.directions.length > 1);
+  protected readonly activeSortHasSecondaryAction = computed(() =>
+    this.activeId() === 'random' || this.activeSortCanToggle());
+  protected readonly secondarySortActionLabelKey = computed(() => {
+    if (this.activeId() === 'random') {
+      return 'browse.toolbar.shuffleAgain';
+    }
+    return this.activeSort().direction === 'asc'
+      ? 'browse.toolbar.sortDescending'
+      : 'browse.toolbar.sortAscending';
+  });
   protected readonly activeSortIcon = computed(() =>
     sortDirectionIcon(this.activeSort().option.id, this.activeSort().direction));
   protected readonly columnSections = computed<readonly BookBrowseColumnSection[]>(() => {
@@ -485,8 +495,12 @@ export class BookBrowseToolbarComponent {
     }
   }
 
-  protected toggleSortDirection(): void {
+  protected activateSecondarySortAction(): void {
     const active = this.activeSort();
+    if (active.option.id === 'random') {
+      this.randomSortRequested.emit();
+      return;
+    }
     const nextDirection = active.option.directions.find(direction => direction !== active.direction);
     if (!nextDirection) {
       return;
