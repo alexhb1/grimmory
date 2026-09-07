@@ -39,6 +39,7 @@ public class BookSortRegistry {
                 "title", "seriesName", "seriesNumber", "publisher", "publishedDate",
                 "amazonRating", "amazonReviewCount", "goodreadsRating", "goodreadsReviewCount",
                 "hardcoverRating", "hardcoverReviewCount", "ranobedbRating",
+                "lubimyczytacRating", "audibleRating", "audibleReviewCount",
                 "narrator", "pageCount", "language")) {
             registry.register(field, metadataField(field));
         }
