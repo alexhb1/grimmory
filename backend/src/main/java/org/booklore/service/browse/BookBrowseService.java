@@ -91,10 +91,10 @@ public class BookBrowseService {
 
         List<SortTerm> sortTerms = SortParser.parse(sortString, sortRegistry.registry().keys());
         Specification<BookEntity> filter = filterSpecifications.base(query, facets, facetLogic, userId, isAdmin, BookFilterSpecifications.libraryIds(user), null);
-        Specification<BookEntity> spec = withSort(filter, sortTerms, userId, randomSeed);
+        Specification<BookEntity> sorting = sortBy(sortTerms, userId, randomSeed);
 
         Pageable pageRequest = PageRequest.of((int) (offset / limit), limit);
-        Page<Book> page = bookQueryService.findBooksPaged(spec, pageRequest, userId);
+        Page<Book> page = bookQueryService.findBooksPaged(filter, sorting, pageRequest, userId);
         enrich(page.getContent(), userId);
 
         CursorState baseState = new CursorState(offset, limit, sortString, paramsHash, randomSeed);
@@ -147,12 +147,12 @@ public class BookBrowseService {
         return BrowsePage.of(page.getContent(), offset, limit, page.getTotalElements(), cursorCodec.encode(baseState), links);
     }
 
-    private Specification<BookEntity> withSort(Specification<BookEntity> filter, List<SortTerm> sortTerms, Long userId, Integer randomSeed) {
+    private Specification<BookEntity> sortBy(List<SortTerm> sortTerms, Long userId, Integer randomSeed) {
         return (root, query, cb) -> {
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {
                 query.orderBy(sortRegistry.registry().toOrders(sortTerms, root, query, cb, userId, randomSeed));
             }
-            return filter.toPredicate(root, query, cb);
+            return null;
         };
     }
 

@@ -12,6 +12,7 @@ import org.booklore.model.entity.BookEntity;
 import org.booklore.model.entity.BookMetadataEntity;
 import org.booklore.repository.BookRepository;
 import org.booklore.repository.UserContentRestrictionRepository;
+import org.booklore.repository.projection.BookIdProjection;
 import org.booklore.security.policy.ContentRestrictionSpecification;
 import org.booklore.service.restriction.ContentRestrictionService;
 import org.booklore.util.BookUtils;
@@ -71,9 +72,16 @@ public class BookQueryService {
     }
 
     public Page<Book> findBooksPaged(Specification<BookEntity> spec, Pageable pageable, Long userId) {
-        Page<BookEntity> page = bookRepository.findAll(distinct(spec), pageable);
+        return findBooksPaged(spec, Specification.unrestricted(), pageable, userId);
+    }
+
+    // Decide DISTINCT before adding sort joins, which must not multiply books.
+    public Page<Book> findBooksPaged(Specification<BookEntity> filter, Specification<BookEntity> sorting,
+                                    Pageable pageable, Long userId) {
+        Page<BookIdProjection> page = bookRepository.findBy(distinct(filter).and(sorting),
+                query -> query.as(BookIdProjection.class).page(pageable));
         Map<Long, BookEntity> booksById = bookRepository
-                .findAllWithMetadataByIds(page.getContent().stream().map(BookEntity::getId).collect(Collectors.toSet()))
+                .findAllWithMetadataByIds(page.getContent().stream().map(BookIdProjection::getId).collect(Collectors.toSet()))
                 .stream()
                 .collect(Collectors.toMap(BookEntity::getId, book -> book));
         List<Book> dtos = page.getContent().stream()
