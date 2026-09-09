@@ -74,7 +74,7 @@ describe('BookBrowseToolbarComponent', () => {
     fixture.componentRef.setInput('cardDetail', 'addedOn');
     await fixture.whenStable();
 
-    buttonByLabel('More actions').click();
+    buttonByLabel('More Actions').click();
     fixture.detectChanges();
 
     const menu = document.querySelector('app-menu[aria-label="Card Detail"]') as HTMLElement;
