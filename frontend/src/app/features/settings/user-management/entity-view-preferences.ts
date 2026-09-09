@@ -33,6 +33,14 @@ export function entityViewMode(
   return override?.view ?? preferences?.global.view ?? 'GRID';
 }
 
+export function entityViewCardDetail(
+  preferences: EntityViewPreferences | undefined,
+  context: EntityViewPreferenceContext | null,
+): string | null {
+  const override = context ? findEntityViewPreferenceOverride(preferences, context) : undefined;
+  return override?.cardDetail ?? preferences?.global.cardDetail ?? null;
+}
+
 export function entityViewSortPatch(sortCriteria: readonly SortCriterion[]): Partial<EntityViewPreference> {
   const primary = sortCriteria.at(0);
   return {sortKey: primary?.field, sortDir: primary?.direction, sortCriteria: [...sortCriteria]};

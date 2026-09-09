@@ -250,11 +250,6 @@ export class BookBrowsePageComponent {
     ),
   );
 
-  protected readonly cardDetail = computed<BookQuerySortKey | null>(() => {
-    const key = this.preferences.viewPreference()?.cardDetail;
-    return key && isBookQuerySortKey(key) && bookSortHasDetailLine(key) ? key : null;
-  });
-
   protected readonly searchDraft = createBrowseSearchDraft({
     committed: this.urlState.query,
     commit: term => this.urlState.setQuery(term),
@@ -327,7 +322,7 @@ export class BookBrowsePageComponent {
       const primary = this.sortTerms().at(0);
       return primary && !this.preferences.isDefaultSort(this.sortTerms()) && bookSortHasDetailLine(primary.key)
         ? primary.key
-        : this.cardDetail();
+        : this.preferences.cardDetail();
     },
     this.presentation.showingPreviousResults,
   );

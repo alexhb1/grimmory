@@ -6,6 +6,7 @@ import {
   UserService,
 } from '../../settings/user-management/user.service';
 import {
+  entityViewCardDetail,
   entityViewMode,
   entityViewSortCriteria,
   entityViewSortPatch,
@@ -16,6 +17,7 @@ import {
 import {browseSortCriteria} from '../../../shared/browse/sort';
 import {
   DEFAULT_BOOK_SORT_TERMS,
+  isBookQuerySortKey,
   sortTermsToken,
   type BookQuerySortKey,
   type BookSortTerm,
@@ -26,7 +28,7 @@ import {
   normalizeBookColumnPreferences,
   type BookBrowseColumnVisibilityChange,
 } from './book-browse-columns';
-import {bookSortTermsFromCriteria} from './book-browse-sort';
+import {bookSortHasDetailLine, bookSortTermsFromCriteria} from './book-browse-sort';
 import {type BookBrowseUrlState, type BookBrowseViewMode} from './book-browse-url-state';
 
 export interface BookBrowsePreferencesOptions {
@@ -42,6 +44,10 @@ export function createBookBrowsePreferences({context, availableSortKeys, urlStat
   const viewMode = computed<BookBrowseViewMode>(() =>
     urlState.view() ?? (entityViewMode(entityViewPreferences(), context()) === 'TABLE' ? 'table' : 'grid'));
   const formatPill = computed(() => entityViewPreferences()?.global.overlayBookType ?? true);
+  const cardDetail = computed<BookQuerySortKey | null>(() => {
+    const key = entityViewCardDetail(entityViewPreferences(), context());
+    return key && isBookQuerySortKey(key) && bookSortHasDetailLine(key) ? key : null;
+  });
 
   const defaultSortTerms = computed<readonly BookSortTerm[]>(() => {
     const preferences = entityViewPreferences();
@@ -101,6 +107,7 @@ export function createBookBrowsePreferences({context, availableSortKeys, urlStat
   return {
     viewMode,
     formatPill,
+    cardDetail,
     sortTerms,
     defaultSortTerms,
     isDefaultSort,
