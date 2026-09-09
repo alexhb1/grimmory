@@ -2891,6 +2891,9 @@
       "grid": "Grade",
       "table": "Tabela"
     },
+    "cardDetail": {
+      "none": "Nenhum"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Tem certeza de que deseja excluir a nota \"{{ title }}\"?",

@@ -2895,6 +2895,9 @@
       "grid": "Grille",
       "table": "Tableau"
     },
+    "cardDetail": {
+      "none": "Aucune"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Êtes-vous sûr de vouloir supprimer la note « {{ title }} » ?",

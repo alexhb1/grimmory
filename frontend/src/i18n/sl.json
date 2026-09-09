@@ -2894,6 +2894,9 @@
       "grid": "Mreža",
       "table": "Tabela"
     },
+    "cardDetail": {
+      "none": "Brez"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Ali si prepričan, da želiš izbrisati opombo \"{{ title }}\"?",

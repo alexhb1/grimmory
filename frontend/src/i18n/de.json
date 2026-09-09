@@ -2894,6 +2894,9 @@
       "grid": "Raster",
       "table": "Tabelle"
     },
+    "cardDetail": {
+      "none": "Keine"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Sind Sie sicher, dass Sie die Notiz \"{{ title }}\" löschen möchten?",

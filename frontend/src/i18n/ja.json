@@ -2892,6 +2892,9 @@
       "grid": "グリッド",
       "table": "テーブル"
     },
+    "cardDetail": {
+      "none": "なし"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "メモ「{{ title }}」を削除してもよろしいですか？",

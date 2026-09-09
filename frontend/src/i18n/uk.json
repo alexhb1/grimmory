@@ -2894,6 +2894,9 @@
       "grid": "Сітка",
       "table": "Таблиця"
     },
+    "cardDetail": {
+      "none": "Жодного"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Ви впевнені, що хочете видалити нотатку \"{{ title }}\"?",

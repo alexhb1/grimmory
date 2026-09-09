@@ -2896,6 +2896,9 @@
       "grid": "Mreža",
       "table": "Tablica"
     },
+    "cardDetail": {
+      "none": "Ništa"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "Jeste li sigurni da želite obrisati bilješku \"{{ title }}\"?",

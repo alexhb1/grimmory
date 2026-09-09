@@ -2891,6 +2891,9 @@
       "grid": "网格",
       "table": "表格"
     },
+    "cardDetail": {
+      "none": "无"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "确定要删除笔记「{{ title }}」吗？",

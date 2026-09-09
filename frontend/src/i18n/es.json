@@ -2895,6 +2895,9 @@
       "grid": "Cuadrícula",
       "table": "Tabla"
     },
+    "cardDetail": {
+      "none": "Ninguno"
+    },
     "notes": {
       "confirm": {
         "deleteMessage": "¿Estás seguro de que deseas eliminar la nota \"{{ title }}\"?",

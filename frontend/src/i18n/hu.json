@@ -2873,6 +2873,9 @@
         "long": "Lejátszás folytatása"
       }
     },
+    "cardDetail": {
+      "none": "Sehonnan"
+    },
     "seriesPage": {
       "tooltip": {
         "moreActions": "További lehetőségek",
