@@ -138,7 +138,7 @@
   </div>
   @if (viewMode() === 'grid') {
     <app-menu-item value="card-detail" [submenu]="cardDetailMenu">
-      {{ 'browse.toolbar.cardDetail' | transloco }}
+      {{ 'book.cardDetail.label' | transloco }}
     </app-menu-item>
   } @else {
     <app-menu-item value="columns" [submenu]="columnsMenu">{{ 'browse.toolbar.columns' | transloco }}</app-menu-item>
@@ -152,11 +152,11 @@
 <app-menu
   #cardDetailMenu="ngMenu"
   menuClass="w-60 max-h-[min(32rem,calc(100vh-2rem))] overflow-y-auto"
-  [ariaLabel]="'browse.toolbar.cardDetail' | transloco">
+  [ariaLabel]="'book.cardDetail.label' | transloco">
   <app-menu-radio-group
     [value]="cardDetail() ?? ''"
     (valueSelected)="setCardDetail($event)">
-    <app-menu-radio value="">{{ 'browse.toolbar.noCardDetail' | transloco }}</app-menu-radio>
+    <app-menu-radio value="">{{ 'book.cardDetail.none' | transloco }}</app-menu-radio>
     @for (option of cardDetailOptions; track option.id) {
       <app-menu-radio [value]="option.id">{{ option.labelKey | transloco }}</app-menu-radio>
     }

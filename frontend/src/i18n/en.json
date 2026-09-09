@@ -551,9 +551,7 @@
       "sortSaved": "Sort Saved",
       "sortSavedDetail": "Sort configuration saved for this {{entityType}}.",
       "editSort": "Edit Sort",
-      "tableSortConfig": "Sort Config",
-      "cardDetailNone": "None",
-      "cardDetail": "Card Detail"
+      "tableSortConfig": "Sort Config"
     },
     "sidebarSort": {
       "sectionTitle": "Sidebar Library and Shelf Sorting Preference",
@@ -2929,6 +2927,10 @@
     "viewMode": {
       "grid": "Grid",
       "table": "Table"
+    },
+    "cardDetail": {
+      "label": "Card Detail",
+      "none": "None"
     },
     "notes": {
       "confirm": {
@@ -5358,9 +5360,7 @@
       "smallerCards": "Smaller Cards",
       "largerCards": "Larger Cards",
       "columns": "Columns",
-      "resetColumns": "Reset to Default",
-      "cardDetail": "Card Detail",
-      "noCardDetail": "None"
+      "resetColumns": "Reset to Default"
     },
     "bulk": {
       "markAsMessage": "Mark {{count}} books as {{status}}?",

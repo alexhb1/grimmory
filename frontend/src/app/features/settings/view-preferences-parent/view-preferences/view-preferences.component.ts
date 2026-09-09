@@ -14,7 +14,7 @@ import {FormsModule} from '@angular/forms';
 
 import {Tooltip} from '@openng/optimus-ui/tooltip';
 import {ToggleSwitch} from '@openng/optimus-ui/toggleswitch';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {TranslocoDirective, TranslocoPipe, TranslocoService} from '@jsverse/transloco';
 import {take} from 'rxjs/operators';
 
 import {DialogLauncherService} from '../../../../shared/services/dialog-launcher.service';
@@ -41,6 +41,7 @@ import {BookBrowseMultiSortEditorComponent} from '../../../book/browse/book-brow
     Tooltip,
     ToggleSwitch,
     TranslocoDirective,
+    TranslocoPipe,
     BookBrowseMultiSortEditorComponent
   ],
   templateUrl: './view-preferences.component.html',
@@ -149,7 +150,7 @@ export class ViewPreferencesComponent implements OnInit {
       {label: this.t.translate('settingsView.librarySort.viewTable'), value: 'TABLE', translationKey: 'viewTable'}
     ];
     this.cardDetailOptions = [
-      {label: this.t.translate('settingsView.librarySort.cardDetailNone'), value: null},
+      {label: this.t.translate('book.cardDetail.none'), value: null},
       ...BOOK_CARD_DETAIL_OPTIONS.map(option => ({label: this.t.translate(option.labelKey), value: option.id}))
     ];
   }
