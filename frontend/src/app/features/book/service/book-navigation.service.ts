@@ -1,4 +1,7 @@
-import {computed, Injectable, signal} from '@angular/core';
+import {computed, inject, Injectable, signal} from '@angular/core';
+import {Router} from '@angular/router';
+
+import {type BookFileType, type BookSummary} from '../data/book-response.models';
 
 export interface BookNavigationState {
   bookIds: number[];
@@ -9,6 +12,8 @@ export interface BookNavigationState {
   providedIn: 'root'
 })
 export class BookNavigationService {
+  private readonly router = inject(Router);
+
   private readonly _navigationState = signal<BookNavigationState | null>(null);
   readonly navigationState = this._navigationState.asReadonly();
 
@@ -53,6 +58,15 @@ export class BookNavigationService {
     this._availableBookIds.set(bookIds);
   }
 
+  readBook(book: BookSummary): void {
+    const baseUrl = this.readerRoute(book.primaryFile?.bookType);
+    if (!baseUrl) {
+      return;
+    }
+
+    void this.router.navigate([`/${baseUrl}/book/${book.id}`]);
+  }
+
   setNavigationContext(bookIds: number[], currentBookId: number): void {
     const currentIndex = bookIds.indexOf(currentBookId);
     if (currentIndex !== -1) {
@@ -72,6 +86,24 @@ export class BookNavigationService {
           currentIndex: newIndex
         });
       }
+    }
+  }
+
+  private readerRoute(bookType: BookFileType | undefined): string | null {
+    switch (bookType) {
+      case 'PDF':
+        return 'pdf-reader';
+      case 'EPUB':
+      case 'FB2':
+      case 'MOBI':
+      case 'AZW3':
+        return 'ebook-reader';
+      case 'CBX':
+        return 'cbx-reader';
+      case 'AUDIOBOOK':
+        return 'audiobook-player';
+      default:
+        return null;
     }
   }
 }
