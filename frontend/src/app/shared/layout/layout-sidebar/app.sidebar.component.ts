@@ -1,4 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {injectQuery} from '@tanstack/angular-query-experimental';
+import {lastValueFrom, takeUntil} from 'rxjs';
+import {API_CONFIG} from '../../../core/config/api-config';
+import {abortSignal, QUERY_DEFAULTS} from '../../../core/data/query-transport';
+import {bookQueryKeys} from '../../../features/book/data/book-query-keys';
 import { Router, RouterLink } from '@angular/router';
 import { AppSidebarSectionComponent } from './app.sidebar-section.component';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
@@ -28,11 +34,8 @@ import {
 import { LibraryService } from '../../../features/book/service/library.service';
 import { LibraryHealthService } from '../../../features/book/service/library-health.service';
 import { ShelfService } from '../../../features/book/service/shelf.service';
-import { BookService } from '../../../features/book/service/book.service';
 import { UserService } from '../../../features/settings/user-management/user.service';
 import { MagicShelfService } from '../../../features/magic-shelf/service/magic-shelf.service';
-import { SeriesDataService } from '../../../features/series-browser/service/series-data.service';
-import { AuthorService } from '../../../features/author-browser/service/author.service';
 import { DialogLauncherService } from '../../services/dialog-launcher.service';
 import { CommandPaletteService } from '../../../features/command-palette/command-palette.service';
 import { AuthService } from '../../service/auth.service';
@@ -160,10 +163,10 @@ function isNewerVersion(latest: string | undefined, current: string | undefined)
   styleUrl: './app.sidebar.component.scss',
 })
 export class AppSidebarComponent {
+  private readonly http = inject(HttpClient);
   private readonly libraryService = inject(LibraryService);
   private readonly libraryHealthService = inject(LibraryHealthService);
   private readonly shelfService = inject(ShelfService);
-  private readonly bookService = inject(BookService);
   protected readonly dialogLauncherService = inject(DialogLauncherService);
   private readonly commandPaletteService = inject(CommandPaletteService);
   protected readonly bookDialogHelperService = inject(BookDialogHelperService);
@@ -173,8 +176,6 @@ export class AppSidebarComponent {
   private readonly userService = inject(UserService);
   private readonly versionService = inject(VersionService);
   private readonly magicShelfService = inject(MagicShelfService);
-  private readonly seriesDataService = inject(SeriesDataService);
-  private readonly authorService = inject(AuthorService);
   private readonly t = inject(TranslocoService);
   private readonly metadataProgressService = inject(MetadataProgressService);
   private readonly bookdropFileService = inject(BookdropFileService);
@@ -182,7 +183,6 @@ export class AppSidebarComponent {
   private readonly themeService = inject(AppThemeService);
 
   readonly currentUser = this.userService.currentUser;
-  private readonly allAuthors = this.authorService.allAuthors;
   protected readonly activeLang = toSignal(this.t.langChanges$, { initialValue: this.t.getActiveLang() });
   protected readonly versionInfo = toSignal(this.versionService.getVersion(), { initialValue: null });
   protected readonly appVersionLabel = computed(() => formatVersionLabel(this.versionInfo()?.current ?? '...'));
@@ -217,31 +217,42 @@ export class AppSidebarComponent {
     typeof navigator !== 'undefined' ? navigator.userAgent : ''
   );
 
+  private readonly entityCountsQuery = injectQuery(() => ({
+    queryKey: [...bookQueryKeys.collections(), 'sidebar-entity-counts'],
+    enabled: this.authService.isAuthenticated() && this.layoutService.areSidebarCountsVisible('home'),
+    queryFn: async ({signal}) => {
+      const [authors, series] = await Promise.all([
+        this.getEntityCount('authors', signal),
+        this.getEntityCount('series', signal),
+      ]);
+      return {authors, series};
+    },
+    ...QUERY_DEFAULTS,
+  }));
+
+  private async getEntityCount(entity: 'authors' | 'series', signal: AbortSignal): Promise<number> {
+    const response = await lastValueFrom(this.http.get<{totalElements: number}>(`${API_CONFIG.BASE_URL}/api/v1/app/${entity}`, {params: {page: 0, size: 1}})
+      .pipe(takeUntil(abortSignal(signal))));
+    return response.totalElements;
+  }
+
   readonly sections = computed<SidebarSection[]>(() => {
     this.activeLang();
     return [
-      ...buildHomeSection(this.translate, {
-        allBooks: this.bookService.books().length,
-        series: this.seriesDataService.allSeries().length,
-        authors: this.allAuthors()?.length ?? 0,
-      }),
+      ...buildHomeSection(this.translate, this.entityCountsQuery.data() ?? {authors: 0, series: 0}),
       ...buildLibrarySection(
         this.libraryService.libraries(),
-        this.libraryService.bookCountByLibraryId(),
         this.layoutService.librarySort(),
         this.translate,
         { health: this.libraryHealthService },
       ),
       ...buildShelfSection(
         this.shelfService.shelves(),
-        this.shelfService.bookCountByShelfId(),
-        this.shelfService.unshelvedBookCount(),
         this.layoutService.shelfSort(),
         this.translate,
       ),
       ...buildMagicShelfSection(
         this.magicShelfService.shelves(),
-        this.magicShelfService.bookCountByMagicShelfId(),
         this.layoutService.magicShelfSort(),
         this.translate,
       ),

@@ -3,6 +3,10 @@ import { RouterLink } from '@angular/router';
 import { Tooltip } from '@openng/optimus-ui/tooltip';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideEllipsisVertical } from '@lucide/angular';
+import {injectQuery} from '@tanstack/angular-query-experimental';
+import {BookQueryService} from '../../../features/book/data/book-query.service';
+import type {FacetValueMap} from '../../../features/book/data/book-query-params';
+import {AuthService} from '../../service/auth.service';
 import { IconSelection, toIconSelection } from '../../icons/icon-selection';
 
 import { IconDisplayComponent } from '../../components/icon-display/icon-display.component';
@@ -37,6 +41,27 @@ export class AppSidebarItemRowComponent {
   readonly key = computed(() => `${this.parentKey()}-${this.index()}`);
 
   readonly layoutService = inject(LayoutService);
+  private readonly bookQuery = inject(BookQueryService);
+  private readonly authService = inject(AuthService);
+  private readonly countFacets = computed<FacetValueMap | undefined>(() => {
+    const {id, menuTarget} = this.item();
+    if (id === 'allBooks') return {};
+    if (id === 'shelfUnshelved') return {shelf_status: ['unshelved']};
+    switch (menuTarget?.type) {
+      case 'library': return {library: [String(menuTarget.entity.id)]};
+      case 'shelf': return {shelf: [String(menuTarget.entity.id)]};
+      case 'magicShelf': return {shelf: [`magic:${menuTarget.entity.id}`]};
+      default: return undefined;
+    }
+  });
+  private readonly bookCountQuery = injectQuery(() => ({
+    ...this.bookQuery.page({facets: this.countFacets() ?? {}, facetLogic: 'or', sort: [], size: 1}),
+    enabled: this.countFacets() !== undefined && this.authService.isAuthenticated()
+      && this.layoutService.areSidebarCountsVisible(this.parentKey()),
+  }));
+  readonly bookCount = computed(() => this.countFacets() === undefined
+    ? this.item().bookCount
+    : this.bookCountQuery.data()?.page.totalElements);
 
   readonly isRouteActive = computed(() => {
     const route = this.item().routerLink?.[0];
