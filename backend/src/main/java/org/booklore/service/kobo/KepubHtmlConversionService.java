@@ -1,20 +1,23 @@
 package org.booklore.service.kobo;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.*;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Entities;
+import org.jsoup.nodes.TextNode;
+import org.jsoup.parser.Parser;
 import org.jsoup.select.NodeFilter;
 import org.springframework.stereotype.Service;
-import javax.xml.transform.*;
-import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Gatherer;
 import java.util.stream.Stream;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class KepubHtmlConversionService {
@@ -22,6 +25,8 @@ public class KepubHtmlConversionService {
     private static final String CLASSNAME_KOBO_STYLES = "kobostylehacks";
     private static final String CLASSNAME_KOBO_HYPHENATE = "kobostylehyphenate";
     private static final String ID_FORMAT_KOBO_SPAN = "kobo.%d";
+
+    private static final Set<String> SELF_CONTAINED_TAGS = Set.of("img", "svg", "math");
 
     private static final String CSS_KOBO_STYLES = """
             div#book-inner {
@@ -147,6 +152,14 @@ public class KepubHtmlConversionService {
         // Also wrap each image
         AtomicInteger koboSpanIndex = new AtomicInteger();
 
+        Set<String> usedIds = new HashSet<>();
+        for (var element : document.getElementsByAttribute("id")) {
+            usedIds.add(element.id());
+        }
+
+        List<TextNode> textNodes = new ArrayList<>();
+        List<Element> selfContained = new ArrayList<>();
+
         document.body()
                 .filter(
                         (node, depth) -> {
@@ -159,48 +172,57 @@ public class KepubHtmlConversionService {
                             }
 
                             if ("span".equals(parent.tagName()) && parent.hasClass(CLASSNAME_KOBO_SPAN)) {
-                                // The iterator will pick up the koboSpan we're adding
                                 return NodeFilter.FilterResult.SKIP_ENTIRELY;
                             }
 
                             if (node instanceof TextNode textNode) {
-                                if (textNode.isBlank()) {
-                                    return NodeFilter.FilterResult.CONTINUE;
+                                if (!textNode.isBlank()) {
+                                    textNodes.add(textNode);
                                 }
 
-                                var koboSpans = getSentences(textNode.text())
-                                        .map(sentence -> {
-                                            var koboSpan = document.createElement("span");
-                                            koboSpan.id(String.format(ID_FORMAT_KOBO_SPAN, koboSpanIndex.incrementAndGet()));
-                                            koboSpan.addClass(CLASSNAME_KOBO_SPAN);
-                                            koboSpan.text(sentence);
-                                            return koboSpan;
-                                        })
-                                        .toList();
-
-                                for (var span : koboSpans) {
-                                    textNode.before(span);
-                                }
-
-                                return NodeFilter.FilterResult.REMOVE;
+                                return NodeFilter.FilterResult.CONTINUE;
                             }
 
-                            if (node instanceof Element element) {
-                                if ("img".equals(element.tagName()) || "svg".equals(element.tagName())) {
-                                    var koboSpan = document.createElement("span");
-                                    koboSpan.id(String.format(ID_FORMAT_KOBO_SPAN, koboSpanIndex.incrementAndGet()));
-                                    koboSpan.addClass(CLASSNAME_KOBO_SPAN);
+                            if (node instanceof Element element && SELF_CONTAINED_TAGS.contains(element.tagName())) {
+                                selfContained.add(element);
 
-                                    element.before(koboSpan);
-                                    koboSpan.appendChild(element);
-
-                                    return NodeFilter.FilterResult.SKIP_ENTIRELY;
-                                }
+                                return NodeFilter.FilterResult.SKIP_ENTIRELY;
                             }
 
                             return NodeFilter.FilterResult.CONTINUE;
                         }
                 );
+
+        for (var textNode : textNodes) {
+            var koboSpans = getSentences(textNode.getWholeText())
+                    .map(sentence -> createKoboSpan(document, koboSpanIndex, usedIds).text(sentence))
+                    .toList();
+
+            for (var koboSpan : koboSpans) {
+                textNode.before(koboSpan);
+            }
+
+            textNode.remove();
+        }
+
+        for (var element : selfContained) {
+            var koboSpan = createKoboSpan(document, koboSpanIndex, usedIds);
+
+            element.before(koboSpan);
+            koboSpan.appendChild(element);
+        }
+    }
+
+    private Element createKoboSpan(Document document, AtomicInteger koboSpanIndex, Set<String> usedIds) {
+        String id;
+
+        do {
+            id = String.format(ID_FORMAT_KOBO_SPAN, koboSpanIndex.incrementAndGet());
+        } while (!usedIds.add(id));
+
+        return document.createElement("span")
+                .attr("id", id)
+                .addClass(CLASSNAME_KOBO_SPAN);
     }
 
     private void transformContentAddStyles(Document document, boolean forceEnableHyphenation) {
@@ -291,14 +313,9 @@ public class KepubHtmlConversionService {
     }
 
     public String transform(String html, boolean forceEnableHyphenation) {
-        Document document = Jsoup.parse(html, "/");
+        Document document = Jsoup.parse(html, "/", Parser.xmlParser());
         transformDocument(document, forceEnableHyphenation);
         return document.toString();
     }
 
-    public String transform(InputStream stream, String inputEncoding, boolean forceEnableHyphenation) throws IOException {
-        Document document = Jsoup.parse(stream, inputEncoding, "/");
-        transformDocument(document, forceEnableHyphenation);
-        return document.toString();
-    }
 }
