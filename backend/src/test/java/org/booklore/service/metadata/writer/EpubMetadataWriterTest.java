@@ -91,6 +91,7 @@ class EpubMetadataWriterTest {
         libraryPath.setPath(tempDir.toString());
         bookEntity.setLibraryPath(libraryPath);
         BookFileEntity primaryFile = new BookFileEntity();
+        primaryFile.setBookFormat(true);
         primaryFile.setBook(bookEntity);
         bookEntity.setBookFiles(Set.of(primaryFile));
         bookEntity.getPrimaryBookFile().setFileSubPath("");

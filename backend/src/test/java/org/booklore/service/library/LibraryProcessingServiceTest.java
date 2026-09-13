@@ -90,6 +90,7 @@ class LibraryProcessingServiceTest {
         existingBook.setLibraryPath(pathEntity);
         BookFileEntity existingBookFile = new BookFileEntity();
         existingBookFile.setBook(existingBook);
+        existingBookFile.setBookFormat(true);
         existingBook.setBookFiles(Set.of(existingBookFile));
         existingBook.getPrimaryBookFile().setFileSubPath("");
         existingBook.getPrimaryBookFile().setFileName("book1.epub");
@@ -153,6 +154,7 @@ class LibraryProcessingServiceTest {
         existingBook.setLibraryPath(pathEntity);
         BookFileEntity existingBookFile = new BookFileEntity();
         existingBookFile.setBook(existingBook);
+        existingBookFile.setBookFormat(true);
         existingBook.setBookFiles(Set.of(existingBookFile));
         existingBook.getPrimaryBookFile().setFileSubPath("");
         existingBook.getPrimaryBookFile().setFileName("book1.epub");
@@ -434,6 +436,7 @@ class LibraryProcessingServiceTest {
         existingBook.setLibraryPath(pathEntity);
         BookFileEntity existingBookFile = new BookFileEntity();
         existingBookFile.setBook(existingBook);
+        existingBookFile.setBookFormat(true);
         existingBook.setBookFiles(Set.of(existingBookFile));
         existingBook.getPrimaryBookFile().setFileSubPath("");
         existingBook.getPrimaryBookFile().setFileName("book1.epub");
@@ -473,6 +476,7 @@ class LibraryProcessingServiceTest {
         existingBook.setLibraryPath(pathEntity);
         BookFileEntity existingBookFile = new BookFileEntity();
         existingBookFile.setBook(existingBook);
+        existingBookFile.setBookFormat(true);
         existingBook.setBookFiles(Set.of(existingBookFile));
         existingBook.getPrimaryBookFile().setFileSubPath("");
         existingBook.getPrimaryBookFile().setFileName("book1.epub");
@@ -547,6 +551,7 @@ class LibraryProcessingServiceTest {
         existingBook.setLibraryPath(pathEntity);
         BookFileEntity existingBookFile = new BookFileEntity();
         existingBookFile.setBook(existingBook);
+        existingBookFile.setBookFormat(true);
         existingBook.setBookFiles(Set.of(existingBookFile));
         existingBook.getPrimaryBookFile().setFileSubPath("");
         existingBook.getPrimaryBookFile().setFileName("book (with parens).epub");
