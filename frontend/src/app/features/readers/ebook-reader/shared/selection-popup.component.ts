@@ -141,7 +141,7 @@ export class TextSelectionPopupComponent {
     }
 
     const target = event.target;
-    if (target instanceof Element && target.closest('.text-selection-popup')) {
+    if (target instanceof Element && target.closest('.text-selection-popup, foliate-view')) {
       return;
     }
 
