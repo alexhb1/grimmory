@@ -18,7 +18,7 @@ public class BookFacetRegistry {
     private static final String MAGIC_SHELF_PREFIX = "magic:";
 
     private static final Set<String> NAMES = Set.of(
-            "author", "series", "genre", "tag", "mood", "language", "publisher", "narrator", "library", "shelf",
+            "id", "author", "series", "genre", "tag", "mood", "language", "publisher", "narrator", "library", "shelf",
             "file_type", "read_status", "personal_rating", "amazon_rating", "goodreads_rating",
             "hardcover_rating", "ranobedb_rating", "lubimyczytac_rating", "audible_rating", "applebooks_rating",
             "age_rating", "content_rating", "match_score",
@@ -42,6 +42,7 @@ public class BookFacetRegistry {
     public Specification<BookEntity> toSpecification(String facetName, List<String> values, FacetLogic logic, Long userId) {
         String mode = mode(logic);
         return switch (facetName) {
+            case "id" -> AppBookSpecification.withIds(values, mode);
             case "author" -> AppBookSpecification.withAuthors(values, mode);
             case "series" -> AppBookSpecification.inSeriesMulti(values, mode);
             case "genre" -> AppBookSpecification.withCategories(values, mode);

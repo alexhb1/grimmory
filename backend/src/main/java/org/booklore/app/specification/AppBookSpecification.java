@@ -751,6 +751,22 @@ public class AppBookSpecification {
         };
     }
 
+    public static Specification<BookEntity> withIds(List<String> bookIds, String mode) {
+        return (root, query, cb) -> {
+            if (bookIds.isEmpty()) return cb.conjunction();
+            List<Long> ids = parseLongList(bookIds, "id");
+            if (ids.isEmpty()) return cb.conjunction();
+
+            if ("and".equals(mode)) {
+                if (ids.size() > 1) return cb.disjunction(); // A book has a single id
+                return cb.equal(root.get("id"), ids.getFirst());
+            }
+
+            Predicate combined = root.get("id").in(ids);
+            return "not".equals(mode) ? cb.not(combined) : combined;
+        };
+    }
+
     public static Specification<BookEntity> withComicCreators(List<String> values, String mode) {
         return (root, query, cb) -> {
             if (values == null || values.isEmpty()) return cb.conjunction();

@@ -6,6 +6,7 @@ import {
   BrowseSortTerm,
 } from '../../../core/data/browse.models';
 export const BOOK_QUERY_FACET_KEYS = [
+  'id',
   'author',
   'series',
   'genre',
