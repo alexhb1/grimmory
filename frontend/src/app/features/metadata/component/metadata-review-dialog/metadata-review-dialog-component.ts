@@ -1,4 +1,4 @@
-import {Component, computed, inject, OnInit, signal, ViewChild} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal, untracked, ViewChild} from '@angular/core';
 import {DynamicDialogConfig, DynamicDialogRef} from '@openng/optimus-ui/dynamicdialog';
 import {FetchedProposal, MetadataTaskService} from '../../../book/service/metadata-task';
 import {BookService} from '../../../book/service/book.service';
@@ -11,6 +11,7 @@ import {MetadataProgressService} from '../../../../shared/service/metadata-progr
 import {MetadataPickerComponent} from '../book-metadata-center/metadata-picker/metadata-picker.component';
 import {DecimalPipe} from '@angular/common';
 import {injectQuery} from '@tanstack/angular-query-experimental';
+import {retryTransientQueryError} from '../../../../core/data/query-transport';
 
 @Component({
   selector: 'app-metadata-review-dialog-component',
@@ -37,9 +38,19 @@ export class MetadataReviewDialogComponent implements OnInit {
   private readonly bookDetailQuery = injectQuery(() => ({
     ...this.bookService.bookDetailQueryOptions(this.currentBookId() ?? -1, true),
     enabled: this.currentBookId() != null,
+    retry: retryTransientQueryError,
   }));
   readonly currentBook = computed(() => this.bookDetailQuery.data() ?? null);
   readonly loading = computed(() => this.currentBook() === null);
+
+  constructor() {
+    // A proposal can outlive its book, so skip any whose book cannot be loaded.
+    effect(() => {
+      if (this.bookDetailQuery.isError()) {
+        untracked(() => this.onNext());
+      }
+    });
+  }
 
   ngOnInit() {
     const taskId = this.config.data?.taskId;
