@@ -27,6 +27,11 @@ public class MetadataProviderService {
 
     public BookMetadata getDetailedMetadata(MetadataProvider provider, String providerItemId) {
         BookParser parser = getParser(provider);
+
+        if (!parser.isEnabled()) {
+            return null;
+        }
+
         if (parser instanceof DetailedMetadataProvider detailedProvider) {
             return detailedProvider.fetchDetailedMetadata(providerItemId);
         }
