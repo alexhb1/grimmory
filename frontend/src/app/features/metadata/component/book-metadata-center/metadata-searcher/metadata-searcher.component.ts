@@ -96,10 +96,10 @@ export class MetadataSearcherComponent implements OnDestroy {
 
   readonly providers = toSignal(
     this.metadataProviderService.fetchMetadataProviders()
-      .pipe(catchError(() => []))
       .pipe(map(
         providers => providers.filter(p => p.enabled).map(p => capitalize(p.name))
       ))
+      .pipe(catchError(() => []))
   );
 
   readonly resultsByProvider = computed(() => {
