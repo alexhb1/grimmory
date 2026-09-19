@@ -7,6 +7,7 @@ import {Button} from '@openng/optimus-ui/button';
 import {AppSettingKey, MetadataMatchWeights} from '../../../../shared/model/app-settings.model';
 import {AppSettingsService} from '../../../../shared/service/app-settings.service';
 import {InputNumber} from '@openng/optimus-ui/inputnumber';
+import {MetadataProviderFieldsService} from '../../../../shared/metadata';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 
 @Component({
@@ -40,6 +41,7 @@ export class MetadataMatchWeightsComponent {
   private appSettingsService = inject(AppSettingsService);
   private messageService = inject(MessageService);
   private t = inject(TranslocoService);
+  private providerFields = inject(MetadataProviderFieldsService);
   private destroyRef = inject(DestroyRef);
 
   private readonly syncSettingsEffect = effect(() => {
@@ -85,7 +87,8 @@ export class MetadataMatchWeightsComponent {
   }
 
   getFieldLabel(key: string): string {
-    return this.t.translate('settingsMeta.matchWeights.fields.' + key);
+    const providerField = this.providerFields.fields().find(field => field.name === key);
+    return providerField ? this.providerFields.label(providerField.name) : this.t.translate('settingsMeta.matchWeights.fields.' + key);
   }
 
   save(): void {

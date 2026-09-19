@@ -24,6 +24,8 @@ import {ShelfService} from '../../book/service/shelf.service';
 import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
 import {Textarea} from '@openng/optimus-ui/textarea';
 import {IconSelection, toIconSelection} from '../../../shared/icons/icon-selection';
+import {MetadataProviderFieldsService, type MetadataProviderFieldRole} from '../../../shared/metadata';
+import type {MetadataProviderFieldName} from '../../../shared/metadata/metadata-providers';
 
 export type RuleOperator =
   | 'equals'
@@ -105,6 +107,7 @@ interface FullFieldConfig {
   label: string;
   type?: FieldType;
   max?: number;
+  providerField?: MetadataProviderFieldName;
 }
 
 type FieldType = 'number' | 'decimal' | 'date' | 'boolean' | undefined;
@@ -143,7 +146,9 @@ export type GroupFormGroup = FormGroup<{
   rules: FormArray<GroupFormGroup | RuleFormGroup>;
 }>;
 
-const FIELD_CONFIGS: Record<RuleField, FullFieldConfig> = {
+const RULE_UNSUPPORTED_PROVIDER_FIELD = 'hardcoverBookId';
+
+const GENERIC_FIELD_CONFIGS: Record<Exclude<RuleField, MetadataProviderFieldName>, FullFieldConfig> = {
   library: {label: 'library'},
   shelf: {label: 'shelf'},
   readStatus: {label: 'readStatus'},
@@ -168,23 +173,11 @@ const FIELD_CONFIGS: Record<RuleField, FullFieldConfig> = {
   fileSize: {label: 'fileSize', type: 'number'},
   fileType: {label: 'fileType'},
   subtitle: {label: 'subtitle'},
-  amazonRating: {label: 'amazonRating', type: 'decimal', max: 5},
-  amazonReviewCount: {label: 'amazonReviewCount', type: 'number'},
-  goodreadsRating: {label: 'goodreadsRating', type: 'decimal', max: 5},
-  goodreadsReviewCount: {label: 'goodreadsReviewCount', type: 'number'},
-  hardcoverRating: {label: 'hardcoverRating', type: 'decimal', max: 5},
-  hardcoverReviewCount: {label: 'hardcoverReviewCount', type: 'number'},
-  ranobedbRating: {label: 'ranobedbRating', type: 'decimal', max: 5},
   addedOn: {label: 'addedOn', type: 'date'},
-  lubimyczytacRating: {label: 'lubimyczytacRating', type: 'decimal', max: 5},
   description: {label: 'description'},
   narrator: {label: 'narrator'},
   ageRating: {label: 'ageRating', type: 'number'},
   contentRating: {label: 'contentRating'},
-  audibleRating: {label: 'audibleRating', type: 'decimal', max: 5},
-  audibleReviewCount: {label: 'audibleReviewCount', type: 'number'},
-  applebooksRating: {label: 'applebooksRating', type: 'decimal', max: 5},
-  applebooksReviewCount: {label: 'applebooksReviewCount', type: 'number'},
   abridged: {label: 'abridged', type: 'boolean'},
   audiobookDuration: {label: 'audiobookDuration', type: 'number'},
   audiobookCodec: {label: 'audiobookCodec'},
@@ -203,12 +196,12 @@ interface FieldGroup {
   fields: RuleField[];
 }
 
-const FIELD_GROUPS: FieldGroup[] = [
+const GENERIC_FIELD_GROUPS: FieldGroup[] = [
   { translationKey: 'organization', fields: ['library', 'shelf', 'readStatus', 'readingProgress'] },
   { translationKey: 'bookInfo', fields: ['title', 'subtitle', 'description', 'authors', 'categories', 'publisher', 'language', 'pageCount', 'ageRating', 'contentRating'] },
   { translationKey: 'series', fields: ['seriesName', 'seriesNumber', 'seriesTotal', 'seriesStatus', 'seriesGaps', 'seriesPosition'] },
   { translationKey: 'dates', fields: ['publishedDate', 'dateFinished', 'lastReadTime', 'addedOn'] },
-  { translationKey: 'ratingsReviews', fields: ['personalRating', 'amazonRating', 'amazonReviewCount', 'goodreadsRating', 'goodreadsReviewCount', 'hardcoverRating', 'hardcoverReviewCount', 'ranobedbRating', 'lubimyczytacRating', 'audibleRating', 'audibleReviewCount', 'applebooksRating', 'applebooksReviewCount'] },
+  { translationKey: 'ratingsReviews', fields: ['personalRating'] },
   { translationKey: 'qualityMetadata', fields: ['metadataScore', 'metadataPresence'] },
   { translationKey: 'tagsMoods', fields: ['moods', 'tags'] },
   { translationKey: 'audiobook', fields: ['narrator', 'abridged', 'audiobookDuration', 'audiobookCodec', 'audiobookChapterCount', 'audiobookBitrate'] },
@@ -261,15 +254,29 @@ const READ_STATUS_KEYS: Record<string, string> = {
 export class MagicShelfComponent implements OnInit {
 
   private readonly t = inject(TranslocoService);
+  private readonly providerFields = inject(MetadataProviderFieldsService);
   private readonly injector = inject(Injector);
   private readonly controlIds = new WeakMap<AbstractControl, string>();
   private controlIdCounter = 0;
 
-  numericFieldConfigMap = new Map<RuleField, FieldConfig>(
-    Object.entries(FIELD_CONFIGS)
+  private readonly providerScoreFields = computed(() => this.providerFields.fields().filter(field => field.role !== 'id'));
+
+  readonly fieldConfigs = computed<Record<RuleField, FullFieldConfig>>(() => ({
+    ...GENERIC_FIELD_CONFIGS,
+    ...Object.fromEntries(this.providerScoreFields().map(field => [field.name, {
+      label: field.name, providerField: field.name, type: field.role === 'rating' ? 'decimal' : 'number', max: field.role === 'rating' ? 5 : undefined,
+    }])) as Record<Extract<RuleField, MetadataProviderFieldName>, FullFieldConfig>,
+  }));
+
+  private readonly fieldGroups = computed(() => GENERIC_FIELD_GROUPS.map(group => group.translationKey === 'ratingsReviews'
+    ? {...group, fields: [...group.fields, ...this.providerScoreFields().map(field => field.name as RuleField)]}
+    : group));
+
+  readonly numericFieldConfigMap = computed(() => new Map<RuleField, FieldConfig>(
+    Object.entries(this.fieldConfigs())
       .filter(([, config]) => config.type)
       .map(([key, config]) => [key as RuleField, {type: config.type!, max: config.max}])
-  );
+  ));
 
   get conditionOptions(): { label: string; value: 'and' | 'or' }[] {
     return [
@@ -279,14 +286,14 @@ export class MagicShelfComponent implements OnInit {
   }
 
   get fieldOptions() {
-    return FIELD_GROUPS
+    return this.fieldGroups()
       .map(group => ({
         label: this.t.translate(`magicShelf.fieldGroups.${group.translationKey}`),
         items: group.fields.map(field => {
-          const config = FIELD_CONFIGS[field];
+          const config = this.fieldConfigs()[field];
           const translationKey = field === 'categories' ? 'genre' : config.label;
           return {
-            label: this.t.translate(`magicShelf.fields.${translationKey}`),
+            label: config.providerField ? this.providerFields.label(config.providerField) : this.t.translate(`magicShelf.fields.${translationKey}`),
             value: field
           };
         })
@@ -360,6 +367,12 @@ export class MagicShelfComponent implements OnInit {
     ];
   }
 
+  private providerFieldOptions(role: MetadataProviderFieldRole) {
+    return this.providerFields.fields()
+      .filter(field => field.role === role && field.name !== RULE_UNSUPPORTED_PROVIDER_FIELD)
+      .map(field => ({label: this.providerFields.label(field.name), value: field.name}));
+  }
+
   get metadataPresenceOptions() {
     return [
       { label: this.t.translate('magicShelf.metadataFieldGroups.bookInfo'), items: [
@@ -386,7 +399,6 @@ export class MagicShelfComponent implements OnInit {
       { label: this.t.translate('magicShelf.metadataFieldGroups.identifiers'), items: [
         {label: this.t.translate('magicShelf.metadataFields.isbn13'), value: 'isbn13'},
         {label: this.t.translate('magicShelf.metadataFields.isbn10'), value: 'isbn10'},
-        {label: this.t.translate('magicShelf.metadataFields.asin'), value: 'asin'},
       ]},
       { label: this.t.translate('magicShelf.metadataFieldGroups.contentClassification'), items: [
         {label: this.t.translate('magicShelf.metadataFields.ageRating'), value: 'ageRating'},
@@ -394,32 +406,10 @@ export class MagicShelfComponent implements OnInit {
       ]},
       { label: this.t.translate('magicShelf.metadataFieldGroups.ratings'), items: [
         {label: this.t.translate('magicShelf.metadataFields.personalRating'), value: 'personalRating'},
-        {label: this.t.translate('magicShelf.metadataFields.amazonRating'), value: 'amazonRating'},
-        {label: this.t.translate('magicShelf.metadataFields.goodreadsRating'), value: 'goodreadsRating'},
-        {label: this.t.translate('magicShelf.metadataFields.hardcoverRating'), value: 'hardcoverRating'},
-        {label: this.t.translate('magicShelf.metadataFields.ranobedbRating'), value: 'ranobedbRating'},
-        {label: this.t.translate('magicShelf.metadataFields.lubimyczytacRating'), value: 'lubimyczytacRating'},
-        {label: this.t.translate('magicShelf.metadataFields.audibleRating'), value: 'audibleRating'},
-        {label: this.t.translate('magicShelf.metadataFields.applebooksRating'), value: 'applebooksRating'},
+        ...this.providerFieldOptions('rating'),
       ]},
-      { label: this.t.translate('magicShelf.metadataFieldGroups.reviewCounts'), items: [
-        {label: this.t.translate('magicShelf.metadataFields.amazonReviewCount'), value: 'amazonReviewCount'},
-        {label: this.t.translate('magicShelf.metadataFields.goodreadsReviewCount'), value: 'goodreadsReviewCount'},
-        {label: this.t.translate('magicShelf.metadataFields.hardcoverReviewCount'), value: 'hardcoverReviewCount'},
-        {label: this.t.translate('magicShelf.metadataFields.audibleReviewCount'), value: 'audibleReviewCount'},
-        {label: this.t.translate('magicShelf.metadataFields.applebooksReviewCount'), value: 'applebooksReviewCount'},
-      ]},
-      { label: this.t.translate('magicShelf.metadataFieldGroups.externalIds'), items: [
-        {label: this.t.translate('magicShelf.metadataFields.openlibraryId'), value: 'openlibraryId'},
-        {label: this.t.translate('magicShelf.metadataFields.goodreadsId'), value: 'goodreadsId'},
-        {label: this.t.translate('magicShelf.metadataFields.hardcoverId'), value: 'hardcoverId'},
-        {label: this.t.translate('magicShelf.metadataFields.googleId'), value: 'googleId'},
-        {label: this.t.translate('magicShelf.metadataFields.audibleId'), value: 'audibleId'},
-        {label: this.t.translate('magicShelf.metadataFields.lubimyczytacId'), value: 'lubimyczytacId'},
-        {label: this.t.translate('magicShelf.metadataFields.ranobedbId'), value: 'ranobedbId'},
-        {label: this.t.translate('magicShelf.metadataFields.comicvineId'), value: 'comicvineId'},
-        {label: this.t.translate('magicShelf.metadataFields.applebooksId'), value: 'applebooksId'},
-      ]},
+      { label: this.t.translate('magicShelf.metadataFieldGroups.reviewCounts'), items: this.providerFieldOptions('reviewCount')},
+      { label: this.t.translate('magicShelf.metadataFieldGroups.externalIds'), items: this.providerFieldOptions('id')},
       { label: this.t.translate('magicShelf.metadataFieldGroups.audiobook'), items: [
         {label: this.t.translate('magicShelf.metadataFields.narrator'), value: 'narrator'},
         {label: this.t.translate('magicShelf.metadataFields.abridged'), value: 'abridged'},
@@ -576,7 +566,7 @@ export class MagicShelfComponent implements OnInit {
   }
 
   buildRuleFromData(data: Rule): RuleFormGroup {
-    const config = FIELD_CONFIGS[data.field];
+    const config = this.fieldConfigs()[data.field];
     const type = config?.type;
     const isRelativeDate = RELATIVE_DATE_OPERATORS.includes(data.operator);
 
@@ -641,7 +631,7 @@ export class MagicShelfComponent implements OnInit {
 
     if (!field) return [...baseOperators, ...multiValueOperators];
 
-    const config = FIELD_CONFIGS[field];
+    const config = this.fieldConfigs()[field];
 
     if (config.type === 'boolean') {
       return baseOperators;
@@ -763,7 +753,7 @@ export class MagicShelfComponent implements OnInit {
   /** A value survives an operator change only when the input the new operator renders can still edit it. */
   private isSingleValue(ruleCtrl: FormGroup, value: unknown): boolean {
     if (value == null || value === '' || Array.isArray(value)) return false;
-    const type = FIELD_CONFIGS[ruleCtrl.get('field')?.value as RuleField]?.type;
+    const type = this.fieldConfigs()[ruleCtrl.get('field')?.value as RuleField]?.type;
     return type !== 'date' || value instanceof Date;
   }
 
