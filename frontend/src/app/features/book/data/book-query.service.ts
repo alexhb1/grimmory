@@ -28,6 +28,8 @@ import {BookDetail, BookRecommendation, BookSummary} from './book-response.model
 import {abortSignal, QUERY_DEFAULTS} from '../../../core/data/query-transport';
 import {AuthService} from '../../../shared/service/auth.service';
 
+const BOOK_BATCH_CHUNK_SIZE = 500;
+
 @Injectable({providedIn: 'root'})
 export class BookQueryService {
   private readonly http = inject(HttpClient);
@@ -108,6 +110,14 @@ export class BookQueryService {
     });
   }
 
+  batch(ids: readonly number[]) {
+    return queryOptions({
+      queryKey: bookQueryKeys.batch(ids),
+      queryFn: ({signal}): Promise<BookSummary[]> => this.fetchBatch(ids, signal),
+      ...QUERY_DEFAULTS,
+    });
+  }
+
   recommendations(bookId: number, limit: number) {
     return queryOptions({
       queryKey: bookQueryKeys.recommendation(bookId, limit),
@@ -139,6 +149,19 @@ export class BookQueryService {
       mapBrowsePage<BookSummary>,
       toPageHttpParams(params),
     );
+  }
+
+  private async fetchBatch(ids: readonly number[], signal: AbortSignal): Promise<BookSummary[]> {
+    const books: BookSummary[] = [];
+    for (let offset = 0; offset < ids.length; offset += BOOK_BATCH_CHUNK_SIZE) {
+      const chunk = ids.slice(offset, offset + BOOK_BATCH_CHUNK_SIZE);
+      books.push(...await this.get<BookSummary[]>(
+        `${this.baseUrl}/batch`,
+        signal,
+        new HttpParams().set('ids', chunk.join(',')),
+      ));
+    }
+    return books;
   }
 
   private get<T>(url: string, signal: AbortSignal, params?: HttpParams): Promise<T> {
