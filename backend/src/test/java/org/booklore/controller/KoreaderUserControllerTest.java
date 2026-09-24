@@ -30,7 +30,7 @@ class KoreaderUserControllerTest {
     @BeforeEach
     void setUp() {
         try (AutoCloseable mocks = MockitoAnnotations.openMocks(this)) {
-            user = new KoreaderUser(1L, "testuser", "pass", "md5", true);
+            user = new KoreaderUser(1L, "testuser", "pass", "md5", true, true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -57,6 +57,22 @@ class KoreaderUserControllerTest {
     void updateSyncEnabled_returnsNoContent() {
         doNothing().when(koreaderUserService).toggleSync(true);
         ResponseEntity<Void> resp = controller.updateSyncEnabled(true);
+        assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode());
+        assertNull(resp.getBody());
+    }
+
+    @Test
+    void toggleSyncProgressWithWebReader_returnsNoContent() {
+        doNothing().when(koreaderUserService).toggleSyncProgressWithWebReader(true);
+        ResponseEntity<Void> resp = controller.toggleSyncProgressWithWebReader(true);
+        assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode());
+        assertNull(resp.getBody());
+    }
+
+    @Test
+    void toggleSyncProgressWithBooklore_delegatesToWebReader_andReturnsNoContent() {
+        doNothing().when(koreaderUserService).toggleSyncProgressWithWebReader(true);
+        ResponseEntity<Void> resp = controller.toggleSyncProgressWithBooklore(true);
         assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode());
         assertNull(resp.getBody());
     }

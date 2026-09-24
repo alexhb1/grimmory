@@ -41,12 +41,14 @@ describe('KoboService', () => {
       token: 'abc123',
       syncEnabled: true,
       autoAddToShelf: false,
+      twoWayProgressSync: true,
     });
 
     expect(responseBody).toEqual({
       token: 'abc123',
       syncEnabled: true,
       autoAddToShelf: false,
+      twoWayProgressSync: true,
     });
   });
 
@@ -61,6 +63,7 @@ describe('KoboService', () => {
       token: 'new-token',
       syncEnabled: false,
       autoAddToShelf: true,
+      twoWayProgressSync: false,
     });
   });
 
@@ -69,6 +72,7 @@ describe('KoboService', () => {
       token: 'abc123',
       syncEnabled: true,
       autoAddToShelf: true,
+      twoWayProgressSync: false,
       progressMarkAsReadingThreshold: 25,
       progressMarkAsFinishedThreshold: 95,
     };

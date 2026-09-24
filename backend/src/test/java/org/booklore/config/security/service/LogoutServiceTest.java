@@ -274,6 +274,7 @@ class LogoutServiceTest {
     private Authentication mockAuth() {
         var auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getPrincipal()).thenReturn("not-anonymous");
         return auth;
     }
 

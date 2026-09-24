@@ -69,12 +69,14 @@ describe('KoreaderService', () => {
       username: 'reader',
       password: 'secret123',
       syncEnabled: false,
+      syncWithWebReader: true,
     });
 
     expect(responseBody).toEqual({
       username: 'reader',
       password: 'secret123',
       syncEnabled: false,
+      syncWithWebReader: true,
     });
   });
 

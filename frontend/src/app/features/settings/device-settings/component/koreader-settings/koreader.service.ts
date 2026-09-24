@@ -8,6 +8,7 @@ export interface KoreaderUser {
   username: string;
   password: string;
   syncEnabled: boolean;
+  syncWithWebReader?: boolean;
 }
 
 @Injectable({

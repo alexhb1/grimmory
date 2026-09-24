@@ -38,6 +38,7 @@ public class KoboLibrarySyncService {
     private final UserBookProgressRepository userBookProgressRepository;
     private final KoboServerProxy koboServerProxy;
     private final ObjectMapper objectMapper;
+    private final KoboSettingsService koboSettingsService;
     private final AppSettingService appSettingService;
 
     private Collection<Entitlement> getEntitlementsFromKoboStoreResponse(ResponseEntity<JsonNode> koboStoreResponse) {
@@ -181,6 +182,12 @@ public class KoboLibrarySyncService {
         List<UserBookProgressEntity> booksNeedingSync =
                 userBookProgressRepository.findAllBooksNeedingKoboSync(userId, snapshotId);
 
+        if (!koboSettingsService.getCurrentUserSettings().isTwoWayProgressSync()) {
+            booksNeedingSync = booksNeedingSync.stream()
+                    .filter(p -> needsStatusSync(p) || needsKoboProgressSync(p))
+                    .toList();
+        }
+
         if (booksNeedingSync.isEmpty()) {
             return Collections.emptyList();
         }
@@ -222,7 +229,8 @@ public class KoboLibrarySyncService {
             return true;
         }
 
-        if (progress.getEpubProgressPercent() != null) {
+        if (koboSettingsService.getCurrentUserSettings().isTwoWayProgressSync()
+                && progress.getEpubProgressPercent() != null) {
             Instant sentTime = progress.getKoboProgressSentTime();
             Instant lastReadTime = progress.getLastReadTime();
             if (lastReadTime != null && (sentTime == null || lastReadTime.isAfter(sentTime))) {
