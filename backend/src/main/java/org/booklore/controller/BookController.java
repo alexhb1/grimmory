@@ -114,8 +114,10 @@ public class BookController {
             @Parameter(description = "How facet values combine within a group: and, or, or not")
             @RequestParam(name = "facet_logic", required = false) String facetLogic,
             @Parameter(description = "Free-text search applied to the counts")
-            @RequestParam(required = false) String query) {
-        return ResponseEntity.ok(bookFacetService.getFacets(facet, facetLogic, query));
+            @RequestParam(required = false) String query,
+            @Parameter(description = "When false, lists only the facets that have values, without the values")
+            @RequestParam(defaultValue = "true") boolean values) {
+        return ResponseEntity.ok(bookFacetService.getFacets(facet, facetLogic, query, values));
     }
 
     @Operation(summary = "Get one book facet", description = "One facet group, scoped by the same facet, facet_logic, and query parameters as the page endpoint, omitting the facet's own selections from its counts. Name facets are paged with a next link when more values follow, and can be searched. Other facets are returned whole, number facets with their min and max and any band counts, as in the facets endpoint.")
