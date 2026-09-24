@@ -28,6 +28,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -299,6 +301,40 @@ class BookFacetServiceTest {
     }
 
     @Test
+    void individualFacetPagesWithNextLink() {
+        book("A", "Horror", "Alice");
+        book("B", "Romance", "Alice");
+        book("C", "Fantasy", "Bob");
+        em.flush();
+
+        List<String> selection = List.of("genre:Horror", "author:Alice");
+        FacetGroupsResponse first = facetService.getFacet("genre", selection, null, null, null, PageRequest.of(0, 1));
+        FacetGroupsResponse last = facetService.getFacet("genre", selection, null, null, null, PageRequest.of(1, 1));
+
+        assertThat(group(first, "genre").links()).extracting(FacetLink::value).containsExactly("Horror");
+        assertThat(group(first, "genre").links().getFirst().rel()).containsExactly("self", "facet");
+        assertThat(first.links().getLast().href())
+                .isEqualTo("/api/v1/books/facets/genre?facet=genre%3AHorror&facet=author%3AAlice&page=1&size=1");
+        assertThat(group(last, "genre").links()).extracting(FacetLink::value).containsExactly("Romance");
+        assertThat(last.links()).extracting(Link::rel).containsExactly(List.of("self"));
+    }
+
+    @Test
+    void individualNumberFacetsMatchTheOverallEndpoint() {
+        BookMetadataEntity metadata = book("A", "Genre", "Author");
+        metadata.setPageCount(120);
+        metadata.setGoodreadsRating(4.2);
+        em.flush();
+
+        FacetGroupsResponse overall = facetService.getFacets(null, null, null);
+        for (String key : List.of("page_count", "goodreads_rating")) {
+            FacetGroupsResponse single = facetService.getFacet(key, null, null, null, null, PageRequest.of(0, 1));
+            assertThat(single.facets()).containsExactly(group(overall, key));
+            assertThat(single.links()).extracting(Link::rel).containsExactly(List.of("self"));
+        }
+    }
+
+    @Test
     void numberFacetBoundsCoverValuesPastTheCap() {
         for (int i = 1; i <= 101; i++) {
             book("T" + i, "Genre", "Author").setPageCount(i);
@@ -331,6 +367,22 @@ class BookFacetServiceTest {
         assertThat(count(goodreads, "4..4.5")).isEqualTo(1);
         assertThat(count(goodreads, "4.5..*")).isEqualTo(1);
         assertThat(link(goodreads, "4..4.5").rel()).containsExactly("self", "facet");
+    }
+
+    @Test
+    void individualFacetSearchesValuesPastTheTopHundred() {
+        for (int i = 0; i < 120; i++) {
+            book("T" + i, "Genre" + i, "Author");
+        }
+        book("Rare", "Zebra Fiction", "Author");
+        em.flush();
+
+        FacetGroupsResponse response = facetService.getFacet("genre", null, null, null, "zebra", PageRequest.of(0, 20));
+
+        assertThat(group(response, "genre").links()).extracting(FacetLink::value).containsExactly("Zebra Fiction");
+        assertThat(response.links().getFirst().href()).isEqualTo("/api/v1/books/facets/genre?search=zebra&page=0&size=20");
+        assertThatThrownBy(() -> facetService.getFacet("page_count", null, null, null, "12", PageRequest.of(0, 20)))
+                .hasMessage("Facet cannot be searched: page_count");
     }
 
     @Test
