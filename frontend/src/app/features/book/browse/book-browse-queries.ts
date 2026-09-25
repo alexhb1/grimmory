@@ -22,9 +22,11 @@ import {
   browseFilterGroups,
   browseFilterChips,
   browseFrozenFacetOrders,
+  withBrowseFacetRange,
   type BrowseFacetDefinitions,
   type BrowseFilterChip,
   type BrowseFilterGroup,
+  type BrowseFilterRangeCommit,
   type BrowseFrozenFacetOrders,
 } from '../../../shared/browse/facets';
 import {bookFacetDefinitions, bookFacetLabelDeps} from './book-browse-facet-definitions';
@@ -115,5 +117,11 @@ export function createBookBrowseQueries({selection, query, scope, enabled}: Book
     title,
     searchHint,
     actionTarget,
+    withRange: (current: FacetValueMap, {key, min, max}: BrowseFilterRangeCommit<BookQueryFacetKey>) => {
+      const bands = definitions().banded?.(key)
+        ? facetsQuery.data()?.facets.find(group => group.key === key)?.values
+        : undefined;
+      return withBrowseFacetRange(current, key, min, max, new Set(bands?.map(value => value.value)));
+    },
   };
 }

@@ -26,7 +26,7 @@ interface RawFacetLink extends RawLink {
 }
 
 interface RawFacetGroup {
-  metadata: {rel: string; key: string; title: string};
+  metadata: {rel: string; key: string; title: string; min?: number; max?: number};
   links: RawFacetLink[];
 }
 
@@ -47,16 +47,22 @@ export function mapBrowseFacetResult(response: RawFacetResponse): BrowseFacetRes
   const sortTokens: string[] = [];
   for (const group of response.facets) {
     if (group.metadata.rel === 'facet') {
-      facets.push({
-        key: group.metadata.key,
-        title: group.metadata.title,
-        values: group.links.map(mapBrowseFacetValue),
-      });
+      facets.push(mapBrowseFacetGroup(group));
     } else if (group.metadata.rel === 'sort') {
       sortTokens.push(...group.links.map(link => link.value));
     }
   }
   return {facets, sortTokens};
+}
+
+function mapBrowseFacetGroup(group: RawFacetGroup): BrowseFacetGroup {
+  return {
+    key: group.metadata.key,
+    title: group.metadata.title,
+    values: group.links.map(mapBrowseFacetValue),
+    min: group.metadata.min,
+    max: group.metadata.max,
+  };
 }
 
 function mapBrowseLink(raw: RawLink): BrowseLink {

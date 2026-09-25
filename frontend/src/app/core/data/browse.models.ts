@@ -29,6 +29,8 @@ export interface BrowseFacetGroup {
   key: string;
   title: string;
   values: BrowseFacetValue[];
+  min?: number;
+  max?: number;
 }
 
 export interface BrowseFacetResult {

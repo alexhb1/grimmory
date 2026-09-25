@@ -48,12 +48,35 @@ describe('book browse facets', () => {
   });
 
   it('replaces a numeric range token rather than stacking it, and keeps band selections', () => {
-    let selection = withBrowseFacetRange({}, 'page_count', 100, 400, definitions);
+    let selection = withBrowseFacetRange({}, 'page_count', 100, 400, new Set());
     expect(selection).toEqual({page_count: ['100..400']});
-    selection = withBrowseFacetRange(selection, 'page_count', null, 200, definitions);
+    selection = withBrowseFacetRange(selection, 'page_count', null, 200, new Set());
     expect(selection).toEqual({page_count: ['*..200']});
-    expect(withBrowseFacetRange(selection, 'page_count', null, null, definitions)).toEqual({});
-    expect(withBrowseFacetRange({match_score: ['70..80']}, 'match_score', 30, 90, definitions))
+    expect(withBrowseFacetRange(selection, 'page_count', null, null, new Set())).toEqual({});
+    expect(withBrowseFacetRange({match_score: ['70..80', '10..20']}, 'match_score', 30, 90, new Set(['70..80'])))
       .toEqual({match_score: ['70..80', '30..90']});
+  });
+
+  it('takes slider bounds from the served min and max', () => {
+    const pageCount = browseFilterGroups([{...group('page_count', []), min: 12, max: 2400}], {}, definitions, {})
+      .find(item => item.key === 'page_count')!;
+
+    expect(pageCount.range).toMatchObject({boundsMin: 12, boundsMax: 2400});
+    expect(pageCount.values).toEqual([]);
+  });
+
+  it('draws the served bands in order, with stars up to the top of each band', () => {
+    const goodreads = browseFilterGroups(
+      [group('goodreads_rating', [['3..4', 151], ['4..4.5', 0], ['4.5..*', 2]])],
+      {},
+      definitions,
+      {goodreads_rating: ['4.5..*']},
+    ).find(item => item.key === 'goodreads_rating')!;
+
+    expect(goodreads.values.map(item => [item.value, item.count, item.selected, item.stars?.value])).toEqual([
+      ['3..4', 151, false, 4],
+      ['4..4.5', 0, false, 4.5],
+      ['4.5..*', 2, true, 5],
+    ]);
   });
 });
