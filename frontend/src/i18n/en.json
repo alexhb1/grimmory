@@ -5244,6 +5244,7 @@
   },
   "browse": {
     "showAll": "Show All",
+    "showMore": "Show More",
     "showFewer": "Show Fewer",
     "clearFilters": "Clear Filters",
     "filter": "Filter",
