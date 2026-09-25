@@ -16,7 +16,14 @@ import {
   checkIndicatorIconClass,
   checkIndicatorUncheckedClass,
 } from '../../ui/checkbox/check-indicator.styles';
-import {type BrowseFilterGroup, type BrowseFilterRangeCommit, type BrowseFilterToggle, type BrowseFilterValue} from '../facets';
+import {
+  type BrowseFilterGroup,
+  type BrowseFilterOpen,
+  type BrowseFilterRangeCommit,
+  type BrowseFilterSearch,
+  type BrowseFilterToggle,
+  type BrowseFilterValue,
+} from '../facets';
 import {BrowseFacetRangeInputsComponent} from './facet-range-inputs.component';
 
 const COLLAPSED_VALUE_COUNT = 8;
@@ -46,6 +53,8 @@ export class BrowseFilterSectionComponent<K extends string = string> implements 
   readonly alwaysShowBoxes = input(false, {transform: booleanAttribute});
   readonly toggleValue = output<BrowseFilterToggle<K>>();
   readonly commitRange = output<BrowseFilterRangeCommit<K>>();
+  readonly openChange = output<BrowseFilterOpen<K>>();
+  readonly searchChange = output<BrowseFilterSearch<K>>();
 
   private readonly injector = inject(Injector);
 
@@ -55,6 +64,7 @@ export class BrowseFilterSectionComponent<K extends string = string> implements 
   protected readonly searching = signal(false);
   protected readonly search = signal('');
   protected readonly isOpen = computed(() => this.disclosure() === 'open');
+  protected readonly revealed = computed(() => this.isOpen() && !this.group().loading);
 
   protected readonly checkIconClass = checkIndicatorIconClass;
   protected readonly expandRowClass =
@@ -68,10 +78,12 @@ export class BrowseFilterSectionComponent<K extends string = string> implements 
     if (group.defaultOpen || this.selectedCount() > 0) {
       this.disclosure.set('open');
     }
+    this.openChange.emit({key: group.key, open: this.isOpen()});
   }
 
   protected toggleOpen(): void {
     this.disclosure.set(this.isOpen() ? 'closed' : 'open');
+    this.openChange.emit({key: this.group().key, open: this.isOpen()});
   }
 
   protected readonly selectedCount = computed(() => {
@@ -109,9 +121,19 @@ export class BrowseFilterSectionComponent<K extends string = string> implements 
 
   protected toggleSearch(input: AppInputComponent): void {
     this.searching.update(searching => !searching);
+    this.emitSearch();
     if (this.searching()) {
       afterNextRender(() => input.focus({preventScroll: true}), {injector: this.injector});
     }
+  }
+
+  protected onSearchInput(value: string): void {
+    this.search.set(value);
+    this.emitSearch();
+  }
+
+  private emitSearch(): void {
+    this.searchChange.emit({key: this.group().key, term: this.activeQuery()});
   }
 
   protected readonly activeQuery = computed(() => this.searching() ? this.search().trim() : '');

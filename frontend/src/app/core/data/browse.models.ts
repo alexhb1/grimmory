@@ -31,6 +31,7 @@ export interface BrowseFacetGroup {
   values: BrowseFacetValue[];
   min?: number;
   max?: number;
+  complete?: boolean;
 }
 
 export interface BrowseFacetResult {

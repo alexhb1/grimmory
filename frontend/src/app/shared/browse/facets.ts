@@ -25,6 +25,7 @@ export interface BrowseFilterGroup<K extends string = string> {
   showAllValues?: boolean;
   range?: BrowseFilterRange;
   defaultOpen: boolean;
+  loading?: boolean;
   values: BrowseFilterValue[];
 }
 
@@ -38,6 +39,16 @@ export interface BrowseFilterRangeCommit<K extends string = string> {
   key: K;
   min: number | null;
   max: number | null;
+}
+
+export interface BrowseFilterOpen<K extends string = string> {
+  key: K;
+  open: boolean;
+}
+
+export interface BrowseFilterSearch<K extends string = string> {
+  key: K;
+  term: string;
 }
 
 export type BrowseFacetSelection<K extends string = string> =
@@ -147,27 +158,17 @@ export function browseFrozenFacetOrders<K extends string>(
   return Object.fromEntries(entries);
 }
 
-function orderedBrowseFacetKeys<K extends string>(
-  served: readonly BrowseFacetGroup[],
-  frozen: BrowseFrozenFacetOrders | undefined,
-  definitions: BrowseFacetDefinitions<K>,
-): K[] {
-  const available = new Set<string>(Object.keys(frozen ?? {}));
-  served.forEach(group => available.add(group.key));
-  return definitions.order.filter(key => available.has(key));
-}
-
 export function browseFilterGroups<K extends string>(
+  available: ReadonlySet<string>,
   served: readonly BrowseFacetGroup[],
   frozen: BrowseFrozenFacetOrders | undefined,
   definitions: BrowseFacetDefinitions<K>,
   selections: BrowseFacetSelection<K>,
 ): BrowseFilterGroup<K>[] {
   const servedByKey = new Map(served.map(group => [group.key, group]));
-  return orderedBrowseFacetKeys(served, frozen, definitions).flatMap(key => {
-    const group = buildFacetGroup(key, servedByKey.get(key), frozen?.[key], selections[key] ?? [], definitions);
-    return group ? [group] : [];
-  });
+  return definitions.order
+    .filter(key => available.has(key) || (selections[key]?.length ?? 0) > 0)
+    .map(key => buildFacetGroup(key, servedByKey.get(key), frozen?.[key], selections[key] ?? [], definitions));
 }
 
 function buildFacetGroup<K extends string>(
@@ -176,15 +177,10 @@ function buildFacetGroup<K extends string>(
   frozenValues: readonly BrowseFrozenFacetValue[] | undefined,
   selected: readonly string[],
   definitions: BrowseFacetDefinitions<K>,
-): BrowseFilterGroup<K> | null {
+): BrowseFilterGroup<K> {
   const servedValues = servedGroup?.values ?? [];
   const kind = definitions.kind?.(key);
   const domain = definitions.valueDomain?.(key);
-  const hasData = (frozenValues?.length ?? 0) > 0 || servedValues.some(item => item.count > 0)
-    || servedGroup?.min != null || selected.length > 0;
-  if (!hasData) {
-    return null;
-  }
   const label = (value: string, servedLabel: string) => definitions.valueLabel?.(key, value) ?? servedLabel;
   const base = {key, labelKey: definitions.labelKey(key), defaultOpen: definitions.openByDefault.has(key)};
   const range = kind === 'range'

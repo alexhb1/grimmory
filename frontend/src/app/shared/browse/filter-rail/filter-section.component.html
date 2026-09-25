@@ -35,7 +35,7 @@
   }
 </div>
 
-<div [class]="revealClass(isOpen())" [attr.inert]="isOpen() ? null : ''">
+<div [class]="revealClass(revealed())" [attr.inert]="revealed() ? null : ''">
   <div class="min-h-0 overflow-hidden">
     <div [class]="revealClass(searching())" [attr.inert]="searching() ? null : ''" data-search-wrap>
       <div class="min-h-0 overflow-hidden pt-px">
@@ -46,7 +46,7 @@
             [placeholder]="'browse.rail.searchValues' | transloco"
             [ariaLabel]="'browse.rail.searchValues' | transloco"
             [value]="search()"
-            (valueChange)="search.set($event)">
+            (valueChange)="onSearchInput($event)">
             <svg lucideSearch appInputLeading class="size-3.5" aria-hidden="true"></svg>
           </app-input>
         </div>
