@@ -149,7 +149,9 @@
             <app-browse-filter-rail
               [groups]="queries.railGroups()"
               (toggleValue)="onToggleFacet($event)"
-              (commitRange)="onCommitFacetRange($event)" />
+              (commitRange)="onCommitFacetRange($event)"
+              (openChange)="queries.setOpen($event)"
+              (searchChange)="queries.setSearch($event)" />
           }
         </div>
         </div>

@@ -191,12 +191,10 @@ describe('BookBrowsePageComponent', () => {
 
   it('pins the route scope onto page and facet requests, over any URL facet for the same key', async () => {
     const routerHarness = await routeTo('/library/3/books?facet=genre:Fantasy&facet=library:99');
-    const facetRequests = http.match(candidate => candidate.url === FACETS_URL);
-    expect(facetRequests.map(facets => facets.request.params.getAll('facet'))).toEqual(
-      expect.arrayContaining([['library:3'], ['genre:Fantasy', 'library:3']]),
-    );
-    expect(facetRequests).toHaveLength(2);
-    facetRequests.forEach(facets => facets.flush({facets: []}));
+    const index = http.expectOne(candidate => candidate.url === FACETS_URL);
+    expect(index.request.params.getAll('facet')).toEqual(['library:3']);
+    expect(index.request.params.get('values')).toBe('false');
+    index.flush({links: [], facets: []});
     const library = http.expectOne(candidate => candidate.url === PAGE_URL);
     expect(library.request.params.getAll('facet')).toEqual(['genre:Fantasy', 'library:3']);
     library.flush(bookPage([1], 1));

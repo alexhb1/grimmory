@@ -1,6 +1,12 @@
 import {Component, booleanAttribute, input, output} from '@angular/core';
 
-import {type BrowseFilterGroup, type BrowseFilterRangeCommit, type BrowseFilterToggle} from '../facets';
+import {
+  type BrowseFilterGroup,
+  type BrowseFilterOpen,
+  type BrowseFilterRangeCommit,
+  type BrowseFilterSearch,
+  type BrowseFilterToggle,
+} from '../facets';
 import {BrowseFilterSectionComponent} from './filter-section.component';
 
 @Component({
@@ -13,7 +19,9 @@ import {BrowseFilterSectionComponent} from './filter-section.component';
         [group]="group"
         [alwaysShowBoxes]="alwaysShowBoxes()"
         (toggleValue)="toggleValue.emit($event)"
-        (commitRange)="commitRange.emit($event)" />
+        (commitRange)="commitRange.emit($event)"
+        (openChange)="openChange.emit($event)"
+        (searchChange)="searchChange.emit($event)" />
     }
   `,
 })
@@ -22,4 +30,6 @@ export class BrowseFilterRailComponent<K extends string = string> {
   readonly alwaysShowBoxes = input(false, {transform: booleanAttribute});
   readonly toggleValue = output<BrowseFilterToggle<K>>();
   readonly commitRange = output<BrowseFilterRangeCommit<K>>();
+  readonly openChange = output<BrowseFilterOpen<K>>();
+  readonly searchChange = output<BrowseFilterSearch<K>>();
 }

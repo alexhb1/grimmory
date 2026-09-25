@@ -52,7 +52,9 @@ import {createBookBrowseUrlState} from './book-browse-url-state';
           alwaysShowBoxes
           [groups]="railGroups()"
           (toggleValue)="onToggle($event)"
-          (commitRange)="onCommitRange($event)" />
+          (commitRange)="onCommitRange($event)"
+          (openChange)="queries.setOpen($event)"
+          (searchChange)="queries.setSearch($event)" />
       </div>
 
       <div
@@ -89,7 +91,7 @@ export class BookBrowseFilterPageComponent {
   private readonly scope = computed(() =>
     bookBrowseScope(this.route.snapshot.paramMap, this.route.snapshot.data),
   );
-  private readonly queries = createBookBrowseQueries({
+  protected readonly queries = createBookBrowseQueries({
     selection: this.staged,
     query: this.debouncedQuery,
     scope: this.scope,

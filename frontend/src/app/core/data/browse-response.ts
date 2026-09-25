@@ -31,6 +31,7 @@ interface RawFacetGroup {
 }
 
 interface RawFacetResponse {
+  links: RawLink[];
   facets: RawFacetGroup[];
 }
 
@@ -53,6 +54,13 @@ export function mapBrowseFacetResult(response: RawFacetResponse): BrowseFacetRes
     }
   }
   return {facets, sortTokens};
+}
+
+export function mapBrowseFacetPage(response: RawFacetResponse): BrowseFacetGroup {
+  return {
+    ...mapBrowseFacetGroup(response.facets[0]),
+    complete: !response.links.some(link => normalizeRel(link.rel).includes('next')),
+  };
 }
 
 function mapBrowseFacetGroup(group: RawFacetGroup): BrowseFacetGroup {
