@@ -5,7 +5,7 @@ import {formatRangeLabel, formatRangeToken, parseRangeToken} from './facet-range
 export interface BrowseFilterValue {
   value: string;
   label: string;
-  count: number;
+  count: number | null;
   selected: boolean;
   stars?: {value: number; max: number};
   icon?: IconSelection;
@@ -193,13 +193,17 @@ function buildFacetGroup<K extends string>(
   if (kind === 'range') {
     return {...base, range, showAllValues: false, values: []};
   }
+  const counts = new Map(servedValues.map(item => [item.value, item.count]));
+  const complete = servedGroup?.complete ?? false;
   const values = plainFacetValues(
-    servedValues, frozenValues, selected, label, value => definitions.valueIcon?.(key, value) ?? undefined,
+    servedValues, frozenValues, selected, label,
+    value => definitions.valueIcon?.(key, value) ?? undefined,
+    value => counts.get(value) ?? (complete ? 0 : null),
   );
   if (domain) {
     return {...base, showAllValues: true, values: applyDomain(values, domain, label)};
   }
-  const ordered = orderFacetValues(values, definitions.valueOrder?.(key), frozenValues);
+  const ordered = orderFacetValues(values, counts, definitions.valueOrder?.(key), frozenValues);
   return {...base, showAllValues: false, values: ordered};
 }
 
@@ -261,9 +265,9 @@ function plainFacetValues(
   selected: readonly string[],
   label: (value: string, servedLabel: string) => string,
   icon: (value: string) => IconSelection | undefined,
+  count: (value: string) => number | null,
 ): BrowseFilterValue[] {
   const selectedValues = new Set(selected);
-  const countsByValue = new Map(servedValues.map(option => [option.value, option.count]));
   const labelsByValue = knownFacetLabels(servedValues, frozenValues);
   for (const value of selectedValues) {
     if (!labelsByValue.has(value)) {
@@ -274,7 +278,7 @@ function plainFacetValues(
     value,
     label: label(value, title),
     icon: icon(value),
-    count: countsByValue.get(value) ?? 0,
+    count: count(value),
     selected: selectedValues.has(value),
   }));
 }
@@ -290,24 +294,25 @@ function applyDomain(
 
 function orderFacetValues(
   values: BrowseFilterValue[],
+  served: ReadonlyMap<string, number>,
   order: BrowseFacetValueOrder | undefined,
   frozenValues: readonly BrowseFrozenFacetValue[] | undefined,
 ): BrowseFilterValue[] {
   const ordered = order ? sortFacetValues(values, order) : values;
   const sinkUnavailable = frozenValues !== undefined && order === undefined;
-  const zeroCountSelections: BrowseFilterValue[] = [];
+  const unservedSelections: BrowseFilterValue[] = [];
   const remainingValues: BrowseFilterValue[] = [];
   const unavailableValues: BrowseFilterValue[] = [];
   for (const item of ordered) {
-    if (item.selected && item.count === 0) {
-      zeroCountSelections.push(item);
-    } else if (sinkUnavailable && item.count === 0) {
+    if (item.selected && !served.has(item.value)) {
+      unservedSelections.push(item);
+    } else if (sinkUnavailable && !served.has(item.value)) {
       unavailableValues.push(item);
     } else {
       remainingValues.push(item);
     }
   }
-  return [...zeroCountSelections, ...remainingValues, ...unavailableValues];
+  return [...unservedSelections, ...remainingValues, ...unavailableValues];
 }
 
 function sortFacetValues(values: BrowseFilterValue[], order: BrowseFacetValueOrder): BrowseFilterValue[] {

@@ -4,11 +4,12 @@ import {browseFilterGroups, browseFrozenFacetOrders, withBrowseFacetRange} from 
 import {type BrowseFacetGroup} from '../../../core/data/browse.models';
 import {bookFacetDefinitions} from './book-browse-facet-definitions';
 
-function group(key: string, values: [string, number][]): BrowseFacetGroup {
+function group(key: string, values: [string, number][], complete = true): BrowseFacetGroup {
   return {
     key,
     title: key,
     values: values.map(([value, count]) => ({value, title: value, count, selected: false})),
+    complete,
   };
 }
 
@@ -38,8 +39,8 @@ describe('book browse facets', () => {
     expect(narrowed[0].values.map(item => [item.value, item.count]))
       .toEqual([['Comedy', 7], ['Gothic', 0], ['Drama', 0]]);
 
-    const selectedAtZero = browseFilterGroups(AVAILABLE, [group('genre', [['Comedy', 7], ['Gothic', 0]])], frozen, definitions, {genre: ['Gothic']});
-    expect(selectedAtZero[0].values.map(item => item.value)).toEqual(['Gothic', 'Comedy', 'Drama']);
+    const selectedUnserved = browseFilterGroups(AVAILABLE, [group('genre', [['Comedy', 7]])], frozen, definitions, {genre: ['Drama']});
+    expect(selectedUnserved[0].values.map(item => item.value)).toEqual(['Drama', 'Comedy', 'Gothic']);
 
     const grown = browseFilterGroups(
       AVAILABLE,
@@ -49,6 +50,19 @@ describe('book browse facets', () => {
       {},
     );
     expect(grown[0].values.map(item => item.value)).toEqual(['Gothic', 'Comedy', 'Drama', 'Farce']);
+  });
+
+  it('leaves counts unknown for values missing from a cut-off list', () => {
+    const frozen = browseFrozenFacetOrders([group('author', [['Gaiman', 40], ['Pratchett', 30]])], definitions);
+    const authors = browseFilterGroups(
+      AVAILABLE,
+      [group('author', [['Pratchett', 12]], false)],
+      frozen,
+      definitions,
+      {author: ['Lindbergh']},
+    ).find(item => item.key === 'author')!;
+    expect(authors.values.map(item => [item.value, item.count]))
+      .toEqual([['Lindbergh', null], ['Pratchett', 12], ['Gaiman', null]]);
   });
 
   it('replaces a numeric range token rather than stacking it, and keeps band selections', () => {
