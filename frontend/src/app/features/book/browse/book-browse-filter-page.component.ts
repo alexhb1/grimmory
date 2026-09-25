@@ -8,7 +8,6 @@ import {BrowseFilterRailComponent} from '../../../shared/browse/filter-rail/filt
 import {
   countBrowseFacetValues,
   toggleBrowseFacetValue,
-  withBrowseFacetRange,
   type BrowseFilterRangeCommit,
   type BrowseFilterToggle,
 } from '../../../shared/browse/facets';
@@ -136,8 +135,7 @@ export class BookBrowseFilterPageComponent {
   }
 
   protected onCommitRange(commit: BrowseFilterRangeCommit<BookQueryFacetKey>): void {
-    this.staged.update(current =>
-      withBrowseFacetRange(current, commit.key, commit.min, commit.max, this.queries.definitions()));
+    this.staged.update(current => this.queries.withRange(current, commit));
   }
 
   protected onClear(): void {

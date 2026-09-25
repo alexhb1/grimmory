@@ -1,12 +1,6 @@
 import {type BrowseFacetGroup} from '../../core/data/browse.models';
 import {type IconSelection} from '../icons/icon-selection';
-import {
-  bucketRangeTokens,
-  formatRangeLabel,
-  formatRangeToken,
-  parseRangeToken,
-  type BrowseFacetBucket,
-} from './facet-ranges';
+import {formatRangeLabel, formatRangeToken, parseRangeToken} from './facet-ranges';
 
 export interface BrowseFilterValue {
   value: string;
@@ -104,11 +98,10 @@ export function withBrowseFacetRange<K extends string>(
   key: K,
   min: number | null,
   max: number | null,
-  definitions: BrowseFacetDefinitions<K>,
+  bandTokens: ReadonlySet<string>,
 ): BrowseFacetSelection<K> {
   const clamp = (value: number | null) => (value == null ? null : Math.max(0, value));
-  const bucketTokens = bucketRangeTokens(definitions.valueBuckets?.(key));
-  const kept = browseFacetValues(selection, key).filter(value => bucketTokens.has(value));
+  const kept = browseFacetValues(selection, key).filter(value => bandTokens.has(value));
   const token = formatRangeToken({min: clamp(min), max: clamp(max)});
   return withBrowseFacetValues(selection, key, token == null ? kept : [...kept, token]);
 }
@@ -121,7 +114,8 @@ export interface BrowseFacetDefinitions<K extends string> {
   readonly kind?: (key: K) => BrowseFacetKind | undefined;
   readonly valueOrder?: (key: K) => BrowseFacetValueOrder | undefined;
   readonly valueDomain?: (key: K) => readonly string[] | undefined;
-  readonly valueBuckets?: (key: K) => readonly BrowseFacetBucket[] | undefined;
+  readonly banded?: (key: K) => boolean;
+  readonly starScale?: (key: K) => number | undefined;
   readonly fileSize?: (key: K) => boolean;
   readonly valueLabel?: (key: K, value: string) => string | null;
   readonly valueIcon?: (key: K, value: string) => IconSelection | null;
@@ -185,19 +179,20 @@ function buildFacetGroup<K extends string>(
 ): BrowseFilterGroup<K> | null {
   const servedValues = servedGroup?.values ?? [];
   const kind = definitions.kind?.(key);
-  const buckets = definitions.valueBuckets?.(key);
   const domain = definitions.valueDomain?.(key);
-  const hasData = (frozenValues?.length ?? 0) > 0 || servedValues.length > 0 || selected.length > 0;
+  const hasData = (frozenValues?.length ?? 0) > 0 || servedValues.some(item => item.count > 0)
+    || servedGroup?.min != null || selected.length > 0;
   if (!hasData) {
     return null;
   }
   const label = (value: string, servedLabel: string) => definitions.valueLabel?.(key, value) ?? servedLabel;
   const base = {key, labelKey: definitions.labelKey(key), defaultOpen: definitions.openByDefault.has(key)};
   const range = kind === 'range'
-    ? buildFacetRange(servedValues, selected, buckets, definitions.fileSize?.(key) ?? false)
+    ? buildFacetRange(servedGroup, selected, definitions.fileSize?.(key) ?? false)
     : undefined;
-  if (buckets) {
-    return {...base, range, showAllValues: true, values: bucketFacetValues(buckets, servedValues, selected, label)};
+  if (definitions.banded?.(key)) {
+    const values = bandFacetValues(servedValues, selected, label, definitions.starScale?.(key));
+    return {...base, range, showAllValues: true, values};
   }
   if (kind === 'range') {
     return {...base, range, showAllValues: false, values: []};
@@ -213,58 +208,39 @@ function buildFacetGroup<K extends string>(
 }
 
 function buildFacetRange(
-  servedValues: BrowseFacetGroup['values'],
+  servedGroup: BrowseFacetGroup | undefined,
   selected: readonly string[],
-  buckets: readonly BrowseFacetBucket[] | undefined,
   fileSize: boolean,
 ): BrowseFilterRange {
-  const numeric = servedValues
-    .map(item => Number(item.value))
-    .filter(value => Number.isFinite(value));
-  const bucketTokens = bucketRangeTokens(buckets);
-  const token = selected.find(value => !bucketTokens.has(value));
+  const bandTokens = new Set(servedGroup?.values.map(item => item.value));
+  const token = selected.find(value => !bandTokens.has(value));
   const parsed = token != null ? parseRangeToken(token) : null;
   return {
     min: parsed?.min ?? null,
     max: parsed?.max ?? null,
-    boundsMin: numeric.length > 0 ? Math.floor(Math.min(...numeric)) : null,
-    boundsMax: numeric.length > 0 ? Math.ceil(Math.max(...numeric)) : null,
+    boundsMin: servedGroup?.min != null ? Math.floor(servedGroup.min) : null,
+    boundsMax: servedGroup?.max != null ? Math.ceil(servedGroup.max) : null,
     fileSize,
   };
 }
 
-function bucketFacetValues(
-  buckets: readonly BrowseFacetBucket[],
+function bandFacetValues(
   servedValues: BrowseFacetGroup['values'],
   selected: readonly string[],
   label: (value: string, servedLabel: string) => string,
+  starScale: number | undefined,
 ): BrowseFilterValue[] {
   const selectedSet = new Set(selected);
-  const starScale = Math.max(0, ...buckets.map(bucket => bucket.stars ?? 0));
-  return buckets.flatMap(bucket => {
-    const value = formatRangeToken(bucket);
-    const bucketLabel = formatRangeLabel(bucket);
-    if (value === null || bucketLabel === null) {
-      return [];
-    }
-    return [{
-      value,
-      label: label(value, bucketLabel),
-      count: countWithinBucket(servedValues, bucket),
-      selected: selectedSet.has(value),
-      stars: bucket.stars != null ? {value: bucket.stars, max: starScale} : undefined,
-    }];
+  return servedValues.map(item => {
+    const range = parseRangeToken(item.value);
+    return {
+      value: item.value,
+      label: label(item.value, (range && formatRangeLabel(range)) ?? item.title),
+      count: item.count,
+      selected: selectedSet.has(item.value),
+      stars: starScale != null ? {value: range?.max ?? starScale, max: starScale} : undefined,
+    };
   });
-}
-
-function countWithinBucket(servedValues: BrowseFacetGroup['values'], bucket: BrowseFacetBucket): number {
-  return servedValues.reduce((sum, item) => {
-    const parsed = Number(item.value);
-    if (Number.isNaN(parsed)) return sum;
-    if (bucket.min != null && parsed < bucket.min) return sum;
-    if (bucket.max != null && parsed > bucket.max) return sum;
-    return sum + item.count;
-  }, 0);
 }
 
 function knownFacetLabels(
