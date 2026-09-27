@@ -347,6 +347,7 @@ class BookFacetServiceTest {
                 .doesNotContain("mood", "goodreads_rating");
         assertThat(group(response, "genre").links()).isEmpty();
         assertThat(group(response, "sort")).isEqualTo(group(facetService.getFacets(null, null, null, true), "sort"));
+        assertThat(response.links().getFirst().href()).isEqualTo("/api/v1/books/facets?values=false");
     }
 
     @Test

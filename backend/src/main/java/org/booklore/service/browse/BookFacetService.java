@@ -165,7 +165,8 @@ public class BookFacetService {
                     groups.add(new FacetGroup(new Metadata("facet", def.key(), def.title()), List.of()));
                 }
             }
-            List<Link> links = List.of(Link.json(List.of("self"), href(FACET_PATH, preserved)));
+            String selfParams = includeValues ? preserved : joinParams(preserved, "values=false");
+            List<Link> links = List.of(Link.json(List.of("self"), href(FACET_PATH, selfParams)));
             return new FacetGroupsResponse(links, groups);
         });
     }
