@@ -9,6 +9,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BookSetting } from '../../book/model/book.model';
 import { UserService } from '../../settings/user-management/user.service';
 import { AuthService } from '../../../shared/service/auth.service';
+import { StatusBarColorDirective } from '../shared/status-bar-color.directive';
+import { enterFullscreenWhileReading } from '../shared/reader-fullscreen';
 import { API_CONFIG } from '../../../core/config/api-config';
 import { PdfAnnotationService } from '../../../shared/service/pdf-annotation.service';
 import { ReaderIconComponent } from '../../readers/ebook-reader/shared/icon.component';
@@ -40,7 +42,7 @@ type EmbedPdfMessage =
 @Component({
   selector: 'app-pdf-reader',
   standalone: true,
-  imports: [CommonModule, ProgressSpinner, TranslocoPipe, ReaderIconComponent, FormsModule, PdfSidebarComponent],
+  imports: [CommonModule, ProgressSpinner, TranslocoPipe, ReaderIconComponent, FormsModule, PdfSidebarComponent, StatusBarColorDirective],
   providers: [EmbedPdfBookService, PdfBookmarkService],
   templateUrl: './pdf-reader.component.html',
   styleUrl: './pdf-reader.component.scss',
@@ -195,6 +197,9 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   private userPanPreferred = false;
 
+  constructor() {
+    enterFullscreenWhileReading(() => document.documentElement);
+  }
 
   ngOnInit(): void {
     const dismissed = localStorage.getItem(this.DOC_VIEWER_DISMISSED_KEY);

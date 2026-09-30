@@ -5,7 +5,7 @@
 }
 
 @if (!isLoading()) {
-<div class="pdf-reader-container" [class.dark]="isDarkTheme()" [class.v-hidden]="viewerMode() === 'book' && !isInitialScrollDone()" [class.footer-hidden]="!footerVisible()">
+<div class="pdf-reader-container" appStatusBarColor [class.dark]="isDarkTheme()" [class.v-hidden]="viewerMode() === 'book' && !isInitialScrollDone()" [class.footer-hidden]="!footerVisible()">
 
   <!-- Footer trigger zone -->
   <div class="footer-trigger-zone" [class.inactive]="footerVisible()" (mouseenter)="onFooterTriggerZoneEnter()"></div>

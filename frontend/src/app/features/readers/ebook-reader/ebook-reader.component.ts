@@ -34,6 +34,8 @@ import {EbookShortcutsHelpComponent} from './dialogs/shortcuts-help.component';
 import {TranslocoPipe} from '@jsverse/transloco';
 import {RelocateProgressData} from './state/progress.service';
 import {WakeLockService} from '../../../shared/service/wake-lock.service';
+import {StatusBarColorDirective} from '../shared/status-bar-color.directive';
+import {enterFullscreenWhileReading} from '../shared/reader-fullscreen';
 import {ViewEvent} from './core/view-manager.service';
 import {PageTitleService} from '../../../shared/service/page-title.service';
 
@@ -47,6 +49,7 @@ interface PendingInitialChapterRestore {
   selector: 'app-ebook-reader',
   standalone: true,
   imports: [
+    StatusBarColorDirective,
     ReaderHeaderComponent,
     ReaderSettingsDialogComponent,
     ReaderQuickSettingsComponent,
@@ -138,6 +141,7 @@ export class EbookReaderComponent implements OnInit {
   readonly isCurrentCfiBookmarked = this.headerService.isCurrentCfiBookmarked;
 
   constructor() {
+    enterFullscreenWhileReading(() => document.documentElement);
     this.destroyRef.onDestroy(() => {
       this.wakeLockService.disable();
       this.viewManager.destroy();

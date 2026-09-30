@@ -16,6 +16,8 @@ import { ProgressSpinner } from '@openng/optimus-ui/progressspinner';
 import { FormsModule } from "@angular/forms";
 import { ReadingSessionService } from '../../../shared/service/reading-session.service';
 import { WakeLockService } from '../../../shared/service/wake-lock.service';
+import { StatusBarColorDirective } from '../shared/status-bar-color.directive';
+import { enterFullscreenWhileReading } from '../shared/reader-fullscreen';
 import { ReaderHeaderFooterVisibilityManager } from '../ebook-reader';
 
 import { CbxHeaderComponent } from './layout/header/cbx-header.component';
@@ -46,6 +48,7 @@ import {computeCbxSpreads, findCbxSpreadForPage} from './core/cbx-spread.util';
   selector: 'app-cbx-reader',
   standalone: true,
   imports: [
+    StatusBarColorDirective,
     ProgressSpinner,
     FormsModule,
     TranslocoPipe,
@@ -285,6 +288,8 @@ export class CbxReaderComponent implements OnInit, OnDestroy {
   }
 
   constructor() {
+    enterFullscreenWhileReading(() => this.readerRootRef()?.nativeElement ?? document.documentElement);
+
     effect(() => {
       this.sidebarService.bookmarks();
       this.updateBookmarkState();

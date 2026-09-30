@@ -52,7 +52,7 @@
 
   <div #magnifierLens class="magnifier-lens"></div>
 
-  <div #imageScrollHost class="image-container" [class.magnifier-active]="isMagnifierActive()"
+  <div #imageScrollHost appStatusBarColor class="image-container" [class.magnifier-active]="isMagnifierActive()"
     [class.two-page-view]="isTwoPageView() && scrollMode() === CbxScrollMode.PAGINATED"
     [class.infinite-scroll]="scrollMode() === CbxScrollMode.INFINITE"
     [class.long-strip]="scrollMode() === CbxScrollMode.LONG_STRIP"
