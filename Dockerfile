@@ -6,8 +6,8 @@ ENV PATH="${PNPM_HOME}/bin:${PATH}"
 WORKDIR /workspace
 
 COPY package.json ./
-RUN ENV="/root/.shrc" SHELL="/bin/sh" \
-    npx --yes get-pnpm "$(node -p "require('./package.json').packageManager.split('@')[1]")"
+RUN PNPM_VERSION="$(node -p "require('./package.json').packageManager.split('@')[1]")" && \
+    ENV="/root/.shrc" SHELL="/bin/sh" npx --yes get-pnpm "$PNPM_VERSION"
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/pnpm/store \
