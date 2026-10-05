@@ -154,6 +154,7 @@ export class BookBrowseFilterPageComponent {
     return {
       title: this.transloco.translate('browse.filter'),
       breadcrumbs: [
+        ...this.queries.parentBreadcrumbs(),
         {
           label: this.queries.title(),
           commands: ['/', ...this.route.parent!.snapshot.url.map(segment => segment.path)],

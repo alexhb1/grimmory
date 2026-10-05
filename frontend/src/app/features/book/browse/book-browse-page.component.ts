@@ -290,9 +290,12 @@ export class BookBrowsePageComponent {
 
   protected readonly pageHeader = computed<PageHeader>(() => {
     const total = this.presentation.total();
+    const title = this.queries.title();
+    const parents = this.queries.parentBreadcrumbs();
     return {
-      title: this.queries.title(),
+      title,
       count: total == null ? undefined : total.toLocaleString(),
+      breadcrumbs: parents.length > 0 ? [...parents, {label: title}] : undefined,
     };
   });
 
