@@ -164,15 +164,6 @@ export function countBrowseFacetValues(selection: BrowseFacetSelection): number 
   return Object.values(selection).reduce((count, values) => count + (values?.length ?? 0), 0);
 }
 
-export function requireBrowseFacetValue<K extends string>(
-  selection: BrowseFacetSelection<K>,
-  key: K,
-  value: string,
-): BrowseFacetSelection<K> {
-  const required = browseFacetValues(selection, `+${key}`);
-  return required.includes(value) ? selection : withBrowseFacetValues(selection, `+${key}`, [...required, value]);
-}
-
 export function withBrowseFacetRange<K extends string>(
   selection: BrowseFacetSelection<K>,
   key: K,
