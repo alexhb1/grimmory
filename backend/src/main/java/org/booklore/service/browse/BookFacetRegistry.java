@@ -18,7 +18,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -60,12 +59,12 @@ public class BookFacetRegistry {
             case "tag" -> namedFilter(TagEntity.class, "tags", values, mode);
             case "mood" -> namedFilter(MoodEntity.class, "moods", values, mode);
             case "comic_character" -> BookFilterSpecification.withComicCollection("characters", values, mode,
-                    cachedIds(ComicCharacterEntity.class));
+                    idsFor(ComicCharacterEntity.class));
             case "comic_team" -> BookFilterSpecification.withComicCollection("teams", values, mode,
-                    cachedIds(ComicTeamEntity.class));
+                    idsFor(ComicTeamEntity.class));
             case "comic_location" -> BookFilterSpecification.withComicCollection("locations", values, mode,
-                    cachedIds(ComicLocationEntity.class));
-            case "comic_creator" -> BookFilterSpecification.withComicCreators(values, mode, cachedIds(ComicCreatorEntity.class));
+                    idsFor(ComicLocationEntity.class));
+            case "comic_creator" -> BookFilterSpecification.withComicCreators(values, mode, idsFor(ComicCreatorEntity.class));
             case "series" -> BookFilterSpecification.inSeriesMulti(values, mode);
             case "language" -> BookFilterSpecification.withLanguages(values, mode);
             case "publisher" -> BookFilterSpecification.withPublishers(values, mode);
@@ -94,12 +93,11 @@ public class BookFacetRegistry {
     }
 
     private Specification<BookEntity> namedFilter(Class<?> type, String path, List<String> values, String mode) {
-        return BookFilterSpecification.withMetadataCollection(path, values, mode, cachedIds(type));
+        return BookFilterSpecification.withMetadataCollection(path, values, mode, idsFor(type));
     }
 
-    private Function<String, List<Long>> cachedIds(Class<?> type) {
-        var idsByName = new HashMap<String, List<Long>>();
-        return name -> idsByName.computeIfAbsent(name, value -> matchingIds(type, value));
+    private Function<String, List<Long>> idsFor(Class<?> type) {
+        return name -> matchingIds(type, name);
     }
 
     private List<Long> matchingIds(Class<?> type, String name) {
