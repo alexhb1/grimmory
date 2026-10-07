@@ -106,7 +106,7 @@ public class BookBrowseService {
         Long userId = scope.userId();
 
         Specification<BookEntity> spec = filterSpecifications
-                .base(null, Map.of(), FacetLogic.AND, scope, null)
+                .base(null, Map.of(), scope, null)
                 .and((root, query, cb) -> root.get("id").in(ids));
 
         List<Book> books = bookQueryService.findBooks(spec, userId);
