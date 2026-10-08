@@ -1,7 +1,12 @@
 import {ChangeDetectionStrategy, computed, Component, DestroyRef, effect, inject, input, linkedSignal, output, untracked} from '@angular/core';
 import {UpperCasePipe} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {injectQuery} from '@tanstack/angular-query-experimental';
 import {Book, BookRecommendation, BookType, FileInfo} from '../../../../../book/model/book.model';
+import {BookMenuComponent} from '../../../../../book/components/book-menu/book-menu.component';
+import {BookRowComponent} from '../../../../../book/components/book-row/book-row.component';
+import {type BookSortTerm} from '../../../../../book/data/book-query-params';
+import {BookQueryService} from '../../../../../book/data/book-query.service';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from '@openng/optimus-ui/tabs';
 import {InfiniteScrollDirective} from 'ngx-infinite-scroll';
 import {BookCardLiteComponent} from '../../../../../book/components/book-card-lite/book-card-lite-component';
@@ -66,6 +71,9 @@ interface MetadataTab {
 
 const metadataTab = (value: MetadataTabValue, icon: string, labelKey: string): MetadataTab => ({value, icon, labelKey});
 
+const SERIES_SORT: readonly BookSortTerm[] = [{key: 'seriesNumber', direction: 'asc'}];
+const ROW_SIZE = 24;
+
 @Component({
   selector: 'app-metadata-tabs',
   standalone: true,
@@ -78,6 +86,8 @@ const metadataTab = (value: MetadataTabValue, icon: string, labelKey: string): M
     Tabs,
     InfiniteScrollDirective,
     BookCardLiteComponent,
+    BookMenuComponent,
+    BookRowComponent,
     BookReviewsComponent,
     BookNotesComponent,
     BookReadingSessionsComponent,
@@ -92,10 +102,9 @@ const metadataTab = (value: MetadataTabValue, icon: string, labelKey: string): M
 })
 export class MetadataTabsComponent {
   readonly book = input.required<Book>();
-  readonly bookInSeries = input<Book[]>([]);
-  readonly hasSeries = input(false);
   readonly recommendedBooks = input<BookRecommendation[]>([]);
 
+  private readonly bookQuery = inject(BookQueryService);
   protected urlHelper = inject(UrlHelperService);
   private bookMetadataManageService = inject(BookMetadataManageService);
   private audiobookService = inject(AudiobookService);
@@ -112,12 +121,15 @@ export class MetadataTabsComponent {
   });
 
   readonly readBook = output<ReadEvent>();
+  readonly openBook = output<number>();
   readonly downloadBook = output<DownloadEvent>();
   readonly downloadFile = output<DownloadAdditionalFileEvent>();
   readonly downloadAllFiles = output<DownloadAllFilesEvent>();
   readonly deleteBookFile = output<DeleteBookFileEvent>();
   readonly deleteSupplementaryFile = output<DeleteSupplementaryFileEvent>();
   readonly detachBookFile = output<DetachBookFileEvent>();
+
+  private readonly seriesName = computed(() => this.book().metadata?.seriesName);
 
   readonly supportsDualCovers = computed(() => this.bookMetadataManageService.supportsDualCovers(this.book()));
   readonly fileState = computed(() => {
@@ -134,7 +146,7 @@ export class MetadataTabsComponent {
     };
   });
   readonly availableTabs = computed<MetadataTab[]>(() => [
-    ...(this.hasSeries() ? [metadataTab('series', 'pi pi-ethereum', 'moreInSeries')] : []),
+    ...(this.seriesName() ? [metadataTab('series', 'pi pi-ethereum', 'moreInSeries')] : []),
     metadataTab('similar', 'pi pi-bookmark', 'similarBooks'),
     ...(this.supportsDualCovers() ? [metadataTab('covers', 'pi pi-images', 'covers')] : []),
     ...(this.fileState().hasAudiobookFormat ? [metadataTab('chapters', 'pi pi-headphones', 'chapters')] : []),
@@ -149,6 +161,15 @@ export class MetadataTabsComponent {
       previous && availableTabs.some(tab => tab.value === previous.value)
         ? previous.value
         : availableTabs[0]?.value ?? 'similar',
+  });
+
+  protected readonly seriesQuery = injectQuery(() => ({
+    ...this.bookQuery.page({facets: {series: [this.seriesName() ?? '']}, sort: SERIES_SORT, size: ROW_SIZE}),
+    enabled: this.activeTab() === 'series',
+  }));
+  protected readonly seriesCards = computed(() => {
+    const bookId = this.book().id;
+    return (this.seriesQuery.data()?.content ?? []).filter(book => book.id !== bookId).map(book => ({book}));
   });
 
   constructor() {
