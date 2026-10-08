@@ -5,7 +5,7 @@ import {BookService} from '../../../../book/service/book.service';
 import {BookFileService} from '../../../../book/service/book-file.service';
 import {Rating, RatingRateEvent} from '@openng/optimus-ui/rating';
 import {FormsModule} from '@angular/forms';
-import {Book, BookFile, BookMetadata, BookRecommendation, BookType, ComicMetadata, FileInfo, ReadStatus} from '../../../../book/model/book.model';
+import {Book, BookFile, BookMetadata, BookType, ComicMetadata, FileInfo, ReadStatus} from '../../../../book/model/book.model';
 import {UrlHelperService} from '../../../../../shared/service/url-helper.service';
 import {CoverComponent} from '../../../../../shared/components/cover/cover.component';
 import {UserService} from '../../../../settings/user-management/user.service';
@@ -84,7 +84,6 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
   private readonly bookNavigationService = inject(BookNavigationService);
   private readonly metadataHostService = inject(BookMetadataHostService);
   private readonly currentBook = signal<Book | null>(null);
-  readonly recommendations = signal<BookRecommendation[]>([]);
 
   @Input()
   set book(value: Book | null) {
@@ -102,10 +101,6 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
     return this.currentBook();
   }
 
-  @Input()
-  set recommendedBooks(value: BookRecommendation[]) {
-    this.recommendations.set(value);
-  }
   private readonly activeLang = toSignal(this.t.langChanges$, {initialValue: this.t.getActiveLang()});
   private readonly userState = this.userService.currentUser;
   private readonly appSettings = this.appSettingsService.appSettings;

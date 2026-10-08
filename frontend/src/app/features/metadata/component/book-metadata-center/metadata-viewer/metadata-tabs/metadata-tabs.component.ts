@@ -2,20 +2,19 @@ import {ChangeDetectionStrategy, computed, Component, DestroyRef, effect, inject
 import {UpperCasePipe} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {injectQuery} from '@tanstack/angular-query-experimental';
-import {Book, BookRecommendation, FileInfo} from '../../../../../book/model/book.model';
+import {Book, FileInfo} from '../../../../../book/model/book.model';
 import {BookNavigationService, type ReadOptions} from '../../../../../book/service/book-navigation.service';
 import {BookMenuComponent} from '../../../../../book/components/book-menu/book-menu.component';
 import {BookRowComponent} from '../../../../../book/components/book-row/book-row.component';
 import {type BookSortTerm} from '../../../../../book/data/book-query-params';
 import {BookQueryService} from '../../../../../book/data/book-query.service';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from '@openng/optimus-ui/tabs';
-import {InfiniteScrollDirective} from 'ngx-infinite-scroll';
-import {BookCardLiteComponent} from '../../../../../book/components/book-card-lite/book-card-lite-component';
 import {BookReviewsComponent} from '../../../../../book/components/book-reviews/book-reviews.component';
 import {BookNotesComponent} from '../../../../../book/components/book-notes/book-notes-component';
 import {BookReadingSessionsComponent} from '../../book-reading-sessions/book-reading-sessions.component';
 import {Button} from '@openng/optimus-ui/button';
 import {Tooltip} from '@openng/optimus-ui/tooltip';
+import {AppSettingsService} from '../../../../../../shared/service/app-settings.service';
 import {UrlHelperService} from '../../../../../../shared/service/url-helper.service';
 import {CoverComponent} from '../../../../../../shared/components/cover/cover.component';
 import {BookMetadataManageService} from '../../../../../book/service/book-metadata-manage.service';
@@ -79,8 +78,6 @@ const ROW_SIZE = 24;
     TabPanel,
     TabPanels,
     Tabs,
-    InfiniteScrollDirective,
-    BookCardLiteComponent,
     BookMenuComponent,
     BookRowComponent,
     BookReviewsComponent,
@@ -97,6 +94,7 @@ const ROW_SIZE = 24;
 })
 export class MetadataTabsComponent {
   private readonly bookQuery = inject(BookQueryService);
+  private readonly appSettingsService = inject(AppSettingsService);
   protected urlHelper = inject(UrlHelperService);
   private readonly bookNavigation = inject(BookNavigationService);
   private readonly bookMetadataManageService = inject(BookMetadataManageService);
@@ -104,7 +102,6 @@ export class MetadataTabsComponent {
   private readonly t = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
   readonly book = input.required<Book>();
-  readonly recommendedBooks = input<BookRecommendation[]>([]);
 
   readonly audiobookInfo = linkedSignal<number, AudiobookInfo | null>({
     source: () => this.book().id,
@@ -124,6 +121,7 @@ export class MetadataTabsComponent {
   readonly detachBookFile = output<DetachBookFileEvent>();
 
   private readonly seriesName = computed(() => this.book().metadata?.seriesName);
+  private readonly similarEnabled = computed(() => this.appSettingsService.appSettings()?.similarBookRecommendation ?? false);
 
   readonly supportsDualCovers = computed(() => this.bookMetadataManageService.supportsDualCovers(this.book()));
   readonly fileState = computed(() => {
@@ -141,7 +139,7 @@ export class MetadataTabsComponent {
   });
   readonly availableTabs = computed<MetadataTab[]>(() => [
     ...(this.seriesName() ? [metadataTab('series', 'pi pi-ethereum', 'moreInSeries')] : []),
-    metadataTab('similar', 'pi pi-bookmark', 'similarBooks'),
+    ...(this.similarEnabled() ? [metadataTab('similar', 'pi pi-bookmark', 'similarBooks')] : []),
     ...(this.supportsDualCovers() ? [metadataTab('covers', 'pi pi-images', 'covers')] : []),
     ...(this.fileState().hasAudiobookFormat ? [metadataTab('chapters', 'pi pi-headphones', 'chapters')] : []),
     metadataTab('files', 'pi pi-folder-open', 'files'),
@@ -165,6 +163,11 @@ export class MetadataTabsComponent {
     const bookId = this.book().id;
     return (this.seriesQuery.data()?.content ?? []).filter(book => book.id !== bookId).map(book => ({book}));
   });
+  protected readonly similarQuery = injectQuery(() => ({
+    ...this.bookQuery.recommendations(this.book().id, ROW_SIZE),
+    enabled: this.activeTab() === 'similar',
+  }));
+  protected readonly similarCards = computed(() => (this.similarQuery.data() ?? []).map(book => ({book})));
 
   constructor() {
     effect(() => {
