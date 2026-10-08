@@ -1,6 +1,5 @@
 <ng-container *transloco="let t; prefix: 'metadata.tabs'">
 @let currentBook = book();
-@let recommendations = recommendedBooks();
 @let currentAudiobookInfo = audiobookInfo();
 @let currentFileState = fileState();
 <p-tabs lazy class="custom-p-tabs" [value]="activeTab()" scrollable (valueChange)="onTabChange($event)">
@@ -19,17 +18,7 @@
     </p-tabpanel>
     <p-tabpanel value="similar">
       <ng-template #content>
-        <div class="tab-content">
-          @if (recommendations.length > 0) {
-            <div class="dashboard-scroller-infinite" infiniteScroll [infiniteScrollDistance]="2" [infiniteScrollThrottle]="50" [horizontal]="true">
-              @for (recBook of recommendations; track recBook.book.id) {
-                <div class="dashboard-scroller-card">
-                  <app-book-card-lite-component [book]="recBook.book"></app-book-card-lite-component>
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <app-book-row [cards]="similarCards()" [status]="similarQuery.status()" [bookMenu]="bookMenu" (retry)="similarQuery.refetch()" (opened)="openBook.emit($event.id)" />
       </ng-template>
     </p-tabpanel>
     <p-tabpanel value="covers">
