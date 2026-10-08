@@ -88,11 +88,6 @@
       "createLibrary": "Create Your Library",
       "customize": "Customize Dashboard"
     },
-    "row": {
-      "previous": "Scroll back",
-      "next": "Scroll forward",
-      "loadError": "These books couldn't be loaded."
-    },
     "scroller": {
       "continueListening": "Continue Listening",
       "continueReading": "Continue Reading",
@@ -2843,6 +2838,11 @@
         "continueReading": "Continue reading",
         "readStatusMenu": "Change read status"
       }
+    },
+    "row": {
+      "previous": "Scroll back",
+      "next": "Scroll forward",
+      "loadError": "These books couldn't be loaded."
     },
     "menu": {
       "label": "Book actions",
