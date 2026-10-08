@@ -5,7 +5,7 @@ import {BookService} from '../../../../book/service/book.service';
 import {BookFileService} from '../../../../book/service/book-file.service';
 import {Rating, RatingRateEvent} from '@openng/optimus-ui/rating';
 import {FormsModule} from '@angular/forms';
-import {Book, BookFile, BookMetadata, BookRecommendation, BookType, ComicMetadata, FileInfo, ReadStatus} from '../../../../book/model/book.model';
+import {Book, BookFile, BookMetadata, BookType, ComicMetadata, FileInfo, ReadStatus} from '../../../../book/model/book.model';
 import {UrlHelperService} from '../../../../../shared/service/url-helper.service';
 import {CoverComponent} from '../../../../../shared/components/cover/cover.component';
 import {UserService} from '../../../../settings/user-management/user.service';
@@ -65,7 +65,6 @@ interface ProviderBadge {
 export class MetadataViewerComponent implements OnInit, AfterViewChecked {
   private bookService = inject(BookService);
   private currentBook = signal<Book | null>(null);
-  readonly recommendations = signal<BookRecommendation[]>([]);
 
   @Input()
   set book(value: Book | null) {
@@ -81,11 +80,6 @@ export class MetadataViewerComponent implements OnInit, AfterViewChecked {
 
   get book(): Book | null {
     return this.currentBook();
-  }
-
-  @Input()
-  set recommendedBooks(value: BookRecommendation[]) {
-    this.recommendations.set(value);
   }
 
   private readonly t = inject(TranslocoService);
