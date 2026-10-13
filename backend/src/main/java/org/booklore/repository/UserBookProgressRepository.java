@@ -1,10 +1,5 @@
 package org.booklore.repository;
 
-import org.booklore.model.dto.BookCompletionHeatmapDto;
-import org.booklore.model.dto.CompletionTimelineDto;
-import org.booklore.model.dto.ProgressPercentDto;
-import org.booklore.model.dto.RatingDistributionDto;
-import org.booklore.model.dto.StatusDistributionDto;
 import org.booklore.model.entity.UserBookProgressEntity;
 import org.booklore.model.enums.ReadStatus;
 import org.springframework.data.domain.Pageable;
@@ -68,25 +63,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
             @Param("userId") Long userId,
             @Param("snapshotId") String snapshotId
     );
-
-    @Query("""
-            SELECT
-                YEAR(COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime)) as year,
-                MONTH(COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime)) as month,
-                ubp.readStatus as readStatus,
-                COUNT(ubp) as bookCount
-            FROM UserBookProgressEntity ubp
-            WHERE ubp.user.id = :userId
-            AND ubp.readStatus IS NOT NULL
-            AND ubp.readStatus NOT IN (org.booklore.model.enums.ReadStatus.UNSET, org.booklore.model.enums.ReadStatus.UNREAD)
-            AND COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime) IS NOT NULL
-            AND YEAR(COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime)) = :year
-            GROUP BY YEAR(COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime)),
-                     MONTH(COALESCE(ubp.dateFinished, ubp.readStatusModifiedTime, ubp.lastReadTime)),
-                     ubp.readStatus
-            ORDER BY year DESC, month DESC
-            """)
-    List<CompletionTimelineDto> findCompletionTimelineByUser(@Param("userId") Long userId, @Param("year") int year);
 
     @Modifying
     @Transactional
@@ -169,55 +145,6 @@ public interface UserBookProgressRepository extends JpaRepository<UserBookProgre
           AND ubp.book.id IN :bookIds
     """)
     int bulkUpdatePersonalRating(@Param("userId") Long userId, @Param("bookIds") List<Long> bookIds, @Param("rating") Integer rating);
-
-    @Query("""
-            SELECT
-                YEAR(ubp.dateFinished) as year,
-                MONTH(ubp.dateFinished) as month,
-                COUNT(ubp) as count
-            FROM UserBookProgressEntity ubp
-            WHERE ubp.user.id = :userId
-            AND ubp.dateFinished IS NOT NULL
-            AND YEAR(ubp.dateFinished) >= :startYear
-            AND YEAR(ubp.dateFinished) <= :endYear
-            GROUP BY YEAR(ubp.dateFinished), MONTH(ubp.dateFinished)
-            ORDER BY year ASC, month ASC
-            """)
-    List<BookCompletionHeatmapDto> findBookCompletionHeatmap(
-            @Param("userId") Long userId,
-            @Param("startYear") int startYear,
-            @Param("endYear") int endYear);
-
-    @Query("""
-            SELECT ubp.personalRating as rating, COUNT(ubp) as count
-            FROM UserBookProgressEntity ubp
-            WHERE ubp.user.id = :userId
-            AND ubp.personalRating IS NOT NULL
-            GROUP BY ubp.personalRating
-            ORDER BY ubp.personalRating
-            """)
-    List<RatingDistributionDto> findRatingDistributionByUser(@Param("userId") Long userId);
-
-    @Query("""
-            SELECT ubp.readStatus as status, COUNT(ubp) as count
-            FROM UserBookProgressEntity ubp
-            WHERE ubp.user.id = :userId
-            AND ubp.readStatus IS NOT NULL
-            AND ubp.readStatus <> org.booklore.model.enums.ReadStatus.UNSET
-            GROUP BY ubp.readStatus
-            """)
-    List<StatusDistributionDto> findStatusDistributionByUser(@Param("userId") Long userId);
-
-    @Query("""
-            SELECT ubp.koreaderProgressPercent as koreaderProgressPercent,
-                   ubp.koboProgressPercent as koboProgressPercent,
-                   ubp.epubProgressPercent as epubProgressPercent,
-                   ubp.pdfProgressPercent as pdfProgressPercent,
-                   ubp.cbxProgressPercent as cbxProgressPercent
-            FROM UserBookProgressEntity ubp
-            WHERE ubp.user.id = :userId
-            """)
-    List<ProgressPercentDto> findAllProgressPercentsByUser(@Param("userId") Long userId);
 
     /**
      * Returns book IDs for in-progress reading (non-audiobook), ordered by most recently read.
