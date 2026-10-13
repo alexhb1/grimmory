@@ -4065,15 +4065,7 @@
       "insightPeakDecadeBooks": "{{ count }} knjiga"
     },
     "topItems": {
-      "axisNumberOfBooks": "Broj knjiga",
-      "dataTypes": {
-        "authors": "Autori",
-        "categories": "Kategorije",
-        "series": "Serijali",
-        "publishers": "Izdavači",
-        "tags": "Oznake",
-        "moods": "Raspoloženja"
-      }
+      "axisNumberOfBooks": "Broj knjiga"
     },
     "libraryFilter": {
       "allLibraries": "Sve zbirke"
@@ -4098,7 +4090,8 @@
       "readingDna": "Profil čitalačkog DNK-a",
       "readingHabits": "Analiza čitalačkih navika",
       "bookFlow": "Tijek knjige",
-      "publicationEra": "Doba objave u odnosu na ocjenu"
+      "publicationEra": "Doba objave u odnosu na ocjenu",
+      "readingJourney": "Čitalačko putovanje"
     },
     "sessionHeatmap": {
       "title": "Aktivnost sesija čitanja",
@@ -4110,9 +4103,6 @@
     "sessionTimeline": {
       "title": "Vremenska crta sesija čitanja",
       "description": "Tjedni pregled vaših sesija čitanja i obrazaca",
-      "previousWeek": "Prethodni tjedan",
-      "nextWeek": "Sljedeći tjedan",
-      "week": "Tjedan {{ number }}",
       "readingSession": "Sesija čitanja",
       "tooltipTime": "Vrijeme:",
       "tooltipDuration": "Trajanje:",
@@ -4127,10 +4117,6 @@
     },
     "favoriteDays": {
       "title": "Omiljeni dani čitanja",
-      "selectYear": "Odaberite godinu",
-      "selectMonth": "Odaberite mjesec",
-      "allYears": "Sve godine",
-      "allMonths": "Svi mjeseci",
       "axisDayOfWeek": "Dan u tjednu"
     },
     "personalRating": {
@@ -4257,6 +4243,15 @@
     "readingHeatmap": {
       "title": "Toplinska karta aktivnosti čitanja",
       "booksRead": "Pročitane knjige"
+    },
+    "readingJourney": {
+      "title": "Čitalačko putovanje",
+      "description": "Dodane knjige naspram završenih kroz vrijeme; razlika je vaš zaostatak",
+      "axisMonth": "Mjesec",
+      "axisCumulativeBooks": "Kumulativne knjige",
+      "legendBooksAdded": "Dodane knjige",
+      "legendBooksFinished": "Završene knjige",
+      "insightCurrentBacklog": "Trenutni zaostatak"
     },
     "ratingTaste": {
       "title": "Usporedba ukusa ocjenjivanja",
@@ -4767,6 +4762,29 @@
       "viewMode": "Prikaz",
       "density": "Veličina",
       "resetColumns": "Vrati na zadano"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Konfiguracija grafikona",
+      "resetOrder": "Vrati redoslijed"
+    },
+    "filter": {
+      "allYears": "Sve godine",
+      "selectYear": "Odaberite godinu",
+      "allMonths": "Svi mjeseci",
+      "selectMonth": "Odaberite mjesec",
+      "week": "Tjedan {{ number }}",
+      "previousWeek": "Prethodni tjedan",
+      "nextWeek": "Sljedeći tjedan",
+      "dataTypes": {
+        "authors": "Autori",
+        "categories": "Kategorije",
+        "series": "Serijali",
+        "publishers": "Izdavači",
+        "tags": "Oznake",
+        "moods": "Raspoloženja"
+      }
     }
   }
 }

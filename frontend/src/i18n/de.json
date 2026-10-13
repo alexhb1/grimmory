@@ -4064,15 +4064,7 @@
       "insightPeakDecadeBooks": "{{ count }} Bücher"
     },
     "topItems": {
-      "axisNumberOfBooks": "Anzahl der Bücher",
-      "dataTypes": {
-        "authors": "Autoren",
-        "categories": "Kategorien",
-        "series": "Serien",
-        "publishers": "Verlage",
-        "tags": "Schlagwörter",
-        "moods": "Stimmungen"
-      }
+      "axisNumberOfBooks": "Anzahl der Bücher"
     },
     "libraryFilter": {
       "allLibraries": "Alle Bibliotheken"
@@ -4097,7 +4089,8 @@
       "readingDna": "Lese-DNA-Profil",
       "readingHabits": "Lesegewohnheiten-Analyse",
       "bookFlow": "Buch Flow",
-      "publicationEra": "Veröffentlichungszeitraum vs. Bewertung"
+      "publicationEra": "Veröffentlichungszeitraum vs. Bewertung",
+      "readingJourney": "Lesereise"
     },
     "sessionHeatmap": {
       "title": "Lesesitzungsaktivität",
@@ -4109,9 +4102,6 @@
     "sessionTimeline": {
       "title": "Lesesitzungszeitachse",
       "description": "Wöchentliche Übersicht Ihrer Lesesitzungen und Muster",
-      "previousWeek": "Vorherige Woche",
-      "nextWeek": "Nächste Woche",
-      "week": "Woche {{ number }}",
       "readingSession": "Lesesitzung",
       "tooltipTime": "Zeit:",
       "tooltipDuration": "Dauer:",
@@ -4126,10 +4116,6 @@
     },
     "favoriteDays": {
       "title": "Bevorzugte Lesetage",
-      "selectYear": "Jahr auswählen",
-      "selectMonth": "Monat auswählen",
-      "allYears": "Alle Jahre",
-      "allMonths": "Alle Monate",
       "axisDayOfWeek": "Wochentag"
     },
     "personalRating": {
@@ -4256,6 +4242,15 @@
     "readingHeatmap": {
       "title": "Leseaktivitäts-Heatmap",
       "booksRead": "Gelesene Bücher"
+    },
+    "readingJourney": {
+      "title": "Lesereise",
+      "description": "Hinzugefügte vs. beendete Bücher im Zeitverlauf - die Lücke ist Ihr Rückstand",
+      "axisMonth": "Monat",
+      "axisCumulativeBooks": "Kumulierte Bücher",
+      "legendBooksAdded": "Bücher hinzugefügt",
+      "legendBooksFinished": "Bücher beendet",
+      "insightCurrentBacklog": "Aktueller Rückstand"
     },
     "ratingTaste": {
       "title": "Bewertungs-Geschmacksvergleich",
@@ -4763,6 +4758,29 @@
     },
     "sort": {
       "apply": "Anwenden"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Diagrammkonfiguration",
+      "resetOrder": "Reihenfolge zurücksetzen"
+    },
+    "filter": {
+      "allYears": "Alle Jahre",
+      "selectYear": "Jahr auswählen",
+      "allMonths": "Alle Monate",
+      "selectMonth": "Monat auswählen",
+      "week": "Woche {{ number }}",
+      "previousWeek": "Vorherige Woche",
+      "nextWeek": "Nächste Woche",
+      "dataTypes": {
+        "authors": "Autoren",
+        "categories": "Kategorien",
+        "series": "Serien",
+        "publishers": "Verlage",
+        "tags": "Schlagwörter",
+        "moods": "Stimmungen"
+      }
     }
   }
 }

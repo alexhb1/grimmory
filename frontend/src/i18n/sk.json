@@ -4009,15 +4009,7 @@
       "insightPeakDecadeBooks": ""
     },
     "topItems": {
-      "axisNumberOfBooks": "",
-      "dataTypes": {
-        "authors": "",
-        "categories": "",
-        "series": "",
-        "publishers": "",
-        "tags": "",
-        "moods": ""
-      }
+      "axisNumberOfBooks": ""
     },
     "libraryFilter": {
       "allLibraries": ""
@@ -4042,7 +4034,8 @@
       "readingDna": "",
       "readingHabits": "",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": ""
     },
     "sessionHeatmap": {
       "title": "",
@@ -4055,9 +4048,6 @@
     "sessionTimeline": {
       "title": "",
       "description": "",
-      "previousWeek": "",
-      "nextWeek": "",
-      "week": "",
       "readingSession": "",
       "tooltipTime": "",
       "tooltipDuration": "",
@@ -4072,10 +4062,6 @@
     },
     "favoriteDays": {
       "title": "",
-      "selectYear": "",
-      "selectMonth": "",
-      "allYears": "",
-      "allMonths": "",
       "axisDayOfWeek": ""
     },
     "personalRating": {
@@ -4202,6 +4188,15 @@
     "readingHeatmap": {
       "title": "",
       "booksRead": ""
+    },
+    "readingJourney": {
+      "title": "",
+      "description": "",
+      "axisMonth": "",
+      "axisCumulativeBooks": "",
+      "legendBooksAdded": "",
+      "legendBooksFinished": "",
+      "insightCurrentBacklog": ""
     },
     "ratingTaste": {
       "title": "",
@@ -4693,6 +4688,29 @@
   "browse": {
     "toolbar": {
       "viewMode": "Pohľad"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "",
+      "resetOrder": ""
+    },
+    "filter": {
+      "allYears": "",
+      "selectYear": "",
+      "allMonths": "",
+      "selectMonth": "",
+      "week": "",
+      "previousWeek": "",
+      "nextWeek": "",
+      "dataTypes": {
+        "authors": "",
+        "categories": "",
+        "series": "",
+        "publishers": "",
+        "tags": "",
+        "moods": ""
+      }
     }
   }
 }

@@ -4061,15 +4061,7 @@
       "insightPeakDecadeBooks": "{{ count }} книг"
     },
     "topItems": {
-      "axisNumberOfBooks": "Количество книг",
-      "dataTypes": {
-        "authors": "Авторы",
-        "categories": "Категории",
-        "series": "Серии",
-        "publishers": "Издательства",
-        "tags": "Теги",
-        "moods": "Настроения"
-      }
+      "axisNumberOfBooks": "Количество книг"
     },
     "libraryFilter": {
       "allLibraries": "Все библиотеки"
@@ -4094,7 +4086,8 @@
       "readingDna": "Профиль читательского ДНК",
       "readingHabits": "Анализ читательских привычек",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "Путь чтения"
     },
     "sessionHeatmap": {
       "title": "Активность сеансов чтения",
@@ -4106,9 +4099,6 @@
     "sessionTimeline": {
       "title": "Хронология сеансов чтения",
       "description": "Еженедельный обзор ваших сеансов чтения и закономерностей",
-      "previousWeek": "Предыдущая неделя",
-      "nextWeek": "Следующая неделя",
-      "week": "Неделя {{ number }}",
       "readingSession": "Сеанс чтения",
       "tooltipTime": "Время:",
       "tooltipDuration": "Длительность:",
@@ -4123,10 +4113,6 @@
     },
     "favoriteDays": {
       "title": "Любимые дни чтения",
-      "selectYear": "Выберите год",
-      "selectMonth": "Выберите месяц",
-      "allYears": "Все годы",
-      "allMonths": "Все месяцы",
       "axisDayOfWeek": "День недели"
     },
     "personalRating": {
@@ -4253,6 +4239,15 @@
     "readingHeatmap": {
       "title": "Тепловая карта активности чтения",
       "booksRead": "Прочитано книг"
+    },
+    "readingJourney": {
+      "title": "Путь чтения",
+      "description": "Добавленные и прочитанные книги за время. Разрыв показывает ваши накопления",
+      "axisMonth": "Месяц",
+      "axisCumulativeBooks": "Накопительное количество книг",
+      "legendBooksAdded": "Добавлено книг",
+      "legendBooksFinished": "Прочитано книг",
+      "insightCurrentBacklog": "Текущие накопления"
     },
     "ratingTaste": {
       "title": "Сравнение вкусов в оценках",
@@ -4757,6 +4752,29 @@
       "viewMode": "Вид",
       "density": "Размер",
       "resetColumns": "Сбросить по умолчанию"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Настройка графиков",
+      "resetOrder": "Сбросить порядок"
+    },
+    "filter": {
+      "allYears": "Все годы",
+      "selectYear": "Выберите год",
+      "allMonths": "Все месяцы",
+      "selectMonth": "Выберите месяц",
+      "week": "Неделя {{ number }}",
+      "previousWeek": "Предыдущая неделя",
+      "nextWeek": "Следующая неделя",
+      "dataTypes": {
+        "authors": "Авторы",
+        "categories": "Категории",
+        "series": "Серии",
+        "publishers": "Издательства",
+        "tags": "Теги",
+        "moods": "Настроения"
+      }
     }
   }
 }

@@ -4061,15 +4061,7 @@
       "insightPeakDecadeBooks": "{{ count }} 本"
     },
     "topItems": {
-      "axisNumberOfBooks": "书籍数量",
-      "dataTypes": {
-        "authors": "作者",
-        "categories": "分类",
-        "series": "系列",
-        "publishers": "出版社",
-        "tags": "标签",
-        "moods": "情绪"
-      }
+      "axisNumberOfBooks": "书籍数量"
     },
     "libraryFilter": {
       "allLibraries": "所有书库"
@@ -4094,7 +4086,8 @@
       "readingDna": "阅读 DNA 档案",
       "readingHabits": "阅读习惯分析",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "阅读旅程"
     },
     "sessionHeatmap": {
       "title": "阅读会话活动",
@@ -4106,9 +4099,6 @@
     "sessionTimeline": {
       "title": "阅读会话时间线",
       "description": "阅读会话和模式的每周概览",
-      "previousWeek": "上一周",
-      "nextWeek": "下一周",
-      "week": "第 {{ number }} 周",
       "readingSession": "阅读会话",
       "tooltipTime": "时间：",
       "tooltipDuration": "时长：",
@@ -4123,10 +4113,6 @@
     },
     "favoriteDays": {
       "title": "最爱阅读日",
-      "selectYear": "选择年份",
-      "selectMonth": "选择月份",
-      "allYears": "所有年份",
-      "allMonths": "所有月份",
       "axisDayOfWeek": "星期"
     },
     "personalRating": {
@@ -4253,6 +4239,15 @@
     "readingHeatmap": {
       "title": "阅读活动热力图",
       "booksRead": "已读图书"
+    },
+    "readingJourney": {
+      "title": "阅读旅程",
+      "description": "书籍添加与完成的对比，差距就是您的待读清单",
+      "axisMonth": "月份",
+      "axisCumulativeBooks": "累计书籍",
+      "legendBooksAdded": "添加的书籍",
+      "legendBooksFinished": "完成的书籍",
+      "insightCurrentBacklog": "当前待读"
     },
     "ratingTaste": {
       "title": "评分口味对比",
@@ -4757,6 +4752,29 @@
       "viewMode": "视图",
       "density": "大小",
       "resetColumns": "重置为默认"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "图表配置",
+      "resetOrder": "重置顺序"
+    },
+    "filter": {
+      "allYears": "所有年份",
+      "selectYear": "选择年份",
+      "allMonths": "所有月份",
+      "selectMonth": "选择月份",
+      "week": "第 {{ number }} 周",
+      "previousWeek": "上一周",
+      "nextWeek": "下一周",
+      "dataTypes": {
+        "authors": "作者",
+        "categories": "分类",
+        "series": "系列",
+        "publishers": "出版社",
+        "tags": "标签",
+        "moods": "情绪"
+      }
     }
   }
 }

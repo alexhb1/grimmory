@@ -4061,15 +4061,7 @@
       "insightPeakDecadeBooks": "{{ count }} livros"
     },
     "topItems": {
-      "axisNumberOfBooks": "Número de Livros",
-      "dataTypes": {
-        "authors": "Autores",
-        "categories": "Categorias",
-        "series": "Séries",
-        "publishers": "Editoras",
-        "tags": "",
-        "moods": "Humores"
-      }
+      "axisNumberOfBooks": "Número de Livros"
     },
     "libraryFilter": {
       "allLibraries": "Todas as Bibliotecas"
@@ -4094,7 +4086,8 @@
       "readingDna": "Perfil de DNA de Leitura",
       "readingHabits": "Análise de Hábitos de Leitura",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "Jornada de Leitura"
     },
     "sessionHeatmap": {
       "title": "Atividade de Sessões de Leitura",
@@ -4106,9 +4099,6 @@
     "sessionTimeline": {
       "title": "Linha do Tempo de Sessões de Leitura",
       "description": "Visão geral semanal das suas sessões e padrões de leitura",
-      "previousWeek": "Semana anterior",
-      "nextWeek": "Próxima semana",
-      "week": "Semana {{ number }}",
       "readingSession": "Sessão de Leitura",
       "tooltipTime": "Horário:",
       "tooltipDuration": "Duração:",
@@ -4123,10 +4113,6 @@
     },
     "favoriteDays": {
       "title": "Dias Favoritos de Leitura",
-      "selectYear": "Selecionar Ano",
-      "selectMonth": "Selecionar Mês",
-      "allYears": "Todos os Anos",
-      "allMonths": "Todos os Meses",
       "axisDayOfWeek": "Dia da Semana"
     },
     "personalRating": {
@@ -4253,6 +4239,15 @@
     "readingHeatmap": {
       "title": "Mapa de Calor de Atividade de Leitura",
       "booksRead": "Livros Lidos"
+    },
+    "readingJourney": {
+      "title": "Jornada de Leitura",
+      "description": "Livros adicionados vs concluídos ao longo do tempo, a diferença é sua lista de espera",
+      "axisMonth": "Mês",
+      "axisCumulativeBooks": "Livros Acumulados",
+      "legendBooksAdded": "Livros Adicionados",
+      "legendBooksFinished": "Livros Concluídos",
+      "insightCurrentBacklog": "Pendentes Atuais"
     },
     "ratingTaste": {
       "title": "Comparação de Gosto de Avaliação",
@@ -4757,6 +4752,29 @@
       "viewMode": "Visualização",
       "density": "Tamanho",
       "resetColumns": "Redefinir para Padrão"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Configuração de Gráficos",
+      "resetOrder": "Redefinir Ordem"
+    },
+    "filter": {
+      "allYears": "Todos os Anos",
+      "selectYear": "Selecionar Ano",
+      "allMonths": "Todos os Meses",
+      "selectMonth": "Selecionar Mês",
+      "week": "Semana {{ number }}",
+      "previousWeek": "Semana anterior",
+      "nextWeek": "Próxima semana",
+      "dataTypes": {
+        "authors": "Autores",
+        "categories": "Categorias",
+        "series": "Séries",
+        "publishers": "Editoras",
+        "tags": "",
+        "moods": "Humores"
+      }
     }
   }
 }

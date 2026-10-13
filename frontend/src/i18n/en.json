@@ -4063,6 +4063,57 @@
       "saveFailed": "Failed to save changes."
     }
   },
+  "stats": {
+    "card": {
+      "loading": "Loading chart",
+      "noData": "No data available",
+      "loadError": "The chart could not be loaded"
+    },
+    "sizeKey": "Books per bubble",
+    "heatmapLess": "Less",
+    "heatmapMore": "More",
+    "config": {
+      "title": "Chart Configuration",
+      "resetOrder": "Reset Order",
+      "showDescriptions": "Show chart descriptions",
+      "addChart": "Add chart",
+      "moveChartEarlier": "Move {{ name }} up",
+      "moveChartLater": "Move {{ name }} down",
+      "removeChart": "Remove {{ name }}",
+      "done": "Done"
+    },
+    "filter": {
+      "allYears": "All Years",
+      "selectYear": "Select Year",
+      "allMonths": "All Months",
+      "selectMonth": "Select Month",
+      "allDays": "All Days",
+      "selectDay": "Select Day",
+      "week": "Week {{ number }}",
+      "previousWeek": "Previous week",
+      "nextWeek": "Next week",
+      "kindSelectorLabel": "Choose what to rank",
+      "measureSelectorLabel": "Choose how to rank",
+      "dataTypes": {
+        "authors": "Authors",
+        "categories": "Categories",
+        "series": "Series",
+        "publishers": "Publishers",
+        "tags": "Tags",
+        "moods": "Moods"
+      },
+      "measures": {
+        "books": "Book Count",
+        "read": "Read Status",
+        "rating": "Personal Rating"
+      },
+      "rankedBy": {
+        "books": "book count",
+        "read": "books read",
+        "rating": "personal rating"
+      }
+    }
+  },
   "statsLibrary": {
     "main": {
       "title": "Library Statistics",
@@ -4073,17 +4124,20 @@
       "bookFormats": "Book Formats",
       "languages": "Languages",
       "metadataScore": "Metadata Score",
-      "pageCount": "Page Count",
+      "pageCount": "Page Count Distribution",
       "publicationTimeline": "Publication Timeline",
-      "topItems": "Top Items (Authors/Categories/etc.)"
+      "topItems": "Top Items"
     },
     "bookFormats": {
       "title": "Book Formats",
-      "description": "Distribution of file types in your library"
+      "description": "Distribution of file types in your library",
+      "unknown": "Unknown"
     },
     "language": {
       "title": "Languages",
-      "description": "Languages represented in your collection"
+      "description": "Languages represented in your collection",
+      "other": "Other",
+      "unknown": "Unknown"
     },
     "metadataScore": {
       "title": "Metadata Score",
@@ -4092,32 +4146,45 @@
       "good": "Good (70-89%)",
       "fair": "Fair (50-69%)",
       "poor": "Poor (25-49%)",
-      "veryPoor": "Very Poor (0-24%)"
+      "veryPoor": "Very Poor (0-24%)",
+      "averageLabel": "Average"
     },
     "pageCount": {
       "title": "Page Count Distribution",
       "description": "Distribution of book lengths in your library",
       "tooltipTitle": "{{ label }} pages",
       "axisPageCount": "Page Count",
-      "axisBooks": "Books"
+      "axisBooks": "Number of Books"
     },
     "publicationTimeline": {
       "title": "Publication Timeline",
       "description": "When were your books originally published?",
+      "chartLabel": "Books in your library by the decade they were published",
       "axisNumberOfBooks": "Number of Books",
       "insightOldest": "Oldest",
       "insightNewest": "Newest",
-      "insightPeakDecadeBooks": "{{ count }} books"
+      "insightMostBooks": "Most Books",
+      "insightPeakDecadeBooks": "{{ count }} books",
+      "insightPeakDecadeBook": "{{ count }} book",
+      "insightNoYear": "No Year",
+      "insightNoYearDetail": "books not shown",
+      "decadeLabel": "{{ decade }}s",
+      "decadePre1900": "Pre-1900",
+      "axisDecade": "Decade"
     },
     "topItems": {
       "axisNumberOfBooks": "Number of Books",
-      "dataTypes": {
-        "authors": "Authors",
-        "categories": "Categories",
-        "series": "Series",
-        "publishers": "Publishers",
-        "tags": "Tags",
-        "moods": "Moods"
+      "axisAverageRating": "Average Personal Rating",
+      "averageRating": "Average Rating",
+      "readStatus": {
+        "other": "Other"
+      },
+      "heading": "Top {{ kind }}",
+      "summary": "Your top 10 {{ kind }}, ranked by {{ measure }}",
+      "chartLabels": {
+        "books": "Your 10 {{ kind }} with the most books",
+        "read": "Your 10 {{ kind }} with the most books read, split by the status of each book",
+        "rating": "Your 10 highest-rated {{ kind }}, from at least 2 rated books each"
       }
     },
     "libraryFilter": {
@@ -4130,14 +4197,15 @@
       "titleBarTitle": "Reading Statistics"
     },
     "chartNames": {
-      "heatmap": "Reading Session Heatmap",
+      "heatmap": "Reading Session Activity",
       "favoriteDays": "Favorite Reading Days",
       "timeline": "Reading Session Timeline",
       "readingHeatmap": "Reading Activity Heatmap",
       "personalRating": "Personal Rating Distribution",
       "readStatus": "Reading Status Distribution",
-      "genreStats": "Genre Statistics",
+      "genreStats": "Reading by Genre",
       "readingClock": "Reading Clock",
+      "daysToFinish": "Days to Finish",
       "readingSurvival": "Reading Survival Curve",
       "bookLength": "Book Length Sweet Spot",
       "ratingTaste": "Rating Taste Comparison",
@@ -4145,44 +4213,50 @@
       "readingDna": "Reading DNA Profile",
       "readingHabits": "Reading Habits Analysis",
       "bookFlow": "Book Flow",
-      "publicationEra": "Publication Era vs Rating"
+      "publicationEra": "Publication Era vs Rating",
+      "readingJourney": "Reading Journey"
     },
     "sessionHeatmap": {
       "title": "Reading Session Activity",
       "description": "Daily overview of your reading sessions across the year",
       "currentStreak": "Current Streak",
       "longestStreak": "Longest Streak",
-      "totalDays": "Total Days",
-      "readingSessions": "Reading Sessions"
+      "totalDays": "All-time Reading Days",
+      "readingSessions": "Reading Sessions",
+      "readingDay": "{{ count }} day",
+      "readingDays_plural": "{{ count }} days"
     },
     "sessionTimeline": {
       "title": "Reading Session Timeline",
       "description": "Weekly overview of your reading sessions and patterns",
-      "previousWeek": "Previous week",
-      "nextWeek": "Next week",
-      "week": "Week {{ number }}",
       "readingSession": "Reading Session",
       "tooltipTime": "Time:",
       "tooltipDuration": "Duration:",
-      "tooltipFormat": "Format:"
+      "tooltipFormat": "Format:",
+      "truncated": "Showing the first {{ count }} sessions of this week."
     },
     "genreStats": {
       "title": "Reading by Genre",
       "description": "Top genres by total reading time",
       "axisGenres": "Genres",
       "axisTimeRead": "Time Read",
-      "readingTime": "Reading Time"
+      "readingTime": "Reading Time",
+      "pageInfo": "Page {{ current }} of {{ total }}"
     },
     "favoriteDays": {
       "title": "Favorite Reading Days",
-      "selectYear": "Select Year",
-      "selectMonth": "Select Month",
-      "allYears": "All Years",
-      "allMonths": "All Months",
-      "axisDayOfWeek": "Day of Week"
+      "summary": "Average reading time on each day of the week",
+      "chartLabel": "Average reading time per day for each day of the week, {{ period }}",
+      "allTime": "all time",
+      "axisDayOfWeek": "Day of Week",
+      "axisAveragePerDay": "Average per Day",
+      "averagePerDay": "Average per Day",
+      "daysCounted": "Days Counted"
     },
     "personalRating": {
       "title": "Personal Rating Distribution",
+      "summary": "Books by your rating, in half stars",
+      "chartLabel": "Number of books at each of your ratings, from half a star to five stars",
       "axisPersonalRating": "Personal Rating",
       "axisNumberOfBooks": "Number of Books",
       "tooltipTitle": "Personal Rating: {{ label }}"
@@ -4301,19 +4375,60 @@
           "high": "You systematically work through series, authors, and genres"
         },
         "momentum": {
-          "low": "Your reading activity has been quiet recently",
-          "mid": "You have a steady reading pace going",
-          "high": "You are on a strong active reading streak right now"
+          "low": "You haven't finished many books lately, and few are on the go",
+          "mid": "You've finished some books lately and have a few on the go",
+          "high": "You've finished plenty of books lately and have several on the go"
         }
       }
     },
     "readingHeatmap": {
       "title": "Reading Activity Heatmap",
-      "booksRead": "Books Read"
+      "summary": "Books you finished each month",
+      "chartLabel": "Books finished each month, one row per year",
+      "booksRead": "Books Read",
+      "pagesRead": "Pages",
+      "thisYear": "This Year",
+      "thisYearDetail": "finished so far in {{ year }}",
+      "bestMonth": "Best Month",
+      "bookCount": "{{ count }} book",
+      "booksCount": "{{ count }} books"
+    },
+    "readingJourney": {
+      "title": "Reading Journey",
+      "description": "Books added vs finished over time - the gap is your backlog",
+      "chartLabel": "Books added and finished in total each month, with the backlog between them",
+      "markerYearAgo": "12 months ago",
+      "axisMonth": "Month",
+      "axisCumulativeBooks": "Cumulative Books",
+      "legendBooksAdded": "Books Added",
+      "legendBooksFinished": "Books Finished",
+      "insightCurrentBacklog": "Current Backlog",
+      "legendBacklog": "Backlog",
+      "insightLastTwelveMonths": "Last 12 Months",
+      "insightLastTwelveMonthsDetail": "{{ from }} → {{ to }} since {{ month }}",
+      "insightMostAdded": "Most Added"
     },
     "ratingTaste": {
       "title": "Rating Taste Comparison",
-      "description": "Compare your personal ratings against external ratings (Goodreads, Amazon, etc.)"
+      "description": "Compare your personal ratings against external ratings (Goodreads, Amazon, etc.)",
+      "chartLabel": "Your rating against other readers' rating, book by book",
+      "axisOtherReaders": "Other Readers' Rating",
+      "axisYourRating": "Your Rating",
+      "books": "Books",
+      "rateHigher": "You rate higher",
+      "rateSame": "About the same",
+      "rateLower": "You rate lower",
+      "averageLabel": "On average you rate",
+      "averageHigher": "higher than other readers",
+      "averageLower": "lower than other readers",
+      "averageSame": "The same",
+      "averageSameDetail": "as other readers",
+      "higher": "Higher",
+      "same": "About the Same",
+      "sameDetail": "within ¼★",
+      "lower": "Lower",
+      "bookCount": "{{ count }} book",
+      "booksCount": "{{ count }} books"
     },
     "seriesProgress": {
       "title": "Series Progress Tracker",
@@ -4339,12 +4454,45 @@
       "next": "Next:",
       "tooltipRead": "Read: {{ read }}/{{ owned }} owned",
       "noMatchingSearch": "No series matching \"{{ term }}\"",
-      "pageInfo": "Page {{ current }} of {{ total }}"
+      "pageInfo": "Page {{ current }} of {{ total }}",
+      "summary": "Your largest series in progress first, then the rest, book by book",
+      "chartLabel": "Books in each series by status, with how many you've read",
+      "averageProgress": "Average Series Progress",
+      "acrossSeries": "across {{ count }} series",
+      "axisNumberOfBooks": "Number of Books",
+      "axisSeries": "Series",
+      "readOfBooks": "{{ read }} of {{ books }} read",
+      "yourRating": "Your Rating",
+      "yourRatingValue": "Your rating: {{ rating }}"
+    },
+    "daysToFinish": {
+      "title": "Days to Finish",
+      "description": "How long books took you, from your first session to finishing",
+      "chartLabel": "Books finished in {{ year }} by how long they took",
+      "axisTimeToFinish": "Time from First Session to Finish",
+      "axisNumberOfBooks": "Number of Books",
+      "underAWeek": "Under a week",
+      "oneToTwoWeeks": "1–2 weeks",
+      "twoToFourWeeks": "2–4 weeks",
+      "oneToTwoMonths": "1–2 months",
+      "twoToThreeMonths": "2–3 months",
+      "threeMonthsOrMore": "3 months +",
+      "books": "Books",
+      "untitled": "Untitled",
+      "andMore": "and {{ count }} more",
+      "booksFinished": "Books Finished",
+      "withSessions": "with reading sessions",
+      "median": "Median",
+      "quickest": "Quickest",
+      "longest": "Longest"
     },
     "readingSurvival": {
       "title": "Reading Survival Curve",
-      "description": "Of books started, what percentage reached each progress threshold",
+      "description": "Of the books you've stopped reading, how far each one got. Books you're reading or rereading now are left out.",
+      "chartLabel": "Share of the books you've stopped reading that got to each point",
       "completionRate": "Completion Rate",
+      "stoppedBooks": "{{ finished }} of {{ stopped }} books you've stopped reading",
+      "stoppedBook": "{{ finished }} of {{ stopped }} book you've stopped reading",
       "survivalRate": "Survival Rate",
       "axisProgressThreshold": "Progress Threshold",
       "axisBooksSurviving": "% of Books Surviving",
@@ -4353,28 +4501,70 @@
     "readingClock": {
       "title": "Reading Clock",
       "description": "When do you read throughout the day",
+      "chartLabel": "Reading time by hour of day, {{ days }}, {{ period }}",
+      "everyDay": "every day",
+      "allTime": "all time",
       "peakHour": "Peak Hour",
       "totalRead": "Total Read"
     },
     "bookLength": {
       "title": "Book Length Sweet Spot",
       "description": "How book length relates to your personal ratings",
+      "chartLabel": "Your ratings by book length, with the average rating of each length",
       "sweetSpot": "Sweet Spot",
       "axisPageCount": "Page Count",
-      "axisPersonalRating": "Personal Rating"
+      "axisPersonalRating": "Personal Rating",
+      "averageRating": "Average rating",
+      "pageCount": "{{ count }} pages",
+      "yourRating": "Your Rating",
+      "books": "Books",
+      "averageHere": "Average at This Length",
+      "highestAverage": "Highest average, {{ count }}+ books",
+      "sweetSpotDetail": "pages, average {{ rating }} from {{ count }} books",
+      "bookCount": "{{ count }} book",
+      "booksCount": "{{ count }} books"
     },
     "bookFlow": {
       "title": "Book Flow",
       "description": "How books flow from acquisition to status to rating",
+      "chartLabel": "Your books flowing from the year they were added, to their status, to your rating",
       "totalBooks": "Total Books",
+      "read": "Read",
+      "readOfLibrary": "{{ read }} of {{ total }} books in your library",
+      "readOfLibraryBook": "{{ read }} of {{ total }} book in your library",
       "colAdded": "Added",
       "colStatus": "Status",
-      "colRating": "Rating"
+      "colRating": "Rating",
+      "statusRead": "Read",
+      "statusReading": "Reading",
+      "statusUnread": "Unread",
+      "statusPaused": "Paused",
+      "statusAbandoned": "Abandoned",
+      "ratingHigh": "Rated 4-5",
+      "ratingMid": "Rated 3",
+      "ratingLow": "Rated 1-2",
+      "ratingUnrated": "Unrated",
+      "busiestYear": "Busiest Year",
+      "busiestYearBooks": "{{ count }} books added",
+      "busiestYearBook": "{{ count }} book added",
+      "earlierYears": "Earlier",
+      "unknownYear": "Unknown"
     },
     "publicationEra": {
       "title": "Publication Era vs Rating",
       "description": "Which publication decades do you rate highest",
-      "bestDecade": "Best Decade"
+      "chartLabel": "Your ratings by the decade books were published, with the average rating of each decade",
+      "bestDecade": "Best Decade",
+      "axisDecade": "Decade Published",
+      "axisPersonalRating": "Personal Rating",
+      "yourRating": "Your Rating",
+      "books": "Books",
+      "averageHere": "Average for This Decade",
+      "averageRating": "Average rating",
+      "highestAverage": "Highest average, {{ count }}+ books",
+      "bestDecadeDetail": "average {{ rating }} from {{ count }} books",
+      "bookCount": "{{ count }} book",
+      "booksCount": "{{ count }} books"
     }
   },
   "magicShelf": {

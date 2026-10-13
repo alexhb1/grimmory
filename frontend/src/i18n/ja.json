@@ -4062,15 +4062,7 @@
       "insightPeakDecadeBooks": "{{ count }}冊"
     },
     "topItems": {
-      "axisNumberOfBooks": "書籍数",
-      "dataTypes": {
-        "authors": "著者",
-        "categories": "カテゴリ",
-        "series": "シリーズ",
-        "publishers": "出版社",
-        "tags": "タグ",
-        "moods": "ムード"
-      }
+      "axisNumberOfBooks": "書籍数"
     },
     "libraryFilter": {
       "allLibraries": "すべてのライブラリ"
@@ -4095,7 +4087,8 @@
       "readingDna": "読書DNAプロフィール",
       "readingHabits": "読書習慣分析",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "読書ジャーニー"
     },
     "sessionHeatmap": {
       "title": "読書セッション活動",
@@ -4107,9 +4100,6 @@
     "sessionTimeline": {
       "title": "読書セッションタイムライン",
       "description": "読書セッションとパターンの週間概要",
-      "previousWeek": "前の週",
-      "nextWeek": "次の週",
-      "week": "第{{ number }}週",
       "readingSession": "読書セッション",
       "tooltipTime": "時間:",
       "tooltipDuration": "所要時間:",
@@ -4124,10 +4114,6 @@
     },
     "favoriteDays": {
       "title": "お気に入りの読書曜日",
-      "selectYear": "年を選択",
-      "selectMonth": "月を選択",
-      "allYears": "全年",
-      "allMonths": "全月",
       "axisDayOfWeek": "曜日"
     },
     "personalRating": {
@@ -4254,6 +4240,15 @@
     "readingHeatmap": {
       "title": "読書活動ヒートマップ",
       "booksRead": "読了書籍"
+    },
+    "readingJourney": {
+      "title": "読書ジャーニー",
+      "description": "追加された書籍と読了書籍の推移（差がバックログ）",
+      "axisMonth": "月",
+      "axisCumulativeBooks": "累計書籍数",
+      "legendBooksAdded": "追加された書籍",
+      "legendBooksFinished": "読了した書籍",
+      "insightCurrentBacklog": "現在のバックログ"
     },
     "ratingTaste": {
       "title": "評価テイスト比較",
@@ -4758,6 +4753,29 @@
       "viewMode": "表示",
       "density": "サイズ",
       "resetColumns": "デフォルトに戻す"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "チャート設定",
+      "resetOrder": "順序をリセット"
+    },
+    "filter": {
+      "allYears": "全年",
+      "selectYear": "年を選択",
+      "allMonths": "全月",
+      "selectMonth": "月を選択",
+      "week": "第{{ number }}週",
+      "previousWeek": "前の週",
+      "nextWeek": "次の週",
+      "dataTypes": {
+        "authors": "著者",
+        "categories": "カテゴリ",
+        "series": "シリーズ",
+        "publishers": "出版社",
+        "tags": "タグ",
+        "moods": "ムード"
+      }
     }
   }
 }

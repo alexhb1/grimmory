@@ -4061,15 +4061,7 @@
       "insightPeakDecadeBooks": "{{ count }} książek"
     },
     "topItems": {
-      "axisNumberOfBooks": "Liczba książek",
-      "dataTypes": {
-        "authors": "Autorzy",
-        "categories": "Kategorie",
-        "series": "Serie",
-        "publishers": "Wydawcy",
-        "tags": "Tagi",
-        "moods": "Nastroje"
-      }
+      "axisNumberOfBooks": "Liczba książek"
     },
     "libraryFilter": {
       "allLibraries": "Wszystkie biblioteki"
@@ -4094,7 +4086,8 @@
       "readingDna": "Profil DNA czytelnika",
       "readingHabits": "Analiza nawyków czytelniczych",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "Podróż czytelnicza"
     },
     "sessionHeatmap": {
       "title": "Aktywność sesji czytania",
@@ -4106,9 +4099,6 @@
     "sessionTimeline": {
       "title": "Oś czasu sesji czytania",
       "description": "Tygodniowy przegląd Twoich sesji czytania i wzorców",
-      "previousWeek": "Poprzedni tydzień",
-      "nextWeek": "Następny tydzień",
-      "week": "Tydzień {{ number }}",
       "readingSession": "Sesja czytania",
       "tooltipTime": "Czas:",
       "tooltipDuration": "Czas trwania:",
@@ -4123,10 +4113,6 @@
     },
     "favoriteDays": {
       "title": "Ulubione dni czytania",
-      "selectYear": "Wybierz rok",
-      "selectMonth": "Wybierz miesiąc",
-      "allYears": "Wszystkie lata",
-      "allMonths": "Wszystkie miesiące",
       "axisDayOfWeek": "Dzień tygodnia"
     },
     "personalRating": {
@@ -4253,6 +4239,15 @@
     "readingHeatmap": {
       "title": "Mapa aktywności czytelniczej",
       "booksRead": "Przeczytane książki"
+    },
+    "readingJourney": {
+      "title": "Podróż czytelnicza",
+      "description": "Dodane vs ukończone książki w czasie, różnica to Twoje zaległości",
+      "axisMonth": "Miesiąc",
+      "axisCumulativeBooks": "Książki narastająco",
+      "legendBooksAdded": "Dodane książki",
+      "legendBooksFinished": "Ukończone książki",
+      "insightCurrentBacklog": "Aktualne zaległości"
     },
     "ratingTaste": {
       "title": "Porównanie gustów ocen",
@@ -4757,6 +4752,29 @@
       "viewMode": "Widok",
       "density": "Rozmiar",
       "resetColumns": "Resetuj do domyślnych"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Konfiguracja wykresów",
+      "resetOrder": "Resetuj kolejność"
+    },
+    "filter": {
+      "allYears": "Wszystkie lata",
+      "selectYear": "Wybierz rok",
+      "allMonths": "Wszystkie miesiące",
+      "selectMonth": "Wybierz miesiąc",
+      "week": "Tydzień {{ number }}",
+      "previousWeek": "Poprzedni tydzień",
+      "nextWeek": "Następny tydzień",
+      "dataTypes": {
+        "authors": "Autorzy",
+        "categories": "Kategorie",
+        "series": "Serie",
+        "publishers": "Wydawcy",
+        "tags": "Tagi",
+        "moods": "Nastroje"
+      }
     }
   }
 }

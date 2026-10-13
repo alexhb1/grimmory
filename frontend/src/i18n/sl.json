@@ -4064,15 +4064,7 @@
       "insightPeakDecadeBooks": "{{ count }} knjig"
     },
     "topItems": {
-      "axisNumberOfBooks": "Število knjig",
-      "dataTypes": {
-        "authors": "Avtorji",
-        "categories": "Kategorije",
-        "series": "Zbirke",
-        "publishers": "Založniki",
-        "tags": "Oznake",
-        "moods": "Razpoloženja"
-      }
+      "axisNumberOfBooks": "Število knjig"
     },
     "libraryFilter": {
       "allLibraries": "Vse knjižnice"
@@ -4097,7 +4089,8 @@
       "readingDna": "Bralni DNA profil",
       "readingHabits": "Analiza bralnih navad",
       "bookFlow": "Tok knjig",
-      "publicationEra": "Obdobje izdaje glede na oceno"
+      "publicationEra": "Obdobje izdaje glede na oceno",
+      "readingJourney": "Bralna pot"
     },
     "sessionHeatmap": {
       "title": "Aktivnost bralnih sej",
@@ -4109,9 +4102,6 @@
     "sessionTimeline": {
       "title": "Časovnica bralnih sej",
       "description": "Tedenski pregled bralnih sej in vzorcev",
-      "previousWeek": "Prejšnji teden",
-      "nextWeek": "Naslednji teden",
-      "week": "{{ number }}. teden",
       "readingSession": "Bralna seja",
       "tooltipTime": "Čas:",
       "tooltipDuration": "Trajanje:",
@@ -4126,10 +4116,6 @@
     },
     "favoriteDays": {
       "title": "Najljubši dnevi za branje",
-      "selectYear": "Izberi leto",
-      "selectMonth": "Izberi mesec",
-      "allYears": "Vsa leta",
-      "allMonths": "Vsi meseci",
       "axisDayOfWeek": "Dan v tednu"
     },
     "personalRating": {
@@ -4256,6 +4242,15 @@
     "readingHeatmap": {
       "title": "Toplotni zemljevid bralne aktivnosti",
       "booksRead": "Prebranih knjig"
+    },
+    "readingJourney": {
+      "title": "Bralna pot",
+      "description": "Dodane knjige v primerjavi z dokončanimi – razlika je tvoj zaostanek",
+      "axisMonth": "Mesec",
+      "axisCumulativeBooks": "Skupno število knjig",
+      "legendBooksAdded": "Dodane knjige",
+      "legendBooksFinished": "Dokončane knjige",
+      "insightCurrentBacklog": "Trenutni zaostanek"
     },
     "ratingTaste": {
       "title": "Primerjava okusa in ocen",
@@ -4763,6 +4758,29 @@
       "viewMode": "Pogled",
       "density": "Velikost",
       "resetColumns": "Ponastavi na privzeto"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Konfiguracija grafov",
+      "resetOrder": "Ponastavi vrstni red"
+    },
+    "filter": {
+      "allYears": "Vsa leta",
+      "selectYear": "Izberi leto",
+      "allMonths": "Vsi meseci",
+      "selectMonth": "Izberi mesec",
+      "week": "{{ number }}. teden",
+      "previousWeek": "Prejšnji teden",
+      "nextWeek": "Naslednji teden",
+      "dataTypes": {
+        "authors": "Avtorji",
+        "categories": "Kategorije",
+        "series": "Zbirke",
+        "publishers": "Založniki",
+        "tags": "Oznake",
+        "moods": "Razpoloženja"
+      }
     }
   }
 }

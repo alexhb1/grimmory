@@ -4028,15 +4028,7 @@
       "insightPeakDecadeBooks": ""
     },
     "topItems": {
-      "axisNumberOfBooks": "",
-      "dataTypes": {
-        "authors": "Penulis",
-        "categories": "Kategori",
-        "series": "Seri",
-        "publishers": "Penerbit",
-        "tags": "Tag",
-        "moods": ""
-      }
+      "axisNumberOfBooks": ""
     },
     "libraryFilter": {
       "allLibraries": ""
@@ -4061,7 +4053,8 @@
       "readingDna": "",
       "readingHabits": "",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": ""
     },
     "sessionHeatmap": {
       "title": "",
@@ -4074,9 +4067,6 @@
     "sessionTimeline": {
       "title": "",
       "description": "",
-      "previousWeek": "",
-      "nextWeek": "",
-      "week": "",
       "readingSession": "",
       "tooltipTime": "",
       "tooltipDuration": "Durasi:",
@@ -4091,10 +4081,6 @@
     },
     "favoriteDays": {
       "title": "",
-      "selectYear": "",
-      "selectMonth": "",
-      "allYears": "",
-      "allMonths": "",
       "axisDayOfWeek": ""
     },
     "personalRating": {
@@ -4221,6 +4207,15 @@
     "readingHeatmap": {
       "title": "",
       "booksRead": ""
+    },
+    "readingJourney": {
+      "title": "",
+      "description": "",
+      "axisMonth": "Bulan",
+      "axisCumulativeBooks": "",
+      "legendBooksAdded": "",
+      "legendBooksFinished": "",
+      "insightCurrentBacklog": ""
     },
     "ratingTaste": {
       "title": "",
@@ -4722,6 +4717,29 @@
     "bulk": {
       "organizeFiles": "Atur Berkas",
       "lockUnlockMetadata": "Kunci/Buka kunci metadata"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "",
+      "resetOrder": ""
+    },
+    "filter": {
+      "allYears": "",
+      "selectYear": "",
+      "allMonths": "",
+      "selectMonth": "",
+      "week": "",
+      "previousWeek": "",
+      "nextWeek": "",
+      "dataTypes": {
+        "authors": "Penulis",
+        "categories": "Kategori",
+        "series": "Seri",
+        "publishers": "Penerbit",
+        "tags": "Tag",
+        "moods": ""
+      }
     }
   }
 }

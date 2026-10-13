@@ -4065,15 +4065,7 @@
       "insightPeakDecadeBooks": "{{ count }} livres"
     },
     "topItems": {
-      "axisNumberOfBooks": "Nombre de livres",
-      "dataTypes": {
-        "authors": "Auteurs",
-        "categories": "Catégories",
-        "series": "Séries",
-        "publishers": "Éditeurs",
-        "tags": "",
-        "moods": "Humeurs"
-      }
+      "axisNumberOfBooks": "Nombre de livres"
     },
     "libraryFilter": {
       "allLibraries": "Toutes les bibliothèques"
@@ -4098,7 +4090,8 @@
       "readingDna": "Profil ADN de lecture",
       "readingHabits": "Analyse des habitudes de lecture",
       "bookFlow": "",
-      "publicationEra": ""
+      "publicationEra": "",
+      "readingJourney": "Parcours de lecture"
     },
     "sessionHeatmap": {
       "title": "Activité des sessions de lecture",
@@ -4110,9 +4103,6 @@
     "sessionTimeline": {
       "title": "Chronologie des sessions de lecture",
       "description": "Aperçu hebdomadaire de vos sessions et habitudes de lecture",
-      "previousWeek": "Semaine précédente",
-      "nextWeek": "Semaine suivante",
-      "week": "Semaine {{ number }}",
       "readingSession": "Session de lecture",
       "tooltipTime": "Heure :",
       "tooltipDuration": "Durée :",
@@ -4127,10 +4117,6 @@
     },
     "favoriteDays": {
       "title": "Jours de lecture favoris",
-      "selectYear": "Sélectionner l'année",
-      "selectMonth": "Sélectionner le mois",
-      "allYears": "Toutes les années",
-      "allMonths": "Tous les mois",
       "axisDayOfWeek": "Jour de la semaine"
     },
     "personalRating": {
@@ -4257,6 +4243,15 @@
     "readingHeatmap": {
       "title": "Carte thermique de l'activité de lecture",
       "booksRead": "Livres lus"
+    },
+    "readingJourney": {
+      "title": "Parcours de lecture",
+      "description": "Livres ajoutés vs terminés au fil du temps : l'écart représente votre pile de lecture",
+      "axisMonth": "Mois",
+      "axisCumulativeBooks": "Livres cumulés",
+      "legendBooksAdded": "Livres ajoutés",
+      "legendBooksFinished": "Livres terminés",
+      "insightCurrentBacklog": "Pile de lecture actuelle"
     },
     "ratingTaste": {
       "title": "Comparaison des goûts de notation",
@@ -4764,6 +4759,29 @@
       "viewMode": "Affichage",
       "density": "Taille",
       "resetColumns": "Réinitialiser par défaut"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Configuration des graphiques",
+      "resetOrder": "Réinitialiser l'ordre"
+    },
+    "filter": {
+      "allYears": "Toutes les années",
+      "selectYear": "Sélectionner l'année",
+      "allMonths": "Tous les mois",
+      "selectMonth": "Sélectionner le mois",
+      "week": "Semaine {{ number }}",
+      "previousWeek": "Semaine précédente",
+      "nextWeek": "Semaine suivante",
+      "dataTypes": {
+        "authors": "Auteurs",
+        "categories": "Catégories",
+        "series": "Séries",
+        "publishers": "Éditeurs",
+        "tags": "",
+        "moods": "Humeurs"
+      }
     }
   }
 }

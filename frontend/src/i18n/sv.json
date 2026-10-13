@@ -4063,15 +4063,7 @@
       "insightPeakDecadeBooks": "{{ count }} bocker"
     },
     "topItems": {
-      "axisNumberOfBooks": "Antal bocker",
-      "dataTypes": {
-        "authors": "Forfattare",
-        "categories": "Kategorier",
-        "series": "Serier",
-        "publishers": "Forlag",
-        "tags": "Taggar",
-        "moods": "Stämningar"
-      }
+      "axisNumberOfBooks": "Antal bocker"
     },
     "libraryFilter": {
       "allLibraries": "Alla bibliotek"
@@ -4096,7 +4088,8 @@
       "readingDna": "Las-DNA-profil",
       "readingHabits": "Lasvanoranalys",
       "bookFlow": "Bokflöde",
-      "publicationEra": "Publikationsera vs. betyg"
+      "publicationEra": "Publikationsera vs. betyg",
+      "readingJourney": "Lasresa"
     },
     "sessionHeatmap": {
       "title": "Lassessionsaktivitet",
@@ -4108,9 +4101,6 @@
     "sessionTimeline": {
       "title": "Lassessionstidslinje",
       "description": "Veckooversikt av dina lassessioner och monster",
-      "previousWeek": "Foregaende vecka",
-      "nextWeek": "Nasta vecka",
-      "week": "Vecka {{ number }}",
       "readingSession": "Lassession",
       "tooltipTime": "Tid:",
       "tooltipDuration": "Varaktighet:",
@@ -4125,10 +4115,6 @@
     },
     "favoriteDays": {
       "title": "Favoritläsdagar",
-      "selectYear": "Välj år",
-      "selectMonth": "Välj månad",
-      "allYears": "Alla år",
-      "allMonths": "Alla månader",
       "axisDayOfWeek": "Veckodag"
     },
     "personalRating": {
@@ -4255,6 +4241,15 @@
     "readingHeatmap": {
       "title": "Lasaktivitetsvarmekarta",
       "booksRead": "Bocker lasta"
+    },
+    "readingJourney": {
+      "title": "Lasresa",
+      "description": "Bocker tillagda mot avslutade over tid. Gapet ar din laskobacklog",
+      "axisMonth": "Manad",
+      "axisCumulativeBooks": "Kumulativa bocker",
+      "legendBooksAdded": "Bocker tillagda",
+      "legendBooksFinished": "Bocker avslutade",
+      "insightCurrentBacklog": "Nuvarande backlog"
     },
     "ratingTaste": {
       "title": "Betygsjamforelse",
@@ -4762,6 +4757,29 @@
       "organizeFiles": "Organisera filer",
       "updateReadStatus": "Uppdatera lässtatus",
       "lockUnlockMetadata": "Lås/lås upp metadata"
+    }
+  },
+  "stats": {
+    "config": {
+      "title": "Diagramkonfiguration",
+      "resetOrder": "Aterstall ordning"
+    },
+    "filter": {
+      "allYears": "Alla år",
+      "selectYear": "Välj år",
+      "allMonths": "Alla månader",
+      "selectMonth": "Välj månad",
+      "week": "Vecka {{ number }}",
+      "previousWeek": "Foregaende vecka",
+      "nextWeek": "Nasta vecka",
+      "dataTypes": {
+        "authors": "Forfattare",
+        "categories": "Kategorier",
+        "series": "Serier",
+        "publishers": "Forlag",
+        "tags": "Taggar",
+        "moods": "Stämningar"
+      }
     }
   }
 }
