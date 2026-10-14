@@ -1,208 +1,84 @@
-import {Component, effect, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, Observable} from 'rxjs';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
-import {readStatsChartThemeColors} from '../../../shared/stats-chart-theme.service';
+import {Component, computed, input} from '@angular/core';
 
-interface MatrixDataPoint {
-  x: number; // month (0-11)
-  y: number; // year index
-  v: number; // book count
-}
+import {type StatsActivityMonth, type StatsRows} from '../../../../data/stats-response.models';
+import {currentMonth, firstMaximum} from '../../../shared/stats-chart-data';
+import {injectStatsText, STATS_CHART_HOST_CLASS} from '../../../shared/stats-chart-text';
+import {type StatsHeatmap, type StatsHeatmapColumnLabel, StatsHeatmapComponent} from '../../../shared/stats-heatmap.component';
+import {type StatsInsight, StatsInsightListComponent} from '../../../shared/stats-insight-list.component';
 
-interface YearMonthData {
-  year: number;
-  month: number;
-  count: number;
-}
-
-interface YScaleWithMax {
-  max?: number;
-}
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-type HeatmapChartData = ChartData<'matrix', MatrixDataPoint[], string>;
+const MONTHS = Array.from({length: 12}, (_, index) => String(index + 1).padStart(2, '0'));
 
 @Component({
   selector: 'app-reading-heatmap-chart',
-  standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
-  templateUrl: './reading-heatmap-chart.component.html',
-  styleUrls: ['./reading-heatmap-chart.component.scss']
+  imports: [StatsHeatmapComponent, StatsInsightListComponent],
+  template: `
+    <app-stats-heatmap
+      [heatmap]="chart()"
+      [columns]="12"
+      [columnLabels]="monthLabels()"
+      [rowLabels]="years()"
+      values />
+    <app-stats-insight-list [items]="insights()" />
+  `,
+  host: {class: STATS_CHART_HOST_CLASS},
 })
 export class ReadingHeatmapChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly syncChartEffect = effect(() => {
-    if (this.bookService.isBooksLoading()) {
-      return;
-    }
+  private readonly text = injectStatsText('statsUser.readingHeatmap');
 
-    const stats = this.calculateHeatmapData(this.bookService.books());
-    this.updateChartData(stats);
+  readonly data = input.required<StatsRows<StatsActivityMonth>>();
+
+  private readonly finished = computed(() => this.data().rows.filter(({finished}) => finished > 0));
+
+  readonly years = computed(() => {
+    const lastYear = new Date().getFullYear();
+    const firstYear = Math.min(lastYear, ...this.finished().map(({month}) => Number(month.slice(0, 4))));
+    return Array.from({length: lastYear - firstYear + 1}, (_, index) => String(lastYear - index));
   });
 
-  public readonly chartType = 'matrix' as const;
+  readonly monthLabels = computed<readonly StatsHeatmapColumnLabel[]>(() =>
+    MONTHS.map((month, column) => ({column, label: this.text.date(`2000-${month}`, {month: 'short'})})),
+  );
 
-  private yearLabels: string[] = [];
-  private maxBookCount = 1;
+  readonly chart = computed<StatsHeatmap>(() => {
+    const {t, date, number} = this.text;
+    const months = new Map(this.data().rows.map((row) => [row.month, row]));
+    const now = currentMonth();
 
-  public readonly chartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {
-        top: 20
-      }
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderColor: '#ef476f',
-        borderWidth: 2,
-        cornerRadius: 8,
-        displayColors: false,
-        padding: 16,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13},
-        callbacks: {
-          title: (context) => {
-            const point = context[0].raw as MatrixDataPoint;
-            const year = this.yearLabels[point.y];
-            const month = MONTH_NAMES[point.x];
-            return `${month} ${year}`;
-          },
-          label: (context) => {
-            const point = context.raw as MatrixDataPoint;
-            const key = point.v === 1 ? 'statsUser.readingHeatmap.tooltipBook' : 'statsUser.readingHeatmap.tooltipBooks';
-            return this.t.translate(key, {value: point.v});
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        type: 'linear',
-        position: 'bottom',
-        ticks: {
-          stepSize: 1,
-          callback: (value) => MONTH_NAMES[value as number] || '',
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {display: false},
-      },
-      y: {
-        type: 'linear',
-        offset: true,
-        ticks: {
-          stepSize: 1,
-          callback: (value) => this.yearLabels[value as number] || '',
-          font: {
-            family: "'Inter', sans-serif",
-            size: 11
-          }
-        },
-        grid: {display: false},
-      }
-    }
-  };
-
-  private readonly chartDataSubject = new BehaviorSubject<HeatmapChartData>({
-    labels: [],
-    datasets: [{
-      label: this.t.translate('statsUser.readingHeatmap.booksRead'),
-      data: []
-    }]
-  });
-
-  public readonly chartData$: Observable<HeatmapChartData> = this.chartDataSubject.asObservable();
-
-  private updateChartData(yearMonthData: YearMonthData[]): void {
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({length: 10}, (_, i) => currentYear - 9 + i);
-
-    this.yearLabels = years.map(String);
-    this.maxBookCount = Math.max(1, ...yearMonthData.map(d => d.count));
-
-    const heatmapData: MatrixDataPoint[] = [];
-
-    years.forEach((year, yearIndex) => {
-      for (let month = 0; month <= 11; month++) {
-        const dataPoint = yearMonthData.find(d => d.year === year && d.month === month + 1);
-        heatmapData.push({
-          x: month,
-          y: yearIndex,
-          v: dataPoint?.count || 0
-        });
-      }
-    });
-
-    if (this.chartOptions?.scales?.['y']) {
-      (this.chartOptions.scales['y'] as YScaleWithMax).max = years.length - 1;
-    }
-
-    this.chartDataSubject.next({
-      labels: [],
-      datasets: [{
-        label: this.t.translate('statsUser.readingHeatmap.booksRead'),
-        data: heatmapData,
-        backgroundColor: (context) => {
-          const point = context.raw as MatrixDataPoint;
-          if (!point?.v) return readStatsChartThemeColors().grid;
-
-          const intensity = point.v / this.maxBookCount;
-          const alpha = Math.max(0.2, Math.min(1.0, intensity * 0.8 + 0.2));
-          return `rgba(239, 71, 111, ${alpha})`;
-        },
-        borderWidth: 1,
-        width: ({chart}) => (chart.chartArea?.width || 0) / 12 - 1,
-        height: ({chart}) => (chart.chartArea?.height || 0) / years.length - 1
-      }]
-    });
-  }
-
-  private calculateHeatmapData(books: Book[]): YearMonthData[] {
-    if (books.length === 0) {
-      return [];
-    }
-
-    return this.processHeatmapData(books);
-  }
-
-  private processHeatmapData(books: Book[]): YearMonthData[] {
-    const yearMonthMap = new Map<string, number>();
-    const currentYear = new Date().getFullYear();
-    const startYear = currentYear - 9;
-
-    books
-      .filter(book => book.dateFinished)
-      .forEach(book => {
-        const finishedDate = new Date(book.dateFinished!);
-        const year = finishedDate.getFullYear();
-
-        if (year >= startYear && year <= currentYear) {
-          const month = finishedDate.getMonth() + 1;
+    return {
+      label: t('chartLabel'),
+      valueName: t('booksRead'),
+      cells: this.years().flatMap((year, row) =>
+        MONTHS.map((month, column) => {
           const key = `${year}-${month}`;
-          yearMonthMap.set(key, (yearMonthMap.get(key) || 0) + 1);
-        }
-      });
+          const pages = months.get(key)?.finishedPages ?? 0;
+          const value = months.get(key)?.finished ?? 0;
+          return {
+            column,
+            row,
+            value,
+            label: date(key, {month: 'short', year: 'numeric'}),
+            future: key > now && value === 0,
+            details: pages > 0 ? [{label: t('pagesRead'), value: number(pages)}] : [],
+          };
+        }),
+      ),
+    };
+  });
 
-    return Array.from(yearMonthMap.entries())
-      .map(([key, count]) => {
-        const [year, month] = key.split('-').map(Number);
-        return {year, month, count};
-      })
-      .sort((a, b) => a.year - b.year || a.month - b.month);
-  }
+  readonly insights = computed<readonly StatsInsight[]>(() => {
+    const {t, number, date} = this.text;
+    const year = new Date().getFullYear();
+    const thisYear = this.finished().filter(({month}) => month.startsWith(`${year}-`)).reduce((sum, {finished}) => sum + finished, 0);
+    const best = firstMaximum(this.finished(), ({finished}) => finished);
+    const books = (count: number) => t(count === 1 ? 'bookCount' : 'booksCount', {count: number(count)});
+
+    return [
+      {label: t('thisYear'), value: books(thisYear), detail: t('thisYearDetail', {year})},
+      {
+        label: t('bestMonth'),
+        value: books(best?.finished ?? 0),
+        detail: best ? date(best.month, {month: 'short', year: 'numeric'}) : '',
+      },
+    ];
+  });
 }

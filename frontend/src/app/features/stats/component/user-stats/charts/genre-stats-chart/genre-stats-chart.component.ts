@@ -1,194 +1,92 @@
-import {Component, DestroyRef, inject, Input, OnInit} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {BaseChartDirective} from 'ng2-charts';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BehaviorSubject, EMPTY, Observable} from 'rxjs';
-import {catchError} from 'rxjs/operators';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {GenreStatsResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import {Component, computed, inject, input, linkedSignal} from '@angular/core';
+import {TranslocoPipe} from '@jsverse/transloco';
+import {LucideChevronLeft, LucideChevronRight} from '@lucide/angular';
+import {barX, defineChart} from '@tanstack/charts';
+import {scaleLinear} from '@tanstack/charts/scales/linear';
 
-type GenreChartData = ChartData<'bar', number[], string>;
+import {AppButtonComponent} from '../../../../../../shared/ui/button/app-button.component';
+import {STATS_CARD} from '../../../../card/stats-context';
+import {type StatsGenreTime} from '../../../../data/stats-response.models';
+import {shorten, STATS_CHART_PALETTE, statsAxis, statsBar, statsBarBand, statsTooltip} from '../../../shared/stats-chart-basics';
+import {StatsChartPlotComponent} from '../../../shared/stats-chart-plot.component';
+import {injectStatsText, STATS_CHART_HOST_CLASS} from '../../../shared/stats-chart-text';
+
+const PAGE_SIZE = 12;
 
 @Component({
   selector: 'app-genre-stats-chart',
-  standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
-  templateUrl: './genre-stats-chart.component.html',
-  styleUrls: ['./genre-stats-chart.component.scss']
+  imports: [AppButtonComponent, LucideChevronLeft, LucideChevronRight, StatsChartPlotComponent, TranslocoPipe],
+  template: `
+    <app-stats-chart-plot [options]="chart()" />
+
+    @if (card.state() !== 'empty') {
+      <nav class="flex items-center justify-center gap-3 text-xs tabular-nums text-text-secondary">
+        <app-button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          [ariaLabel]="'common.back' | transloco"
+          [disabled]="page() === 0"
+          (clicked)="page.set(page() - 1)">
+          <svg lucideChevronLeft aria-hidden="true"></svg>
+        </app-button>
+        <span>{{ text.t('pageInfo', {current: page() + 1, total: totalPages()}) }}</span>
+        <app-button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          [ariaLabel]="'common.next' | transloco"
+          [disabled]="page() + 1 >= totalPages()"
+          (clicked)="page.set(page() + 1)">
+          <svg lucideChevronRight aria-hidden="true"></svg>
+        </app-button>
+      </nav>
+    }
+  `,
+  host: {class: STATS_CHART_HOST_CLASS},
 })
-export class GenreStatsChartComponent implements OnInit {
-  @Input() maxGenres: number = 35;
+export class GenreStatsChartComponent {
+  protected readonly text = injectStatsText('statsUser.genreStats');
+  protected readonly card = inject(STATS_CARD);
 
-  public readonly chartType = 'bar' as const;
-  public readonly chartData$: Observable<GenreChartData>;
-  public readonly chartOptions: ChartConfiguration['options'];
+  readonly data = input.required<readonly StatsGenreTime[]>();
 
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly chartDataSubject: BehaviorSubject<GenreChartData>;
+  readonly page = linkedSignal({source: this.data, computation: () => 0});
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.data().length / PAGE_SIZE)));
 
-  constructor() {
-    this.chartDataSubject = new BehaviorSubject<GenreChartData>({
-      labels: [],
-      datasets: []
-    });
-    this.chartData$ = this.chartDataSubject.asObservable();
+  readonly chart = computed(() => {
+    const {t} = this.text;
+    const rows = this.data();
+    const start = this.page() * PAGE_SIZE;
+    const genres = rows.slice(start, start + PAGE_SIZE).map((row) => ({...row, hours: row.seconds / 3600}));
 
-    this.chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: {top: 10}
-      },
-      plugins: {
-        legend: {display: false},
-        tooltip: {
-          enabled: true,
-          borderWidth: 1,
-          cornerRadius: 6,
-          displayColors: true,
-          padding: 12,
-          titleFont: {size: 14, weight: 'bold'},
-          bodyFont: {size: 13},
-          callbacks: {
-            label: (context) => {
-              const dataIndex = context.dataIndex;
-              const dataset = context.dataset;
-              const label = context.chart.data.labels?.[dataIndex] as string;
-              const minutes = Math.floor((dataset.data[dataIndex] as number) / 60);
-              const hours = Math.floor(minutes / 60);
-              const mins = minutes % 60;
-
-              const timeStr = hours > 0
-                ? `${hours}h ${mins}m`
-                : `${mins}m`;
-
-              return `${label}: ${timeStr}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: this.t.translate('statsUser.genreStats.axisGenres'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          },
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            maxRotation: 90,
-            minRotation: 90,
-            callback: (value, index) => {
-              const label = this.chartDataSubject.value.labels?.[index] as string;
-              const maxLength = 12;
-              if (label && label.length > maxLength) {
-                return label.substring(0, maxLength) + '...';
-              }
-              return label;
-            }
-          },
-          grid: {display: false},
-          border: {display: false}
-        },
-        y: {
-          title: {
-            display: true,
-            text: this.t.translate('statsUser.genreStats.axisTimeRead'),
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          },
-          beginAtZero: true,
-          ticks: {
-            font: {family: "'Inter', sans-serif", size: 11},
-            callback: (value) => {
-              const seconds = value as number;
-              const minutes = Math.floor(seconds / 60);
-              const hours = Math.floor(minutes / 60);
-              const days = Math.floor(hours / 24);
-
-              const dayLabel = days === 1 ? this.t.translate('statsUser.genreStats.day') : this.t.translate('statsUser.genreStats.days');
-              const hrLabel = (h: number) => h === 1 ? this.t.translate('statsUser.genreStats.hr') : this.t.translate('statsUser.genreStats.hrs');
-              const minLabel = this.t.translate('statsUser.genreStats.min');
-              const secLabel = this.t.translate('statsUser.genreStats.sec');
-
-              if (days > 0) {
-                const remainingHours = hours % 24;
-                if (remainingHours > 0) {
-                  return `${days} ${dayLabel} ${remainingHours} ${hrLabel(remainingHours)}`;
-                }
-                return `${days} ${dayLabel}`;
-              } else if (hours > 0) {
-                const remainingMinutes = minutes % 60;
-                if (remainingMinutes > 0) {
-                  return `${hours} ${hrLabel(hours)} ${remainingMinutes} ${minLabel}`;
-                }
-                return `${hours} ${hrLabel(hours)}`;
-              } else if (minutes > 0) {
-                return `${minutes} ${minLabel}`;
-              }
-              return `${seconds} ${secLabel}`;
+    return {
+      ariaLabel: t('title'),
+      definition: defineChart({
+        chart: ({width}) => ({
+          marks: [
+            barX(genres.filter(({hours}) => hours > 0), {x: 'hours', y: 'genre', fill: STATS_CHART_PALETTE[0], ...statsBar(width)}),
+          ],
+          scales: {
+            x: {
+              scale: scaleLinear().domain([0, Math.max(1, ...rows.map((row) => row.seconds)) / 3600]),
+              grid: true,
+              axis: statsAxis(t('axisTimeRead'), {format: (hours: number) => this.text.duration(hours * 60)}),
             },
-            stepSize: undefined,
-            maxTicksLimit: 8
+            y: {
+              scale: statsBarBand(genres.map(({genre}) => genre)),
+              axis: statsAxis(t('axisGenres'), {format: (genre: string) => shorten(genre, 29)}),
+            },
           },
-          grid: {
-          },
-          border: {display: false}
-        }
-      }
+        }),
+        focus: 'nearest-y',
+        focusRing: false,
+        svgAnimation: true,
+        tooltip: statsTooltip<(typeof genres)[number]>(([{datum: row}]) => ({
+          title: row.genre,
+          rows: [{label: t('readingTime'), value: this.text.duration(row.seconds / 60)}],
+        })),
+      }),
     };
-  }
-
-  ngOnInit(): void {
-    this.loadGenreStats();
-  }
-
-  private loadGenreStats(): void {
-    this.userStatsService.getGenreStats()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        catchError((error) => {
-          console.error('Error loading genre stats:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => {
-        this.updateChartData(data);
-      });
-  }
-
-  private updateChartData(genreStats: GenreStatsResponse[]): void {
-    const sortedStats = [...genreStats]
-      .sort((a, b) => b.totalDurationSeconds - a.totalDurationSeconds)
-      .slice(0, this.maxGenres);
-
-    const labels = sortedStats.map(stat => stat.genre);
-    const durations = sortedStats.map(stat => stat.totalDurationSeconds);
-
-    this.chartDataSubject.next({
-      labels,
-      datasets: [
-        {
-          label: this.t.translate('statsUser.genreStats.readingTime'),
-          data: durations,
-          backgroundColor: 'rgba(34, 197, 94, 0.8)',
-          borderColor: 'rgba(34, 197, 94, 1)',
-          borderWidth: 1,
-          borderRadius: 4,
-          barPercentage: 0.8,
-          categoryPercentage: 0.6
-        }
-      ]
-    });
-  }
+  });
 }

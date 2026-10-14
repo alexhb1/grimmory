@@ -1,162 +1,102 @@
-import {Component, inject, OnDestroy, OnInit} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {BehaviorSubject, EMPTY, Observable, Subject} from 'rxjs';
-import {catchError, takeUntil} from 'rxjs/operators';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {PeakHoursResponse, UserStatsService} from '../../../../../settings/user-management/user-stats.service';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
-import {AsyncPipe} from '@angular/common';
+import {Component, computed, input} from '@angular/core';
+import {defineChart} from '@tanstack/charts';
+import {angleGrid, polar, radialBarRadius, radialGrid} from '@tanstack/charts/polar';
+import {scaleBand} from '@tanstack/charts/scales/band';
+import {scaleLinear} from '@tanstack/charts/scales/linear';
+import {groupBy} from '@tanstack/charts/transform/group';
 
-type ClockChartData = ChartData<'polarArea', number[], string>;
+import {type StatsSlot} from '../../../../data/stats-response.models';
+import {STATS_BAR_FOCUS, STATS_CHART_PALETTE, STATS_POLAR_GRID, statsTooltip} from '../../../shared/stats-chart-basics';
+import {firstMaximum} from '../../../shared/stats-chart-data';
+import {StatsChartPlotComponent} from '../../../shared/stats-chart-plot.component';
+import {injectStatsText, STATS_CHART_HOST_CLASS} from '../../../shared/stats-chart-text';
+import {type StatsInsight, StatsInsightListComponent} from '../../../shared/stats-insight-list.component';
 
-const HOUR_LABELS = [
-  '12am', '1am', '2am', '3am', '4am', '5am',
-  '6am', '7am', '8am', '9am', '10am', '11am',
-  '12pm', '1pm', '2pm', '3pm', '4pm', '5pm',
-  '6pm', '7pm', '8pm', '9pm', '10pm', '11pm'
-];
+export interface ReadingClockData {
+  readonly year: number | null;
+  readonly weekday: number | null;
+  readonly rows: readonly StatsSlot[];
+}
 
 @Component({
   selector: 'app-reading-clock-chart',
-  standalone: true,
-  imports: [
-    AsyncPipe,BaseChartDirective, Tooltip, TranslocoDirective],
-  templateUrl: './reading-clock-chart.component.html',
-  styleUrls: ['./reading-clock-chart.component.scss']
+  imports: [StatsChartPlotComponent, StatsInsightListComponent],
+  template: `
+    <app-stats-chart-plot [options]="chart()" />
+    <app-stats-insight-list [items]="insights()" />
+  `,
+  host: {class: STATS_CHART_HOST_CLASS},
 })
-export class ReadingClockChartComponent implements OnInit, OnDestroy {
-  private readonly userStatsService = inject(UserStatsService);
-  private readonly t = inject(TranslocoService);
-  private readonly destroy$ = new Subject<void>();
+export class ReadingClockChartComponent {
+  private readonly text = injectStatsText('statsUser.readingClock');
 
-  public readonly chartType = 'polarArea' as const;
-  public peakHour = '';
-  public totalHoursRead = 0;
-  public readerType = '';
-  public hasData = false;
+  readonly data = input.required<ReadingClockData>();
 
-  public readonly chartOptions: ChartConfiguration<'polarArea'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 10, bottom: 10}
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderWidth: 1,
-        cornerRadius: 6,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 12},
-        callbacks: {
-          title: (context) => HOUR_LABELS[context[0].dataIndex],
-          label: (context) => {
-            const minutes = context.parsed.r;
-            if (minutes >= 60) {
-              const hrs = Math.floor(minutes / 60);
-              const mins = Math.round(minutes % 60);
-              return this.t.translate('statsUser.readingClock.tooltipReading', {time: `${hrs}h ${mins}m`});
-            }
-            return this.t.translate('statsUser.readingClock.tooltipReading', {time: `${Math.round(minutes)}m`});
-          }
-        }
-      }
-    },
-    scales: {
-      r: {
-        ticks: {display: false},
-        pointLabels: {
-          display: true,
-          font: {family: "'Inter', sans-serif", size: 10}
-        }
-      }
-    }
-  };
-
-  private readonly chartDataSubject = new BehaviorSubject<ClockChartData>({
-    labels: [],
-    datasets: []
+  private readonly shown = computed(() => {
+    const {rows, weekday} = this.data();
+    return weekday === null ? rows : rows.filter((slot) => slot.weekday === weekday);
   });
 
-  public readonly chartData$: Observable<ClockChartData> = this.chartDataSubject.asObservable();
+  private readonly minutes = computed(() =>
+    groupBy(this.shown(), {by: 'hour', outputs: {seconds: {value: 'seconds', reduce: 'sum'}}})
+      .map(({hour, seconds}) => ({hour, minutes: seconds / 60})),
+  );
 
-  ngOnInit(): void {
-    this.userStatsService.getPeakHours()
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError((error) => {
-          console.error('Error loading peak hours:', error);
-          return EMPTY;
-        })
-      )
-      .subscribe((data) => this.processData(data));
-  }
+  private readonly longest = computed(() => {
+    const {rows, weekday} = this.data();
+    if (weekday !== null) return Math.max(1, ...rows.map(({seconds}) => seconds / 60));
+    return Math.max(1, ...this.minutes().map(({minutes}) => minutes));
+  });
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  private readonly hourLabels = computed(() => Array.from({length: 24}, (_, hour) => this.text.hour(hour)));
 
-  private processData(data: PeakHoursResponse[]): void {
-    if (!data || data.length === 0) {
-      this.hasData = false;
-      return;
-    }
+  readonly chart = computed(() => {
+    const {t} = this.text;
+    const {year, weekday} = this.data();
+    const labels = this.hourLabels();
+    const hours = this.minutes().map(({hour, minutes}) => ({hour: labels[hour], minutes}));
+    const halfStep = Math.PI / labels.length;
+    const days = weekday === null ? t('everyDay') : this.text.weekday(weekday, 'long');
 
-    this.hasData = true;
+    return {
+      ariaLabel: t('chartLabel', {days, period: year === null ? t('allTime') : year}),
+      definition: defineChart({
+        marks: [
+          polar({
+            inset: 24,
+            startAngle: -halfStep,
+            endAngle: 2 * Math.PI - halfStep,
+            scales: {
+              angle: {scale: scaleBand<string>().domain(labels).paddingInner(0.08).paddingOuter(0.04)},
+              radius: {scale: scaleLinear().domain([0, this.longest()])},
+            },
+            guides: [
+              radialGrid({ticks: 3, ...STATS_POLAR_GRID}),
+              angleGrid({values: labels.filter((_, hour) => hour % 3 === 0), labelOffset: 10, ...STATS_POLAR_GRID}),
+            ],
+            marks: [
+              radialBarRadius(hours, {angle: 'hour', radius: 'minutes', fill: STATS_CHART_PALETTE[0], cornerRadius: 2, states: STATS_BAR_FOCUS}),
+            ],
+          }),
+        ],
+        scales: {x: null, y: null},
+        focusRing: false,
+        svgAnimation: true,
+        tooltip: statsTooltip<(typeof hours)[number]>(([{datum: hour}]) => ({
+          title: hour.hour,
+          rows: [{label: t('totalRead'), value: this.text.duration(hour.minutes)}],
+        })),
+      }),
+    };
+  });
 
-    // Build 24-hour array
-    const hourMinutes = new Array(24).fill(0);
-    let totalSeconds = 0;
-    let peakIdx = 0;
-    let peakVal = 0;
+  readonly insights = computed<readonly StatsInsight[]>(() => {
+    const {t, duration} = this.text;
+    const peak = firstMaximum(this.minutes().filter(({minutes}) => minutes > 0), ({minutes}) => minutes);
 
-    for (const entry of data) {
-      const minutes = entry.totalDurationSeconds / 60;
-      hourMinutes[entry.hourOfDay] = minutes;
-      totalSeconds += entry.totalDurationSeconds;
-      if (minutes > peakVal) {
-        peakVal = minutes;
-        peakIdx = entry.hourOfDay;
-      }
-    }
-
-    this.peakHour = HOUR_LABELS[peakIdx];
-    this.totalHoursRead = Math.round(totalSeconds / 3600);
-
-    // Night owl vs early bird
-    const nightHours = [20, 21, 22, 23, 0, 1, 2];
-    const morningHours = [5, 6, 7, 8, 9, 10, 11];
-    const nightTotal = nightHours.reduce((sum, h) => sum + hourMinutes[h], 0);
-    const morningTotal = morningHours.reduce((sum, h) => sum + hourMinutes[h], 0);
-
-    if (nightTotal > morningTotal * 1.2) {
-      this.readerType = this.t.translate('statsUser.readingClock.nightOwl');
-    } else if (morningTotal > nightTotal * 1.2) {
-      this.readerType = this.t.translate('statsUser.readingClock.earlyBird');
-    } else {
-      this.readerType = this.t.translate('statsUser.readingClock.balanced');
-    }
-
-    // Generate colors: cool blues for low, warm oranges for peak
-    const maxMinutes = Math.max(...hourMinutes, 1);
-    const colors = hourMinutes.map(minutes => {
-      const ratio = minutes / maxMinutes;
-      if (ratio >= 0.7) return 'rgba(255, 152, 0, 0.8)';   // Warm orange
-      if (ratio >= 0.4) return 'rgba(255, 193, 7, 0.7)';    // Yellow
-      if (ratio >= 0.15) return 'rgba(100, 181, 246, 0.6)';  // Light blue
-      return 'rgba(66, 133, 244, 0.35)';                      // Cool blue
-    });
-
-    this.chartDataSubject.next({
-      labels: HOUR_LABELS,
-      datasets: [{
-        data: hourMinutes,
-        backgroundColor: colors
-      }]
-    });
-  }
+    return [
+      {label: t('peakHour'), value: peak ? this.hourLabels()[peak.hour] : '—'},
+      {label: t('totalRead'), value: duration(this.shown().reduce((sum, slot) => sum + slot.seconds, 0) / 60)},
+    ];
+  });
 }

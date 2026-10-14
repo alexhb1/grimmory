@@ -1,10 +1,33 @@
-import {describe, it} from 'vitest';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {beforeEach, describe, expect, it} from 'vitest';
 
-// NOTE(frontend-seam): Real coverage here needs seams around Chart.js matrix registration,
-// translated tooltip callbacks, streak-stat loading, and year navigation so heatmap processing can
-// be exercised without relying on matrix controller rendering internals.
-describe.skip('ReadingSessionHeatmapComponent', () => {
-  it('needs chart-runtime and streak seams to verify heatmap data shaping and milestone calculations deterministically', () => {
-    // TODO(seam): Cover heatmap cell construction and streak milestones once Chart.js matrix concerns are isolated.
+import {getTranslocoModule} from '../../../../../../core/testing/transloco-testing';
+import {STATS_CARD_TESTING_PROVIDER} from '../../../shared/stats-chart-testing';
+import {ReadingSessionHeatmapComponent} from './reading-session-heatmap.component';
+
+describe('ReadingSessionHeatmapComponent', () => {
+  let fixture: ComponentFixture<ReadingSessionHeatmapComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ReadingSessionHeatmapComponent, getTranslocoModule({preloadLangs: true})],
+      providers: [STATS_CARD_TESTING_PROVIDER],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ReadingSessionHeatmapComponent);
+  });
+
+  it('lays every day of the year out in Monday-first weeks', () => {
+    fixture.componentRef.setInput('data', {
+      year: 2026,
+      rows: [{day: '2026-01-05', sessions: 3}],
+      streaks: {current: 1, longest: 8, readingDays: 10},
+    });
+    const cells = fixture.componentInstance.cells();
+
+    expect(cells).toHaveLength(365);
+    expect(cells[0]).toEqual({week: 0, weekday: 3, date: '2026-01-01', count: 0});
+    expect(cells[4]).toEqual({week: 1, weekday: 0, date: '2026-01-05', count: 3});
+    expect(cells.at(-1)).toEqual({week: 52, weekday: 3, date: '2026-12-31', count: 0});
   });
 });

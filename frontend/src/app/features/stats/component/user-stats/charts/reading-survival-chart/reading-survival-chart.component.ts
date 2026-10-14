@@ -1,184 +1,105 @@
-import {Component, computed, inject} from '@angular/core';
-import {BaseChartDirective} from 'ng2-charts';
-import {Tooltip} from '@openng/optimus-ui/tooltip';
-import {ChartConfiguration, ChartData} from 'chart.js';
-import {BookService} from '../../../../../book/service/book.service';
-import {Book} from '../../../../../book/model/book.model';
-import {TranslocoDirective, TranslocoService} from '@jsverse/transloco';
+import {Component, computed, input} from '@angular/core';
+import {areaY, d3Curve, defineChart, lineY, ruleX, ruleY, text} from '@tanstack/charts';
+import {decorative} from '@tanstack/charts/mark/decorative';
+import {scaleLinear} from '@tanstack/charts/scales/linear';
+import {curveStepBefore} from 'd3-shape';
 
-type SurvivalChartData = ChartData<'line', number[], string>;
+import {type StatsDistribution} from '../../../../data/stats-response.models';
+import {STATS_CHART_PALETTE, STATS_CHART_VALUE, statsAxis, statsTooltip} from '../../../shared/stats-chart-basics';
+import {StatsChartPlotComponent} from '../../../shared/stats-chart-plot.component';
+import {injectStatsText, STATS_CHART_HOST_CLASS} from '../../../shared/stats-chart-text';
+import {type StatsInsight, StatsInsightListComponent} from '../../../shared/stats-insight-list.component';
+import {type StatsLegendItem, StatsLegendComponent} from '../../../shared/stats-legend.component';
 
-interface SurvivalMetrics {
-  totalStarted: number;
-  completionRate: number;
-  medianDropout: string;
-  dangerZoneRange: string;
-  dangerZoneDrop: string;
-  chartData: SurvivalChartData;
-}
-
-const THRESHOLDS = [0, 10, 25, 50, 75, 90, 100];
+const MILESTONES = [10, 25, 50, 75, 90];
 
 @Component({
   selector: 'app-reading-survival-chart',
-  standalone: true,
-  imports: [BaseChartDirective, Tooltip, TranslocoDirective],
-  templateUrl: './reading-survival-chart.component.html',
-  styleUrls: ['./reading-survival-chart.component.scss']
+  imports: [StatsChartPlotComponent, StatsInsightListComponent, StatsLegendComponent],
+  template: `
+    <app-stats-chart-plot [options]="chart()" />
+    <app-stats-legend [items]="legend()" />
+    <app-stats-insight-list [items]="insights()" />
+  `,
+  host: {class: STATS_CHART_HOST_CLASS},
 })
 export class ReadingSurvivalChartComponent {
-  private readonly bookService = inject(BookService);
-  private readonly t = inject(TranslocoService);
-  private readonly survivalMetrics = computed<SurvivalMetrics>(() => {
-    if (this.bookService.isBooksLoading()) {
-      return this.emptyMetrics();
-    }
+  private readonly text = injectStatsText('statsUser.readingSurvival');
 
-    return this.calculateSurvivalMetrics(this.bookService.books());
+  readonly data = input.required<StatsDistribution<number>>();
+
+  private readonly started = computed(() =>
+    this.data().rows.flatMap(({value, books}) => (value !== null && value > 0 ? [{progress: value, books}] : [])),
+  );
+  private readonly startedBooks = computed(() => this.started().reduce((sum, {books}) => sum + books, 0));
+  readonly points = computed(() => {
+    const started = this.startedBooks();
+    if (started === 0) return [];
+    let surviving = started;
+    return [
+      {progress: 0, percent: 100},
+      ...this.started().map(({progress, books}) => {
+        const point = {progress, percent: (surviving / started) * 100};
+        surviving -= books;
+        return point;
+      }),
+    ];
   });
 
-  public readonly chartType = 'line' as const;
-  public readonly totalStarted = computed(() => this.survivalMetrics().totalStarted);
-  public readonly completionRate = computed(() => this.survivalMetrics().completionRate);
-  public readonly medianDropout = computed(() => this.survivalMetrics().medianDropout);
-  public readonly dangerZoneRange = computed(() => this.survivalMetrics().dangerZoneRange);
-  public readonly dangerZoneDrop = computed(() => this.survivalMetrics().dangerZoneDrop);
+  readonly chart = computed(() => {
+    const {t, number} = this.text;
+    const percent = (value: number) => `${number(value, {maximumFractionDigits: 0})}%`;
+    const points = this.points();
+    const color = STATS_CHART_PALETTE[0];
+    const curve = d3Curve(curveStepBefore);
 
-  public readonly chartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: {top: 10, bottom: 10, left: 10, right: 10}
-    },
-    plugins: {
-      legend: {display: false},
-      tooltip: {
-        enabled: true,
-        borderColor: '#e91e63',
-        borderWidth: 1,
-        cornerRadius: 6,
-        padding: 12,
-        titleFont: {size: 13, weight: 'bold'},
-        bodyFont: {size: 12},
-        callbacks: {
-          title: (context) => this.t.translate('statsUser.readingSurvival.tooltipProgress', {label: context[0].label}),
-          label: (context) => this.t.translate('statsUser.readingSurvival.tooltipSurvival', {value: (context.parsed.y ?? 0).toFixed(1)})
-        }
-      }
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.readingSurvival.axisProgressThreshold'),
-          font: {family: "'Inter', sans-serif", size: 12, weight: 'bold'}
+    return {
+      ariaLabel: t('chartLabel'),
+      definition: defineChart({
+        marks: [
+          ruleX(MILESTONES, {strokeOpacity: 0.08}),
+          ruleY([50], {strokeDasharray: '4 4'}),
+          decorative(text(points.slice(-1), {
+            x: 'progress',
+            y: 'percent',
+            text: (point) => percent(point.percent),
+            dx: -9,
+            dy: (point) => (point.percent < 10 ? -11 : -9),
+            anchor: 'end',
+            ...STATS_CHART_VALUE,
+          })),
+          decorative(areaY(points, {x: 'progress', y1: 0, y2: 'percent', fill: color, fillOpacity: 0.12, curve})),
+          lineY(points, {x: 'progress', y: 'percent', stroke: color, points: true, curve}),
+        ],
+        scales: {
+          x: {scale: scaleLinear().domain([0, 100]), axis: statsAxis(t('axisProgressThreshold'), {format: percent})},
+          y: {scale: scaleLinear().domain([0, 100]), grid: true, axis: statsAxis(t('axisBooksSurviving'), {format: percent})},
         },
-        ticks: {
-          font: {family: "'Inter', sans-serif", size: 11}
-        },
-        border: {display: false}
+        focus: 'group-x',
+        maxFocusDistance: Number.POSITIVE_INFINITY,
+        svgAnimation: true,
+        tooltip: statsTooltip<(typeof points)[number]>(([{datum: point}]) => ({
+          title: t('tooltipProgress', {label: percent(point.progress)}),
+          rows: [{label: t('survivalRate'), value: `${number(point.percent, {maximumFractionDigits: 1})}%`, color}],
+        })),
+      }),
+    };
+  });
+
+  readonly legend = computed<readonly StatsLegendItem[]>(() => [
+    {label: this.text.t('survivalRate'), color: STATS_CHART_PALETTE[0], swatch: 'line'},
+  ]);
+
+  readonly insights = computed<readonly StatsInsight[]>(() => {
+    const {t, number} = this.text;
+    const stopped = this.startedBooks();
+    const finished = this.started().find((row) => row.progress === 100)?.books ?? 0;
+    return [
+      {
+        label: t('completionRate'),
+        value: number(stopped > 0 ? finished / stopped : 0, {style: 'percent'}),
+        detail: t(stopped === 1 ? 'stoppedBook' : 'stoppedBooks', {finished: number(finished), stopped: number(stopped)}),
       },
-      y: {
-        min: 0,
-        max: 100,
-        title: {
-          display: true,
-          text: this.t.translate('statsUser.readingSurvival.axisBooksSurviving'),
-          font: {family: "'Inter', sans-serif", size: 12, weight: 'bold'}
-        },
-        ticks: {
-          font: {family: "'Inter', sans-serif", size: 11},
-          callback: (value) => `${value}%`
-        },
-        border: {display: false}
-      }
-    }
-  };
-
-  public readonly chartData = computed(() => this.survivalMetrics().chartData);
-
-  private calculateSurvivalMetrics(books: Book[]): SurvivalMetrics {
-    if (books.length === 0) {
-      return this.emptyMetrics();
-    }
-
-    const startedBooks = books.filter(b => this.getBookProgress(b) > 0);
-    const totalStarted = startedBooks.length;
-
-    if (totalStarted === 0) {
-      return this.emptyMetrics();
-    }
-
-    const progresses = startedBooks.map(b => this.getBookProgress(b));
-    const survivalValues = THRESHOLDS.map(threshold => {
-      const survived = progresses.filter(p => p >= threshold).length;
-      return (survived / totalStarted) * 100;
-    });
-
-    const completionRate = Math.round(survivalValues[survivalValues.length - 1]);
-
-    const medianIdx = survivalValues.findIndex(v => v < 50);
-    const medianDropout = medianIdx === -1
-      ? '100%+'
-      : medianIdx === 0
-        ? `${THRESHOLDS[0]}%`
-        : `${THRESHOLDS[medianIdx - 1]}-${THRESHOLDS[medianIdx]}%`;
-
-    let maxDrop = 0;
-    let dangerIdx = 0;
-    for (let i = 1; i < survivalValues.length; i++) {
-      const drop = survivalValues[i - 1] - survivalValues[i];
-      if (drop > maxDrop) {
-        maxDrop = drop;
-        dangerIdx = i;
-      }
-    }
-    const dangerZoneRange = `${THRESHOLDS[dangerIdx - 1]}-${THRESHOLDS[dangerIdx]}%`;
-    const dangerZoneDrop = `-${maxDrop.toFixed(0)}%`;
-
-    const labels = THRESHOLDS.map(t => `${t}%`);
-    return {
-      totalStarted,
-      completionRate,
-      medianDropout,
-      dangerZoneRange,
-      dangerZoneDrop,
-      chartData: {
-        labels,
-        datasets: [{
-          label: this.t.translate('statsUser.readingSurvival.survivalRate'),
-          data: survivalValues,
-          borderColor: '#e91e63',
-          backgroundColor: 'rgba(233, 30, 99, 0.15)',
-          fill: true,
-          stepped: true,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointBackgroundColor: '#e91e63',
-          pointBorderWidth: 2,
-          borderWidth: 2
-        }]
-      }
-    };
-  }
-
-  private emptyMetrics(): SurvivalMetrics {
-    return {
-      totalStarted: 0,
-      completionRate: 0,
-      medianDropout: '',
-      dangerZoneRange: '',
-      dangerZoneDrop: '',
-      chartData: {labels: [], datasets: []}
-    };
-  }
-
-  private getBookProgress(book: Book): number {
-    if (book.pdfProgress?.percentage) return book.pdfProgress.percentage;
-    if (book.epubProgress?.percentage) return book.epubProgress.percentage;
-    if (book.cbxProgress?.percentage) return book.cbxProgress.percentage;
-    if (book.koreaderProgress?.percentage) return book.koreaderProgress.percentage;
-    if (book.koboProgress?.percentage) return book.koboProgress.percentage;
-    return 0;
-  }
+    ];
+  });
 }
