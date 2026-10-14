@@ -1,81 +1,148 @@
 package org.booklore.service.browse;
 
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
 import org.booklore.app.specification.AppBookSpecification;
 import org.booklore.exception.ApiError;
 import org.booklore.model.entity.BookEntity;
+import org.booklore.model.entity.BookFileEntity;
+import org.booklore.model.entity.UserBookProgressEntity;
+import org.booklore.model.enums.ReadStatus;
 import org.booklore.service.opds.MagicShelfBookService;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.function.BiFunction;
+
+import static org.booklore.service.browse.FacetDef.names;
+import static org.booklore.service.browse.FacetDef.number;
+import static org.booklore.service.browse.FacetDef.values;
 
 @Component
 public class BookFacetRegistry {
 
     private static final String MAGIC_SHELF_PREFIX = "magic:";
 
-    private static final Set<String> NAMES = Set.of(
-            "author", "series", "genre", "tag", "mood", "language", "publisher", "narrator", "library", "shelf",
-            "file_type", "read_status", "personal_rating", "amazon_rating", "goodreads_rating",
-            "hardcover_rating", "ranobedb_rating", "lubimyczytac_rating", "audible_rating", "applebooks_rating",
-            "age_rating", "content_rating", "match_score",
-            "published_year", "file_size", "page_count", "shelf_status",
-            "comic_character", "comic_team", "comic_location", "comic_creator");
+    private static final List<String> RATING_BANDS = List.of("0..<1", "1..<2", "2..<3", "3..<4", "4..<4.5", "4.5..*");
+    private static final List<String> MATCH_SCORE_BANDS = List.of("95..*", "90..<95", "80..<90", "70..<80", "50..<70", "30..<50", "0..<30");
 
     private final MagicShelfBookService magicShelfBookService;
+    private final FacetRegistry<BookEntity> registry;
 
     public BookFacetRegistry(MagicShelfBookService magicShelfBookService) {
         this.magicShelfBookService = magicShelfBookService;
+        this.registry = build();
     }
 
-    public boolean has(String facetName) {
-        return NAMES.contains(facetName);
+    public FacetRegistry<BookEntity> registry() {
+        return registry;
     }
 
-    public Set<String> facetNames() {
-        return NAMES;
+    private FacetRegistry<BookEntity> build() {
+        return new FacetRegistry<BookEntity>()
+                .register(names("author", "Authors", any(AppBookSpecification::withAuthors),
+                        (root, query, cb, scope) -> metadata(root).join("authors", JoinType.LEFT).get("name")))
+                .register(names("genre", "Genre", any(AppBookSpecification::withCategories),
+                        (root, query, cb, scope) -> metadata(root).join("categories", JoinType.LEFT).get("name")))
+                .register(names("tag", "Tags", any(AppBookSpecification::withTags),
+                        (root, query, cb, scope) -> metadata(root).join("tags", JoinType.LEFT).get("name")))
+                .register(names("mood", "Moods", any(AppBookSpecification::withMoods),
+                        (root, query, cb, scope) -> metadata(root).join("moods", JoinType.LEFT).get("name")))
+                .register(names("series", "Series", any(AppBookSpecification::inSeriesMulti),
+                        (root, query, cb, scope) -> metadata(root).get("seriesName")))
+                .register(names("publisher", "Publisher", any(AppBookSpecification::withPublishers),
+                        (root, query, cb, scope) -> metadata(root).get("publisher")))
+                .register(names("language", "Language", any(AppBookSpecification::withLanguages),
+                        (root, query, cb, scope) -> metadata(root).get("language")))
+                .register(names("narrator", "Narrator", any(AppBookSpecification::withNarrators),
+                        (root, query, cb, scope) -> metadata(root).get("narrator")))
+                .register(values("file_type", "File Type", any(AppBookSpecification::withFileTypes),
+                        (root, query, cb, scope) -> {
+                            Join<BookEntity, BookFileEntity> files = root.join("bookFiles", JoinType.LEFT);
+                            files.on(cb.isTrue(files.get("isBookFormat")));
+                            return files.get("bookType");
+                        },
+                        (root, query, cb, scope) -> cb.<String>selectCase()
+                                .when(cb.isTrue(root.get("isPhysical")), "PHYSICAL")
+                                .otherwise(cb.nullLiteral(String.class))))
+                .register(values("content_rating", "Content Rating", any(AppBookSpecification::withContentRatings),
+                        (root, query, cb, scope) -> metadata(root).get("contentRating")))
+                .register(rating("amazon_rating", "Amazon Rating", AppBookSpecification::withAmazonRatings, "amazonRating"))
+                .register(rating("goodreads_rating", "Goodreads Rating", AppBookSpecification::withGoodreadsRatings, "goodreadsRating"))
+                .register(rating("hardcover_rating", "Hardcover Rating", AppBookSpecification::withHardcoverRatings, "hardcoverRating"))
+                .register(rating("ranobedb_rating", "RanobeDB Rating", AppBookSpecification::withRanobedbRatings, "ranobedbRating"))
+                .register(rating("lubimyczytac_rating", "Lubimyczytac Rating", AppBookSpecification::withLubimyczytacRatings, "lubimyczytacRating"))
+                .register(rating("audible_rating", "Audible Rating", AppBookSpecification::withAudibleRatings, "audibleRating"))
+                .register(rating("applebooks_rating", "Apple Books Rating", AppBookSpecification::withApplebooksRatings, "applebooksRating"))
+                .register(values("age_rating", "Age Rating", any(AppBookSpecification::withAgeRatings),
+                        (root, query, cb, scope) -> metadata(root).get("ageRating")))
+                .register(number("page_count", "Page Count", any(AppBookSpecification::withPageCounts),
+                        (root, query, cb, scope) -> metadata(root).get("pageCount")))
+                .register(number("match_score", "Match Score", any(AppBookSpecification::withMatchScores),
+                        (root, query, cb, scope) -> root.get("metadataMatchScore")).banded(MATCH_SCORE_BANDS))
+                .register(number("published_year", "Published Year", any(AppBookSpecification::withPublishedYears),
+                        (root, query, cb, scope) -> cb.function("YEAR", Integer.class, metadata(root).get("publishedDate"))))
+                .register(values("library", "Library", any(AppBookSpecification::inLibraries),
+                        (root, query, cb, scope) -> root.join("library").get("id")))
+                .register(values("shelf", "Shelf", this::shelves,
+                        (root, query, cb, scope) -> root.join("shelves", JoinType.LEFT).get("id")))
+                .register(values("shelf_status", "Shelf Status", any(AppBookSpecification::withShelfStatus),
+                        (root, query, cb, scope) -> cb.<String>selectCase()
+                                .when(cb.isNotEmpty(root.get("shelves")), "shelved")
+                                .otherwise("unshelved")))
+                .register(values("read_status", "Read Status",
+                        (values, scope) -> AppBookSpecification.withReadStatuses(values, scope.userId(), "or"),
+                        (root, query, cb, scope) -> {
+                            Join<BookEntity, UserBookProgressEntity> progress = root.join("userBookProgress", JoinType.LEFT);
+                            progress.on(cb.equal(progress.get("user").get("id"), scope.userId()));
+                            return cb.<ReadStatus>selectCase()
+                                    .when(progress.get("id").isNull(), ReadStatus.UNSET)
+                                    .otherwise(progress.get("readStatus"));
+                        }))
+                .register(values("personal_rating", "Personal Rating",
+                        (values, scope) -> AppBookSpecification.withPersonalRatings(values, scope.userId(), "or"),
+                        (root, query, cb, scope) -> {
+                            Join<BookEntity, UserBookProgressEntity> progress = root.join("userBookProgress");
+                            progress.on(cb.equal(progress.get("user").get("id"), scope.userId()));
+                            return progress.get("personalRating");
+                        }))
+                .register(number("file_size", "File Size", any(AppBookSpecification::withFileSizes),
+                        (root, query, cb, scope) -> {
+                            Join<BookEntity, BookFileEntity> files = root.join("bookFiles", JoinType.LEFT);
+                            files.on(cb.isTrue(files.get("isBookFormat")));
+                            return files.get("fileSizeKb");
+                        }))
+                .register(names("comic_character", "Comic Characters", any(AppBookSpecification::withComicCharacters),
+                        (root, query, cb, scope) -> comic(root).join("characters", JoinType.LEFT).get("name")))
+                .register(names("comic_team", "Comic Teams", any(AppBookSpecification::withComicTeams),
+                        (root, query, cb, scope) -> comic(root).join("teams", JoinType.LEFT).get("name")))
+                .register(names("comic_location", "Comic Locations", any(AppBookSpecification::withComicLocations),
+                        (root, query, cb, scope) -> comic(root).join("locations", JoinType.LEFT).get("name")))
+                .register(names("comic_creator", "Comic Creators", any(AppBookSpecification::withComicCreators),
+                        (root, query, cb, scope) -> comic(root).join("creatorMappings", JoinType.LEFT).join("creator", JoinType.LEFT).get("name")));
     }
 
-    public Specification<BookEntity> matching(String facetName, List<String> values, Long userId) {
-        return switch (facetName) {
-            case "author" -> AppBookSpecification.withAuthors(values, "or");
-            case "series" -> AppBookSpecification.inSeriesMulti(values, "or");
-            case "genre" -> AppBookSpecification.withCategories(values, "or");
-            case "tag" -> AppBookSpecification.withTags(values, "or");
-            case "mood" -> AppBookSpecification.withMoods(values, "or");
-            case "language" -> AppBookSpecification.withLanguages(values, "or");
-            case "publisher" -> AppBookSpecification.withPublishers(values, "or");
-            case "narrator" -> AppBookSpecification.withNarrators(values, "or");
-            case "library" -> AppBookSpecification.inLibraries(values, "or");
-            case "shelf" -> shelves(values, userId);
-            case "file_type" -> AppBookSpecification.withFileTypes(values, "or");
-            case "read_status" -> AppBookSpecification.withReadStatuses(values, userId, "or");
-            case "personal_rating" -> AppBookSpecification.withPersonalRatings(values, userId, "or");
-            case "amazon_rating" -> AppBookSpecification.withAmazonRatings(values, "or");
-            case "goodreads_rating" -> AppBookSpecification.withGoodreadsRatings(values, "or");
-            case "hardcover_rating" -> AppBookSpecification.withHardcoverRatings(values, "or");
-            case "ranobedb_rating" -> AppBookSpecification.withRanobedbRatings(values, "or");
-            case "lubimyczytac_rating" -> AppBookSpecification.withLubimyczytacRatings(values, "or");
-            case "audible_rating" -> AppBookSpecification.withAudibleRatings(values, "or");
-            case "applebooks_rating" -> AppBookSpecification.withApplebooksRatings(values, "or");
-            case "age_rating" -> AppBookSpecification.withAgeRatings(values, "or");
-            case "content_rating" -> AppBookSpecification.withContentRatings(values, "or");
-            case "match_score" -> AppBookSpecification.withMatchScores(values, "or");
-            case "published_year" -> AppBookSpecification.withPublishedYears(values, "or");
-            case "file_size" -> AppBookSpecification.withFileSizes(values, "or");
-            case "page_count" -> AppBookSpecification.withPageCounts(values, "or");
-            case "shelf_status" -> AppBookSpecification.withShelfStatus(values, "or");
-            case "comic_character" -> AppBookSpecification.withComicCharacters(values, "or");
-            case "comic_team" -> AppBookSpecification.withComicTeams(values, "or");
-            case "comic_location" -> AppBookSpecification.withComicLocations(values, "or");
-            case "comic_creator" -> AppBookSpecification.withComicCreators(values, "or");
-            default -> throw ApiError.INVALID_FACET.createException("Unknown facet: " + facetName);
-        };
+    private static FacetFilter<BookEntity> any(BiFunction<List<String>, String, Specification<BookEntity>> filter) {
+        return (values, scope) -> filter.apply(values, "or");
     }
 
-    private Specification<BookEntity> shelves(List<String> values, Long userId) {
+    private static FacetDef<BookEntity> rating(String key, String title,
+                                               BiFunction<List<String>, String, Specification<BookEntity>> filter, String field) {
+        return number(key, title, any(filter), (root, query, cb, scope) -> metadata(root).get(field)).banded(RATING_BANDS);
+    }
+
+    private static Join<?, ?> metadata(Root<BookEntity> root) {
+        return root.join("metadata", JoinType.LEFT);
+    }
+
+    private static Join<?, ?> comic(Root<BookEntity> root) {
+        return metadata(root).join("comicMetadata", JoinType.LEFT);
+    }
+
+    private Specification<BookEntity> shelves(List<String> values, BrowseScope scope) {
         List<String> regularIds = new ArrayList<>();
         List<Specification<BookEntity>> specs = new ArrayList<>();
         for (String value : values) {
@@ -83,7 +150,7 @@ public class BookFacetRegistry {
                 continue;
             }
             if (value.startsWith(MAGIC_SHELF_PREFIX)) {
-                specs.add(magicShelfBookService.toSpecification(userId, parseMagicShelfId(value)));
+                specs.add(magicShelfBookService.toSpecification(scope.userId(), parseMagicShelfId(value)));
             } else {
                 regularIds.add(value);
             }
