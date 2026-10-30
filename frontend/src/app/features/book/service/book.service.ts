@@ -1,6 +1,6 @@
 import {computed, effect, inject, Service} from '@angular/core';
 import {first, from, lastValueFrom, Observable, throwError} from 'rxjs';
-import {HttpClient, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpErrorResponse, HttpParams} from '@angular/common/http';
 import {catchError, map, tap} from 'rxjs/operators';
 import {Book, BookDeletionResponse, BookRecommendation, BookSetting, BookStatusUpdateResponse, BookType, CreatePhysicalBookRequest, PersonalRatingUpdateResponse, ReadStatus} from '../model/book.model';
 import {API_CONFIG} from '../../../core/config/api-config';
@@ -205,11 +205,13 @@ export class BookService {
         });
       }),
       catchError(error => {
-        this.messageService.add({
-          severity: 'error',
-          summary: this.t.translate('book.bookService.toast.creationFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.creationFailedDetail')
-        });
+        if (!(error instanceof HttpErrorResponse && error.status === 409)) {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.bookService.toast.creationFailedSummary'),
+            detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.creationFailedDetail')
+          });
+        }
         return throwError(() => error);
       })
     );
