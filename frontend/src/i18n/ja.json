@@ -11,28 +11,29 @@
     "success": "成功",
     "yes": "はい",
     "no": "いいえ",
-    "ok": "OK",
+    "ok": "",
     "retry": "再試行",
     "back": "戻る",
     "next": "次へ",
     "submit": "送信",
     "remove": "削除",
+    "clear": "",
     "edit": "編集",
     "info": "情報",
     "select": "選択",
     "dismiss": "閉じる",
     "discard": "破棄",
     "review": "確認",
+    "libraryPathInaccessible": "",
     "displaySettings": "表示設定",
     "cardSize": "カードサイズ",
+    "decreaseCardSize": "",
+    "increaseCardSize": "",
+    "cardSizeControls": "",
     "on": "",
     "off": "",
     "moreActionsFor": "",
-    "cardSizeControls": "",
-    "libraryPathInaccessible": "",
-    "decreaseCardSize": "",
-    "dialogLoadError": "",
-    "increaseCardSize": ""
+    "dialogLoadError": ""
   },
   "auth": {
     "oidc": {
@@ -60,18 +61,18 @@
       "useLocalLogin": "ローカルログインを使用",
       "oidcAutoDisabled": "{{provider}}認証は、{{count}}回連続の失敗（タイムアウトを含む）により自動的に無効化されました。再試行するか、ローカルログインで続行できます。",
       "oidcManuallyDisabled": "{{provider}}認証は手動で無効化されています。再有効化するか、ローカルログインで続行できます。",
+      "oidcErrorsSummary": "",
       "rateLimited": "ログイン試行回数が多すぎます。しばらくしてからもう一度お試しください。",
-      "oidcErrors": {
-        "providerUnreachable": "",
-        "stateMismatch": "",
-        "invalidToken": "",
-        "userNotProvisioned": "",
-        "unknown": "",
-        "exchangeFailed": ""
-      },
-      "oidcOnlyRedirectFailed": "",
       "sessionRevoked": "",
-      "oidcErrorsSummary": ""
+      "oidcOnlyRedirectFailed": "",
+      "oidcErrors": {
+        "stateMismatch": "",
+        "exchangeFailed": "",
+        "userNotProvisioned": "",
+        "providerUnreachable": "",
+        "invalidToken": "",
+        "unknown": ""
+      }
     }
   },
   "nav": {
@@ -111,7 +112,7 @@
       "authentication": "認証",
       "tasks": "タスク",
       "auditLogs": "監査ログ",
-      "opds": "OPDS",
+      "opds": "",
       "devices": "デバイス"
     }
   },
@@ -139,14 +140,14 @@
       "username": "ユーザー名",
       "password": "パスワード",
       "fromAddress": "送信元アドレス",
-      "hostPlaceholder": "smtp.example.com",
-      "portPlaceholder": "587",
-      "usernamePlaceholder": "user@example.com",
+      "hostPlaceholder": "",
+      "portPlaceholder": "",
+      "usernamePlaceholder": "",
       "passwordPlaceholder": "パスワードを入力",
-      "fromAddressPlaceholder": "noreply@example.com",
+      "fromAddressPlaceholder": "",
       "providerNamePlaceholder": "プロバイダー名",
       "authentication": "認証",
-      "startTls": "StartTLS",
+      "startTls": "",
       "shared": "共有",
       "shareTooltip": "このプロバイダーをすべてのユーザーと共有",
       "loadError": "メールプロバイダーの読み込みに失敗しました",
@@ -205,7 +206,7 @@
       "default": "デフォルト",
       "email": "メール",
       "name": "名前",
-      "emailPlaceholder": "recipient@example.com",
+      "emailPlaceholder": "",
       "namePlaceholder": "受信者名",
       "editRecipient": "受信者を編集",
       "deleteRecipient": "受信者を削除",
@@ -296,7 +297,10 @@
       "maxWidth": "最大幅",
       "maxWidthDesc": "行の追跡を容易にするために読書エリアの最大幅を制限します。",
       "maxHeight": "最大高さ",
-      "maxHeightDesc": "画面に合わせて読書エリアの最大高さを制限します。"
+      "maxHeightDesc": "画面に合わせて読書エリアの最大高さを制限します。",
+      "navigation": "",
+      "tapToTurnPage": "",
+      "tapToTurnPageDesc": ""
     },
     "pdf": {
       "sectionTitle": "PDFリーダー：デフォルト設定",
@@ -305,17 +309,17 @@
       "pageSpreadDesc": "PDFページの表示方法を選択します。単一ページまたは見開き表示。",
       "pageZoom": "ページズーム",
       "pageZoomDesc": "読みやすさを向上させるためにPDFドキュメントのデフォルトズームレベルを設定します。",
+      "scrollLayout": "",
+      "scrollLayoutDesc": "",
+      "vertical": "",
+      "horizontal": "",
       "even": "偶数",
       "odd": "奇数",
       "none": "なし",
       "autoZoom": "自動ズーム",
       "pageFit": "ページフィット",
       "pageWidth": "ページ幅",
-      "actualSize": "実際のサイズ",
-      "scrollLayoutDesc": "",
-      "vertical": "",
-      "horizontal": "",
-      "scrollLayout": ""
+      "actualSize": "実際のサイズ"
     },
     "cbx": {
       "sectionTitle": "コミックブックリーダー：デフォルト設定",
@@ -328,6 +332,8 @@
       "fitModeDesc": "リーダーウィンドウに画像をどのように拡大縮小するかを選択します。",
       "scrollMode": "スクロールモード",
       "scrollModeDesc": "ページ区切りまたは無限スクロールの読書体験を選択します。",
+      "stripMaxWidth": "",
+      "stripMaxWidthDesc": "",
       "backgroundColor": "背景色",
       "backgroundColorDesc": "コミックリーダーの背景色を設定します。",
       "even": "偶数",
@@ -341,12 +347,10 @@
       "automatic": "自動",
       "paginated": "ページ区切り",
       "infinite": "無限",
+      "longStrip": "",
       "gray": "グレー",
       "black": "ブラック",
-      "white": "ホワイト",
-      "stripMaxWidthDesc": "",
-      "stripMaxWidth": "",
-      "longStrip": ""
+      "white": "ホワイト"
     },
     "streamingPdf": {
       "sectionTitle": "ストリーミングPDFリーダー：デフォルト設定",
@@ -432,6 +436,43 @@
   "settingsView": {
     "title": "表示設定",
     "description": "グリッドレイアウト、ソートオプション、サイドバーの動作など、ライブラリでの本の表示方法をカスタマイズします。",
+    "saveFailedDetail": "",
+    "language": {
+      "label": "",
+      "savedDetail": ""
+    },
+    "uiFont": {
+      "label": "",
+      "accessibleLabel": "",
+      "savedDetail": ""
+    },
+    "theme": {
+      "sectionTitle": "",
+      "sectionDesc": "",
+      "oledDarkMode": "",
+      "savedDetail": "",
+      "syncSavedDetail": "",
+      "customPrimaryOptionLabel": "",
+      "customPrimaryColors": {
+        "red": "",
+        "orange": "",
+        "amber": "",
+        "yellow": "",
+        "lime": "",
+        "green": "",
+        "emerald": "",
+        "teal": "",
+        "cyan": "",
+        "sky": "",
+        "blue": "",
+        "indigo": "",
+        "violet": "",
+        "purple": "",
+        "fuchsia": "",
+        "pink": "",
+        "rose": ""
+      }
+    },
     "dashboardScrollers": {
       "sectionTitle": "ダッシュボード設定",
       "sectionDesc": "異なるブックコレクションから最大5つのスクローラーを追加し、動作をカスタマイズできます",
@@ -446,6 +487,9 @@
       "maxItems": "最大アイテム数",
       "addScroller": "スクローラーを追加",
       "resetToDefault": "デフォルトに戻す",
+      "saveSettings": "",
+      "saveSuccess": "",
+      "saveSuccessDetail": "",
       "scrollerTypes": {
         "lastRead": "読み続ける",
         "lastListened": "聴き続ける",
@@ -456,8 +500,6 @@
       },
       "sortFields": {
         "title": "タイトル",
-        "fileName": "ファイル名",
-        "filePath": "ファイルパス",
         "addedOn": "追加日",
         "author": "著者",
         "authorSurnameVorname": "著者（姓）",
@@ -470,16 +512,12 @@
         "readStatus": "読書状態",
         "dateFinished": "完了日",
         "readingProgress": "読書進捗",
-        "bookType": "本の種類",
         "pageCount": "ページ数"
       },
       "sortDirections": {
         "asc": "昇順",
         "desc": "降順"
-      },
-      "saveSuccess": "",
-      "saveSuccessDetail": "",
-      "saveSettings": ""
+      }
     },
     "librarySort": {
       "sectionTitle": "ライブラリとシェルフの表示・ソート設定",
@@ -487,10 +525,9 @@
       "defaultPreferences": "デフォルト設定",
       "defaultPreferencesDesc": "すべてのライブラリとシェルフのデフォルト表示モードとマルチフィールドソートを設定します。ドラッグでソートの優先順位を並べ替えます。",
       "sortOrderLabel": "ソート順（ドラッグで並べ替え）",
+      "formatOverlay": "本の種類オーバーレイ",
       "ascending": "昇順",
       "descending": "降順",
-      "remove": "削除",
-      "addSortField": "ソートフィールドを追加...",
       "autoSave": "ナビゲーション時に自動保存",
       "autoSaveDesc": "メタデータエディタで次の本や前の本に移動する際に変更を自動保存します。",
       "overrideManagement": "オーバーライド管理",
@@ -506,34 +543,6 @@
       "saveSettings": "設定を保存",
       "saveSuccess": "設定を保存しました",
       "saveSuccessDetail": "ソートと表示の設定が正常に保存されました。",
-      "sortTitle": "タイトル",
-      "sortFileName": "ファイル名",
-      "sortFilePath": "ファイルパス",
-      "sortAuthor": "著者",
-      "sortAuthorSurname": "著者（姓）",
-      "sortSeriesName": "シリーズ名",
-      "sortSeriesNumber": "シリーズ番号",
-      "sortLastRead": "最終閲覧",
-      "sortPersonalRating": "個人評価",
-      "sortAddedOn": "追加日",
-      "sortFileSize": "ファイルサイズ",
-      "sortLocked": "ロック",
-      "sortPublisher": "出版社",
-      "sortPublishedDate": "出版日",
-      "sortAmazonRating": "Amazon評価",
-      "sortAmazonCount": "Amazon件数",
-      "sortGoodreadsRating": "Goodreads評価",
-      "sortGoodreadsCount": "Goodreads件数",
-      "sortHardcoverRating": "Hardcover評価",
-      "sortHardcoverCount": "Hardcover件数",
-      "sortRanobedbRating": "Ranobedb評価",
-      "sortReadStatus": "読書状態",
-      "sortDateFinished": "完了日",
-      "sortReadingProgress": "読書進捗",
-      "sortBookType": "本の種類",
-      "sortNarrator": "ナレーター",
-      "sortPages": "ページ数",
-      "sortRandom": "ランダム",
       "entityLibrary": "ライブラリ",
       "entityShelf": "シェルフ",
       "entityMagicShelf": "マジックシェルフ",
@@ -543,25 +552,7 @@
       "sortSaved": "ソートを保存しました",
       "sortSavedDetail": "この{{entityType}}のソート設定が保存されました。",
       "editSort": "ソートを編集",
-      "tableSortConfig": "ソート設定",
-      "visibleSortFields": "表示するソートフィールド",
-      "visibleSortFieldsDesc": "ブックブラウザのソートドロップダウンに表示するソートフィールドを選択し、ドラッグで並べ替えます。",
-      "sortFieldCount": "{{count}} / {{total}} 選択中",
-      "resetToDefaults": "デフォルトに戻す"
-    },
-    "filter": {
-      "sectionTitle": "フィルター設定",
-      "sectionDesc": "サイドバーに表示されるフィルターコントロールのデフォルトオプションを設定します。",
-      "filterMode": "フィルターモード",
-      "filterModeDesc": "右側のフィルターサイドバーから選択したフィルターを組み合わせるデフォルトモードを選択します。",
-      "visibleFilters": "表示フィルター",
-      "visibleFiltersDesc": "サイドバーに表示するフィルターを選択し、ドラッグで並べ替えます。{{min}}～{{max}}個のフィルター。",
-      "selectionCount": "{{count}} / {{total}} 選択中",
-      "addFilter": "フィルターを追加...",
-      "resetToDefaults": "デフォルトに戻す",
-      "modeAnd": "AND",
-      "modeOr": "OR",
-      "modeSingle": "単一"
+      "tableSortConfig": "ソート設定"
     },
     "sidebarSort": {
       "sectionTitle": "サイドバーのライブラリとシェルフのソート設定",
@@ -601,43 +592,6 @@
       "sidebarWidthDesc": "ナビゲーションサイドバーとブックフィルターパネルの幅を制御します。",
       "saved": "設定を更新しました",
       "savedDetail": "サイドバー幅の設定が保存されました。"
-    },
-    "theme": {
-      "customPrimaryColors": {
-        "violet": "",
-        "pink": "",
-        "lime": "",
-        "sky": "",
-        "amber": "",
-        "rose": "",
-        "cyan": "",
-        "purple": "",
-        "fuchsia": "",
-        "blue": "",
-        "orange": "",
-        "green": "",
-        "red": "",
-        "yellow": "",
-        "indigo": "",
-        "emerald": "",
-        "teal": ""
-      },
-      "syncSavedDetail": "",
-      "savedDetail": "",
-      "customPrimaryOptionLabel": "",
-      "oledDarkMode": "",
-      "sectionTitle": "",
-      "sectionDesc": ""
-    },
-    "saveFailedDetail": "",
-    "language": {
-      "savedDetail": "",
-      "label": ""
-    },
-    "uiFont": {
-      "savedDetail": "",
-      "accessibleLabel": "",
-      "label": ""
     }
   },
   "settingsMeta": {
@@ -654,6 +608,8 @@
       "sectionDesc": "メタデータが元のファイルに書き込まれる方法と、メタデータ変更時のファイルの移動やリネーム方法を設定します。",
       "networkWarningTitle": "ネットワークストレージの警告：",
       "networkWarning": "これらの機能はディスク上のブックファイルを直接変更・移動します（メタデータの書き換えやファイルのリネームを含む）。ローカルファイルシステムでの使用を前提としています。NASやクラウドバックアップストレージでの使用はテストされておらず、ファイルの破損、不完全な書き込み、永久的なデータ損失につながる可能性があります。ネットワークストレージに関連するGithub issueはサポート対象外です。",
+      "networkModeTitle": "",
+      "networkModeDesc": "",
       "unsupportedNote": "FB2、AZW3、MOBI形式へのメタデータ書き込みは<b>サポートされていません</b>。",
       "writeEpub": "EPUBにメタデータを書き込み",
       "writeEpubDesc": "本の情報を編集する際に、メタデータをEPUBファイルに直接書き込みます。",
@@ -679,9 +635,7 @@
       "writeOnScanDesc": "スキャン中に本が最初にライブラリに追加される際にサイドカーJSONファイルを作成します。",
       "includeCover": "カバー画像ファイルを含める",
       "includeCoverDesc": "サイドカーJSONファイルと一緒に、カバー画像を<code>BookName.cover.jpg</code>として保存します。",
-      "loadError": "設定の読み込みに失敗しました。",
-      "networkModeTitle": "",
-      "networkModeDesc": ""
+      "loadError": "設定の読み込みに失敗しました。"
     },
     "providers": {
       "sectionTitle": "メタデータプロバイダー",
@@ -698,47 +652,14 @@
       "cookiePlaceholder": "Amazon cookieを貼り付け",
       "languageRestriction": "言語制限",
       "selectLanguage": "言語を選択",
-      "apiKeyOptional": "APIキー（任意）",
+      "googleApiLabel": "",
       "googleApiDesc": "Google Books APIキーを提供すると、レート制限が緩和され信頼性が向上します。",
       "googleApiPlaceholder": "Google Books APIキーを入力",
       "apiToken": "APIトークン",
       "hardcoverPlaceholder": "Hardcover APIトークンを入力",
-      "comicvinePlaceholder": "Comic Vine APIトークンを入力"
-    },
-    "fieldSelector": {
-      "sectionTitle": "メタデータエディタとピッカーの有効フィールド",
-      "sectionDesc": "本の情報を編集したりプロバイダーからメタデータを選択する際に表示するメタデータフィールドを選択します。無効なフィールドはインターフェースに表示されません。",
-      "fields": {
-        "amazonRating": "",
-        "asin": "",
-        "goodreadsRating": "",
-        "goodreadsReviewCount": "",
-        "hardcoverRating": "",
-        "hardcoverId": "",
-        "audibleRating": "",
-        "googleId": "",
-        "ranobedbId": "",
-        "amazonReviewCount": "",
-        "lubimyczytacId": "",
-        "ranobedbRating": "",
-        "lubimyczytacRating": "",
-        "comicvineId": "",
-        "hardcoverBookId": "",
-        "audibleReviewCount": "",
-        "hardcoverReviewCount": "",
-        "audibleId": "",
-        "goodreadsId": ""
-      },
-      "providers": {
-        "goodreads": "",
-        "amazon": "",
-        "googleBooks": "",
-        "lubimyczytac": "",
-        "hardcover": "",
-        "ranobedb": "",
-        "audible": "",
-        "comicvine": ""
-      }
+      "comicvinePlaceholder": "Comic Vine APIトークンを入力",
+      "ranobedbPreferRomajiLabel": "",
+      "ranobedbPreferRomajiDesc": ""
     },
     "publicReviews": {
       "sectionTitle": "パブリックレビュー",
@@ -766,33 +687,28 @@
       "recalcSuccess": "すべてのブックマッチスコアが正常に再計算されました。",
       "recalcError": "マッチスコアの再計算に失敗しました。",
       "fields": {
-        "amazonReviewCount": "",
-        "hardcoverRating": "",
-        "doubanReviewCount": "",
+        "title": "",
+        "subtitle": "",
         "authors": "",
-        "seriesName": "",
-        "amazonRating": "",
-        "doubanRating": "",
+        "description": "",
         "publisher": "",
+        "publishedDate": "",
+        "categories": "",
+        "coverImage": "",
+        "seriesName": "",
+        "seriesNumber": "",
         "seriesTotal": "",
         "language": "",
-        "coverImage": "",
-        "categories": "",
-        "subtitle": "",
-        "ranobedbRating": "",
-        "title": "",
-        "isbn10": "",
-        "publishedDate": "",
-        "goodreadsRating": "",
-        "seriesNumber": "",
-        "audibleReviewCount": "",
         "isbn13": "",
-        "description": "",
+        "isbn10": "",
         "pageCount": "",
-        "hardcoverReviewCount": "",
-        "goodreadsReviewCount": "",
-        "audibleRating": ""
+        "doubanRating": "",
+        "doubanReviewCount": ""
       }
+    },
+    "fieldSelector": {
+      "sectionTitle": "メタデータエディタとピッカーの有効フィールド",
+      "sectionDesc": "本の情報を編集したりプロバイダーからメタデータを選択する際に表示するメタデータフィールドを選択します。無効なフィールドはインターフェースに表示されません。"
     }
   },
   "settingsLibMeta": {
@@ -835,6 +751,8 @@
     "covers": {
       "sectionTitle": "ブックカバー画像",
       "regenerate": "カバーを再生成",
+      "regenerateAllBtn": "",
+      "regenerateMissingBtn": "",
       "regenerateDesc": "すべての本のカバー画像をファイルに埋め込まれたカバーから再生成します。",
       "regenerateStarted": "カバー再生成を開始しました",
       "regenerateStartedDetail": "ブックカバーを再生成中です。",
@@ -846,9 +764,7 @@
       "aspectRatio": "アスペクト比しきい値: {{value}}",
       "aspectRatioDesc": "このしきい値を超えるアスペクト比の画像がトリミングされます。2.5の値は、通常の2.5倍以上縦長（または横長）の画像がトリミングされることを意味します。",
       "smartCropping": "スマートトリミング",
-      "smartCroppingDesc": "トリミング位置を決定する際に均一な色の領域をスキップします。カバー画像を最も関連性の高いコンテンツに焦点を当てます。",
-      "regenerateAllBtn": "",
-      "regenerateMissingBtn": ""
+      "smartCroppingDesc": "トリミング位置を決定する際に均一な色の領域をスキップします。カバー画像を最も関連性の高いコンテンツに焦点を当てます。"
     },
     "search": {
       "sectionTitle": "検索とおすすめ",
@@ -904,10 +820,10 @@
       "libraries": "ライブラリ",
       "notSet": "未設定",
       "allLibrariesAdmin": "すべてのライブラリ（管理者）",
+      "noLibrariesAssigned": "",
       "selectLibraries": "ライブラリを選択",
       "enterFullName": "氏名を入力",
-      "enterEmail": "メールを入力",
-      "noLibrariesAssigned": ""
+      "enterEmail": "メールを入力"
     },
     "permGroups": {
       "administration": "管理",
@@ -1137,7 +1053,7 @@
       "sectionDesc": "APIサービスを有効または無効にして、書籍コレクションへのアクセスを制御します。",
       "opdsLabel": "OPDSサーバー",
       "opdsDesc": "OPDSサーバーを有効にして、OPDS対応のリーディングアプリ（KOReader、Moon+ Readerなど）からブックコレクションにアクセスします。",
-      "komgaLabel": "Komga API",
+      "komgaLabel": "",
       "komgaDesc": "Komga互換APIを有効にして、Komgaクライアント（Tachiyomi、Komeliaなど）をGrimmoryで使用します。認証にはOPDSユーザーアカウントを使用します。",
       "groupUnknownLabel": "不明なシリーズをグループ化",
       "groupUnknownDesc": "有効にすると、シリーズのない本は「不明なシリーズ」の下にグループ化されます。無効にすると、各本が個別のシリーズとして表示されます。",
@@ -1197,6 +1113,7 @@
     "deleteSuccess": "ユーザーが正常に削除されました",
     "deleteError": "ユーザーの削除に失敗しました",
     "opdsCopied": "OPDSエンドポイントをクリップボードにコピーしました",
+    "copyFailed": "",
     "komgaCopied": "Komga APIエンドポイントをクリップボードにコピーしました",
     "sortUpdateSuccess": "ソート順が正常に更新されました",
     "sortUpdateError": "ソート順の更新に失敗しました",
@@ -1323,6 +1240,9 @@
       "providerPlaceholder": "例: Authentik、Keycloak",
       "clientId": "クライアントID",
       "clientIdPlaceholder": "OIDCクライアントID",
+      "clientSecret": "",
+      "clientSecretPlaceholder": "",
+      "clientSecretHint": "",
       "issuerUri": "発行者URI",
       "issuerPlaceholder": "例: https://auth.example.com/realms/grimmory",
       "scope": "スコープ",
@@ -1335,16 +1255,22 @@
       "emailPlaceholder": "例: email",
       "nameClaim": "表示名クレーム",
       "namePlaceholder": "例: name",
-      "clientSecretHint": "",
-      "sessionDuration": "",
-      "clientSecretPlaceholder": "",
-      "clientSecret": "",
-      "groupsPlaceholder": "",
       "groupsClaim": "",
+      "groupsPlaceholder": "",
+      "sessionDuration": "",
       "sessionDurationPlaceholder": "",
       "sessionDurationHint": "",
-      "backchannelLogoutHint": "",
-      "backchannelLogoutUri": ""
+      "backchannelLogoutUri": "",
+      "backchannelLogoutHint": ""
+    },
+    "mobileRedirectUris": {
+      "title": "",
+      "description": "",
+      "label": "",
+      "placeholder": "",
+      "hintPrefix": "",
+      "hintSuffix": "",
+      "removeLabel": ""
     },
     "provisioning": {
       "sectionTitle": "ユーザープロビジョニング",
@@ -1353,13 +1279,62 @@
       "autoEnabled": "有効",
       "autoDisabled": "無効",
       "autoDesc": "有効にすると、初回OIDCログイン時に以下の権限で新しいユーザーが自動的に作成されます。無効の場合、OIDCでログインする前にGrimmoryでユーザーを手動で作成する必要があります。",
+      "linkLocalLabel": "",
+      "linkLocalDesc": "",
+      "linkLocalWarning": "",
       "defaultPerms": "デフォルト権限",
       "readBooks": "本を読む",
       "defaultLibraryAccess": "デフォルトライブラリアクセス",
-      "selectLibraries": "新しいユーザーがアクセスできるライブラリを選択",
-      "linkLocalLabel": "",
-      "linkLocalDesc": "",
-      "linkLocalWarning": ""
+      "selectLibraries": "新しいユーザーがアクセスできるライブラリを選択"
+    },
+    "groupMapping": {
+      "sectionTitle": "",
+      "sectionDesc": "",
+      "syncModeLabel": "",
+      "syncModeHint": "",
+      "addMapping": "",
+      "colGroupClaim": "",
+      "colAdmin": "",
+      "colPermissions": "",
+      "colLibraries": "",
+      "colDescription": "",
+      "addTitle": "",
+      "editTitle": "",
+      "groupClaimLabel": "",
+      "groupClaimPlaceholder": "",
+      "descriptionLabel": "",
+      "descriptionPlaceholder": "",
+      "adminLabel": "",
+      "permissionsLabel": "",
+      "librariesLabel": ""
+    },
+    "infoPanel": {
+      "sectionTitle": "",
+      "sectionDesc": "",
+      "redirectUri": "",
+      "postLogoutRedirectUri": "",
+      "backChannelLogoutUri": "",
+      "requiredScopes": "",
+      "pkceMethod": "",
+      "grantType": ""
+    },
+    "testConnection": {
+      "button": "",
+      "passed": "",
+      "failed": "",
+      "checks": "",
+      "error": ""
+    },
+    "oidcOnly": {
+      "sectionTitle": "",
+      "sectionDesc": "",
+      "label": "",
+      "enabled": "",
+      "disabled": "",
+      "description": "",
+      "backdoorHint": "",
+      "saved": "",
+      "error": ""
     },
     "toast": {
       "saved": "保存しました",
@@ -1369,72 +1344,14 @@
       "providerError": "OIDCプロバイダー設定の保存に失敗しました。",
       "provisionSaved": "OIDC自動プロビジョニング設定が保存されました。",
       "provisionError": "OIDC自動プロビジョニング設定の保存に失敗しました。",
-      "syncModeSaved": "",
-      "sessionDurationError": "",
-      "groupMappingDeleted": "",
       "sessionDurationSaved": "",
-      "groupMappingError": "",
-      "syncModeError": "",
+      "sessionDurationError": "",
       "copiedToClipboard": "",
-      "groupMappingSaved": ""
-    },
-    "infoPanel": {
-      "sectionTitle": "",
-      "pkceMethod": "",
-      "redirectUri": "",
-      "backChannelLogoutUri": "",
-      "postLogoutRedirectUri": "",
-      "sectionDesc": "",
-      "grantType": "",
-      "requiredScopes": ""
-    },
-    "groupMapping": {
-      "syncModeHint": "",
-      "sectionTitle": "",
-      "librariesLabel": "",
-      "descriptionPlaceholder": "",
-      "colPermissions": "",
-      "syncModeLabel": "",
-      "addTitle": "",
-      "colGroupClaim": "",
-      "colLibraries": "",
-      "colDescription": "",
-      "colAdmin": "",
-      "permissionsLabel": "",
-      "groupClaimLabel": "",
-      "sectionDesc": "",
-      "editTitle": "",
-      "addMapping": "",
-      "adminLabel": "",
-      "descriptionLabel": "",
-      "groupClaimPlaceholder": ""
-    },
-    "mobileRedirectUris": {
-      "placeholder": "",
-      "removeLabel": "",
-      "title": "",
-      "label": "",
-      "hintSuffix": "",
-      "description": "",
-      "hintPrefix": ""
-    },
-    "oidcOnly": {
-      "enabled": "",
-      "saved": "",
-      "sectionTitle": "",
-      "description": "",
-      "label": "",
-      "backdoorHint": "",
-      "error": "",
-      "disabled": "",
-      "sectionDesc": ""
-    },
-    "testConnection": {
-      "error": "",
-      "button": "",
-      "failed": "",
-      "passed": "",
-      "checks": ""
+      "syncModeSaved": "",
+      "syncModeError": "",
+      "groupMappingSaved": "",
+      "groupMappingDeleted": "",
+      "groupMappingError": ""
     }
   },
   "settingsDevice": {
@@ -1451,8 +1368,6 @@
       "syncConfigDesc": "GrimmoryライブラリとKOReaderデバイス間の同期を有効にして設定します。",
       "enableSync": "KOReader同期を有効化",
       "enableSyncDesc": "読書進捗を自動的に同期するには同期をオンにしてください。",
-      "syncWithGrimmory": "Grimmory電子書籍リーダーと読書進捗を同期",
-      "syncWithGrimmoryDesc": "Grimmoryの電子書籍リーダーとKOReader間の双方向同期を有効にします。<strong>注意：</strong>進捗の同期は近似的であり、正確なページや位置ではなくチャプター単位で更新される場合があります。",
       "apiPath": "KOReader APIパス",
       "apiPathDesc": "KOReader同期サービスのAPIエンドポイントパス。",
       "username": "KOReaderユーザー名",
@@ -1488,6 +1403,8 @@
       "autoAddDesc": "有効にすると、新しく追加された本が自動的にKoboシェルフに追加されます。各本を手動でシェルフに追加する必要がなくなります。",
       "token": "Kobo同期トークン",
       "tokenDesc": "Koboデバイスとの認証に使用する一意の同期トークン。安全に保管してください。",
+      "apiPath": "",
+      "apiPathDesc": "",
       "tokenManagement": "トークン管理",
       "regenerateToken": "トークンを再生成",
       "tokenManagementDesc": "必要に応じて同期トークンを再生成します。現在のトークンは無効になります。",
@@ -1533,11 +1450,8 @@
       "syncEnabled": "Kobo同期が有効になりました",
       "syncDisabled": "Kobo同期が無効になりました",
       "progressUpdated": "進捗しきい値が正常に更新されました",
-      "twoWaySyncLabel": "双方向読書進捗同期",
-      "twoWaySyncDesc": "GrimmoryのWebリーダーとKoboデバイス間の双方向同期を有効にします。どちらのプラットフォームでの読書進捗も、もう一方に反映されます。",
-      "twoWaySyncNote": "注意：位置形式が異なるため、同期精度はベストエフォートです。ほとんどの場合、チャプターレベルで正確になります。",
-      "twoWaySyncKepubWarning": "KEPUB conversion is currently disabled. Two-way progress sync requires KEPUB conversion to be enabled by an administrator.",
-      "twoWaySyncKepubWarningAdmin": "KEPUB conversion is currently disabled. Enable it in the Administrator Settings below for two-way progress sync to work.",
+      "twoWaySyncKepubWarning": "",
+      "twoWaySyncKepubWarningAdmin": "",
       "twoWaySyncEnabled": "双方向進捗同期が有効になりました",
       "twoWaySyncDisabled": "双方向進捗同期が無効になりました",
       "autoAddEnabled": "新しい本はKoboシェルフに自動的に追加されます",
@@ -1632,6 +1546,7 @@
       "filesCount": "{{ uploaded }}/{{ total }} ファイル",
       "failedCount": "（{{ count }}件失敗）",
       "dragDropTitle": "ファイルをドラッグ＆ドロップ",
+      "supportedFormats": "",
       "maxFileSize": "最大ファイルサイズ: {{ size }}/ファイル",
       "fileTooLargeTooltip": "ファイルが大きすぎます",
       "uploadFailedTooltip": "アップロードに失敗しました",
@@ -1650,8 +1565,7 @@
         "missingDataSummary": "データが不足しています",
         "missingDataDetail": "アップロードする前にライブラリとパスを選択してください。",
         "uploadFailedDefault": "不明なエラーによりアップロードに失敗しました。"
-      },
-      "supportedFormats": ""
+      }
     },
     "changePassword": {
       "title": "パスワードを変更",
@@ -1762,36 +1676,25 @@
         "createFailedDefault": "管理者ユーザーの作成に失敗しました。もう一度お試しください。"
       }
     },
+    "message": {
+      "issueCount": "",
+      "issuePosition": "",
+      "previousIssue": "",
+      "nextIssue": ""
+    },
     "ui": {
-      "validation": {
-        "min": "",
-        "maxLength": "",
-        "parse": "",
-        "email": "",
-        "required": "",
-        "max": "",
-        "default": "",
-        "minLength": "",
-        "pattern": ""
+      "autocomplete": {
+        "noResults": "",
+        "loadFailed": ""
       },
-      "tag": {
-        "removeTag": "",
-        "removeLabel": ""
+      "datePicker": {
+        "previousMonth": "",
+        "nextMonth": ""
       },
       "input": {
+        "showPassword": "",
         "hidePassword": "",
-        "trailingAction": "",
-        "showPassword": ""
-      },
-      "select": {
-        "noResults": "",
-        "selectedCount": "",
-        "clearSelection": "",
-        "search": ""
-      },
-      "rating": {
-        "valueText": "",
-        "setRatingTo": ""
+        "trailingAction": ""
       },
       "message": {
         "issueCount": "",
@@ -1799,25 +1702,63 @@
         "previousIssue": "",
         "nextIssue": ""
       },
+      "rating": {
+        "valueText": "",
+        "setRatingTo": ""
+      },
+      "select": {
+        "clearSelection": "",
+        "noResults": "",
+        "search": "",
+        "selectedCount": ""
+      },
+      "shelfMenu": {
+        "addToShelf": "",
+        "newShelf": "",
+        "removeFromAllShelves": ""
+      },
       "spinner": {
         "loading": ""
       },
-      "autocomplete": {
-        "noResults": ""
+      "tag": {
+        "removeTag": "",
+        "removeLabel": ""
       },
-      "datePicker": {
-        "nextMonth": "",
-        "previousMonth": ""
+      "validation": {
+        "default": "",
+        "email": "",
+        "max": "",
+        "maxLength": "",
+        "min": "",
+        "minLength": "",
+        "parse": "",
+        "pattern": "",
+        "required": ""
+      },
+      "bulkActions": {
+        "selectAll": "すべて選択"
       }
-    },
-    "message": {
-      "previousIssue": "",
-      "nextIssue": "",
-      "issuePosition": "",
-      "issueCount": ""
     }
   },
   "layout": {
+    "commandPalette": {
+      "placeholder": "",
+      "empty": "",
+      "bookSearchError": "",
+      "hintNavigate": "",
+      "hintSelect": "",
+      "ariaLabel": "",
+      "groups": {
+        "action": "",
+        "page": "",
+        "book": "",
+        "author": "",
+        "series": "",
+        "shelf": "",
+        "magicShelf": "",
+        "library": ""
+      }
+    },
     "menu": {
       "adjustSidebarWidth": "サイドバーの幅を調整",
       "home": "ホーム",
@@ -1828,39 +1769,45 @@
       "magicShelves": "マジックシェルフ",
       "unshelved": "未分類",
       "series": "シリーズ",
+      "authors": "著者",
       "notebook": "ノートブック",
       "update": "（アップデート）",
-      "authors": "著者",
-      "documentation": "",
-      "account": "",
-      "search": "",
-      "more": "",
       "updateAvailable": "",
-      "settings": "",
-      "tools": "",
-      "editSidebar": "",
-      "toggleNavigation": "",
-      "add": "",
-      "expandSidebar": "",
-      "resizeSidebar": "",
-      "goToDashboard": "",
-      "doneEditing": "",
-      "notifications": "",
-      "createMagicShelf": "",
-      "collapseSidebar": "",
-      "uploadBook": "",
-      "primaryNav": "",
-      "libraryStats": "",
+      "versionCopied": "",
       "versionCopyFailed": "",
-      "profile": "",
+      "tools": "",
+      "collapseSidebar": "",
+      "expandSidebar": "",
+      "goToDashboard": "",
+      "notifications": "",
+      "primaryNav": "",
+      "resizeSidebar": "",
+      "search": "",
+      "add": "",
+      "createMagicShelf": "",
+      "editSidebar": "",
+      "doneEditing": "",
+      "more": "",
+      "account": "",
+      "settings": "",
+      "libraryStats": "",
       "readingStats": "",
+      "metadataManager": "",
       "bookdrop": "",
       "createLibrary": "",
-      "metadataManager": "",
-      "versionCopied": "",
-      "logout": ""
+      "uploadBook": "",
+      "documentation": "",
+      "profile": "",
+      "logout": "",
+      "toggleNavigation": ""
     },
     "closeNavigation": "ナビゲーションを閉じる",
+    "pageHeader": {
+      "backTo": "",
+      "breadcrumbAriaLabel": "",
+      "moreBreadcrumbs": "",
+      "tabsAriaLabel": ""
+    },
     "changelog": {
       "title": "新着情報",
       "description": "最新のアップデートと改善",
@@ -1868,48 +1815,31 @@
       "empty": "利用可能なアップデートはありません。"
     },
     "theme": {
+      "theme": "",
       "primary": "プライマリ",
       "surface": "サーフェス",
-      "options": {
-        "violet": "",
-        "crimson": "",
-        "cobalt": "",
-        "teal": "",
-        "forest": "",
-        "slate": "",
-        "grimmory": "",
-        "custom": "",
-        "meadow": "",
-        "ember": "",
-        "fuchsia": "",
-        "rose": "",
-        "lagoon": ""
-      },
-      "light": "",
-      "dark": "",
-      "theme": "",
       "mode": "",
       "appearance": "",
-      "syncAcrossDevices": "",
+      "light": "",
+      "dark": "",
       "system": "",
-      "customPrimary": ""
-    },
-    "commandPalette": {
-      "groups": {
-        "shelf": "",
-        "series": "",
-        "page": "",
-        "author": "",
-        "magicShelf": "",
-        "library": "",
-        "action": "",
-        "book": ""
-      },
-      "hintSelect": "",
-      "ariaLabel": "",
-      "empty": "",
-      "placeholder": "",
-      "hintNavigate": ""
+      "customPrimary": "",
+      "syncAcrossDevices": "",
+      "options": {
+        "grimmory": "",
+        "cobalt": "",
+        "ember": "",
+        "crimson": "",
+        "rose": "",
+        "forest": "",
+        "meadow": "",
+        "teal": "",
+        "lagoon": "",
+        "violet": "",
+        "fuchsia": "",
+        "slate": "",
+        "custom": ""
+      }
     }
   },
   "libraryCreator": {
@@ -1926,6 +1856,7 @@
       "bookFolders": "ブックフォルダ",
       "addFolder": "フォルダを追加",
       "emptyFoldersHint": "本のファイルが含まれるフォルダを追加してください",
+      "folderStructureHint": "",
       "options": "オプション",
       "watchFolders": "フォルダを監視",
       "watchFoldersTooltip": "フォルダに追加された新しい本を自動検出します",
@@ -1937,6 +1868,12 @@
       "metadataSourcePreferSidecar": "サイドカー優先",
       "metadataSourcePreferEmbedded": "埋め込み優先",
       "metadataSourceNone": "なし",
+      "organizationMode": "",
+      "organizationModeTooltip": "",
+      "organizationModeLockedTooltip": "",
+      "organizationModeBookPerFile": "",
+      "organizationModeBookPerFolder": "",
+      "organizationModeAutoDetect": "",
       "formatPriority": "フォーマット優先順位",
       "formatPriorityTooltip": "本に複数のファイルがある場合の優先フォーマットをドラッグで並べ替え",
       "allowedFormats": "許可するフォーマット",
@@ -1965,14 +1902,7 @@
         "createdLargeDetail": "{{count}}ファイルのライブラリが作成されました。読み込み中...",
         "createFailedSummary": "作成に失敗しました",
         "createFailedDetail": "ライブラリの作成中にエラーが発生しました。もう一度お試しください。"
-      },
-      "organizationMode": "",
-      "organizationModeBookPerFile": "",
-      "organizationModeBookPerFolder": "",
-      "organizationModeAutoDetect": "",
-      "folderStructureHint": "",
-      "organizationModeLockedTooltip": "",
-      "organizationModeTooltip": ""
+      }
     },
     "loading": {
       "title": "ライブラリを読み込み中",
@@ -2136,7 +2066,7 @@
         "seriesTotal": "シリーズの総冊数",
         "isbn10": "ISBN-10識別子",
         "isbn13": "ISBN-13識別子",
-        "asin": "Amazon ASIN"
+        "asin": ""
       },
       "placeholderExamples": {
         "wildcard": "任意のテキスト",
@@ -2144,14 +2074,14 @@
         "title": "失われた都市",
         "subtitle": "冒険の物語",
         "authors": "田中太郎",
-        "seriesNumber": "25",
-        "published": "{Published:yyyy-MM-dd}",
+        "seriesNumber": "",
+        "published": "",
         "publisher": "エピックプレス",
         "language": "ja",
-        "seriesTotal": "50",
-        "isbn10": "1234567890",
-        "isbn13": "1234567890123",
-        "asin": "B012345678"
+        "seriesTotal": "",
+        "isbn10": "",
+        "isbn13": "",
+        "asin": ""
       },
       "commonPatternLabels": {
         "authorTitle": "著者 - タイトル",
@@ -2222,8 +2152,8 @@
       "seriesTotal": "シリーズ合計",
       "publicReviews": "パブリックレビュー",
       "noValue": "値なし",
-      "isbn10": "ISBN 10",
-      "isbn13": "ISBN 13",
+      "isbn10": "",
+      "isbn13": "",
       "ageRating": "年齢制限",
       "contentRating": "コンテンツレーティング",
       "pages": "ページ数",
@@ -2231,25 +2161,6 @@
       "audiobookDetails": "オーディオブック詳細",
       "comicBookDetails": "コミックブック詳細",
       "providerMetadata": "プロバイダーメタデータ",
-      "amazonAsin": "Amazon ASIN",
-      "amazonRating": "Amazon ★",
-      "amazonReviewCount": "Amazon #",
-      "googleBooksId": "Google Books ID",
-      "goodreadsId": "Goodreads ID",
-      "goodreadsRating": "Goodreads ★",
-      "goodreadsReviewCount": "Goodreads #",
-      "hardcoverId": "Hardcover ID",
-      "hardcoverBookId": "Hardcover Book ID",
-      "hardcoverRating": "Hardcover ★",
-      "hardcoverReviewCount": "Hardcover #",
-      "lubimyczytacId": "Lubimyczytac ID",
-      "lubimyczytacRating": "Lubimyczytac ★",
-      "comicvineId": "Comicvine ID",
-      "ranobedbId": "Ranobedb ID",
-      "ranobedbRating": "Ranobedb ★",
-      "audibleId": "Audible ID",
-      "audibleRating": "Audible ★",
-      "audibleReviewCount": "Audible #",
       "closeBtn": "閉じる",
       "previousBookBtn": "前の本",
       "nextBookBtn": "次の本",
@@ -2260,6 +2171,7 @@
       "saveBtn": "保存",
       "fetchFromFileBtn": "ファイルから",
       "fetchFromFileTooltip": "ブックファイルに埋め込まれたメタデータを読み込み",
+      "writtenToFileTooltip": "",
       "previousBookTooltip": "前の本へ",
       "nextBookTooltip": "次の本へ",
       "autoFetchTooltip": "デフォルトソースを使用してメタデータを自動取得",
@@ -2306,11 +2218,9 @@
         "audiobookUploadFailed": "オーディオブックカバーのアップロード中にエラーが発生しました",
         "fileMetadataLoaded": "ブックファイルからメタデータを読み込みました。確認して保存してください。",
         "fileMetadataFailed": "ブックファイルからのメタデータ抽出に失敗しました"
-      },
-      "writtenToFileTooltip": ""
+      }
     },
     "picker": {
-      "loadingMetadata": "完全なメタデータを読み込み中...",
       "columnCurrent": "現在",
       "columnFetched": "取得済み",
       "copyMissingTooltip": "欠損フィールドをコピー",
@@ -2340,7 +2250,7 @@
       "lockAllTooltip": "すべてのフィールドをロック",
       "backToListBtn": "一覧に戻る",
       "saveChangesBtn": "変更を保存",
-      "na": "N/A",
+      "na": "",
       "toast": {
         "successSummary": "成功",
         "metadataUpdated": "ブックメタデータが更新されました",
@@ -2357,7 +2267,7 @@
     },
     "searcher": {
       "providersLabel": "プロバイダー",
-      "isbnLabel": "ISBN",
+      "isbnLabel": "",
       "titleLabel": "タイトル",
       "authorLabel": "著者",
       "isbnTooltip": "ISBNが優先されます。ISBNがない場合、タイトルと著者で検索されます。",
@@ -2371,8 +2281,10 @@
       "fetching": "取得中...",
       "readyToSearch": "検索の準備ができました",
       "readyToSearchHint": "上に検索条件を入力して「検索」をクリックするとメタデータを検索できます",
+      "noProviders": "",
       "noResultsFound": "結果が見つかりません",
       "noResultsHint": "検索条件を調整するか、別のプロバイダーを選択してみてください",
+      "searchFailed": "",
       "selectOverlay": "選択"
     },
     "tabs": {
@@ -2396,17 +2308,17 @@
       "playTooltip": "再生",
       "downloadTooltip": "ダウンロード",
       "deleteTooltip": "削除",
+      "detachTooltip": "",
       "downloadAllTooltip": "すべてのファイルをZIPアーカイブとしてダウンロード",
       "physicalBookHint": "デジタルコピーをアップロードするか、メタデータを手動で追加できます。",
+      "chapters": "",
+      "chapterTitle": "",
+      "startTime": "",
+      "endTime": "",
+      "duration": "",
       "totalDuration": "",
       "noChapters": "",
-      "chapters": "",
-      "endTime": "",
-      "chapterTitle": "",
-      "duration": "",
-      "detachTooltip": "",
-      "fileName": "",
-      "startTime": ""
+      "fileName": ""
     },
     "viewer": {
       "metadataLocked": "この本のメタデータはロックされています。",
@@ -2415,11 +2327,13 @@
       "moodsLabel": "ムード：",
       "tagsLabel": "タグ：",
       "libraryLabel": "ライブラリ：",
+      "shelvesLabel": "",
       "publisherLabel": "出版社：",
       "publishedLabel": "出版日：",
       "languageLabel": "言語：",
       "formatsLabel": "フォーマット：",
       "primaryBadge": "プライマリ",
+      "firstAuthorBadge": "",
       "physicalBadge": "物理本",
       "grimmoryProgressLabel": "Grimmory進捗：",
       "metadataMatchLabel": "メタデータ一致：",
@@ -2445,7 +2359,7 @@
       "universeTitle": "ユニバース",
       "comicIssue": "イシュー",
       "comicVolume": "ボリューム",
-      "comicVol": "Vol.",
+      "comicVol": "",
       "comicStoryArc": "ストーリーアーク",
       "comicAltSeries": "別シリーズ",
       "comicFormat": "フォーマット",
@@ -2470,6 +2384,7 @@
       "audiobookSampleRate": "サンプルレート",
       "audiobookChannels": "チャンネル",
       "audiobookCodec": "コーデック",
+      "audiobookAbridged": "",
       "abridged": "要約版",
       "unabridged": "完全版",
       "readBtn": "読む",
@@ -2482,6 +2397,8 @@
       "goToPreviousBook": "前の本へ",
       "goToNextBook": "次の本へ",
       "personalRating": "個人評価",
+      "ratingTooltip": "",
+      "ratingTooltipNoReviews": "",
       "loadingBookDetails": "書籍詳細を読み込み中...",
       "readStatusUnread": "未読",
       "readStatusPaused": "一時停止",
@@ -2500,6 +2417,8 @@
       "menuSendBook": "本を送信",
       "menuQuickSend": "クイック送信",
       "menuCustomSend": "カスタム送信",
+      "menuMarkPhysical": "",
+      "menuUnmarkPhysical": "",
       "menuAttachToAnotherBook": "別の本に添付",
       "menuDeleteFileFormats": "ファイル形式を削除",
       "menuDeleteSupplementaryFiles": "補足ファイルを削除",
@@ -2538,14 +2457,14 @@
         "deleteFormatSuccessDetail": "ブック形式「{{ fileName }}」が正常に削除されました",
         "deleteFormatErrorSummary": "エラー",
         "deleteFormatErrorDetail": "ブック形式の削除に失敗しました: {{ error }}",
+        "detachFileSuccessSummary": "",
+        "detachFileSuccessDetail": "",
+        "detachFileErrorSummary": "",
+        "detachFileErrorDetail": "",
         "dateUpdatedSummary": "日付を更新しました",
         "dateUpdatedDetail": "本の完了日が更新されました。",
         "dateUpdateFailedSummary": "更新に失敗しました",
-        "dateUpdateFailedDetail": "本の完了日を更新できませんでした。",
-        "detachFileErrorSummary": "",
-        "detachFileErrorDetail": "",
-        "detachFileSuccessDetail": "",
-        "detachFileSuccessSummary": ""
+        "dateUpdateFailedDetail": "本の完了日を更新できませんでした。"
       },
       "confirm": {
         "resetProgressMessage": "「{{ title }}」の読書進捗をリセットしますか？",
@@ -2559,22 +2478,17 @@
         "deleteAltFormatMessage": "「{{ fileName }}」を削除してもよろしいですか？\n\nこのファイルはファイルシステムから完全に削除されます。",
         "deleteAltFormatHeader": "ブック形式の削除",
         "deleteFileBtn": "ファイルを削除",
-        "deleteBookMessage": "「{{ title }}」を削除してもよろしいですか？\n\nライブラリからブックレコードが完全に削除されます。\n\nこの操作は元に戻せません。",
-        "deleteBookAllFilesMessage": "「{{ title }}」を削除してもよろしいですか？\n\nブックレコードと関連するすべてのファイルがファイルシステムから完全に削除されます。\n\nこの操作は元に戻せません。",
-        "deleteEverythingBtn": "すべて削除",
         "detachFileHeader": "",
-        "largeFileHeader": "",
-        "largeFileMessage": "",
         "detachFileMessage": "",
         "detachFileCopyMetadata": "",
         "detachFileBtn": "",
+        "deleteBookMessage": "「{{ title }}」を削除してもよろしいですか？\n\nライブラリからブックレコードが完全に削除されます。\n\nこの操作は元に戻せません。",
+        "deleteBookAllFilesMessage": "「{{ title }}」を削除してもよろしいですか？\n\nブックレコードと関連するすべてのファイルがファイルシステムから完全に削除されます。\n\nこの操作は元に戻せません。",
+        "deleteEverythingBtn": "すべて削除",
+        "largeFileMessage": "",
+        "largeFileHeader": "",
         "sendAnyway": ""
-      },
-      "menuMarkPhysical": "",
-      "menuUnmarkPhysical": "",
-      "firstAuthorBadge": "",
-      "shelvesLabel": "",
-      "audiobookAbridged": ""
+      }
     },
     "sidecar": {
       "title": "サイドカーメタデータ",
@@ -2590,11 +2504,12 @@
       "byLabel": "作成者：",
       "coverFileLabel": "カバーファイル：",
       "loading": "サイドカーデータを読み込み中...",
+      "readFailed": "",
       "syncStatusInSync": "同期済み",
       "syncStatusOutdated": "古い",
       "syncStatusConflict": "競合",
       "syncStatusMissing": "欠落",
-      "syncStatusNA": "N/A",
+      "syncStatusNA": "",
       "syncStatusUnknown": "不明",
       "toast": {
         "exportSuccessSummary": "エクスポート成功",
@@ -2623,6 +2538,7 @@
       "searchingForCovers": "カバーを検索中...",
       "noCoversFound": "カバーが見つかりません",
       "noCoversFoundDescription": "検索条件を調整するか、スペルを確認してみてください。",
+      "searchFailed": "",
       "coversFoundSingular": "{{ count }}件のカバーが見つかりました",
       "coversFoundPlural": "{{ count }}件のカバーが見つかりました",
       "resultsHint": "画像をクリックしてプレビュー、または選択して適用",
@@ -2676,18 +2592,18 @@
       "deleting": "削除中...",
       "tabs": {
         "author": "著者",
-        "genre": "ジャンル",
-        "mood": "ムード",
-        "tag": "タグ",
-        "series": "シリーズ",
-        "publisher": "出版社",
-        "language": "言語",
-        "publishers": "",
-        "genres": "",
-        "tags": "",
         "authors": "",
-        "seriesPlural": "",
+        "genre": "ジャンル",
+        "genres": "",
+        "mood": "ムード",
         "moods": "",
+        "tag": "タグ",
+        "tags": "",
+        "series": "シリーズ",
+        "seriesPlural": "",
+        "publisher": "出版社",
+        "publishers": "",
+        "language": "言語",
         "languages": ""
       },
       "placeholders": {
@@ -2767,10 +2683,31 @@
       "toast": {
         "providerRequiredSummary": "エラー",
         "providerRequiredDetail": "有効な各ブックフィールドに少なくとも1つのプロバイダー（P1～P4）を選択する必要があります。"
-      }
+      },
+      "inactiveProvider": ""
     },
     "fetchOptions": {
       "startRefresh": "更新を開始"
+    },
+    "providers": {
+      "openLibrary": "",
+      "amazon": "",
+      "google": "",
+      "goodReads": "",
+      "hardcover": "",
+      "comicvine": "",
+      "douban": "",
+      "lubimyczytac": "",
+      "ranobedb": "",
+      "audible": "",
+      "appleBooks": ""
+    },
+    "providerFields": {
+      "id": "",
+      "rating": "",
+      "reviewCount": "",
+      "asin": "",
+      "hardcoverBookId": ""
     }
   },
   "notebook": {
@@ -2808,71 +2745,31 @@
         "customCoverHeader": "カスタムカバー生成の確認"
       },
       "toast": {
-        "sortSavedSummary": "ソートを保存しました",
-        "sortSavedGlobalDetail": "デフォルトのソート設定が保存されました。",
-        "sortSavedEntityDetail": "この{{ entityType }}のソート設定が保存されました。",
         "regenCoverStartedSummary": "カバー再生成を開始しました",
         "regenCoverStartedDetail": "{{ count }}冊の本のカバーを再生成中です。完了後にページを更新してください。",
         "customCoverStartedSummary": "カスタムカバー生成を開始しました",
         "customCoverStartedDetail": "{{ count }}冊の本のカスタムカバーを生成中です。",
         "failedSummary": "失敗",
         "regenCoverFailedDetail": "カバー再生成を開始できませんでした。",
-        "customCoverFailedDetail": "カスタムカバー生成を開始できませんでした。",
-        "unshelveSuccessDetail": "本のシェルフが更新されました",
-        "unshelveFailedDetail": "本のシェルフの更新に失敗しました",
-        "noEligibleBooksSummary": "対象の本がありません",
-        "noEligibleBooksDetail": "選択した本は単一ファイルの本（代替フォーマットなし）である必要があります。",
-        "multipleLibrariesSummary": "複数のライブラリ",
-        "multipleLibrariesDetail": "選択した本はすべて同じライブラリのものである必要があります。"
+        "customCoverFailedDetail": "カスタムカバー生成を開始できませんでした。"
       },
       "loading": {
-        "deleting": "{{ count }}冊の本を削除中...",
-        "unshelving": "{{ count }}冊の本をシェルフから削除中..."
+        "deleting": "{{ count }}冊の本を削除中..."
       },
       "labels": {
         "allBooks": "すべての本",
-        "unshelvedBooks": "未分類の本",
-        "unshelvedBooksFiltered": "未分類の本（フィルター適用中）",
-        "filteredSuffix": "（フィルター適用中）",
-        "seriesCollapsedInfo": "{{ count }}{{ itemWord }}を表示中（シリーズを折りたたみ）",
-        "item": "件",
-        "items": "件",
-        "selected": "選択中",
-        "setAsDefault": "デフォルトに設定しますか？",
-        "save": "保存",
-        "collapseSeries": "シリーズを折りたたむ",
-        "gridColumns": "グリッド列数",
-        "bookTypeOverlay": "本の種類オーバーレイ",
-        "noBooks": "このコレクションには本がありません！",
-        "failedLibrary": "ライブラリの本の読み込みに失敗しました！",
-        "failedShelf": "シェルフの本の読み込みに失敗しました！",
-        "activeFilters": "{{ count }}件のアクティブフィルター",
-        "failedBooks": ""
-      },
-      "tooltip": {
-        "clearFilters": "適用されたフィルターをクリア",
-        "visibleColumns": "表示列",
-        "selectSorting": "ソートを選択",
-        "toggleView": "グリッドとテーブル表示を切替",
-        "search": "検索",
-        "toggleSidebar": "サイドバーフィルターの切替",
-        "metadataActions": "メタデータ操作",
-        "assignToShelf": "シェルフに割り当て",
-        "removeFromShelf": "このシェルフから削除",
-        "lockUnlockMetadata": "メタデータのロック/解除",
-        "organizeFiles": "ファイルを整理",
-        "attachToBook": "別の本に添付",
-        "moreActions": "その他の操作",
-        "selectAll": "すべての本を選択",
-        "deselectAll": "すべての本の選択を解除",
-        "deleteSelected": "選択した本を削除"
-      },
-      "placeholder": {
-        "selectColumns": "列を選択",
-        "search": "タイトル、著者、シリーズ、ジャンル、またはISBN..."
+        "unshelvedBooks": "未分類の本"
       }
     },
     "card": {
+      "book": {
+        "physical": "",
+        "unknownTitle": "不明なタイトル"
+      },
+      "aria": {
+        "bookMenu": "",
+        "coverAlt": "{{ title }}のカバー"
+      },
       "menu": {
         "assignShelf": "シェルフに割り当て",
         "viewDetails": "詳細を表示",
@@ -2900,9 +2797,9 @@
         "deleteBookHeader": "削除の確認",
         "deleteFileMessage": "追加ファイル「{{ fileName }}」を削除してもよろしいですか？",
         "deleteFileHeader": "ファイル削除の確認",
-        "sendAnyway": "無視して送信",
         "largeFileMessage": "",
-        "largeFileHeader": ""
+        "largeFileHeader": "",
+        "sendAnyway": "無視して送信"
       },
       "toast": {
         "quickSendSuccessDetail": "本の送信がスケジュールされました。",
@@ -2938,6 +2835,61 @@
         "continueReading": "読書を続ける",
         "readStatusMenu": ""
       }
+    },
+    "menu": {
+      "label": "",
+      "openInNewTab": "",
+      "addToShelf": "",
+      "markAs": "",
+      "send": "",
+      "quickSend": "クイック送信",
+      "customSend": "カスタム送信",
+      "download": "ダウンロード",
+      "metadata": "メタデータ",
+      "editMetadata": "メタデータを編集",
+      "fetchMetadata": "",
+      "fetchMetadataWithOptions": "",
+      "searchProviders": "",
+      "restoreCover": "",
+      "generateCover": "",
+      "lockMetadata": "",
+      "more": "その他",
+      "organizeFile": "ファイルを整理",
+      "resetGrimmoryProgress": "Grimmory進捗をリセット",
+      "resetKoreaderProgress": "KOReader進捗をリセット",
+      "deleteEntireBook": "",
+      "confirm": {
+        "deleteBookMessage": "「{{ title }}」を削除してもよろしいですか？\n\nファイルシステムからブックファイルが完全に削除されます。\n\nこの操作は元に戻せません。",
+        "deleteBookHeader": "削除の確認",
+        "deleteFileMessage": "追加ファイル「{{ fileName }}」を削除してもよろしいですか？",
+        "deleteFileHeader": "ファイル削除の確認",
+        "largeFileMessage": "",
+        "largeFileHeader": "",
+        "sendAnyway": "無視して送信"
+      }
+    },
+    "readAction": {
+      "read": {
+        "short": "",
+        "long": "本を読む"
+      },
+      "continueReading": {
+        "short": "続ける",
+        "long": "読み続ける"
+      },
+      "play": {
+        "short": "再生",
+        "long": "オーディオブックを再生"
+      },
+      "continueListening": {
+        "short": "続ける",
+        "long": "聴き続ける"
+      }
+    },
+    "selectBook": "",
+    "viewMode": {
+      "grid": "グリッド",
+      "table": "テーブル"
     },
     "notes": {
       "confirm": {
@@ -3060,13 +3012,14 @@
       "library": {
         "optionsLabel": "オプション",
         "addPhysicalBook": "物理本を追加",
+        "bulkIsbnImport": "",
         "editLibrary": "ライブラリを編集",
         "rescanLibrary": "ライブラリを再スキャン",
         "customFetchMetadata": "メタデータをカスタム取得",
         "autoFetchMetadata": "メタデータを自動取得",
         "findDuplicates": "重複を検索",
         "deleteLibrary": "ライブラリを削除",
-        "bulkIsbnImport": ""
+        "manageLibrary": "ライブラリを管理"
       },
       "shelf": {
         "publicShelfPrefix": "公開シェルフ - ",
@@ -3078,8 +3031,8 @@
       "magicShelf": {
         "optionsLabel": "オプション",
         "editMagicShelf": "マジックシェルフを編集",
-        "deleteMagicShelf": "マジックシェルフを削除",
-        "exportJson": "JSONをコピー"
+        "exportJson": "JSONをコピー",
+        "deleteMagicShelf": "マジックシェルフを削除"
       },
       "confirm": {
         "rescanLibraryMessage": "ライブラリ「{{ name }}」を更新してもよろしいですか？",
@@ -3098,42 +3051,13 @@
         "shelfDeleteFailedDetail": "シェルフの削除に失敗しました",
         "magicShelfDeletedDetail": "マジックシェルフが削除されました",
         "magicShelfDeleteFailedDetail": "シェルフの削除に失敗しました",
-        "failedSummary": "失敗",
         "magicShelfJsonCopiedDetail": "",
+        "magicShelfJsonCopyFailedDetail": "",
+        "failedSummary": "失敗",
         "dialogLoadFailedDetail": ""
       },
       "loading": {
         "deletingLibrary": "ライブラリ「{{ name }}」を削除中..."
-      }
-    },
-    "columnPref": {
-      "columns": {
-        "readStatus": "読了",
-        "title": "タイトル",
-        "authors": "著者",
-        "publisher": "出版社",
-        "seriesName": "シリーズ",
-        "seriesNumber": "シリーズ #",
-        "categories": "ジャンル",
-        "publishedDate": "出版日",
-        "lastReadTime": "最終閲覧",
-        "addedOn": "追加日",
-        "fileName": "ファイル名",
-        "fileSizeKb": "ファイルサイズ",
-        "language": "言語",
-        "isbn": "ISBN",
-        "pageCount": "ページ数",
-        "amazonRating": "Amazon",
-        "amazonReviewCount": "AZ #",
-        "goodreadsRating": "Goodreads",
-        "goodreadsReviewCount": "GR #",
-        "hardcoverRating": "Hardcover",
-        "hardcoverReviewCount": "HC #",
-        "ranobedbRating": "Ranobedb"
-      },
-      "toast": {
-        "savedSummary": "設定を保存しました",
-        "savedDetail": "列レイアウトが保存されました。"
       }
     },
     "coverPref": {
@@ -3142,12 +3066,6 @@
         "savedDetail": "カバーサイズが{{ scale }}xに設定されました。",
         "saveFailedSummary": "保存に失敗しました",
         "saveFailedDetail": "カバーサイズの設定をローカルに保存できませんでした。"
-      }
-    },
-    "filterPref": {
-      "toast": {
-        "saveFailedSummary": "保存に失敗しました",
-        "saveFailedDetail": "サイドバーフィルターの設定をローカルに保存できませんでした。"
       }
     },
     "reviews": {
@@ -3215,7 +3133,7 @@
       "libraryPlaceholder": "ライブラリを選択",
       "titleLabel": "タイトル",
       "titlePlaceholder": "例: 吾輩は猫である",
-      "isbnLabel": "ISBN",
+      "isbnLabel": "",
       "isbnPlaceholder": "例: 9780134685991",
       "authorsLabel": "著者",
       "authorsPlaceholder": "著者名を入力してEnterキーを押してください",
@@ -3236,7 +3154,52 @@
       "validationReady": "作成の準備ができました",
       "cancelButton": "キャンセル",
       "addButton": "物理本を追加",
-      "fetchMetadataTooltip": ""
+      "fetchMetadataTooltip": "",
+      "metadataNotFound": "",
+      "metadataLookupFailed": ""
+    },
+    "bulkIsbnImport": {
+      "title": "",
+      "description": "",
+      "closeTooltip": "閉じる",
+      "libraryLabel": "図書館",
+      "libraryPlaceholder": "ライブラリを選択",
+      "tabFile": "ファイルをアップロード",
+      "tabPaste": "",
+      "chooseFile": "ファイルを選択",
+      "fileFormatsHint": "",
+      "pastePlaceholder": "",
+      "parseButton": "パース",
+      "errorFileTooLarge": "",
+      "errorNoIsbns": "",
+      "errorTooMany": "",
+      "validCount": "",
+      "skippedCount": "",
+      "duplicatesRemoved": "",
+      "reason": {
+        "invalid": "",
+        "alreadyExists": ""
+      },
+      "previewLabel": "",
+      "clearButton": "消去",
+      "validationLibraryRequired": "ライブラリを選択",
+      "validationNoIsbns": "",
+      "validationReady": "",
+      "cancelButton": "キャンセル",
+      "startImportButton": "インポート開始",
+      "processingLabel": "",
+      "lookingUp": "",
+      "createdNoMetadata": "",
+      "unknownError": "不明なエラー",
+      "processingHint": "",
+      "cancelImportButton": "",
+      "summaryTitle": "インポート完了",
+      "summaryCreated": "",
+      "summaryNoMetadata": "",
+      "summaryFailed": "失敗",
+      "summaryCancelled": "",
+      "failedIsbnsLabel": "",
+      "doneButton": "終了"
     },
     "fileUploader": {
       "title": "追加ファイルをアップロード",
@@ -3251,6 +3214,8 @@
       "statusReady": "準備完了",
       "statusFailed": "失敗",
       "dragDropText": "ここにファイルをドラッグ＆ドロップしてアップロードします。",
+      "supportedFormats": "",
+      "supplementaryAllFormats": "",
       "maxFileSize": "最大ファイルサイズ: {{ size }}/ファイル",
       "uploadForBook": "<strong>{{ title }}</strong>の追加ファイルをアップロードします。",
       "thisBook": "この本",
@@ -3259,46 +3224,10 @@
         "fileTooLargeDetail": "{{ fileName }}が最大ファイルサイズ{{ maxSize }}を超えています",
         "fileTooLargeError": "ファイルが最大サイズ{{ maxSize }}を超えています",
         "uploadFailedUnknown": "不明なエラーによりアップロードに失敗しました。"
-      },
-      "supplementaryAllFormats": "",
-      "supportedFormats": ""
+      }
     },
     "filter": {
-      "title": "フィルター",
       "showingFirst100": "最初の100件を表示",
-      "footerNote": "注意: フィルターカテゴリごとに上位100件が表示されます",
-      "labels": {
-        "author": "著者",
-        "category": "ジャンル",
-        "series": "シリーズ",
-        "bookType": "本の種類",
-        "readStatus": "読書状態",
-        "personalRating": "個人評価",
-        "publisher": "出版社",
-        "matchScore": "メタデータマッチスコア",
-        "library": "ライブラリ",
-        "shelf": "シェルフ",
-        "shelfStatus": "シェルフ状態",
-        "tag": "タグ",
-        "publishedDate": "出版年",
-        "fileSize": "ファイルサイズ",
-        "amazonRating": "Amazon評価",
-        "goodreadsRating": "Goodreads評価",
-        "hardcoverRating": "Hardcover評価",
-        "language": "言語",
-        "pageCount": "ページ数",
-        "mood": "ムード",
-        "ageRating": "年齢制限",
-        "contentRating": "コンテンツレーティング",
-        "narrator": "ナレーター",
-        "comicCharacter": "コミックキャラクター",
-        "comicTeam": "コミックチーム",
-        "comicLocation": "コミックロケーション",
-        "comicCreator": "コミッククリエイター",
-        "lubimyczytacRating": "Lubimyczytac評価",
-        "ranobedbRating": "Ranobedb評価",
-        "audibleRating": "Audible評価"
-      },
       "readStatus": {
         "unread": "未読",
         "reading": "読書中",
@@ -3320,14 +3249,14 @@
         "poor": "不良（0～29%）"
       },
       "fileSize": {
-        "lt1mb": "< 1 MB",
+        "lt1mb": "",
         "1to10mb": "1～10 MB",
         "10to50mb": "10～50 MB",
         "50to100mb": "50～100 MB",
         "250to500mb": "250～500 MB",
         "05to1gb": "0.5～1 GB",
         "1to2gb": "1～2 GB",
-        "5plusGb": "5+ GB"
+        "5plusGb": ""
       },
       "pageCount": {
         "lt50": "50ページ未満",
@@ -3351,14 +3280,6 @@
       "shelfStatus": {
         "shelved": "シェルフに登録済み",
         "unshelved": "未分類"
-      },
-      "comicRoles": {
-        "penciller": "ペンシラー",
-        "inker": "インカー",
-        "colorist": "カラリスト",
-        "letterer": "レタラー",
-        "coverArtist": "カバーアーティスト",
-        "editor": "エディター"
       }
     },
     "shelfAssigner": {
@@ -3366,6 +3287,7 @@
       "descriptionMulti": "{{ count }}冊の本のシェルフを選択",
       "descriptionSingle": "「{{ title }}」をシェルフに整理",
       "shelvesAvailable": "{{ count }}個のシェルフが利用可能",
+      "searchPlaceholder": "",
       "emptyTitle": "利用可能なシェルフがありません",
       "emptyDescription": "本の整理を開始するには最初のシェルフを作成してください。<br/>下のボタンをクリックして始めましょう。",
       "createShelf": "シェルフを作成",
@@ -3377,8 +3299,7 @@
       "toast": {
         "updateSuccessDetail": "本のシェルフが更新されました",
         "updateFailedDetail": "本のシェルフの更新に失敗しました"
-      },
-      "searchPlaceholder": ""
+      }
     },
     "shelfCreator": {
       "title": "新しいシェルフを作成",
@@ -3390,6 +3311,7 @@
       "chooseIcon": "アイコンを選択",
       "chooseIconSubtitle": "利用可能なアイコンから選択",
       "selectedIcon": "選択されたアイコン",
+      "customSvg": "",
       "removeIconTooltip": "アイコンを削除",
       "visibilityLabel": "可視性",
       "makePublicLabel": "このシェルフを公開する（他のユーザーには読み取り専用）",
@@ -3400,8 +3322,7 @@
       "toast": {
         "createSuccessDetail": "シェルフを作成しました: {{ name }}",
         "createFailedDetail": "シェルフの作成に失敗しました"
-      },
-      "customSvg": ""
+      }
     },
     "shelfEditDialog": {
       "title": "シェルフを編集",
@@ -3420,27 +3341,6 @@
         "updateFailedSummary": "更新に失敗しました",
         "updateFailedDetail": "シェルフの更新中にエラーが発生しました。もう一度お試しください。"
       }
-    },
-    "table": {
-      "bookCoverAlt": "ブックカバー",
-      "statusWithPrefix": "状態: {{ status }}",
-      "locked": "ロック済み",
-      "unlocked": "ロック解除",
-      "toast": {
-        "metadataLockedSummary": "メタデータをロックしました",
-        "metadataLockedDetail": "ブックメタデータが正常にロックされました。",
-        "metadataUnlockedSummary": "メタデータのロックを解除しました",
-        "metadataUnlockedDetail": "ブックメタデータのロックが正常に解除されました。",
-        "lockFailedSummary": "ロックに失敗しました",
-        "lockFailedDetail": "メタデータのロック中にエラーが発生しました。",
-        "unlockFailedSummary": "ロック解除に失敗しました",
-        "unlockFailedDetail": "メタデータのロック解除中にエラーが発生しました。"
-      },
-      "selectBookFallback": "書籍を選択",
-      "noRating": "評価なし",
-      "ratingOutOf": "",
-      "selectBook": "",
-      "label": ""
     },
     "lockUnlockDialog": {
       "title": "メタデータのロック/解除",
@@ -3462,42 +3362,7 @@
       }
     },
     "sorting": {
-      "sortOrder": "ソート順",
-      "removeTooltip": "削除",
-      "addSortFieldPlaceholder": "ソートフィールドを追加...",
-      "saveAsDefault": "デフォルトとして保存",
-      "ascendingTooltip": "昇順 - クリックで変更",
-      "descendingTooltip": "降順 - クリックで変更",
-      "options": {
-        "title": "タイトル",
-        "fileName": "ファイル名",
-        "filePath": "ファイルパス",
-        "author": "著者",
-        "authorSurnameVorname": "著者（姓）",
-        "seriesName": "シリーズ名",
-        "seriesNumber": "シリーズ番号",
-        "lastReadTime": "最終閲覧",
-        "personalRating": "個人評価",
-        "addedOn": "追加日",
-        "fileSizeKb": "ファイルサイズ",
-        "locked": "ロック",
-        "publisher": "出版社",
-        "publishedDate": "出版日",
-        "readStatus": "読書状態",
-        "dateFinished": "完了日",
-        "readingProgress": "読書進捗",
-        "bookType": "本の種類",
-        "amazonRating": "Amazon評価",
-        "amazonReviewCount": "Amazon #",
-        "goodreadsRating": "Goodreads評価",
-        "goodreadsReviewCount": "Goodreads #",
-        "hardcoverRating": "Hardcover評価",
-        "hardcoverReviewCount": "Hardcover #",
-        "ranobedbRating": "Ranobedb評価",
-        "narrator": "ナレーター",
-        "pageCount": "ページ数",
-        "random": "ランダム"
-      }
+      "saveAsDefault": "デフォルトとして保存"
     },
     "fileAttacher": {
       "title": "ファイルを別の本に添付",
@@ -3557,17 +3422,41 @@
     },
     "seriesPage": {
       "seriesDetailsTab": "シリーズ詳細",
+      "bookListTab": "",
       "publisher": "出版社：",
       "years": "年：",
       "numberOfBooks": "冊数：",
+      "book": "本",
+      "books": "本",
+      "synopsis": "あらすじ",
       "language": "言語：",
       "readStatus": "読書状態：",
       "noDescription": "説明はありません。",
       "showLess": "折りたたむ",
       "showMore": "もっと見る",
       "noBooksFound": "このシリーズの本が見つかりません。",
+      "booksInSeries": "シリーズ冊数",
       "selected": "選択中",
       "loadingSeriesDetails": "シリーズ詳細を読み込み中...",
+      "completionOwned": "",
+      "missingBooks": "",
+      "nextUp": "次は次へ",
+      "continueReading": "続きを読む",
+      "readButton": "読む",
+      "viewDetails": "詳細を見る",
+      "continueButton": "続ける",
+      "readPercent": "",
+      "listPages": "ページ",
+      "stats": {
+        "totalPages": "総ページ数",
+        "avgPersonalRating": "",
+        "avgGoodreads": "",
+        "avgAmazon": "",
+        "avgHardcover": "",
+        "formats": "形式",
+        "totalAudioDuration": "",
+        "owned": "所有物"
+      },
       "status": {
         "unread": "未読",
         "reading": "読書中",
@@ -3588,31 +3477,7 @@
         "selectAll": "すべての本を選択",
         "deselectAll": "すべての本の選択を解除",
         "deleteSelected": "選択した本を削除"
-      },
-      "book": "本",
-      "books": "本",
-      "synopsis": "あらすじ",
-      "booksInSeries": "シリーズ冊数",
-      "nextUp": "次は次へ",
-      "continueReading": "続きを読む",
-      "readButton": "読む",
-      "viewDetails": "詳細を見る",
-      "continueButton": "続ける",
-      "listPages": "ページ",
-      "stats": {
-        "totalPages": "総ページ数",
-        "formats": "形式",
-        "owned": "所有物",
-        "avgGoodreads": "",
-        "avgHardcover": "",
-        "totalAudioDuration": "",
-        "avgPersonalRating": "",
-        "avgAmazon": ""
-      },
-      "missingBooks": "",
-      "readPercent": "",
-      "completionOwned": "",
-      "bookListTab": ""
+      }
     },
     "duplicateMerger": {
       "title": "重複を検索",
@@ -3622,7 +3487,7 @@
       "presetAggressive": "積極的",
       "presetCustom": "カスタム",
       "advanced": "詳細",
-      "signalIsbn": "ISBN",
+      "signalIsbn": "",
       "signalExternalId": "外部ID",
       "signalTitleAuthor": "タイトル + 著者",
       "signalDirectory": "同じディレクトリ",
@@ -3662,48 +3527,52 @@
         "mergePartialDetail": "{{ success }}件マージ成功、{{ failed }}件失敗。"
       }
     },
-    "bulkIsbnImport": {
-      "closeTooltip": "閉じる",
-      "libraryLabel": "図書館",
-      "libraryPlaceholder": "ライブラリを選択",
-      "tabFile": "ファイルをアップロード",
-      "chooseFile": "ファイルを選択",
-      "parseButton": "パース",
-      "clearButton": "消去",
-      "validationLibraryRequired": "ライブラリを選択",
-      "cancelButton": "キャンセル",
-      "startImportButton": "インポート開始",
-      "unknownError": "不明なエラー",
-      "summaryTitle": "インポート完了",
-      "summaryFailed": "失敗",
-      "doneButton": "終了",
-      "fileFormatsHint": "",
-      "skippedCount": "",
-      "failedIsbnsLabel": "",
-      "summaryCancelled": "",
-      "createdNoMetadata": "",
-      "previewLabel": "",
-      "tabPaste": "",
-      "validCount": "",
-      "cancelImportButton": "",
-      "processingHint": "",
-      "errorFileTooLarge": "",
-      "processingLabel": "",
-      "title": "",
-      "summaryNoMetadata": "",
-      "lookingUp": "",
-      "pastePlaceholder": "",
-      "summaryCreated": "",
-      "description": "",
-      "validationNoIsbns": "",
-      "validationReady": "",
-      "reason": {
-        "invalid": "",
-        "alreadyExists": ""
-      },
-      "errorTooMany": "",
-      "errorNoIsbns": "",
-      "duplicatesRemoved": ""
+    "fields": {
+      "random": "ランダム",
+      "title": "タイトル",
+      "author": "著者",
+      "authorSurname": "著者（姓）",
+      "genre": "ジャンル",
+      "series": "シリーズ",
+      "seriesNumber": "シリーズ番号",
+      "publisher": "出版社",
+      "tag": "タグ",
+      "mood": "ムード",
+      "language": "言語",
+      "narrator": "ナレーター",
+      "fileType": "本の種類",
+      "readStatus": "読書状態",
+      "personalRating": "個人評価",
+      "amazonRating": "Amazon評価",
+      "amazonReviewCount": "Amazon #",
+      "goodreadsRating": "Goodreads評価",
+      "goodreadsReviewCount": "Goodreads #",
+      "hardcoverRating": "Hardcover評価",
+      "hardcoverReviewCount": "Hardcover #",
+      "ranobedbRating": "Ranobedb評価",
+      "pageCount": "ページ数",
+      "publishedDate": "出版日",
+      "publishedYear": "出版年",
+      "addedOn": "追加日",
+      "lastReadTime": "最終閲覧",
+      "dateFinished": "完了日",
+      "readingProgress": "読書進捗",
+      "fileName": "ファイル名",
+      "fileSize": "ファイルサイズ",
+      "isbn": "",
+      "library": "ライブラリ",
+      "shelf": "シェルフ",
+      "ageRating": "年齢制限",
+      "contentRating": "コンテンツレーティング",
+      "matchScore": "メタデータマッチスコア",
+      "shelfStatus": "シェルフ状態",
+      "comicCharacter": "コミックキャラクター",
+      "comicTeam": "コミックチーム",
+      "comicLocation": "コミックロケーション",
+      "comicCreator": "コミッククリエイター",
+      "lubimyczytacRating": "Lubimyczytac評価",
+      "audibleReviewCount": "Audibleレビュー数",
+      "audibleRating": "Audible評価"
     }
   },
   "readerAudiobook": {
@@ -3735,7 +3604,7 @@
     },
     "details": {
       "narratedBy": "ナレーター: {{ narrator }}",
-      "kbps": "{{ bitrate }} kbps",
+      "kbps": "",
       "totalDuration": "合計 {{ duration }}"
     },
     "sidebar": {
@@ -3813,10 +3682,10 @@
       "toggleZoom": "ズーム切替（ページフィット / 実際のサイズ）",
       "doubleTap": "ダブルタップ",
       "toggleSlideshow": "スライドショー / 自動再生の切替",
-      "showHelpDialog": "このヘルプダイアログを表示",
-      "magnifierLensSize": "",
+      "toggleMagnifier": "",
       "magnifierZoom": "",
-      "toggleMagnifier": ""
+      "magnifierLensSize": "",
+      "showHelpDialog": "このヘルプダイアログを表示"
     },
     "footer": {
       "prevBook": "前の本",
@@ -3851,10 +3720,10 @@
       "exitFullscreenLabel": "フルスクリーン終了",
       "fullscreenLabel": "フルスクリーン",
       "keyboardShortcutsLabel": "キーボードショートカット",
-      "settings": "設定",
-      "closeReader": "リーダーを閉じる",
       "enableMagnifier": "",
-      "disableMagnifier": ""
+      "disableMagnifier": "",
+      "settings": "設定",
+      "closeReader": "リーダーを閉じる"
     },
     "quickSettings": {
       "fitMode": "フィットモード",
@@ -3881,13 +3750,23 @@
       "black": "ブラック",
       "gray": "グレー",
       "white": "ホワイト",
-      "clickToPaginate": "",
       "magnifierLensSize": "",
-      "stripMaxWidth": "",
-      "autoCloseMenu": "",
       "magnifierZoom": "",
       "brightness": "",
-      "emulateBook": ""
+      "emulateBook": "",
+      "clickToPaginate": "",
+      "autoCloseMenu": "",
+      "stripMaxWidth": ""
+    },
+    "webtoonHint": {
+      "regionLabel": "",
+      "message": "",
+      "switch": "",
+      "dismiss": "",
+      "never": ""
+    },
+    "continuation": {
+      "scrollForNext": ""
     },
     "sidebar": {
       "contentTab": "コンテンツ",
@@ -3907,16 +3786,6 @@
       "clearSearch": "検索をクリア",
       "page": "ページ",
       "untitled": "無題"
-    },
-    "webtoonHint": {
-      "never": "",
-      "dismiss": "",
-      "switch": "",
-      "regionLabel": "",
-      "message": ""
-    },
-    "continuation": {
-      "scrollForNext": ""
     }
   },
   "readerEbook": {
@@ -3934,7 +3803,7 @@
       "language": "言語",
       "pages": "ページ数",
       "unknown": "不明",
-      "na": "N/A",
+      "na": "",
       "series": "シリーズ",
       "seriesName": "シリーズ名",
       "bookNumber": "巻数",
@@ -4057,9 +3926,9 @@
       "searchInBook": "本の中で検索",
       "annotate": "注釈",
       "addNote": "メモを追加",
-      "deleteAnnotation": "注釈を削除",
       "goToLink": "",
-      "removeLink": ""
+      "removeLink": "",
+      "deleteAnnotation": "注釈を削除"
     },
     "shortcutsHelp": {
       "title": "キーボードショートカット",
@@ -4075,12 +3944,12 @@
       "notesShortcut": "メモ",
       "display": "表示",
       "toggleFullscreen": "フルスクリーン切替",
+      "toggleImmersive": "",
       "exitFullscreenCloseDialogs": "フルスクリーン終了 / ダイアログを閉じる",
       "other": "その他",
       "showHelpDialog": "このヘルプダイアログを表示",
       "swipeRight": "右にスワイプ",
-      "swipeLeft": "左にスワイプ",
-      "toggleImmersive": ""
+      "swipeLeft": "左にスワイプ"
     },
     "headerFooterUtil": {
       "timeRemainingInSection": "セクションの残り時間: {{ time }}"
@@ -4121,77 +3990,77 @@
       "switchToLightMode": "ライトモードに切替",
       "switchToDarkMode": "ダークモードに切替",
       "closePdfReader": "PDFリーダーを閉じる",
-      "textNote": "",
-      "annotationColor": "",
-      "ink": "",
-      "zoomPreset": "",
-      "zoomIn": "",
-      "closeSearch": "",
+      "fullscreen": "",
       "exitFullscreen": "",
-      "deselectTool": "",
-      "spreadMode": "",
-      "addBookmark": "",
-      "scrollLayout": "",
-      "searchNext": "",
-      "zoomOut": "",
-      "moreOptions": "",
-      "searchPlaceholder": "",
-      "searchPrevious": "",
-      "bookmarkAdd": "",
-      "highlight": "",
-      "bookmarkRemove": "",
       "sidebar": "",
+      "search": "",
+      "searchPlaceholder": "",
+      "searchNext": "",
+      "searchPrevious": "",
+      "zoomIn": "",
+      "zoomOut": "",
+      "zoomPreset": "",
+      "spreadMode": "",
+      "scrollLayout": "",
+      "scrollLayoutVertical": "",
       "scrollLayoutHorizontal": "",
+      "rotatePage": "",
+      "bookmarkAdd": "",
+      "bookmarkRemove": "",
+      "addBookmark": "",
       "removeBookmark": "",
       "freeText": "",
+      "highlight": "",
+      "textNote": "",
+      "ink": "",
       "draw": "",
-      "scrollLayoutVertical": "",
-      "fullscreen": "",
-      "rotatePage": "",
-      "search": "",
-      "pan": ""
+      "annotationColor": "",
+      "deselectTool": "",
+      "pan": "",
+      "moreOptions": "",
+      "closeSearch": ""
+    },
+    "footer": {
+      "firstPage": "",
+      "previousPage": "",
+      "nextPage": "",
+      "lastPage": "",
+      "of": "",
+      "pageSlider": "",
+      "pagePlaceholder": "",
+      "go": "",
+      "bookViewer": "",
+      "docViewer": ""
+    },
+    "sidebar": {
+      "title": "",
+      "close": "",
+      "contentsTab": "",
+      "bookmarksTab": "",
+      "annotationsTab": "",
+      "noContents": "",
+      "noBookmarks": "",
+      "bookmarkHint": "",
+      "noAnnotations": "",
+      "annotationHint": "",
+      "deleteBookmark": "",
+      "deleteAnnotation": "",
+      "page": ""
     },
     "toast": {
       "failedToLoadBook": "本の読み込みに失敗しました",
-      "annotationFailed": "",
-      "annotationSaved": "",
       "bookmarkAdded": "",
       "bookmarkRemoved": "",
-      "bookmarkExists": ""
-    },
-    "sidebar": {
-      "deleteAnnotation": "",
-      "close": "",
-      "contentsTab": "",
-      "annotationsTab": "",
-      "page": "",
-      "bookmarkHint": "",
-      "noContents": "",
-      "deleteBookmark": "",
-      "title": "",
-      "bookmarksTab": "",
-      "annotationHint": "",
-      "noBookmarks": "",
-      "noAnnotations": ""
+      "bookmarkExists": "",
+      "annotationSaved": "",
+      "annotationFailed": ""
     },
     "docViewer": {
-      "dismiss": "",
-      "saveFailed": "",
-      "saveDocument": "",
       "changesSavedInfo": "",
-      "changesSaved": ""
-    },
-    "footer": {
-      "nextPage": "",
-      "lastPage": "",
-      "bookViewer": "",
-      "of": "",
-      "go": "",
-      "previousPage": "",
-      "pageSlider": "",
-      "firstPage": "",
-      "docViewer": "",
-      "pagePlaceholder": ""
+      "dismiss": "",
+      "saveDocument": "",
+      "changesSaved": "",
+      "saveFailed": ""
     }
   },
   "statsLibrary": {
@@ -4283,12 +4152,12 @@
       "insightYearsOfLiterature": "年間の文学",
       "insightPeakDecade": "ピーク年代",
       "insightPeakDecadeBooks": "{{ count }}冊",
-      "insightGoldenEraRange": "",
       "insightGoldenEra": "",
+      "insightGoldenEraRange": "",
       "insightMostCommonYear": "",
-      "insightRarePicks": "",
       "insightMostCommonYearBooks": "",
-      "insightRarityScore": ""
+      "insightRarityScore": "",
+      "insightRarePicks": ""
     },
     "publicationTrend": {
       "title": "出版トレンド",
@@ -4347,6 +4216,7 @@
       "descriptionPrefix": "最も多い",
       "descriptionSuffix": "（ライブラリ内）",
       "shown": "表示中",
+      "noDataPrefix": "",
       "noDataSuffix": "のデータがありません。",
       "noDataHintPrefix": "書籍に",
       "noDataHintSuffix": "のメタデータがあることを確認してください。",
@@ -4379,8 +4249,7 @@
       "insightAvgPer": "{{ type }}あたりの平均",
       "insightAvgPerValue": "{{ avg }}冊",
       "tooltipBooks": "{{ status }}: {{ value }}冊",
-      "tooltipBook": "{{ status }}: {{ value }}冊",
-      "noDataPrefix": ""
+      "tooltipBook": "{{ status }}: {{ value }}冊"
     },
     "authorUniverse": {
       "title": "著者ユニバース",
@@ -4450,8 +4319,8 @@
       "readingDna": "読書DNAプロフィール",
       "readingHabits": "読書習慣分析",
       "bookFlow": "",
-      "publicationEra": "",
       "readingDebt": "",
+      "publicationEra": "",
       "sessionArchetypes": ""
     },
     "sessionHeatmap": {
@@ -4897,56 +4766,56 @@
       "trend": "トレンド"
     },
     "bookFlow": {
-      "noData": "",
-      "totalBooks": "",
-      "noDataHint": "",
-      "description": "",
-      "avgRating": "",
-      "completionRate": "",
-      "busiestQuarter": "",
-      "colRating": "",
-      "colAdded": "",
-      "colStatus": "",
-      "topStatus": "",
-      "title": "",
-      "tooltip": ""
-    },
-    "publicationEra": {
-      "noDataHint": "",
       "title": "",
       "tooltip": "",
+      "description": "",
+      "totalBooks": "",
+      "busiestQuarter": "",
+      "topStatus": "",
+      "avgRating": "",
+      "completionRate": "",
+      "colAdded": "",
+      "colStatus": "",
+      "colRating": "",
       "noData": "",
+      "noDataHint": ""
+    },
+    "readingDebt": {
+      "title": "",
+      "tooltip": "",
+      "description": "",
+      "booksAdded": "",
+      "booksFinished": "",
+      "backlog": "",
+      "currentBacklog": "",
+      "trendLabel": "",
+      "growing": "",
+      "shrinking": "",
+      "noData": "",
+      "noDataHint": ""
+    },
+    "publicationEra": {
+      "title": "",
+      "tooltip": "",
       "description": "",
       "bestDecade": "",
       "avgRating": "",
-      "booksRated": ""
-    },
-    "readingDebt": {
-      "booksFinished": "",
-      "description": "",
-      "shrinking": "",
-      "backlog": "",
-      "booksAdded": "",
-      "growing": "",
+      "booksRated": "",
       "noData": "",
-      "trendLabel": "",
-      "noDataHint": "",
-      "title": "",
-      "currentBacklog": "",
-      "tooltip": ""
+      "noDataHint": ""
     },
     "sessionArchetypes": {
-      "archetype_afternoon": "",
-      "noData": "",
       "title": "",
       "tooltip": "",
+      "description": "",
+      "sessions": "",
       "dominantType": "",
       "archetype_morning": "",
+      "archetype_afternoon": "",
       "archetype_evening": "",
-      "description": "",
-      "noDataHint": "",
       "archetype_night": "",
-      "sessions": ""
+      "noData": "",
+      "noDataHint": ""
     }
   },
   "magicShelf": {
@@ -5006,8 +4875,8 @@
       "selectMetadataField": "メタデータフィールドを選択"
     },
     "conditions": {
-      "and": "AND",
-      "or": "OR"
+      "and": "",
+      "or": ""
     },
     "fields": {
       "library": "ライブラリ",
@@ -5026,41 +4895,31 @@
       "personalRating": "個人評価",
       "pageCount": "ページ数",
       "language": "言語",
-      "isbn13": "ISBN-13",
-      "isbn10": "ISBN-10",
+      "isbn13": "",
+      "isbn10": "",
       "seriesName": "シリーズ名",
       "seriesNumber": "シリーズ番号",
       "seriesTotal": "シリーズ冊数",
       "fileSize": "ファイルサイズ (Kb)",
       "fileType": "ファイルタイプ",
       "subtitle": "サブタイトル",
-      "amazonRating": "Amazon評価",
-      "amazonReviewCount": "Amazonレビュー数",
-      "goodreadsRating": "Goodreads評価",
-      "goodreadsReviewCount": "Goodreadsレビュー数",
-      "hardcoverRating": "Hardcover評価",
-      "hardcoverReviewCount": "Hardcoverレビュー数",
-      "ranobedbRating": "Ranobedb評価",
       "genre": "ジャンル",
       "addedOn": "追加日",
-      "lubimyczytacRating": "Lubimyczytac評価",
       "description": "説明",
       "narrator": "ナレーター",
       "ageRating": "年齢制限",
       "contentRating": "コンテンツレーティング",
-      "audibleRating": "Audible評価",
-      "audibleReviewCount": "Audibleレビュー数",
       "abridged": "要約版",
       "audiobookDuration": "オーディオブックの長さ (秒)",
+      "audiobookCodec": "",
+      "audiobookChapterCount": "",
+      "audiobookBitrate": "",
       "isPhysical": "物理本",
       "seriesStatus": "シリーズ状態",
       "seriesGaps": "シリーズの欠巻",
       "seriesPosition": "シリーズ内の位置",
       "readingProgress": "読書進捗 (%)",
-      "metadataPresence": "メタデータの有無",
-      "audiobookBitrate": "",
-      "audiobookCodec": "",
-      "audiobookChapterCount": ""
+      "metadataPresence": "メタデータの有無"
     },
     "fieldGroups": {
       "organization": "整理",
@@ -5177,32 +5036,17 @@
       "seriesName": "シリーズ名",
       "seriesNumber": "シリーズ番号",
       "seriesTotal": "シリーズ合計",
-      "isbn13": "ISBN-13",
-      "isbn10": "ISBN-10",
-      "asin": "ASIN",
+      "isbn13": "",
+      "isbn10": "",
       "ageRating": "年齢制限",
       "contentRating": "コンテンツレーティング",
       "personalRating": "個人評価",
-      "amazonRating": "Amazon評価",
-      "goodreadsRating": "Goodreads評価",
-      "hardcoverRating": "Hardcover評価",
-      "ranobedbRating": "Ranobedb評価",
-      "lubimyczytacRating": "Lubimyczytac評価",
-      "audibleRating": "Audible評価",
-      "amazonReviewCount": "Amazonレビュー",
-      "goodreadsReviewCount": "Goodreadsレビュー",
-      "hardcoverReviewCount": "Hardcoverレビュー",
-      "audibleReviewCount": "Audibleレビュー",
-      "goodreadsId": "Goodreads ID",
-      "hardcoverId": "Hardcover ID",
-      "googleId": "Google ID",
-      "audibleId": "Audible ID",
-      "lubimyczytacId": "Lubimyczytac ID",
-      "ranobedbId": "Ranobedb ID",
-      "comicvineId": "ComicVine ID",
       "narrator": "ナレーター",
       "abridged": "要約版",
       "audiobookDuration": "再生時間",
+      "audiobookCodec": "",
+      "audiobookChapterCount": "",
+      "audiobookBitrate": "",
       "comicCharacters": "キャラクター",
       "comicTeams": "チーム",
       "comicLocations": "ロケーション",
@@ -5211,10 +5055,16 @@
       "comicColorists": "カラリスト",
       "comicLetterers": "レタラー",
       "comicCoverArtists": "カバーアーティスト",
-      "comicEditors": "エディター",
-      "audiobookCodec": "",
-      "audiobookBitrate": "",
-      "audiobookChapterCount": ""
+      "comicEditors": "エディター"
+    },
+    "importJson": {
+      "buttonLabel": "",
+      "placeholder": "",
+      "apply": "",
+      "emptyError": "",
+      "parseError": "",
+      "structureError": "",
+      "successDetail": ""
     },
     "toast": {
       "validationErrorSummary": "バリデーションエラー",
@@ -5223,15 +5073,6 @@
       "successDetail": "マジックシェルフが正常に保存されました。",
       "errorSummary": "エラー",
       "errorDetailDefault": "マジックシェルフの保存に失敗しました。"
-    },
-    "importJson": {
-      "buttonLabel": "",
-      "successDetail": "",
-      "structureError": "",
-      "emptyError": "",
-      "apply": "",
-      "placeholder": "",
-      "parseError": ""
     }
   },
   "seriesBrowser": {
@@ -5259,144 +5100,222 @@
     }
   },
   "authorBrowser": {
-    "filters": {
-      "allRead": "",
-      "hasPhoto": "",
-      "genre": "",
-      "unread": "",
-      "unmatched": "",
-      "readStatus": "",
-      "matchStatus": "",
-      "photoStatus": "",
-      "matched": "",
-      "all": "",
-      "reset": "",
-      "library": "",
-      "someRead": "",
-      "inProgress": "",
-      "bookCount": "",
-      "noPhoto": ""
-    },
-    "sort": {
-      "seriesCount": "",
-      "recentlyRead": "",
-      "name": "",
-      "avgRating": "",
-      "matched": "",
-      "photo": "",
-      "recentlyAdded": "",
-      "readingProgress": "",
-      "bookCount": ""
-    },
-    "editor": {
-      "lockAllBtn": "",
-      "uploadPhotoTooltip": "",
-      "lockField": "",
-      "saving": "",
-      "nameLabel": "",
-      "toast": {
-        "photoUploadErrorDetail": "",
-        "successDetail": "",
-        "errorDetail": "",
-        "photoUploadedDetail": "",
-        "errorSummary": "",
-        "successSummary": "",
-        "photoUploadedSummary": ""
-      },
-      "saveBtn": "",
-      "searchPhotoTooltip": "",
-      "unlockField": "",
-      "unlockAllBtn": "",
-      "searchPhotoTitle": "",
-      "asinLabel": "",
-      "descriptionLabel": ""
-    },
-    "toast": {
-      "deleteFailedSummary": "",
-      "deleteSelectedSuccessSummary": "",
-      "deleteSelectedSuccessDetail": "",
-      "deleteSuccessDetail": "",
-      "quickMatchSuccessDetail": "",
-      "autoMatchSuccessDetail": "",
-      "autoMatchFailedDetail": "",
-      "quickMatchSuccessSummary": "",
-      "quickMatchFailedDetail": "",
-      "quickMatchFailedSummary": "",
-      "autoMatchSuccessSummary": "",
-      "deleteFailedDetail": "",
-      "autoMatchFailedSummary": "",
-      "deleteSuccessSummary": ""
-    },
-    "footer": {
-      "autoMatch": "",
-      "selected": "",
-      "selectAll": "",
-      "deleteSelected": "",
-      "deselectAll": ""
-    },
-    "photoSearch": {
-      "selectBtn": "",
-      "queryLabel": "",
-      "noResults": "",
-      "readyHint": "",
-      "resetTooltip": "",
-      "resultsFound": "",
-      "readyTitle": "",
-      "searchBtn": "",
-      "photoAlt": "",
-      "queryPlaceholder": "",
-      "noResultsHint": "",
-      "searching": ""
-    },
-    "match": {
-      "matchBtn": "",
-      "asinLabel": "",
-      "searchBtn": "",
-      "toast": {
-        "matchSuccessSummary": "",
-        "matchFailedSummary": "",
-        "searchFailedDetail": "",
-        "searchFailedSummary": "",
-        "matchFailedDetail": "",
-        "matchSuccessDetail": ""
-      },
-      "resultsFound": "",
-      "authorNameLabel": "",
-      "regionLabel": "",
-      "noResultsHint": "",
-      "readyToSearch": "",
-      "authorNamePlaceholder": "",
-      "searching": "",
-      "asinPlaceholder": "",
-      "readyToSearchHint": "",
-      "noResults": ""
-    },
-    "detail": {
-      "booksTab": "",
-      "quickMatchTooltip": "",
-      "showMore": "",
-      "noBooksFound": "",
-      "showLess": "",
-      "editTab": "",
-      "booksBy": "",
-      "loading": "",
-      "matchTab": ""
-    },
-    "card": {
-      "menu": {
-        "viewAuthor": "",
-        "quickMatch": "",
-        "editAuthor": "",
-        "deleteAuthor": ""
-      },
-      "book": "",
-      "books": "",
-      "matched": "",
-      "quickMatch": ""
-    },
+    "pageTitle": "",
     "browseAllAuthors": "",
     "searchPlaceholder": "",
     "noAuthorsFound": "",
-    "pageTitle": ""
+    "sort": {
+      "name": "",
+      "bookCount": "",
+      "matched": "",
+      "recentlyAdded": "",
+      "recentlyRead": "",
+      "readingProgress": "",
+      "avgRating": "",
+      "photo": "",
+      "seriesCount": ""
+    },
+    "filters": {
+      "all": "",
+      "matchStatus": "",
+      "matched": "",
+      "unmatched": "",
+      "photoStatus": "",
+      "hasPhoto": "",
+      "noPhoto": "",
+      "readStatus": "",
+      "allRead": "",
+      "someRead": "",
+      "inProgress": "",
+      "unread": "",
+      "bookCount": "",
+      "library": "",
+      "genre": "",
+      "reset": ""
+    },
+    "footer": {
+      "selected": "",
+      "autoMatch": "",
+      "deleteSelected": "",
+      "selectAll": "",
+      "deselectAll": ""
+    },
+    "toast": {
+      "deleteSuccessSummary": "",
+      "deleteSuccessDetail": "",
+      "deleteFailedSummary": "",
+      "deleteFailedDetail": "",
+      "autoMatchSuccessSummary": "",
+      "autoMatchSuccessDetail": "",
+      "autoMatchFailedSummary": "",
+      "autoMatchFailedDetail": "",
+      "quickMatchSuccessSummary": "",
+      "quickMatchSuccessDetail": "",
+      "quickMatchFailedSummary": "",
+      "quickMatchFailedDetail": "",
+      "deleteSelectedSuccessSummary": "",
+      "deleteSelectedSuccessDetail": ""
+    },
+    "card": {
+      "matched": "",
+      "quickMatch": "",
+      "book": "",
+      "books": "",
+      "menu": {
+        "viewAuthor": "",
+        "editAuthor": "",
+        "quickMatch": "",
+        "deleteAuthor": ""
+      }
+    },
+    "editor": {
+      "nameLabel": "",
+      "asinLabel": "",
+      "descriptionLabel": "",
+      "saveBtn": "",
+      "saving": "",
+      "uploadPhotoTooltip": "",
+      "lockField": "",
+      "unlockField": "",
+      "lockAllBtn": "",
+      "unlockAllBtn": "",
+      "searchPhotoTooltip": "",
+      "searchPhotoTitle": "",
+      "toast": {
+        "successSummary": "",
+        "successDetail": "",
+        "errorSummary": "",
+        "errorDetail": "",
+        "photoUploadedSummary": "",
+        "photoUploadedDetail": "",
+        "photoUploadErrorDetail": ""
+      }
+    },
+    "detail": {
+      "quickMatchTooltip": "",
+      "loading": "",
+      "booksTab": "",
+      "editTab": "",
+      "matchTab": "",
+      "showMore": "",
+      "showLess": "",
+      "booksBy": "",
+      "noBooksFound": ""
+    },
+    "photoSearch": {
+      "queryLabel": "",
+      "queryPlaceholder": "",
+      "searchBtn": "",
+      "resetTooltip": "",
+      "readyTitle": "",
+      "readyHint": "",
+      "searching": "",
+      "noResults": "",
+      "noResultsHint": "",
+      "resultsFound": "",
+      "selectBtn": "",
+      "photoAlt": ""
+    },
+    "match": {
+      "authorNameLabel": "",
+      "authorNamePlaceholder": "",
+      "asinLabel": "",
+      "asinPlaceholder": "",
+      "regionLabel": "",
+      "searchBtn": "",
+      "searching": "",
+      "noResults": "",
+      "noResultsHint": "",
+      "readyToSearch": "",
+      "readyToSearchHint": "",
+      "resultsFound": "",
+      "matchBtn": "",
+      "toast": {
+        "searchFailedSummary": "",
+        "searchFailedDetail": "",
+        "matchSuccessSummary": "",
+        "matchSuccessDetail": "",
+        "matchFailedSummary": "",
+        "matchFailedDetail": ""
+      }
+    }
+  },
+  "browse": {
+    "showAll": "すべて表示",
+    "showMore": "",
+    "showFewer": "",
+    "clearFilters": "",
+    "filter": "",
+    "moreActions": "その他の操作",
+    "sort": {
+      "multiSort": "",
+      "addField": "",
+      "apply": "",
+      "moveUp": "",
+      "moveDown": "",
+      "flipDirection": ""
+    },
+    "chips": {
+      "removeSearch": ""
+    },
+    "rail": {
+      "searchValues": "",
+      "searchFields": "",
+      "searchScope": {
+        "allBooks": "",
+        "library": "",
+        "shelf": "",
+        "magicShelf": "",
+        "unshelved": ""
+      },
+      "noMatches": "",
+      "minUnit": "",
+      "maxUnit": "",
+      "min": "",
+      "max": ""
+    },
+    "book": {
+      "empty": "",
+      "filteredEmpty": "",
+      "loadError": "",
+      "pageError": ""
+    },
+    "table": {
+      "moreValues": ""
+    },
+    "toolbar": {
+      "columnGroups": {
+        "reading": "",
+        "publishing": "",
+        "file": "ファイル",
+        "categorization": "",
+        "ratings": "評価"
+      },
+      "sort": "",
+      "sortAria": "",
+      "sortAscending": "",
+      "sortDescending": "",
+      "shuffleAgain": "",
+      "viewMode": "表示",
+      "density": "サイズ",
+      "smallerCards": "",
+      "largerCards": "",
+      "showFilters": "",
+      "columns": "",
+      "resetColumns": "デフォルトに戻す"
+    },
+    "bulk": {
+      "markAsMessage": "",
+      "editAll": "",
+      "editOneByOne": "",
+      "selectionEmpty": "",
+      "selectionLoadError": "",
+      "organizeFiles": "ファイルを整理",
+      "updateReadStatus": "読書状態を更新",
+      "lockUnlockMetadata": "メタデータのロック/解除"
+    },
+    "filterPage": {
+      "show": ""
+    }
   }
 }

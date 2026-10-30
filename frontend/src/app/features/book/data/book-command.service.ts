@@ -1,5 +1,5 @@
 import {HttpClient, HttpParams} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {inject, Service} from '@angular/core';
 import {lastValueFrom} from 'rxjs';
 
 import {API_CONFIG} from '../../../core/config/api-config';
@@ -16,6 +16,10 @@ import {
   ResetBookProgressPartialError,
   ResetBookProgressResult,
   DeleteBooksVariables,
+  DeleteAdditionalFileVariables,
+  DeleteAdditionalFileResult,
+  AttachBookFilesVariables,
+  AttachBookFilesResult,
   ResetBookProgressVariables,
   SetAllBookMetadataLocksVariables,
   SetBookReadStatusVariables,
@@ -32,7 +36,7 @@ const RESET_PROGRESS_BACKEND_TYPES = {
   KOBO: 'KOBO',
 } as const satisfies Record<BookProgressSource, string>;
 
-@Injectable({providedIn: 'root'})
+@Service()
 export class BookCommandService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${API_CONFIG.BASE_URL}/api/v1/books`;
@@ -68,6 +72,39 @@ export class BookCommandService {
           };
         }),
       ),
+    });
+  }
+
+  deleteAdditionalFile() {
+    return reconcilingMutationOptions({
+      mutationKey: bookCommandKeys.deleteAdditionalFile(),
+      scope: bookCommandScopes.deletion,
+      mutationFn: (variables: DeleteAdditionalFileVariables) =>
+        this.deleteAdditionalFileRecord(variables),
+      reconcile: (outcome, variables, client) => applyBookQueryChangeSet(
+        client,
+        bookCommandChangeSet(outcome, [variables.bookId], result => ({
+          changedBookIds: [result.bookId],
+        })),
+      ),
+    });
+  }
+
+  attachBookFiles() {
+    return reconcilingMutationOptions({
+      mutationKey: bookCommandKeys.attachBookFiles(),
+      scope: bookCommandScopes.deletion,
+      mutationFn: ({targetBookId, sourceBookIds, moveFiles}: AttachBookFilesVariables) =>
+        lastValueFrom(this.http.post<AttachBookFilesResult>(`${this.baseUrl}/${targetBookId}/attach-file`, {
+          sourceBookIds: requireBookIds(sourceBookIds), moveFiles,
+        })),
+      reconcile: (outcome, variables, client) => {
+        const affected = [variables.targetBookId, ...variables.sourceBookIds];
+        return applyBookQueryChangeSet(client, bookCommandChangeSet(outcome, affected, result => ({
+          changedBookIds: affected,
+          deletedBookIds: result.deletedSourceBookIds,
+        })));
+      },
     });
   }
 
@@ -109,6 +146,13 @@ export class BookCommandService {
       `${this.baseUrl}/status`,
       {bookIds, status},
     ));
+  }
+
+  private async deleteAdditionalFileRecord(
+    {bookId, fileId}: DeleteAdditionalFileVariables,
+  ): Promise<DeleteAdditionalFileResult> {
+    await lastValueFrom(this.http.delete<void>(`${this.baseUrl}/${bookId}/files/${fileId}`));
+    return {bookId, fileId};
   }
 
   private async deleteBookRecords(

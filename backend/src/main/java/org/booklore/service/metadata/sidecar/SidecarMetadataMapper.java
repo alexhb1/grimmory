@@ -100,6 +100,7 @@ public class SidecarMetadataMapper {
         if (m.getIdentifiers() != null) {
             SidecarIdentifiers ids = m.getIdentifiers();
             builder.asin(ids.getAsin())
+                    .openlibraryId(ids.getOpenlibraryId())
                     .goodreadsId(ids.getGoodreadsId())
                     .googleId(ids.getGoogleId())
                     .hardcoverId(ids.getHardcoverId())
@@ -107,6 +108,8 @@ public class SidecarMetadataMapper {
                     .comicvineId(ids.getComicvineId())
                     .lubimyczytacId(ids.getLubimyczytacId())
                     .ranobedbId(ids.getRanobedbId())
+                    .applebooksId(ids.getApplebooksId())
+                    .doubanId(ids.getDoubanId())
                     .audibleId(ids.getAudibleId());
         }
 
@@ -133,6 +136,14 @@ public class SidecarMetadataMapper {
             if (r.getAudible() != null) {
                 builder.audibleRating(r.getAudible().getAverage())
                         .audibleReviewCount(r.getAudible().getCount());
+            }
+            if (r.getApplebooks() != null) {
+                builder.applebooksRating(r.getApplebooks().getAverage())
+                        .applebooksReviewCount(r.getApplebooks().getCount());
+            }
+            if (r.getDouban() != null) {
+                builder.doubanRating(r.getDouban().getAverage())
+                        .doubanReviewCount(r.getDouban().getCount());
             }
         }
 
@@ -196,6 +207,9 @@ public class SidecarMetadataMapper {
                 .lubimyczytacId(entity.getLubimyczytacId())
                 .ranobedbId(entity.getRanobedbId())
                 .audibleId(entity.getAudibleId())
+                .applebooksId(entity.getApplebooksId())
+                .doubanId(entity.getDoubanId())
+                .openlibraryId(entity.getOpenlibraryId())
                 .build();
     }
 
@@ -207,6 +221,8 @@ public class SidecarMetadataMapper {
                 .lubimyczytac(buildRating(entity.getLubimyczytacRating(), null))
                 .ranobedb(buildRating(entity.getRanobedbRating(), null))
                 .audible(buildRating(entity.getAudibleRating(), entity.getAudibleReviewCount()))
+                .applebooks(buildRating(entity.getApplebooksRating(), entity.getApplebooksReviewCount()))
+                .douban(buildRating(entity.getDoubanRating(), entity.getDoubanReviewCount()))
                 .build();
     }
 

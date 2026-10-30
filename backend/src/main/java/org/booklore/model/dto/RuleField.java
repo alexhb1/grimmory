@@ -83,6 +83,14 @@ public enum RuleField {
     AUDIBLE_RATING,
     @JsonProperty("audibleReviewCount")
     AUDIBLE_REVIEW_COUNT,
+    @JsonProperty("applebooksRating")
+    APPLEBOOKS_RATING,
+    @JsonProperty("applebooksReviewCount")
+    APPLEBOOKS_REVIEW_COUNT,
+    @JsonProperty("doubanRating")
+    DOUBAN_RATING,
+    @JsonProperty("doubanReviewCount")
+    DOUBAN_REVIEW_COUNT,
     @JsonProperty("abridged")
     ABRIDGED,
     @JsonProperty("audiobookDuration")

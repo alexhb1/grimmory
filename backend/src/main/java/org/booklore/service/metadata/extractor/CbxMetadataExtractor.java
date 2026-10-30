@@ -37,11 +37,13 @@ public class CbxMetadataExtractor implements FileMetadataExtractor {
     private static final Pattern WEB_SPLIT_PATTERN = Pattern.compile("[,;\\s]+");
 
     // URL Patterns
+    private static final Pattern OPENLIBRARY_URL_PATTERN = Pattern.compile("openlibrary\\.org(/[^/]+/[^/]+)");
     private static final Pattern GOODREADS_URL_PATTERN = Pattern.compile("goodreads\\.com/book/show/(\\d+)(?:-[\\w-]+)?");
     private static final Pattern AMAZON_URL_PATTERN = Pattern.compile("amazon\\.com/dp/([A-Z0-9]{10})");
     private static final Pattern COMICVINE_URL_PATTERN = Pattern.compile("comicvine\\.gamespot\\.com/(?:issue|volume)/(?:[^/]+/)?(\\d+-\\d+)");
     private static final Pattern COMICVINE_SITE_URL_PATTERN = Pattern.compile("comicvine\\.gamespot\\.com/(?:[^/]+/)?(40(?:00|50)-\\d+)/?");
     private static final Pattern HARDCOVER_URL_PATTERN = Pattern.compile("hardcover\\.app/books/([\\w-]+)");
+    private static final Pattern APPLEBOOKS_URL_PATTERN = Pattern.compile("books.apple.com/[^/]+/[^/]+/id([^/]+)");
     private static final Pattern BOOKLORE_TAG_PATTERN = Pattern.compile("\\[BookLore:[^\\]]+\\][^\\n]*(\n|$)");
     private static final Pattern ISBN13_PATTERN = Pattern.compile("\\d{13}");
     private static final Pattern ISBN_CLEANER_PATTERN = Pattern.compile("[- ]");
@@ -307,6 +309,12 @@ public class CbxMetadataExtractor implements FileMetadataExtractor {
             if (url.isBlank()) continue;
             url = url.trim();
 
+            Matcher olMatcher = OPENLIBRARY_URL_PATTERN.matcher(url);
+            if (olMatcher.find()) {
+                builder.openlibraryId(olMatcher.group(1));
+                continue;
+            }
+
             Matcher grMatcher = GOODREADS_URL_PATTERN.matcher(url);
             if (grMatcher.find()) {
                 builder.goodreadsId(grMatcher.group(1));
@@ -334,6 +342,12 @@ public class CbxMetadataExtractor implements FileMetadataExtractor {
             Matcher hcMatcher = HARDCOVER_URL_PATTERN.matcher(url);
             if (hcMatcher.find()) {
                 builder.hardcoverId(hcMatcher.group(1));
+                continue;
+            }
+
+            Matcher applebooksMatcher = APPLEBOOKS_URL_PATTERN.matcher(url);
+            if (applebooksMatcher.find()) {
+                builder.applebooksId(applebooksMatcher.group(1));
                 continue;
             }
         }
@@ -365,14 +379,17 @@ public class CbxMetadataExtractor implements FileMetadataExtractor {
                 case "HardcoverRating" -> safeParseDouble(value, builder::hardcoverRating);
                 case "LubimyczytacRating" -> safeParseDouble(value, builder::lubimyczytacRating);
                 case "RanobedbRating" -> safeParseDouble(value, builder::ranobedbRating);
+                case "ApplebooksRating" -> safeParseDouble(value, builder::applebooksRating);
                 case "HardcoverBookId" -> builder.hardcoverBookId(value);
                 case "HardcoverId" -> builder.hardcoverId(value);
                 case "LubimyczytacId" -> builder.lubimyczytacId(value);
                 case "RanobedbId" -> builder.ranobedbId(value);
                 case "GoogleId" -> builder.googleId(value);
                 case "GoodreadsId" -> builder.goodreadsId(value);
+                case "OpenlibraryId" -> builder.openlibraryId(value);
                 case "ASIN" -> builder.asin(value);
                 case "ComicvineId" -> builder.comicvineId(value);
+                case "ApplebooksId" -> builder.applebooksId(value);
             }
         }
     }

@@ -1,5 +1,5 @@
 import {CommandOutcome} from '../../../core/data/command-options';
-import {KnownBookReadStatus} from './book-response.models';
+import {BookDetail, KnownBookReadStatus} from './book-response.models';
 import {BookQueryChangeSet} from './book-query-cache';
 
 export interface SetBookReadStatusVariables {
@@ -21,6 +21,27 @@ export interface DeleteBooksVariables {
 export interface DeleteBooksResult {
   readonly removedBookIds: readonly number[];
   readonly fileCleanupFailedBookIds: readonly number[];
+}
+
+export interface DeleteAdditionalFileVariables {
+  readonly bookId: number;
+  readonly fileId: number;
+}
+
+export interface DeleteAdditionalFileResult {
+  readonly bookId: number;
+  readonly fileId: number;
+}
+
+export interface AttachBookFilesVariables {
+  readonly targetBookId: number;
+  readonly sourceBookIds: readonly number[];
+  readonly moveFiles: boolean;
+}
+
+export interface AttachBookFilesResult {
+  readonly updatedBook: BookDetail;
+  readonly deletedSourceBookIds: readonly number[];
 }
 
 export type BookProgressSource = 'GRIMMORY' | 'KOREADER' | 'KOBO';
