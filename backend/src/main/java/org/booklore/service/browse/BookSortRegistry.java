@@ -5,6 +5,7 @@ import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ListJoin;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
@@ -36,7 +37,7 @@ public class BookSortRegistry {
         registry.register("addedOn", rootField("addedOn"));
 
         for (String field : List.of(
-                "title", "seriesName", "seriesNumber", "publisher", "publishedDate",
+                "title", "subtitle", "seriesName", "seriesNumber", "publisher", "publishedDate",
                 "amazonRating", "amazonReviewCount", "goodreadsRating", "goodreadsReviewCount",
                 "hardcoverRating", "hardcoverReviewCount", "ranobedbRating",
                 "lubimyczytacRating",
@@ -165,8 +166,8 @@ public class BookSortRegistry {
     }
 
     private static Join<?, ?> authorJoin(SortContext<BookEntity> ctx) {
-        var parent = metadataJoin(ctx);
-
-        return getSortJoin(parent, "authors");
+        var authors = (ListJoin<?, ?>) getSortJoin(metadataJoin(ctx), "authors");
+        authors.on(ctx.cb().equal(authors.index(), 0));
+        return authors;
     }
 }
