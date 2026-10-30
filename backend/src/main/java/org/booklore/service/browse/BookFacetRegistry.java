@@ -1,7 +1,17 @@
 package org.booklore.service.browse;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.booklore.exception.ApiError;
+import org.booklore.model.entity.AuthorEntity;
 import org.booklore.model.entity.BookEntity;
+import org.booklore.model.entity.CategoryEntity;
+import org.booklore.model.entity.ComicCharacterEntity;
+import org.booklore.model.entity.ComicCreatorEntity;
+import org.booklore.model.entity.ComicLocationEntity;
+import org.booklore.model.entity.ComicTeamEntity;
+import org.booklore.model.entity.MoodEntity;
+import org.booklore.model.entity.TagEntity;
 import org.booklore.service.opds.MagicShelfBookService;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
@@ -9,11 +19,12 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 @Component
 public class BookFacetRegistry {
 
-    private static final String MAGIC_SHELF_PREFIX = "magic:";
+    static final String MAGIC_SHELF_PREFIX = "magic:";
 
     private static final Set<String> NAMES = Set.of(
             "author", "series", "genre", "tag", "mood", "language", "publisher", "narrator", "library", "shelf",
@@ -24,6 +35,9 @@ public class BookFacetRegistry {
             "comic_character", "comic_team", "comic_location", "comic_creator");
 
     private final MagicShelfBookService magicShelfBookService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BookFacetRegistry(MagicShelfBookService magicShelfBookService) {
         this.magicShelfBookService = magicShelfBookService;
@@ -39,11 +53,11 @@ public class BookFacetRegistry {
 
     public Specification<BookEntity> matching(String facetName, List<String> values, Long userId) {
         return switch (facetName) {
-            case "author" -> BookFilterSpecification.withAuthors(values);
+            case "author" -> namedFilter(AuthorEntity.class, "authors", values);
             case "series" -> BookFilterSpecification.inSeriesMulti(values);
-            case "genre" -> BookFilterSpecification.withCategories(values);
-            case "tag" -> BookFilterSpecification.withTags(values);
-            case "mood" -> BookFilterSpecification.withMoods(values);
+            case "genre" -> namedFilter(CategoryEntity.class, "categories", values);
+            case "tag" -> namedFilter(TagEntity.class, "tags", values);
+            case "mood" -> namedFilter(MoodEntity.class, "moods", values);
             case "language" -> BookFilterSpecification.withLanguages(values);
             case "publisher" -> BookFilterSpecification.withPublishers(values);
             case "narrator" -> BookFilterSpecification.withNarrators(values);
@@ -65,13 +79,29 @@ public class BookFacetRegistry {
             case "published_year" -> BookFilterSpecification.withPublishedYears(values);
             case "file_size" -> BookFilterSpecification.withFileSizes(values);
             case "page_count" -> BookFilterSpecification.withPageCounts(values);
-            case "shelf_status" -> BookFilterSpecification.withShelfStatus(values);
-            case "comic_character" -> BookFilterSpecification.withComicCharacters(values);
-            case "comic_team" -> BookFilterSpecification.withComicTeams(values);
-            case "comic_location" -> BookFilterSpecification.withComicLocations(values);
-            case "comic_creator" -> BookFilterSpecification.withComicCreators(values);
+            case "shelf_status" -> BookFilterSpecification.withShelfStatus(values, userId);
+            case "comic_character" -> BookFilterSpecification.withComicCollection("characters", values, idsFor(ComicCharacterEntity.class));
+            case "comic_team" -> BookFilterSpecification.withComicCollection("teams", values, idsFor(ComicTeamEntity.class));
+            case "comic_location" -> BookFilterSpecification.withComicCollection("locations", values, idsFor(ComicLocationEntity.class));
+            case "comic_creator" -> BookFilterSpecification.withComicCreators(values, idsFor(ComicCreatorEntity.class));
             default -> throw ApiError.INVALID_FACET.createException("Unknown facet: " + facetName);
         };
+    }
+
+    private Specification<BookEntity> namedFilter(Class<?> type, String path, List<String> values) {
+        return BookFilterSpecification.withMetadataCollection(path, values, idsFor(type));
+    }
+
+    private Function<String, List<Long>> idsFor(Class<?> type) {
+        return name -> matchingIds(type, name);
+    }
+
+    private List<Long> matchingIds(Class<?> type, String name) {
+        var cb = entityManager.getCriteriaBuilder();
+        var query = cb.createQuery(Long.class);
+        var root = query.from(type);
+        query.select(root.get("id")).where(cb.equal(cb.lower(root.get("name")), name));
+        return entityManager.createQuery(query).getResultList();
     }
 
     private Specification<BookEntity> shelves(List<String> values, Long userId) {
@@ -88,7 +118,7 @@ public class BookFacetRegistry {
             }
         }
         if (!regularIds.isEmpty()) {
-            specs.add(BookFilterSpecification.inShelves(regularIds));
+            specs.add(BookFilterSpecification.inShelves(regularIds, userId));
         }
         if (specs.isEmpty()) {
             return (root, query, cb) -> cb.conjunction();

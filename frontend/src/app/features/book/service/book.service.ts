@@ -1,6 +1,6 @@
 import {computed, effect, inject, Service} from '@angular/core';
 import {first, from, lastValueFrom, Observable, throwError} from 'rxjs';
-import {HttpClient, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpErrorResponse, HttpParams} from '@angular/common/http';
 import {catchError, map, tap} from 'rxjs/operators';
 import {Book, BookDeletionResponse, BookRecommendation, BookSetting, BookStatusUpdateResponse, BookType, CreatePhysicalBookRequest, PersonalRatingUpdateResponse, ReadStatus} from '../model/book.model';
 import {API_CONFIG} from '../../../core/config/api-config';
@@ -46,37 +46,6 @@ export class BookService {
   }));
 
   readonly books = computed(() => this.booksQuery.data() ?? []);
-
-  /** Pre-computed unique metadata values for autocomplete across the app. */
-  readonly uniqueMetadata = computed(() => {
-    const books = this.books();
-    const authors = new Set<string>();
-    const categories = new Set<string>();
-    const moods = new Set<string>();
-    const tags = new Set<string>();
-    const publishers = new Set<string>();
-    const series = new Set<string>();
-
-    for (const book of books) {
-      const m = book.metadata;
-      if (!m) continue;
-      m.authors?.forEach(v => authors.add(v));
-      m.categories?.forEach(v => categories.add(v));
-      m.moods?.forEach(v => moods.add(v));
-      m.tags?.forEach(v => tags.add(v));
-      if (m.publisher) publishers.add(m.publisher);
-      if (m.seriesName) series.add(m.seriesName);
-    }
-
-    return {
-      authors: Array.from(authors),
-      categories: Array.from(categories),
-      moods: Array.from(moods),
-      tags: Array.from(tags),
-      publishers: Array.from(publishers),
-      series: Array.from(series),
-    };
-  });
 
   readonly booksError = computed<string | null>(() => {
     if (!this.token() || !this.booksQuery.isError()) {
@@ -236,11 +205,13 @@ export class BookService {
         });
       }),
       catchError(error => {
-        this.messageService.add({
-          severity: 'error',
-          summary: this.t.translate('book.bookService.toast.creationFailedSummary'),
-          detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.creationFailedDetail')
-        });
+        if (!(error instanceof HttpErrorResponse && error.status === 409)) {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.t.translate('book.bookService.toast.creationFailedSummary'),
+            detail: error?.error?.message || error?.message || this.t.translate('book.bookService.toast.creationFailedDetail')
+          });
+        }
         return throwError(() => error);
       })
     );

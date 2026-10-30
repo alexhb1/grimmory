@@ -52,7 +52,7 @@ const FACET_KEYS: Record<MetadataType, BookQueryFacetKey> = {
   languages: 'language'
 };
 const NO_SELECTION: RowSelection = {kind: 'values', values: new Map()};
-const NO_FILTERS = {facets: EMPTY_FACET_SELECTION, facetLogic: 'or' as const};
+const NO_FILTERS = {facets: EMPTY_FACET_SELECTION};
 const PAGE_SIZE = 50;
 
 @Component({
@@ -159,9 +159,9 @@ export class MetadataManagerComponent implements OnInit, OnDestroy {
 
   private readonly affectedBooksQuery = injectQuery(() => {
     const values = this.getSelectedItems().map(item => item.value);
-    const facets = withBrowseFacetValues(EMPTY_FACET_SELECTION, FACET_KEYS[this._activeTab()], values);
+    const facets = withBrowseFacetValues(EMPTY_FACET_SELECTION, FACET_KEYS[this._activeTab()], {include: values, exclude: []});
     return {
-      ...this.bookQuery.ids({facets, facetLogic: 'or', sort: []}),
+      ...this.bookQuery.ids({facets, sort: []}),
       enabled: values.length > 0 && (this.showMergeDialog() || this.showDeleteDialog()),
     };
   });

@@ -49,8 +49,8 @@ import {BrowseSearchInputComponent} from '../../../shared/browse/search-input/se
 import {BrowseFilterRailComponent} from '../../../shared/browse/filter-rail/filter-rail.component';
 import {
   countBrowseFacetValues,
-  toggleBrowseFacetValue,
   type BrowseFilterChip,
+  type BrowseFilterMatchAll,
   type BrowseFilterRangeCommit,
   type BrowseFilterToggle,
 } from '../../../shared/browse/facets';
@@ -425,16 +425,15 @@ export class BookBrowsePageComponent {
   }
 
   protected onToggleFacet(toggle: BrowseFilterToggle<BookQueryFacetKey>): void {
-    this.urlState.setFacets(toggleBrowseFacetValue(
-      this.urlState.facets(),
-      toggle.key,
-      toggle.value,
-      toggle.selected,
-    ));
+    this.urlState.setFacets(this.queries.withState(toggle));
+  }
+
+  protected onFacetMatchAll(change: BrowseFilterMatchAll<BookQueryFacetKey>): void {
+    this.urlState.setFacets(this.queries.chooseMatchAll(change));
   }
 
   protected onCommitFacetRange(commit: BrowseFilterRangeCommit<BookQueryFacetKey>): void {
-    this.urlState.setFacetRange(this.queries.withRange(this.urlState.facets(), commit));
+    this.urlState.setFacetRange(this.queries.withRange(commit));
   }
 
   protected onClearQuery(): void {
