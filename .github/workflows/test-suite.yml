@@ -26,7 +26,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           ref: ${{ inputs.checkout_ref }}
 
       - name: Install just
@@ -64,7 +63,7 @@ jobs:
         continue-on-error: true
 
       - name: Publish Backend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2
+        uses: EnricoMi/publish-unit-test-result-action/linux@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2
         if: ${{ always() && inputs.publish_test_results }}
         with:
           files: backend/build/test-results/**/*.xml
@@ -98,7 +97,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           ref: ${{ inputs.checkout_ref }}
 
       - name: Install just
@@ -111,6 +109,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: true
+          save-cache: ${{ github.ref == 'refs/heads/develop' }}
           install: false
 
       - name: Install Frontend Dependencies
@@ -130,7 +129,7 @@ jobs:
         continue-on-error: true
 
       - name: Publish Frontend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2
+        uses: EnricoMi/publish-unit-test-result-action/linux@7622c5bf3d112a72ab4fa3951c2aa5723d8ab92d # v2
         if: ${{ always() && inputs.publish_test_results }}
         with:
           files: frontend/test-results/vitest-results.xml
