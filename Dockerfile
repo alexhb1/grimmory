@@ -24,8 +24,6 @@ RUN --mount=type=cache,target=/workspace/frontend/.angular/cache \
 FROM --platform=$BUILDPLATFORM gradle:9.5.1-jdk25-alpine AS backend-build
 
 ARG TARGETARCH
-ARG APP_VERSION=development
-ARG APP_REVISION=unknown
 
 WORKDIR /workspace/backend
 
@@ -33,15 +31,15 @@ COPY backend/gradlew backend/gradlew.bat backend/build.gradle.kts backend/settin
 COPY backend/gradle ./gradle
 RUN chmod +x ./gradlew
 
-RUN --mount=type=cache,target=/home/gradle/.gradle \
-    ./gradlew --no-daemon dependencies
+RUN ./gradlew --no-daemon dependencies
 
 COPY LICENSE NOTICE /workspace/
 COPY backend/ ./
 COPY --from=frontend-build /workspace/frontend/dist/grimmory/browser /tmp/frontend-dist
 
-RUN --mount=type=cache,target=/home/gradle/.gradle \
-    TARGETARCH=${TARGETARCH} ./gradlew --no-daemon -PfrontendDistDir=/tmp/frontend-dist bootJar
+ARG APP_VERSION=development
+
+RUN TARGETARCH=${TARGETARCH} ./gradlew --no-daemon -PfrontendDistDir=/tmp/frontend-dist bootJar
 
 RUN set -eux; \
     jar_path="$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*plain.jar' | head -n 1)"; \
